@@ -35,7 +35,8 @@ Write-Host "`n4. Waiting for services to initialize..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
 Write-Host "`n5. Testing service discovery..." -ForegroundColor Yellow
-$serviceDiscoveryScript = @"
+# Create temporary Python script for service discovery test
+$serviceDiscoveryScript = @'
 from config.service_registry import discover_services, get_discovered_services
 import json
 
@@ -47,11 +48,17 @@ registry = get_discovered_services()
 for service_type, type_services in registry.items():
     print(f'  {service_type}: {list(type_services.keys())}')
 print('✓ Service discovery working')
-"@
-python -c $serviceDiscoveryScript
+'@
+$serviceDiscoveryScript | Out-File -FilePath "temp_service_discovery.py" -Encoding UTF8
+try {
+    python temp_service_discovery.py
+} finally {
+    Remove-Item "temp_service_discovery.py" -ErrorAction SilentlyContinue
+}
 
 Write-Host "`n6. Testing service orchestrators..." -ForegroundColor Yellow
-$orchestratorScript = @"
+# Create temporary Python script for orchestrator test
+$orchestratorScript = @'
 print('=== ORCHESTRATOR TEST ===')
 try:
     from src.service_orchestrator import ServiceOrchestrator
@@ -61,11 +68,17 @@ try:
     print('✓ Orchestrator initialized successfully')
 except Exception as e:
     print(f'✗ Error: {e}')
-"@
-python -c $orchestratorScript
+'@
+$orchestratorScript | Out-File -FilePath "temp_orchestrator.py" -Encoding UTF8
+try {
+    python temp_orchestrator.py
+} finally {
+    Remove-Item "temp_orchestrator.py" -ErrorAction SilentlyContinue
+}
 
 Write-Host "`n7. Testing service health endpoints..." -ForegroundColor Yellow
-$healthCheckScript = @"
+# Create temporary Python script for health check test
+$healthCheckScript = @'
 import requests
 import time
 
@@ -84,11 +97,17 @@ for name, url in services:
             print(f'⚠ {name}: Status {response.status_code}')
     except Exception as e:
         print(f'✗ {name}: Not responding - {e}')
-"@
-python -c $healthCheckScript
+'@
+$healthCheckScript | Out-File -FilePath "temp_health_check.py" -Encoding UTF8
+try {
+    python temp_health_check.py
+} finally {
+    Remove-Item "temp_health_check.py" -ErrorAction SilentlyContinue
+}
 
 Write-Host "`n8. Testing echo service functionality..." -ForegroundColor Yellow
-$echoTestScript = @"
+# Create temporary Python script for echo service test
+$echoTestScript = @'
 import requests
 import json
 
@@ -113,8 +132,13 @@ try:
         
 except Exception as e:
     print(f'✗ Echo service test failed: {e}')
-"@
-python -c $echoTestScript
+'@
+$echoTestScript | Out-File -FilePath "temp_echo_test.py" -Encoding UTF8
+try {
+    python temp_echo_test.py
+} finally {
+    Remove-Item "temp_echo_test.py" -ErrorAction SilentlyContinue
+}
 
 Write-Host "`n9. Service job status:" -ForegroundColor Yellow
 Write-Host "   OpenAI Service Job Status: $(Get-Job $openaiJob.Id | Select-Object -ExpandProperty State)"
