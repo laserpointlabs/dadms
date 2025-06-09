@@ -151,3 +151,24 @@ docker exec openai-service env | grep -E "OPENAI|CONSUL|SERVICE|DOCKER_CONTAINER
    - Check network connectivity between services
 
 For more detailed troubleshooting steps, refer to the main documentation.
+
+## Docker Compose Variable Substitution
+
+When defining environment variables in `docker-compose.yml` you can use the
+`${VAR:-default}` syntax:
+
+```yaml
+environment:
+  - PORT=${PORT:-5000}
+```
+
+Variables used inside commands require escaping the dollar sign and running
+through a shell:
+
+```yaml
+command: sh -c "python scripts/service_monitor.py --interval $${CHECK_INTERVAL:-60}"
+```
+
+If Docker Compose passes the raw string (e.g. `"${CHECK_INTERVAL:-60}"`) you
+may see errors like `invalid int value`. Using `$$` ensures the shell expands the
+variable correctly.

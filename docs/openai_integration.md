@@ -136,6 +136,23 @@ The `data` directory contains reference files that are uploaded to the OpenAI As
 
 These files provide domain knowledge to the assistant for better decision analysis.
 
+## Metadata File Locations
+
+Configuration and metadata files that were previously stored in the `data` folder
+are now kept under `config/metadata`.
+
+- `assistant_id.json` – persists the OpenAI assistant ID
+- `rag_file_metadata.json` – tracks uploaded files and vector store mappings
+
+Existing projects can be migrated with:
+
+```bash
+python scripts/move_metadata_files.py
+```
+
+Both `RAGFileManager` and `AssistantIDManager` check the new directory first and
+fall back to the old paths for backward compatibility.
+
 ## Viewing Results
 
 To view the results of the process:
