@@ -19,7 +19,7 @@ if project_root not in sys.path:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,  # Reduced from INFO to WARNING for cleaner test output
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     filename='enhanced_orchestrator_test.log'
 )
@@ -38,12 +38,16 @@ class MockTask:
     def __init__(self, activity_id, process_instance_id):
         self.activity_id = activity_id
         self.process_instance_id = process_instance_id
+        self.task_id = f"task_{activity_id}_{process_instance_id}"
     
     def get_activity_id(self):
         return self.activity_id
     
     def get_process_instance_id(self):
         return self.process_instance_id
+    
+    def get_task_id(self):
+        return self.task_id
 
 
 class TestEnhancedOrchestrator(unittest.TestCase):
