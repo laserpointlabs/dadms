@@ -258,130 +258,197 @@ class DataPersistenceManager:
         
         logger.debug(f"Stored point {point_id} in Qdrant")
     
-    def _store_in_neo4j(self, 
+    def _store_in_neo4j(self,
                        run_id: str,
                        process_instance_id: str,
-                       task_data: Dict[str, Any], 
+                       task_data: Dict[str, Any],
                        decision_context: str,
                        supporting_files: List[str]):
         """Store interaction data in Neo4j graph database"""
-        
+
         with self.neo4j_driver.session() as session:
-            # Create or merge run node
-            session.run("""
-                MERGE (r:Run {run_id: $run_id})
-                ON CREATE SET 
-                    r.created_at = datetime(),
-                    r.decision_context = $decision_context,
-                    r.supporting_files = $supporting_files
-            """, run_id=run_id, decision_context=decision_context, supporting_files=supporting_files or [])
-            
-            # Create or merge process instance node
-            session.run("""
-                MERGE (p:ProcessInstance {process_instance_id: $process_instance_id})
-                ON CREATE SET p.created_at = datetime()
-            """, process_instance_id=process_instance_id)
-            
-            # Create relationship between run and process instance
-            session.run("""
-                MATCH (r:Run {run_id: $run_id})
-                MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
-                MERGE (r)-[:EXECUTED_PROCESS]->(p)
-            """, run_id=run_id, process_instance_id=process_instance_id)
-            
-            # Create or merge task node
-            task_name = task_data.get("task_name", "unknown")
-            session.run("""
-                MERGE (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                SET 
-                    t.assistant_id = $assistant_id,
-                    t.thread_id = $thread_id,
-                    t.processed_at = $processed_at,
-                    t.processed_by = $processed_by,
-                    t.recommendation = $recommendation,
-                    t.updated_at = datetime()
-            """, 
-            task_name=task_name,
-            process_instance_id=process_instance_id,
-            assistant_id=task_data.get("assistant_id", ""),
-            thread_id=task_data.get("thread_id", ""),
-            processed_at=task_data.get("processed_at", ""),
-            processed_by=task_data.get("processed_by", ""),
-            recommendation=json.dumps(task_data.get("recommendation", {})) if isinstance(task_data.get("recommendation"), dict) else str(task_data.get("recommendation", ""))
-            )
-            
-            # Create relationships
-            session.run("""
-                MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
-                MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                MERGE (p)-[:HAS_TASK]->(t)
-            """, process_instance_id=process_instance_id, task_name=task_name)
-            
-            session.run("""
-                MATCH (r:Run {run_id: $run_id})
-                MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                MERGE (r)-[:INCLUDES_TASK]->(t)
-            """, run_id=run_id, task_name=task_name, process_instance_id=process_instance_id)
-            
-            # Expand recommendation JSON into nodes and relationships
-            recommendation = task_data.get("recommendation")
-            if recommendation:
-                self._expand_recommendation_json(session, task_name, process_instance_id, recommendation)
-            
-            logger.debug(f"Stored task {task_name} in Neo4j")
+            tx = session.begin_transaction()
+            try:
+                # Create or merge run node
+                tx.run(
+                    """
+                    MERGE (r:Run {run_id: $run_id})
+                    ON CREATE SET
+                        r.created_at = datetime(),
+                        r.decision_context = $decision_context,
+                        r.supporting_files = $supporting_files
+                    """,
+                    run_id=run_id,
+                    decision_context=decision_context,
+                    supporting_files=supporting_files or [],
+                )
+
+                # Create or merge process instance node
+                tx.run(
+                    """
+                    MERGE (p:ProcessInstance {process_instance_id: $process_instance_id})
+                    ON CREATE SET p.created_at = datetime()
+                    """,
+                    process_instance_id=process_instance_id,
+                )
+
+                # Create relationship between run and process instance
+                tx.run(
+                    """
+                    MATCH (r:Run {run_id: $run_id})
+                    MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
+                    MERGE (r)-[:EXECUTED_PROCESS]->(p)
+                    """,
+                    run_id=run_id,
+                    process_instance_id=process_instance_id,
+                )
+
+                # Create or merge task node
+                task_name = task_data.get("task_name", "unknown")
+                tx.run(
+                    """
+                    MERGE (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
+                    SET
+                        t.assistant_id = $assistant_id,
+                        t.thread_id = $thread_id,
+                        t.processed_at = $processed_at,
+                        t.processed_by = $processed_by,
+                        t.recommendation = $recommendation,
+                        t.updated_at = datetime()
+                    """,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                    assistant_id=task_data.get("assistant_id", ""),
+                    thread_id=task_data.get("thread_id", ""),
+                    processed_at=task_data.get("processed_at", ""),
+                    processed_by=task_data.get("processed_by", ""),
+                    recommendation=json.dumps(task_data.get("recommendation", {}))
+                    if isinstance(task_data.get("recommendation"), dict)
+                    else str(task_data.get("recommendation", "")),
+                )
+
+                # Create relationships
+                tx.run(
+                    """
+                    MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
+                    MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
+                    MERGE (p)-[:HAS_TASK]->(t)
+                    """,
+                    process_instance_id=process_instance_id,
+                    task_name=task_name,
+                )
+
+                tx.run(
+                    """
+                    MATCH (r:Run {run_id: $run_id})
+                    MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
+                    MERGE (r)-[:INCLUDES_TASK]->(t)
+                    """,
+                    run_id=run_id,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                )
+
+                # Expand recommendation JSON into nodes and relationships
+                recommendation = task_data.get("recommendation")
+                if recommendation:
+                    root_node_id = f"{task_name}_{process_instance_id}_rec_root"
+                    tx.run(
+                        """
+                        MERGE (root:RecommendationNode {node_id: $node_id})
+                        SET root.task_name=$task_name, root.process_instance_id=$process_instance_id
+                        """,
+                        node_id=root_node_id,
+                        task_name=task_name,
+                        process_instance_id=process_instance_id,
+                    )
+                    tx.run(
+                        """
+                        MATCH (t:Task {task_name:$task_name, process_instance_id:$process_instance_id})
+                        MATCH (root:RecommendationNode {node_id:$node_id})
+                        MERGE (t)-[:HAS_RECOMMENDATION]->(root)
+                        """,
+                        task_name=task_name,
+                        process_instance_id=process_instance_id,
+                        node_id=root_node_id,
+                    )
+                    self._expand_recommendation_json(tx, task_name, process_instance_id, recommendation, root_node_id)
+
+                tx.commit()
+                logger.debug(f"Stored task {task_name} in Neo4j")
+            except Exception:
+                tx.rollback()
+                raise
     
-    def _expand_recommendation_json(self, session, task_name, process_instance_id, recommendation, parent_node_id=None, relationship_name=None):
-        """Recursively expand recommendation JSON into Neo4j nodes and relationships with clear hierarchical structure."""
+    def _expand_recommendation_json(self, tx, task_name, process_instance_id, recommendation, parent_node_id):
+        """Recursively expand recommendation JSON into Neo4j nodes and relationships using a simplified structure."""
         if isinstance(recommendation, dict):
             for key, value in recommendation.items():
                 node_id = f"{task_name}_{process_instance_id}_{key}_{uuid.uuid4().hex[:8]}"
-                session.run("""
+                tx.run(
+                    """
                     MERGE (n:RecommendationNode {node_id: $node_id})
                     SET n.key = $key, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-                """, node_id=node_id, key=key, task_name=task_name, process_instance_id=process_instance_id)
-
-                rel_name = key.upper().replace(" ", "_").replace("-", "_")
-                if parent_node_id:
-                    session.run(f"""
-                        MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $node_id}})
-                        MERGE (parent)-[:{rel_name}]->(child)
-                    """, parent_node_id=parent_node_id, node_id=node_id)
-                else:
-                    session.run(f"""
-                        MATCH (task:Task {{task_name: $task_name, process_instance_id: $process_instance_id}}), (child:RecommendationNode {{node_id: $node_id}})
-                        MERGE (task)-[:{rel_name}]->(child)
-                    """, task_name=task_name, process_instance_id=process_instance_id, node_id=node_id)
-
-                self._expand_recommendation_json(session, task_name, process_instance_id, value, node_id, rel_name)
+                    """,
+                    node_id=node_id,
+                    key=key,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                )
+                tx.run(
+                    """
+                    MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
+                    MERGE (parent)-[:HAS_CHILD {key: $key}]->(child)
+                    """,
+                    parent_node_id=parent_node_id,
+                    node_id=node_id,
+                    key=key,
+                )
+                self._expand_recommendation_json(tx, task_name, process_instance_id, value, node_id)
 
         elif isinstance(recommendation, list):
             for idx, item in enumerate(recommendation):
                 item_node_id = f"{task_name}_{process_instance_id}_item_{uuid.uuid4().hex[:8]}"
-                session.run("""
-                    MERGE (n:RecommendationNode {node_id: $item_node_id})
-                    SET n.index = $idx, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-                """, item_node_id=item_node_id, idx=idx, task_name=task_name, process_instance_id=process_instance_id)
-
-                if parent_node_id and relationship_name:
-                    session.run(f"""
-                        MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $item_node_id}})
-                        MERGE (parent)-[:{relationship_name}_ITEM]->(child)
-                    """, parent_node_id=parent_node_id, item_node_id=item_node_id)
-
-                self._expand_recommendation_json(session, task_name, process_instance_id, item, item_node_id, relationship_name)
+                tx.run(
+                    """
+                    MERGE (n:RecommendationNode {node_id: $node_id})
+                    SET n.list_index = $idx, n.task_name = $task_name, n.process_instance_id = $process_instance_id
+                    """,
+                    node_id=item_node_id,
+                    idx=idx,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                )
+                tx.run(
+                    """
+                    MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
+                    MERGE (parent)-[:HAS_ITEM]->(child)
+                    """,
+                    parent_node_id=parent_node_id,
+                    node_id=item_node_id,
+                )
+                self._expand_recommendation_json(tx, task_name, process_instance_id, item, item_node_id)
 
         else:
             value_node_id = f"{task_name}_{process_instance_id}_value_{uuid.uuid4().hex[:8]}"
-            session.run("""
-                MERGE (n:RecommendationNode {node_id: $value_node_id})
+            tx.run(
+                """
+                MERGE (n:RecommendationNode {node_id: $node_id})
                 SET n.value = $value, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-            """, value_node_id=value_node_id, value=str(recommendation), task_name=task_name, process_instance_id=process_instance_id)
-
-            if parent_node_id and relationship_name:
-                session.run(f"""
-                    MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $value_node_id}})
-                    MERGE (parent)-[:{relationship_name}_VALUE]->(child)
-                """, parent_node_id=parent_node_id, value_node_id=value_node_id)
+                """,
+                node_id=value_node_id,
+                value=str(recommendation),
+                task_name=task_name,
+                process_instance_id=process_instance_id,
+            )
+            tx.run(
+                """
+                MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
+                MERGE (parent)-[:HAS_VALUE]->(child)
+                """,
+                parent_node_id=parent_node_id,
+                node_id=value_node_id,
+            )
     
     def _prepare_text_for_embedding(self, task_data: Dict[str, Any], decision_context: str) -> str:
         """Prepare text content for embedding generation"""
