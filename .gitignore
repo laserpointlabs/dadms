@@ -115,3 +115,4 @@ qdrant_data/
 !/logs/*/
 /logs/*/*
 !/logs/*/.gitkeep
+myenv/
