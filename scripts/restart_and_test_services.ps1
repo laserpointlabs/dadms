@@ -54,14 +54,10 @@ python -c "
 print('=== ORCHESTRATOR TEST ===')
 try:
     from src.service_orchestrator import ServiceOrchestrator
-    from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
-    
-    regular = ServiceOrchestrator()
-    enhanced = EnhancedServiceOrchestrator()
-    
-    print(f'Regular orchestrator default service: {regular._get_default_service_name()}')
-    print(f'Enhanced orchestrator default service: {enhanced._get_default_service_name()}')
-    print('✓ Both orchestrators initialized successfully')
+
+    orch = ServiceOrchestrator()
+    print(f'Orchestrator default service: {orch._get_default_service_name()}')
+    print('✓ Orchestrator initialized successfully')
 except Exception as e:
     print(f'✗ Error: {e}')
 "

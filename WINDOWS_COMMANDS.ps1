@@ -27,8 +27,8 @@ python .\test_orchestrator_integration.py
 python -c "
 import sys, os
 sys.path.insert(0, os.path.abspath('.'))
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
-print('Enhanced orchestrator available:', EnhancedServiceOrchestrator is not None)
+from src.service_orchestrator import ServiceOrchestrator
+print('Orchestrator available:', ServiceOrchestrator is not None)
 "
 
 ## BPMN Workflow Testing
