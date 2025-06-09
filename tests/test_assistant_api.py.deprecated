@@ -1,5 +1,0 @@
-"""
-DEPRECATED: This test file has issues with the current OpenAI API structure.
-It contains references to API endpoints that have changed in newer versions of the OpenAI SDK.
-Consider updating this file to use the latest API structure.
-"""
