@@ -48,8 +48,11 @@ The Docker Compose configuration includes:
 1. Ensure Docker and Docker Compose are installed
 2. Set required environment variables (see main README.md)
 3. Run: `docker-compose up -d --build`
-4. Access Camunda at: http://localhost:8080/camunda
-5. Monitor services via Consul at: http://localhost:8500
+4. Docker layer caching is enabled via `.dockerignore` and multi-stage
+   builds using the `nvidia/cuda` base image. This avoids downloading
+   NVIDIA components on every build.
+5. Access Camunda at: http://localhost:8080/camunda
+6. Monitor services via Consul at: http://localhost:8500
 
 ## Troubleshooting
 
