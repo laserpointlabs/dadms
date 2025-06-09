@@ -10,7 +10,6 @@ import json
 from datetime import datetime
 from config.service_registry import discover_services
 from src.service_orchestrator import ServiceOrchestrator
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
 
 class MockTask:
     """Mock Camunda task for testing"""
@@ -54,12 +53,7 @@ def test_orchestrators():
         regular_default = regular_orch._get_default_service_name()
         print(f"   ✅ Regular orchestrator initialized, default service: {regular_default}")
         
-        # Test enhanced orchestrator
-        enhanced_orch = EnhancedServiceOrchestrator()
-        enhanced_default = enhanced_orch._get_default_service_name()
-        print(f"   ✅ Enhanced orchestrator initialized, default service: {enhanced_default}")
-        
-        return True, (regular_orch, enhanced_orch)
+        return True, (regular_orch, None)
     except Exception as e:
         print(f"   ❌ Orchestrator initialization failed: {e}")
         return False, (None, None)

@@ -13,7 +13,10 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
+from src.service_orchestrator import ServiceOrchestrator
+
+# Backwards compatibility alias
+EnhancedServiceOrchestrator = ServiceOrchestrator
 
 class TestCloudProviderDecisionProcess(unittest.TestCase):
     """Test cases for the Cloud Provider Decision workflow"""

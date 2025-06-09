@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Import required modules
 from config import camunda_config
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
+from src.service_orchestrator import ServiceOrchestrator
 from camunda.external_task.external_task_worker import ExternalTaskWorker
 from camunda.external_task.external_task import ExternalTask
 
@@ -43,7 +43,7 @@ from camunda.external_task.external_task import ExternalTask
 from config.service_registry import SERVICE_REGISTRY
 
 # Create orchestrator with metrics enabled
-orchestrator = EnhancedServiceOrchestrator(
+orchestrator = ServiceOrchestrator(
     service_registry=SERVICE_REGISTRY,
     debug=True,
     enable_metrics=True
