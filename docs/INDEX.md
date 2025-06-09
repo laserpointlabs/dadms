@@ -5,14 +5,11 @@ Welcome to the DADM (Decision Analysis and Decision Management) system documenta
 ## Getting Started
 
 - [Project README](../README.md) - Project overview and basic information
-- [Installation Guide](INSTALLATION.md) - How to install and set up DADM
-- [Configuration Guide](CONFIGURATION.md) - How to configure DADM for your environment
 
 ## Core Documentation
 
-- [OpenAI Integration](openai_integration_updated.md) - How DADM integrates with OpenAI Assistant API
-- [Camunda Integration](camunda_integration.md) - How DADM integrates with Camunda BPM
-- [BPMN Validation & Deployment](BPMN_VALIDATION_DEPLOYMENT.md) - How to validate and deploy BPMN models
+- [OpenAI Integration](openai_integration.md) - How DADM integrates with the OpenAI Assistant API
+- [BPMN Validation & Deployment](BPMN_VALIDATION_DEPLOYMENT.md) - Validate and deploy BPMN models
 - [Workflow Completion Detection](WORKFLOW_COMPLETION_DETECTION.md) - How the system detects when workflows are complete
 
 ## Services
@@ -24,15 +21,14 @@ Welcome to the DADM (Decision Analysis and Decision Management) system documenta
 
 ## Technical Reference
 
-- [API Reference](API_REFERENCE.md) - Detailed API documentation
 - [Architecture Overview](ARCHITECTURE.md) - DADM architecture and component design
-- [Docker Environment Variables](DOCKER_ENVIRONMENT_VARS.md) - Guide to using environment variables in Docker
+- [Environment Variables](environment_variables.md) - Configure services and Docker
+- [Service Orchestrator Optimizations](service_orchestrator_optimization.md) - Performance features of the orchestrator
 - [Log Organization](LOG_ORGANIZATION.md) - How log files are organized in DADM
 
 ## Project Management
 
 - [Cleanup Summary](CLEANUP_SUMMARY.md) - Summary of recent code cleanup efforts
-- [Metadata Relocation](METADATA_RELOCATION.md) - Details about metadata file relocation
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to the DADM project
 
 ## Usage Examples
