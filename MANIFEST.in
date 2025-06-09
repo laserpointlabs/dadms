@@ -20,7 +20,7 @@ include config/*.py
 
 # Exclude compiled Python files and cache directories
 global-exclude *.py[cod]
-global-exclude __pycache__/
+global-exclude __pycache__
 global-exclude *.so
 global-exclude .*.swp
 global-exclude .DS_Store
