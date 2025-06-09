@@ -15,15 +15,35 @@ project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 logs_dir = os.path.join(project_root, "logs", "services")
 Path(logs_dir).mkdir(parents=True, exist_ok=True)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(os.path.join(logs_dir, "assistant_id_manager.log")),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with proper handler management
+def setup_logging():
+    """Setup logging with proper file handle management"""
+    logger = logging.getLogger("assistant_id_manager")
+    
+    # Only configure if not already configured
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        
+        # Create formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
+        # Create and configure file handler
+        file_handler = logging.FileHandler(os.path.join(logs_dir, "assistant_id_manager.log"))
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
+        # Create and configure console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        
+        # Prevent propagation to root logger to avoid duplicate messages
+        logger.propagate = False
+    
+    return logger
+
+# Setup logging
+setup_logging()
 logger = logging.getLogger("assistant_id_manager")
 
 class AssistantIDManager:
