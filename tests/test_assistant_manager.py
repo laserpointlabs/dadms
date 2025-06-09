@@ -9,7 +9,7 @@ class TestAssistantManager(unittest.TestCase):
 
     def test_missing_api_key_raises_value_error(self):
         """AssistantManager should raise ValueError if OPENAI_API_KEY is not set."""
-        with mock.patch.dict(os.environ, {}, clear=True):
+        with mock.patch('config.openai_config.OPENAI_API_KEY', None):
             with self.assertRaises(ValueError):
                 AssistantManager()
 
