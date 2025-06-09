@@ -92,3 +92,15 @@ Use the debug mode to periodically review performance metrics. Key metrics to wa
 - Memory usage
 
 The optimization introduces minimal code complexity while providing substantial performance benefits, making it a worthwhile improvement for any workflow-intensive application.
+
+## Advanced Features
+
+Recent versions extend these optimizations with additional capabilities:
+
+- **Time-based caches** with automatic expiration and access metrics
+- **ElementTree XML parsing** for faster, memory-efficient BPMN processing
+- **Predictive prefetching** of process definitions and common tasks
+- **Batch processing** to route multiple tasks in a single request
+- **Detailed metrics** that can be exported to Prometheus or similar systems
+
+These enhancements are now part of the main `ServiceOrchestrator` implementation and remain backward compatible.
