@@ -267,10 +267,8 @@ class DataPersistenceManager:
         """Store interaction data in Neo4j graph database"""
 
         with self.neo4j_driver.session() as session:
-            tx = session.begin_transaction()
-            try:
-                # Create or merge run node
-                tx.run(
+            # Create or merge run node
+            session.run(
                     """
                     MERGE (r:Run {run_id: $run_id})
                     ON CREATE SET
@@ -283,8 +281,8 @@ class DataPersistenceManager:
                     supporting_files=supporting_files or [],
                 )
 
-                # Create or merge process instance node
-                tx.run(
+            # Create or merge process instance node
+            session.run(
                     """
                     MERGE (p:ProcessInstance {process_instance_id: $process_instance_id})
                     ON CREATE SET p.created_at = datetime()
@@ -292,8 +290,8 @@ class DataPersistenceManager:
                     process_instance_id=process_instance_id,
                 )
 
-                # Create relationship between run and process instance
-                tx.run(
+            # Create relationship between run and process instance
+            session.run(
                     """
                     MATCH (r:Run {run_id: $run_id})
                     MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
@@ -303,9 +301,9 @@ class DataPersistenceManager:
                     process_instance_id=process_instance_id,
                 )
 
-                # Create or merge task node
-                task_name = task_data.get("task_name", "unknown")
-                tx.run(
+            # Create or merge task node
+            task_name = task_data.get("task_name", "unknown")
+            session.run(
                     """
                     MERGE (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
                     SET
@@ -327,8 +325,8 @@ class DataPersistenceManager:
                     else str(task_data.get("recommendation", "")),
                 )
 
-                # Create relationships
-                tx.run(
+            # Create relationships
+            session.run(
                     """
                     MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
                     MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
@@ -338,7 +336,7 @@ class DataPersistenceManager:
                     task_name=task_name,
                 )
 
-                tx.run(
+            session.run(
                     """
                     MATCH (r:Run {run_id: $run_id})
                     MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
@@ -349,43 +347,39 @@ class DataPersistenceManager:
                     process_instance_id=process_instance_id,
                 )
 
-                # Expand recommendation JSON into nodes and relationships
-                recommendation = task_data.get("recommendation")
-                if recommendation:
-                    root_node_id = f"{task_name}_{process_instance_id}_rec_root"
-                    tx.run(
-                        """
-                        MERGE (root:RecommendationNode {node_id: $node_id})
-                        SET root.task_name=$task_name, root.process_instance_id=$process_instance_id
-                        """,
-                        node_id=root_node_id,
-                        task_name=task_name,
-                        process_instance_id=process_instance_id,
-                    )
-                    tx.run(
-                        """
-                        MATCH (t:Task {task_name:$task_name, process_instance_id:$process_instance_id})
-                        MATCH (root:RecommendationNode {node_id:$node_id})
-                        MERGE (t)-[:HAS_RECOMMENDATION]->(root)
-                        """,
-                        task_name=task_name,
-                        process_instance_id=process_instance_id,
-                        node_id=root_node_id,
-                    )
-                    self._expand_recommendation_json(tx, task_name, process_instance_id, recommendation, root_node_id)
+            # Expand recommendation JSON into nodes and relationships
+            recommendation = task_data.get("recommendation")
+            if recommendation:
+                root_node_id = f"{task_name}_{process_instance_id}_rec_root"
+                session.run(
+                    """
+                    MERGE (root:RecommendationNode {node_id: $node_id})
+                    SET root.task_name=$task_name, root.process_instance_id=$process_instance_id
+                    """,
+                    node_id=root_node_id,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                )
+                session.run(
+                    """
+                    MATCH (t:Task {task_name:$task_name, process_instance_id:$process_instance_id})
+                    MATCH (root:RecommendationNode {node_id:$node_id})
+                    MERGE (t)-[:HAS_RECOMMENDATION]->(root)
+                    """,
+                    task_name=task_name,
+                    process_instance_id=process_instance_id,
+                    node_id=root_node_id,
+                )
+                self._expand_recommendation_json(session, task_name, process_instance_id, recommendation, root_node_id)
 
-                tx.commit()
-                logger.debug(f"Stored task {task_name} in Neo4j")
-            except Exception:
-                tx.rollback()
-                raise
+            logger.debug(f"Stored task {task_name} in Neo4j")
     
-    def _expand_recommendation_json(self, tx, task_name, process_instance_id, recommendation, parent_node_id):
+    def _expand_recommendation_json(self, session, task_name, process_instance_id, recommendation, parent_node_id):
         """Recursively expand recommendation JSON into Neo4j nodes and relationships using a simplified structure."""
         if isinstance(recommendation, dict):
             for key, value in recommendation.items():
                 node_id = f"{task_name}_{process_instance_id}_{key}_{uuid.uuid4().hex[:8]}"
-                tx.run(
+                session.run(
                     """
                     MERGE (n:RecommendationNode {node_id: $node_id})
                     SET n.key = $key, n.task_name = $task_name, n.process_instance_id = $process_instance_id
@@ -395,7 +389,7 @@ class DataPersistenceManager:
                     task_name=task_name,
                     process_instance_id=process_instance_id,
                 )
-                tx.run(
+                session.run(
                     """
                     MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
                     MERGE (parent)-[:HAS_CHILD {key: $key}]->(child)
@@ -404,12 +398,12 @@ class DataPersistenceManager:
                     node_id=node_id,
                     key=key,
                 )
-                self._expand_recommendation_json(tx, task_name, process_instance_id, value, node_id)
+                self._expand_recommendation_json(session, task_name, process_instance_id, value, node_id)
 
         elif isinstance(recommendation, list):
             for idx, item in enumerate(recommendation):
                 item_node_id = f"{task_name}_{process_instance_id}_item_{uuid.uuid4().hex[:8]}"
-                tx.run(
+                session.run(
                     """
                     MERGE (n:RecommendationNode {node_id: $node_id})
                     SET n.list_index = $idx, n.task_name = $task_name, n.process_instance_id = $process_instance_id
@@ -419,7 +413,7 @@ class DataPersistenceManager:
                     task_name=task_name,
                     process_instance_id=process_instance_id,
                 )
-                tx.run(
+                session.run(
                     """
                     MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
                     MERGE (parent)-[:HAS_ITEM]->(child)
@@ -427,11 +421,11 @@ class DataPersistenceManager:
                     parent_node_id=parent_node_id,
                     node_id=item_node_id,
                 )
-                self._expand_recommendation_json(tx, task_name, process_instance_id, item, item_node_id)
+                self._expand_recommendation_json(session, task_name, process_instance_id, item, item_node_id)
 
         else:
             value_node_id = f"{task_name}_{process_instance_id}_value_{uuid.uuid4().hex[:8]}"
-            tx.run(
+            session.run(
                 """
                 MERGE (n:RecommendationNode {node_id: $node_id})
                 SET n.value = $value, n.task_name = $task_name, n.process_instance_id = $process_instance_id
@@ -441,7 +435,7 @@ class DataPersistenceManager:
                 task_name=task_name,
                 process_instance_id=process_instance_id,
             )
-            tx.run(
+            session.run(
                 """
                 MATCH (parent:RecommendationNode {node_id: $parent_node_id}), (child:RecommendationNode {node_id: $node_id})
                 MERGE (parent)-[:HAS_VALUE]->(child)
