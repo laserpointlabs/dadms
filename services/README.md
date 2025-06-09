@@ -17,11 +17,9 @@ Services are typically started using Docker Compose, which also starts the Consu
 2.  **Verify Consul is running:**
     Open your browser and navigate to `http://localhost:8500/ui/dc1/services`. You should see the Consul UI.
     Alternatively, you can use a script:
-    ```powershell
-    # In your PowerShell terminal
+    ```bash
     cd scripts
-    .\dadm_manager.ps1
-    # Select option to check service status or view Consul UI
+    python restart_and_test_services.py --status
     ```
     Or check via curl:
     ```powershell
@@ -43,7 +41,7 @@ Services are typically started using Docker Compose, which also starts the Consu
 
 ### Registering Services
 
-Services are typically configured to auto-register with Consul upon startup. The `scripts/deploy_consul_services.ps1` script can also be used to register services that are running in Docker containers.
+Services are typically configured to auto-register with Consul upon startup. The `scripts/deploy_consul_services.py` script can also be used to register services that are running in Docker containers.
 
 Key aspects of service registration:
 -   **Service Name and ID:** Unique identifiers for the service.
@@ -65,7 +63,7 @@ Refer to the `docs/IMPLEMENTING_SERVICES.md` guide for detailed steps on creatin
     *   `Dockerfile` for containerization.
     *   `requirements.txt` (or equivalent) for dependencies.
     *   A health check endpoint (e.g., `/health`).
-    *   (Optional) `service_config.json` if using `deploy_consul_services.ps1` for registration.
+    *   (Optional) `service_config.json` if using `deploy_consul_services.py` for registration.
 
 2.  **Service Implementation:**
     *   Implement the core logic of your service.
@@ -76,7 +74,7 @@ Refer to the `docs/IMPLEMENTING_SERVICES.md` guide for detailed steps on creatin
     *   **Automatic Registration:** If your service is Python-based, you can use the `ConsulServiceRegistry` class from `services/openai_service/consul_registry.py` (or adapt it) to register the service with Consul on startup.
         *   The service needs to know the Consul address (usually via `CONSUL_HTTP_ADDR` environment variable).
         *   It should provide its name, port, health check path, and any relevant tags or metadata.
-    *   **Manual/Scripted Registration:** For services managed by `docker-compose` and registered via `scripts/deploy_consul_services.ps1`, ensure your service's `service_config.json` (if used) or the script logic correctly defines the service parameters for Consul.
+    *   **Manual/Scripted Registration:** For services managed by `docker-compose` and registered via `scripts/deploy_consul_services.py`, ensure your service's `service_config.json` (if used) or the script logic correctly defines the service parameters for Consul.
 
 4.  **Dockerfile:**
     Create a `Dockerfile` to package your service into a container.

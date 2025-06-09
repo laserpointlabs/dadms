@@ -45,10 +45,9 @@ docker-compose up -d consul
 You can view registered services in several ways:
 
 1. Consul UI: http://localhost:8500/ui/dc1/services
-2. Service Status Dashboard:
-   ```powershell
-   cd scripts
-   .\service_status.ps1
+2. Service Status Script:
+   ```bash
+   python scripts/verify_consul_registration.py
    ```
 3. Command Line:
    ```powershell
@@ -59,10 +58,9 @@ You can view registered services in several ways:
 
 If services aren't appearing in Consul, you can:
 
-1. Run the fix script:
-   ```powershell
-   cd scripts
-   .\fix_consul_services.ps1
+1. Re-register services:
+   ```bash
+   python scripts/deploy_consul_services.py
    ```
 
 2. Check that services are running:
