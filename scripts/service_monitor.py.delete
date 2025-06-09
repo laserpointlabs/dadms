@@ -1,0 +1,179 @@
+"""
+Daemon script to monitor and ensure OpenAI service availability
+
+This script runs in the background and periodically checks if the OpenAI service
+is running. If not, it attempts to restart it. This helps with the 404 errors
+seen in the assistant_monitor.log.
+"""
+import os
+import sys
+import time
+import logging
+import argparse
+import requests
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+# Set up log directory
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+logs_dir = os.path.join(project_root, "logs", "monitors")
+Path(logs_dir).mkdir(parents=True, exist_ok=True)
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(os.path.join(logs_dir, "service_monitor.log")),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("service_monitor")
+
+# Add project root to path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+def check_service(endpoint):
+    """Check if a service is available at the given endpoint"""
+    try:
+        # Try the health endpoint
+        response = requests.get(f"{endpoint}/health", timeout=5)
+        if response.status_code == 200:
+            return True, response.json().get("status", "unknown")
+        
+        # If health endpoint fails, try the root endpoint
+        response = requests.get(endpoint, timeout=5)
+        return response.status_code < 400, "unknown"
+    except requests.exceptions.RequestException:
+        return False, "unreachable"
+
+def restart_service(service_type, service_name):
+    """Attempt to restart a service"""
+    logger.info(f"Attempting to restart {service_type}/{service_name} service...")
+    
+    try:
+        # Use our service starter script
+        result = subprocess.run(
+            [sys.executable, os.path.join(project_root, "scripts", "start_services.py"), "--services", f"{service_type}/{service_name}"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        
+        # Log the output
+        if result.stdout:
+            logger.info(f"Service starter output: {result.stdout}")
+        if result.stderr:
+            logger.warning(f"Service starter error output: {result.stderr}")
+            
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to restart service: {e}")
+        if e.stdout:
+            logger.info(f"Service starter output: {e.stdout}")
+        if e.stderr:
+            logger.error(f"Service starter error output: {e.stderr}")
+        return False
+
+def monitor_services(check_interval=60, services=None):
+    """
+    Monitor services and restart them if they're down
+    
+    Args:
+        check_interval: Time between checks in seconds
+        services: List of services to monitor in format [(type, name, endpoint)]
+    """
+    # Default services to monitor
+    if services is None:
+        from config import service_registry
+        
+        services = []
+        for service_type, service_dict in service_registry.SERVICE_REGISTRY.items():
+            for service_name, service_config in service_dict.items():
+                if service_config.get("active", False) and service_config.get("endpoint"):
+                    services.append((
+                        service_type, 
+                        service_name, 
+                        service_config["endpoint"]
+                    ))
+    
+    logger.info(f"Starting service monitor for {len(services)} services")
+    for service_type, service_name, endpoint in services:
+        logger.info(f"Monitoring {service_type}/{service_name} at {endpoint}")
+    
+    try:
+        while True:
+            check_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"Performing service check at {check_time}")
+            
+            for service_type, service_name, endpoint in services:
+                available, status = check_service(endpoint)
+                
+                if available:
+                    logger.info(f"Service {service_type}/{service_name} is available (status: {status})")
+                else:
+                    logger.warning(f"Service {service_type}/{service_name} is unavailable (status: {status})")
+                    
+                    # Try to restart the service
+                    restart_success = restart_service(service_type, service_name)
+                    
+                    if restart_success:
+                        logger.info(f"Service {service_type}/{service_name} restart initiated")
+                        
+                        # Give it a moment to start up
+                        time.sleep(5)
+                        
+                        # Check if it's now available
+                        available, status = check_service(endpoint)
+                        if available:
+                            logger.info(f"Service {service_type}/{service_name} is now available")
+                        else:
+                            logger.warning(f"Service {service_type}/{service_name} is still unavailable after restart")
+                    else:
+                        logger.error(f"Failed to restart service {service_type}/{service_name}")
+            
+            # Wait for the next check
+            logger.info(f"Next check in {check_interval} seconds")
+            time.sleep(check_interval)
+            
+    except KeyboardInterrupt:
+        logger.info("Service monitor stopped by user")
+    except Exception as e:
+        logger.error(f"Service monitor error: {e}")
+        raise
+
+def main():
+    """Main function"""
+    parser = argparse.ArgumentParser(description="Monitor and ensure DADM services are running")
+    parser.add_argument("--interval", "-i", type=int, default=60, help="Check interval in seconds")
+    parser.add_argument("--services", "-s", nargs="+", help="Specific services to monitor (format: type/name)")
+    args = parser.parse_args()
+    
+    # If specific services are requested, load their endpoints
+    monitored_services = None
+    if args.services:
+        from config import service_registry
+        
+        monitored_services = []
+        for service_spec in args.services:
+            try:
+                service_type, service_name = service_spec.split('/')
+                endpoint = service_registry.SERVICE_REGISTRY[service_type][service_name]["endpoint"]
+                monitored_services.append((service_type, service_name, endpoint))
+            except (ValueError, KeyError) as e:
+                logger.error(f"Invalid service specification '{service_spec}': {e}")
+                return 1
+    
+    try:
+        # Start monitoring
+        monitor_services(args.interval, monitored_services)
+        return 0
+    except Exception as e:
+        logger.error(f"Error in service monitor: {e}")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

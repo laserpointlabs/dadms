@@ -1,0 +1,4 @@
+# Monitor Service Dependencies
+flask==3.0.1
+requests==2.31.0
+colorama==0.4.6

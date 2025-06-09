@@ -1,0 +1,41 @@
+{
+  "files": {
+    "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\decision_matrix_template.md": {
+      "file_id": "file-XwurLAzHwRW2YTL9GyvKoW",
+      "hash": "0d1af787c8242f2adec9c715c6655e054ae5c25b8b1a07a177698c7dfaa732ed",
+      "timestamp": "2025-06-05T12:07:05.412188",
+      "purpose": "assistants",
+      "version": 1
+    },
+    "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\disaster_response_requirements.md": {
+      "file_id": "file-DUuhTU2ezPE6xadouSnK5P",
+      "hash": "eec5482d6f158396d322055ff25e73261f64b4699061e511a93d59332761b951",
+      "timestamp": "2025-06-05T12:07:06.344694",
+      "purpose": "assistants",
+      "version": 1
+    },
+    "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\uas_specifications.md": {
+      "file_id": "file-M9CauH9ciZf44jCzdQMuDG",
+      "hash": "6e69cce81a758d3bae300666634573572b516b6a64896e8cc25e3f698fb9b1af",
+      "timestamp": "2025-06-05T12:07:07.369766",
+      "purpose": "assistants",
+      "version": 1
+    }
+  },
+  "assistants": {
+    "asst_RE2Jk6avH5sEN3PqYGCaSpc3": [
+      "file-XwurLAzHwRW2YTL9GyvKoW",
+      "file-DUuhTU2ezPE6xadouSnK5P",
+      "file-M9CauH9ciZf44jCzdQMuDG"
+    ]
+  },
+  "vector_stores": {
+    "asst_RE2Jk6avH5sEN3PqYGCaSpc3": "vs_6841c0ac7b8481919675d2b3fb8c7c08"
+  },
+  "file_id_to_path": {
+    "file-XwurLAzHwRW2YTL9GyvKoW": "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\decision_matrix_template.md",
+    "file-DUuhTU2ezPE6xadouSnK5P": "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\disaster_response_requirements.md",
+    "file-M9CauH9ciZf44jCzdQMuDG": "C:\\Users\\JohnDeHart\\Documents\\dadm\\data\\uas_specifications.md"
+  },
+  "last_updated": "2025-06-05T12:07:08.198381"
+}

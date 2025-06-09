@@ -1,0 +1,7 @@
+"""
+DEPRECATED: This test had issues with the handling of None values and syntax errors.
+Please use test_cloud_provider_decision_fixed.py instead, which has been created
+as a proper replacement with correct handling for all cases.
+
+This file is kept for reference but should not be used or maintained.
+"""

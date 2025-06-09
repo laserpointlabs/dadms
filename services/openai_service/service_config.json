@@ -1,0 +1,35 @@
+{
+  "service": {
+    "name": "dadm-openai-assistant",
+    "type": "assistant",
+    "port": 5000,
+    "health_endpoint": "/health",
+    "description": "DADM OpenAI Assistant Service for Decision Analysis",
+    "version": "1.0.0",
+    "tags": [
+      "assistant",
+      "openai",
+      "decision-analysis"
+    ],
+    "metadata": {
+      "api_version": "v1",
+      "model_default": "gpt-4o",
+      "supports_streaming": true,
+      "max_tokens": 4096
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
+    "assistant": {
+      "name": "DADM Decision Analysis Assistant",
+      "model": "gpt-4o",
+      "instructions": "You are a Decision Analysis Assistant specialized in helping analyze complex decisions.\n\nFollow these guidelines when processing tasks:\n1. Carefully read and understand the context and task instructions\n2. Break down complex decisions into clear components\n3. Consider all stakeholders mentioned in the context\n4. Think about both immediate and long-term implications\n5. Consider different alternatives and their trade-offs\n6. When evaluating options, explicitly state the criteria used\n7. Provide structured and organized responses\n8. Format your responses based on the specific instructions given for each task\n9. Always provide reasoning for your recommendations\n10. Be clear, concise, and objective in your analysis\n\nWork through the decision process step-by-step, maintaining context from previous tasks\nin the workflow."
+    }
+  }
+}
