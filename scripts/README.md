@@ -63,6 +63,15 @@ python scripts/test_rag_files.py
 
 ### 6. Process Execution Monitor (`monitor_process_execution.py`)
 
+### 7. Environment Cleanup (`cleanup_environment.py`)
+
+Quickly wipe Docker containers, volumes and reset databases.
+
+**Usage:**
+```bash
+python scripts/cleanup_environment.py
+```
+
 ## Running the Scripts
 
 All scripts should be run from the project root directory:

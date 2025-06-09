@@ -94,20 +94,13 @@ After installation, verify that the PostgreSQL migration was successful:
 
 For a quick setup with an automated script:
 
-#### Windows
-
-```powershell
-# Run the setup script
-.\setup.ps1
-```
-
-#### Linux/macOS
+Run the setup script:
 
 ```bash
 # Make the script executable
 chmod +x setup.sh
 
-# Run the setup script
+# Run the script
 ./setup.sh
 ```
 
@@ -122,22 +115,12 @@ If you prefer to set up manually:
    ```
 
 2. Create a virtual environment:
-   ```powershell
-   # Using venv on Windows
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   
-   # Using conda on Windows
-   conda create -n dadm python=3.10
-   conda activate dadm
-   ```
-   
    ```bash
-   # Using venv on Linux/macOS
+   # Using venv
    python -m venv .venv
-   source .venv/bin/activate
-   
-   # Using conda on Linux/macOS
+   source .venv/bin/activate  # On Windows use .\.venv\Scripts\activate
+
+   # Using conda
    conda create -n dadm python=3.10
    conda activate dadm
    ```
@@ -154,12 +137,8 @@ If you prefer to set up manually:
    ```
 
 5. Verify your installation:
-   ```powershell
-   # On Windows
-   .\check_install.ps1
-   
-   # Alternative using Python directly
-   python tests\check_installation.py
+   ```bash
+   python scripts/verify_environment.py
    ```
 
 ## Usage
@@ -366,24 +345,10 @@ python -m unittest tests/test_app.py
 
 After installation, you can verify that everything is set up correctly:
 
-### Windows
-
-```powershell
-# Run the installation verification script
-.\check_install.ps1
-```
-
-### Linux/macOS
+### Environment Verification
 
 ```bash
-# Run the installation verification script
-./check_install.sh
-```
-
-Or using Python directly:
-
-```powershell
-python tests\check_installation.py
+python scripts/verify_environment.py
 ```
 
 The verification script checks:
