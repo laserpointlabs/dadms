@@ -25,7 +25,7 @@ goto invalid_choice
 
 :start_services
 echo Starting services...
-powershell -ExecutionPolicy Bypass -File "scripts\restart_and_test_services.ps1"
+python scripts\restart_and_test_services.py
 goto end
 
 :stop_services
