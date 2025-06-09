@@ -20,18 +20,22 @@ Since you mentioned not using conda on the Codex server, here's the streamlined 
 
 ## 🚀 Quick Deployment Steps for Codex
 
-### On Linux/Codex Server:
+### **For OpenAI Codex (Recommended):**
 ```bash
-# 1. Make setup script executable
-chmod +x setup_linux.sh
+chmod +x setup_codex.sh
+./setup_codex.sh
+```
 
-# 2. Run optimized setup
+**Note**: OpenAI Codex auto-manages the environment, so no manual virtual environment activation is needed.
+
+### Alternative for Linux/Codex Server:
+```bash
+# If using a traditional Linux server
+chmod +x setup_linux.sh
 ./setup_linux.sh
 
-# 3. Verify installation
+# Then activate manually
 source .venv/bin/activate
-dadm --help
-dadm-deploy-bpmn --help
 ```
 
 ### For Windows Testing (Git Bash/PowerShell):
