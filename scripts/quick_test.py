@@ -171,20 +171,14 @@ def test_service_orchestrator():
         sys.path.append(os.path.dirname(os.path.dirname(__file__)))
         
         from src.service_orchestrator import ServiceOrchestrator
-        from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
         
         # Test regular orchestrator
         regular_orch = ServiceOrchestrator()
         regular_default = regular_orch._get_default_service_name()
         print(f"   ✅ Regular orchestrator: default service = {regular_default}")
         
-        # Test enhanced orchestrator
-        enhanced_orch = EnhancedServiceOrchestrator()
-        enhanced_default = enhanced_orch._get_default_service_name()
-        print(f"   ✅ Enhanced orchestrator: default service = {enhanced_default}")
-        
-        if regular_default == enhanced_default == "dadm-openai-assistant":
-            print("   ✅ Both orchestrators using correct service names")
+        if regular_default == "dadm-openai-assistant":
+            print("   ✅ Orchestrator using correct service name")
             return True
         else:
             print("   ⚠️  Service name mismatch detected")
