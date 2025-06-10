@@ -1,19 +1,15 @@
-# Stage 1: NVIDIA runtime image with CUDA libraries preinstalled
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04 AS cuda
-
-# Stage 2: slim Python image for the actual service code
-FROM python:3.9-slim AS runtime
-
-# Copy CUDA from the NVIDIA image so we don't re-download it every build
-COPY --from=cuda /usr/local/cuda /usr/local/cuda
-
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+# Use Python 3.10 to match requirements comment
+FROM python:3.10-slim AS runtime
 
 WORKDIR /app
 
-# Copy main requirements first
+# Copy main requirements first (install in order of stability)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install PyTorch CPU-only versions first to prevent CUDA downloads
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch==2.7.1+cpu torchvision==0.22.1+cpu --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy and install service-specific requirements
 COPY services/openai_service/requirements.txt ./service-requirements.txt
