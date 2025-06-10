@@ -484,13 +484,29 @@ def process_task():
             "timestamp": datetime.now().isoformat(),
             "approach": "name_based_discovery"
         }
-        processed_tasks[task_id] = processed_result
-          # Store interaction in databases if persistence manager is available
+        processed_tasks[task_id] = processed_result        # Store interaction in databases if persistence manager is available
         if persistence_manager and current_run_id:
-            try:                # Store in vector database with correct field structure
+            try:
                 # Extract the actual response content from the result
                 # NameBasedAssistantManager returns "recommendation" not "response"
                 actual_response = result.get("recommendation", result.get("response", ""))
+                
+                # Try to parse the response as JSON for semantic expansion
+                recommendation_data = actual_response
+                if isinstance(actual_response, str):
+                    try:
+                        # Try to parse as JSON first
+                        parsed_json = json.loads(actual_response)
+                        recommendation_data = parsed_json
+                        logger.info(f"Parsed response as structured JSON with {len(parsed_json) if isinstance(parsed_json, dict) else 0} keys")
+                    except:
+                        # If not JSON, create a simple structure for text responses
+                        recommendation_data = {
+                            "response_text": actual_response,
+                            "response_type": "text",
+                            "task_type": task_description.split(":")[0] if ":" in task_description else "analysis"
+                        }
+                        logger.info(f"Using text response structure for semantic expansion")
                 
                 task_data = {
                     "task_name": task_description or "OpenAI Decision Process",
@@ -498,22 +514,17 @@ def process_task():
                     "thread_id": task_id,  # Using task_id as thread_id for tracking
                     "processed_at": datetime.now().isoformat(),
                     "processed_by": "OpenAI Assistant Service",
-                    "recommendation": {
-                        "response": actual_response,
-                        "approach": "name_based_discovery",
-                        "task_id": task_id,
-                        "original_input": task_description,
-                        "status": "success"
-                    }
+                    "recommendation": recommendation_data  # Use the parsed or structured data
                 }
-                  # Use standard storage method
+                
+                # Store with semantic expansion
                 persistence_manager.store_interaction(
                     run_id=current_run_id,
                     process_instance_id=task_id,
                     task_data=task_data,
                     decision_context=task_description
                 )
-                logger.info(f"Stored interaction for task {task_id} in persistence layer with correct data structure")
+                logger.info(f"Stored interaction for task {task_id} with semantic expansion (data type: {type(recommendation_data)})")
             except Exception as e:
                 logger.warning(f"Failed to store interaction in persistence layer: {e}")
                 logger.exception("Full traceback for persistence error:")
