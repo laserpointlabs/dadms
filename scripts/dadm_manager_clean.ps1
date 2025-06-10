@@ -147,7 +147,7 @@ function Test-DADMSystem {
     # Test orchestrators
     Write-Host "🎛️  Testing Orchestrators..."
     try {
-        $orchestratorScript = "from src.service_orchestrator import ServiceOrchestrator; from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator; print('Both orchestrators initialized successfully')"
+        $orchestratorScript = "from src.service_orchestrator import ServiceOrchestrator; ServiceOrchestrator(); print('Orchestrator initialized successfully')"
         $result = python -c $orchestratorScript 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Success "   ✓ $result"
