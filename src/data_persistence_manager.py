@@ -66,11 +66,11 @@ class DataPersistenceManager:
         analysis_id = str(uuid.uuid4())
         
         try:
-            with self.neo4j_driver.session() as session:
-                # Create Analysis node
+            with self.neo4j_driver.session() as session:                # Create Analysis node with proper name
                 session.run("""
                     CREATE (a:Analysis {
                         id: $analysis_id,
+                        name: $name,
                         task_name: $task_name,
                         process_id: $process_id,
                         status: 'started',
@@ -79,6 +79,7 @@ class DataPersistenceManager:
                     })
                 """, 
                 analysis_id=analysis_id,
+                name=f"Analysis: {task_name}",
                 task_name=task_name,
                 process_id=process_id,
                 input_data=json.dumps(task_input)
@@ -114,9 +115,23 @@ class DataPersistenceManager:
                 analysis_id=analysis_id,
                 response_data=json.dumps(response_data)
                 )
-                
-                # Expand response data into semantic nodes
+                  # Expand response data into semantic nodes
                 self._expand_json_to_graph(session, response_data, analysis_id, "OUTPUT")
+                
+                # Special handling for recommendation field containing JSON strings
+                if 'recommendation' in response_data:
+                    recommendation_content = response_data['recommendation']
+                    if isinstance(recommendation_content, str):
+                        try:
+                            # Try to parse as JSON
+                            parsed_recommendation = json.loads(recommendation_content)
+                            logger.info(f"Expanding parsed JSON recommendation with {len(str(parsed_recommendation))} characters")
+                            self._expand_json_to_graph(session, parsed_recommendation, analysis_id, "RECOMMENDATION")
+                        except json.JSONDecodeError:
+                            logger.info(f"Recommendation is text, not JSON - storing as text value")
+                    else:
+                        # If it's already a dict/object, expand it
+                        self._expand_json_to_graph(session, recommendation_content, analysis_id, "RECOMMENDATION")
                 
                 logger.info(f"Captured analysis response: {analysis_id}")
                 
@@ -128,46 +143,73 @@ class DataPersistenceManager:
         Recursively expand JSON data into semantic graph nodes
         """
         try:
+            # Debug: Log the incoming data
+            if parent_id is None:  # Only log top-level calls to avoid excessive logging
+                try:
+                    logger.info(f"=== EXPANDING JSON TO GRAPH ===")
+                    logger.info(f"Data type: {data_type}, Key: {key}")
+                    logger.info(f"Data structure type: {type(data).__name__}")
+                    if isinstance(data, dict):
+                        logger.info(f"Dict keys: {list(data.keys())}")
+                    elif isinstance(data, list):
+                        logger.info(f"List length: {len(data)}")
+                    else:
+                        logger.info(f"Value: {data}")
+                except Exception as e:
+                    logger.info(f"Error logging data: {e}")
+            
             if isinstance(data, dict):
                 # Create a node for this object
                 node_id = str(uuid.uuid4())
-                node_type = self._get_semantic_node_type(key, data)
+                node_type = self._get_semantic_node_type(key, data)                
                 
-                session.run(f"""
+                # Generate meaningful node name based on content
+                node_name = self._generate_node_name(key, data, node_type)
+                logger.info(f"Generated node name: '{node_name}' for node_type: '{node_type}', key: '{key}'")
+                
+                # Use parameterized query to avoid f-string issues
+                query = """
                     CREATE (n:{node_type} {{
                         id: $node_id,
+                        name: $name,
                         analysis_id: $analysis_id,
                         data_type: $data_type,
                         key: $key,
                         created_at: datetime()
                     }})
-                """, 
-                node_id=node_id,
-                analysis_id=analysis_id,
-                data_type=data_type,
-                key=key or "root"
-                )
+                """.format(node_type=node_type)
                 
-                # Connect to parent if exists
+                session.run(query, 
+                    node_id=node_id,
+                    name=node_name,
+                    analysis_id=analysis_id,
+                    data_type=data_type,
+                    key=key or "root"
+                )
+                  # Connect to parent if exists
                 if parent_id:
                     relationship = self._get_semantic_relationship(key)
-                    session.run(f"""
+                    query = """
                         MATCH (parent {{id: $parent_id}})
                         MATCH (child {{id: $node_id}})
                         CREATE (parent)-[:{relationship}]->(child)
-                    """, 
-                    parent_id=parent_id,
-                    node_id=node_id
+                    """.format(relationship=relationship)
+                    
+                    session.run(query, 
+                        parent_id=parent_id,
+                        node_id=node_id
                     )
                 else:
                     # Connect to Analysis root
-                    session.run(f"""
+                    query = """
                         MATCH (a:Analysis {{id: $analysis_id}})
                         MATCH (n {{id: $node_id}})
-                        CREATE (a)-[:HAS_{data_type}]->(n)
-                    """, 
-                    analysis_id=analysis_id,
-                    node_id=node_id
+                        CREATE (a)-[:{rel_type}]->(n)
+                    """.format(rel_type=f"HAS_{data_type}")
+                    
+                    session.run(query, 
+                        analysis_id=analysis_id,
+                        node_id=node_id
                     )
                 
                 # Recursively process dictionary items
@@ -180,12 +222,20 @@ class DataPersistenceManager:
                     self._expand_json_to_graph(session, item, analysis_id, data_type, parent_id, f"{key}_item_{i}")
                     
             else:
-                # Create a value node
+                # Create a value node                
                 if parent_id and data is not None:
                     value_id = str(uuid.uuid4())
+                    # Generate a descriptive name for the value
+                    value_str = str(data)
+                    truncated_value = value_str[:30] + "..." if len(value_str) > 30 else value_str
+                    clean_key = key.replace('_', ' ').title() if key else "Value"
+                    value_name = f"{clean_key}: {truncated_value}"
+                    logger.info(f"Generated value node name: '{value_name}' for key: '{key}', value: '{truncated_value}'")
+                    
                     session.run("""
                         CREATE (v:Value {
                             id: $value_id,
+                            name: $name,
                             analysis_id: $analysis_id,
                             data_type: $data_type,
                             key: $key,
@@ -195,46 +245,52 @@ class DataPersistenceManager:
                         })
                     """, 
                     value_id=value_id,
+                    name=value_name,
                     analysis_id=analysis_id,
                     data_type=data_type,
                     key=key,
                     value=str(data),
                     value_type=type(data).__name__
                     )
-                    
-                    # Connect to parent
+                      # Connect to parent
                     relationship = self._get_semantic_relationship(key)
-                    session.run(f"""
+                    query = """
                         MATCH (parent {{id: $parent_id}})
                         MATCH (value {{id: $value_id}})
                         CREATE (parent)-[:{relationship}]->(value)
-                    """, 
-                    parent_id=parent_id,
-                    value_id=value_id
+                    """.format(relationship=relationship)
+                    
+                    session.run(query,
+                        parent_id=parent_id,
+                        value_id=value_id
                     )
-            
-            # Special handling for AIResponse nodes
+              # Special handling for AIResponse nodes
             if key and key.upper() == "AIRESPONSE":
                 node_id = str(uuid.uuid4())
-                session.run(f"""
-                    CREATE (n:AIResponse {{
+                ai_response_name = "AI Response: " + key if key else "AI Response"
+                logger.info(f"Creating AIResponse node with name: '{ai_response_name}'")
+                
+                session.run("""
+                    CREATE (n:AIResponse {
                         id: $node_id,
+                        name: $name,
                         analysis_id: $analysis_id,
                         data_type: $data_type,
                         key: $key,
                         created_at: datetime()
-                    }})
+                    })
                 """,
                 node_id=node_id,
+                name=ai_response_name,
                 analysis_id=analysis_id,
                 data_type=data_type,
                 key=key
                 )
 
                 if parent_id:
-                    session.run(f"""
-                        MATCH (parent {{id: $parent_id}})
-                        MATCH (child {{id: $node_id}})
+                    session.run("""
+                        MATCH (parent {id: $parent_id})
+                        MATCH (child {id: $node_id})
                         CREATE (parent)-[:HAS_AI_RESPONSE]->(child)
                     """,
                     parent_id=parent_id,
@@ -252,6 +308,45 @@ class DataPersistenceManager:
                 
         except Exception as e:
             logger.error(f"Error expanding JSON to graph: {e}")
+
+    def _generate_node_name(self, key: Optional[str], data: Any, node_type: str) -> str:
+        """Generate a meaningful name for a node based on its content and type"""
+        if not key:
+            return f"{node_type}_Root"
+        
+        # Clean up the key to make it more readable
+        clean_key = key.replace('_', ' ').title()
+        
+        # For specific node types, try to extract meaningful names from data
+        if isinstance(data, dict):
+            # Look for common name fields
+            name_fields = ['name', 'title', 'label', 'primary_choice', 'methodology', 'task_type']
+            for field in name_fields:
+                if field in data and data[field]:
+                    value = str(data[field])
+                    # Truncate long names
+                    if len(value) > 50:
+                        value = value[:47] + "..."
+                    return f"{clean_key}: {value}"
+            
+            # For stakeholders, try to get role or interests
+            if node_type == "Stakeholder" and 'role' in data:
+                return f"{clean_key}: {data['role']}"
+            
+            # For criteria, try to get the criterion name
+            if node_type == "Criterion" and 'name' in data:
+                return f"Criterion: {data['name']}"
+            
+            # For recommendations, use primary_choice if available
+            if node_type == "Recommendation":
+                if 'primary_choice' in data:
+                    return f"Recommendation: {data['primary_choice']}"
+                elif 'reasoning' in data:
+                    reasoning = str(data['reasoning'])[:50] + "..." if len(str(data['reasoning'])) > 50 else str(data['reasoning'])
+                    return f"Recommendation: {reasoning}"
+        
+        # Default to using the cleaned key
+        return clean_key
 
     def _get_semantic_node_type(self, key: Optional[str], data: Dict) -> str:
         """Get semantic node type based on key and data content"""
@@ -424,7 +519,7 @@ class DataPersistenceManager:
             
             logger.info(f"Successfully stored and expanded interaction: {analysis_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error in store_interaction: {e}")
             return False
@@ -437,7 +532,8 @@ class DataPersistenceManager:
         
         try:
             with self.neo4j_driver.session() as session:
-                result = session.run(cypher_query, parameters or {})
+                # Use type: ignore to suppress Neo4j typing issue with dynamic queries
+                result = session.run(cypher_query, parameters or {})  # type: ignore
                 records = [record.data() for record in result]
                 logger.info(f"Graph query returned {len(records)} records")
                 return records
