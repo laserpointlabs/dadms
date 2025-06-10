@@ -9,7 +9,9 @@ __version__ = "0.8.0"
 
 # Export main components
 from .service_orchestrator import ServiceOrchestrator
-from .enhanced_service_orchestrator import EnhancedServiceOrchestrator
+
+# Backwards compatibility alias
+EnhancedServiceOrchestrator = ServiceOrchestrator
 
 __all__ = [
     'ServiceOrchestrator',

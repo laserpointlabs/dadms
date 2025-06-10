@@ -152,7 +152,7 @@ print(f'Discovered {count} services')
     # Test orchestrators
     Write-Host "🎛️  Testing Orchestrators..."
     try {
-        $result = python -c "from src.service_orchestrator import ServiceOrchestrator; from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator; print('Both orchestrators initialized successfully')" 2>&1
+        $result = python -c "from src.service_orchestrator import ServiceOrchestrator; ServiceOrchestrator(); print('Orchestrator initialized successfully')" 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Success "   ✓ $result"
         } else {

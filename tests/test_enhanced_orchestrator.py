@@ -26,7 +26,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from src.service_orchestrator import ServiceOrchestrator
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
+
+# Backwards compatibility alias
+EnhancedServiceOrchestrator = ServiceOrchestrator
 
 
 # Mock task for testing

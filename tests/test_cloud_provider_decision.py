@@ -762,9 +762,10 @@ This recommendation balances immediate needs with long-term strategic considerat
                     score = float(line.split(":")[-1].strip())
                     if score > highest_score:
                         highest_score = score
-                        highest_provider = "Azure"
+                        highest_provider = "Azure"                
                 except ValueError:
-                    pass                elif "Weighted Score" in line and "GCP" in line:
+                    pass
+            elif "Weighted Score" in line and "GCP" in line:
                     try:
                         score = float(line.split(":")[-1].strip())
                         if score > highest_score:

@@ -33,10 +33,10 @@ This document describes the advanced performance optimizations implemented in th
 ## Usage Example
 
 ```python
-from src.enhanced_service_orchestrator import EnhancedServiceOrchestrator
+from src.service_orchestrator import ServiceOrchestrator
 
 # Initialize with custom cache TTLs and metrics enabled
-orchestrator = EnhancedServiceOrchestrator(
+orchestrator = ServiceOrchestrator(
     debug=True,
     enable_metrics=True,
     xml_cache_ttl=3600,        # 1 hour TTL for XML cache
@@ -131,7 +131,7 @@ activity_count = orchestrator.prefetch_common_activities("Process_A:1:123")
 
 ## Implementation Notes
 
-- The `EnhancedServiceOrchestrator` maintains backward compatibility with the original `ServiceOrchestrator` API, making it a drop-in replacement.
+- The enhanced features are now part of the main `ServiceOrchestrator` class, so it remains a drop-in replacement.
 - The `TimeExpiringCache` provides superior cache management compared to simple dictionaries.
 - ElementTree XML parsing is significantly more efficient than regex for structured XML documents like BPMN.
 - Batch processing can be selectively used for scenarios where multiple tasks need to be processed at once.
@@ -163,4 +163,4 @@ def export_to_prometheus(metrics):
 
 ## Conclusion
 
-The `EnhancedServiceOrchestrator` represents a significant advancement over the original optimized implementation, providing better performance, more efficient resource usage, and comprehensive performance monitoring. Its predictive capabilities and batch processing features make it particularly well-suited for high-volume workflow processing environments.
+The enhanced capabilities now integrated into the `ServiceOrchestrator` provide better performance, more efficient resource usage, and comprehensive monitoring. Predictive features and batch processing make it particularly well-suited for high-volume workflow processing environments.
