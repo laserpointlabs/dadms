@@ -85,6 +85,42 @@ in the workflow.""")
 # Initialize Flask app
 app = Flask(__name__)
 
+def initialize_persistence_manager():
+    """Initialize DataPersistenceManager if available"""
+    global persistence_manager, current_run_id, _persistence_initialized
+    
+    if _persistence_initialized:
+        return
+        
+    logger.info("Attempting to initialize DataPersistenceManager...")
+    logger.info(f"DataPersistenceManager import status: {DataPersistenceManager is not None}")
+    
+    if DataPersistenceManager:
+        try:
+            logger.info("Creating DataPersistenceManager instance...")
+            persistence_manager = DataPersistenceManager(
+                qdrant_host=os.environ.get('QDRANT_HOST', 'localhost'),
+                qdrant_port=int(os.environ.get('QDRANT_PORT', '6333')),
+                neo4j_uri=os.environ.get('NEO4J_URI', 'bolt://localhost:7687'),
+                neo4j_user=os.environ.get('NEO4J_USER', 'neo4j'),
+                neo4j_password=os.environ.get('NEO4J_PASSWORD', 'password'),
+                embedding_model=os.environ.get('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+            )
+            # Generate a run ID for this service session
+            current_run_id = persistence_manager.generate_run_id("openai_service")
+            logger.info(f"Data persistence manager initialized with run ID: {current_run_id}")
+            _persistence_initialized = True
+        except Exception as e:
+            logger.warning(f"Failed to initialize data persistence manager: {e}")
+            persistence_manager = None
+    else:
+        logger.warning("DataPersistenceManager not available - data persistence disabled")
+
+@app.before_request
+def ensure_persistence_initialized():
+    """Ensure persistence manager is initialized before handling requests"""
+    initialize_persistence_manager()
+
 # Global service instances - only name-based manager and persistence
 openai_client = None
 name_based_manager = None
@@ -92,7 +128,11 @@ persistence_manager = None
 current_run_id = None
 
 # Task tracking to prevent duplicate processing
-processed_tasks = {}
+# processed_tasks maps task_id (str) to a dict result
+processed_tasks: dict[str, dict] = {}
+
+# Flag to track if persistence manager has been initialized
+_persistence_initialized = False
 
 def get_openai_client():
     """Get or initialize the OpenAI client"""
@@ -367,9 +407,7 @@ def initialize():
                 "approach": "name_based_discovery"
             }), 500
           # Initialize processed tasks tracking
-        processed_tasks = {"service_start_time": time.strftime("%Y-%m-%d %H:%M:%S")}
-        
-        # Initialize persistence manager if not already done
+        processed_tasks = {"service_start_time": time.strftime("%Y-%m-%d %H:%M:%S")}        # Initialize persistence manager if not already done
         if not persistence_manager and DataPersistenceManager:
             try:
                 persistence_manager = DataPersistenceManager(
@@ -378,7 +416,7 @@ def initialize():
                     neo4j_uri=os.environ.get('NEO4J_URI', 'bolt://localhost:7687'),
                     neo4j_user=os.environ.get('NEO4J_USER', 'neo4j'),
                     neo4j_password=os.environ.get('NEO4J_PASSWORD', 'password'),
-                    embedding_model=os.environ.get('EMBEDDING_MODEL', 'text-embedding-3-small')
+                    embedding_model=os.environ.get('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
                 )
                 logger.info("Data persistence manager initialized")
             except Exception as e:
@@ -438,8 +476,7 @@ def process_task():
         # Get the name-based manager and process the task
         manager = get_name_based_manager()
         result = manager.process_task(task_description)
-        
-        # Store the result
+          # Store the result
         processed_result = {
             "status": "success",
             "task_id": task_id,
@@ -447,26 +484,50 @@ def process_task():
             "timestamp": datetime.now().isoformat(),
             "approach": "name_based_discovery"
         }
-        
-        processed_tasks[task_id] = processed_result
-        
-        # Store interaction in databases if persistence manager is available
+        processed_tasks[task_id] = processed_result        # Store interaction in databases if persistence manager is available
         if persistence_manager and current_run_id:
             try:
-                # Store in vector database
+                # Extract the actual response content from the result
+                # NameBasedAssistantManager returns "recommendation" not "response"
+                actual_response = result.get("recommendation", result.get("response", ""))
+                
+                # Try to parse the response as JSON for semantic expansion
+                recommendation_data = actual_response
+                if isinstance(actual_response, str):
+                    try:
+                        # Try to parse as JSON first
+                        parsed_json = json.loads(actual_response)
+                        recommendation_data = parsed_json
+                        logger.info(f"Parsed response as structured JSON with {len(parsed_json) if isinstance(parsed_json, dict) else 0} keys")
+                    except:
+                        # If not JSON, create a simple structure for text responses
+                        recommendation_data = {
+                            "response_text": actual_response,
+                            "response_type": "text",
+                            "task_type": task_description.split(":")[0] if ":" in task_description else "analysis"
+                        }
+                        logger.info(f"Using text response structure for semantic expansion")
+                
+                task_data = {
+                    "task_name": task_description or "OpenAI Decision Process",
+                    "assistant_id": ASSISTANT_NAME,
+                    "thread_id": task_id,  # Using task_id as thread_id for tracking
+                    "processed_at": datetime.now().isoformat(),
+                    "processed_by": "OpenAI Assistant Service",
+                    "recommendation": recommendation_data  # Use the parsed or structured data
+                }
+                
+                # Store with semantic expansion
                 persistence_manager.store_interaction(
                     run_id=current_run_id,
                     process_instance_id=task_id,
-                    task_data={
-                        "user_input": task_description,
-                        "assistant_response": result.get("response", ""),
-                        "assistant_name": ASSISTANT_NAME,
-                        "approach": "name_based_discovery"
-                    }
+                    task_data=task_data,
+                    decision_context=task_description
                 )
-                logger.info(f"Stored interaction for task {task_id} in persistence layer")
+                logger.info(f"Stored interaction for task {task_id} with semantic expansion (data type: {type(recommendation_data)})")
             except Exception as e:
                 logger.warning(f"Failed to store interaction in persistence layer: {e}")
+                logger.exception("Full traceback for persistence error:")
         
         return jsonify(processed_result)
         

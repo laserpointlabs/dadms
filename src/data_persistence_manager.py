@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
-Data Persistence Manager for DADM
+Simple Data Persistence Manager for DADM
 
-This module provides comprehensive data persistence for OpenAI service interactions:
-- Stores inputs, responses, and metadata in Qdrant vector store
-- Stores process flow and relationships in Neo4j graph database
-- Tracks runs separately for multiple executions
-- Provides endpoints for clearing databases
+Captures analysis inputs and expands JSON responses into Neo4j semantic graph.
 """
 
 import os
@@ -15,12 +11,7 @@ import logging
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-import hashlib
 
-# Database clients
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 
@@ -29,466 +20,520 @@ logger = logging.getLogger(__name__)
 
 class DataPersistenceManager:
     """
-    Manages data persistence for DADM OpenAI service interactions
+    Simple data persistence for DADM OpenAI service interactions
     """
     
     def __init__(self, 
-                 qdrant_host: str = "localhost",
-                 qdrant_port: int = 6333,
                  neo4j_uri: str = "bolt://localhost:7687",
                  neo4j_user: str = "neo4j",
                  neo4j_password: str = "password",
-                 embedding_model: str = "all-MiniLM-L6-v2"):
-        """
-        Initialize the data persistence manager
-        
-        Args:
-            qdrant_host: Qdrant server host
-            qdrant_port: Qdrant server port  
-            neo4j_uri: Neo4j database URI
-            neo4j_user: Neo4j username
-            neo4j_password: Neo4j password
-            embedding_model: SentenceTransformer model for embeddings
-        """
-        self.qdrant_host = qdrant_host
-        self.qdrant_port = qdrant_port
+                 **kwargs):  # Accept other args for compatibility
+        """Initialize the data persistence manager"""
         self.neo4j_uri = neo4j_uri
         self.neo4j_user = neo4j_user
         self.neo4j_password = neo4j_password
-        
-        # Initialize clients
-        self.qdrant_client = None
         self.neo4j_driver = None
-        self.embedding_model = None
         
-        # Collection/database names
-        self.qdrant_collection = "dadm_interactions"
-        
-        # Try to initialize connections
-        self._initialize_connections(embedding_model)
+        # Initialize Neo4j connection
+        self._initialize_neo4j()
     
-    def _initialize_connections(self, embedding_model_name: str):
-        """Initialize database connections"""
+    def _initialize_neo4j(self):
+        """Initialize Neo4j connection"""
         try:
-            # Initialize Qdrant client
-            self.qdrant_client = QdrantClient(host=self.qdrant_host, port=self.qdrant_port)
-            logger.info(f"Connected to Qdrant at {self.qdrant_host}:{self.qdrant_port}")
-            
-            # Initialize embedding model
-            self.embedding_model = SentenceTransformer(embedding_model_name)
-            logger.info(f"Loaded embedding model: {embedding_model_name}")
-            
-            # Ensure collection exists
-            self._ensure_qdrant_collection()
-            
-        except Exception as e:
-            logger.warning(f"Failed to initialize Qdrant: {e}")
-            self.qdrant_client = None
-            
-        try:
-            # Initialize Neo4j driver
             self.neo4j_driver = GraphDatabase.driver(
                 self.neo4j_uri, 
                 auth=(self.neo4j_user, self.neo4j_password)
             )
-            
             # Test connection
             with self.neo4j_driver.session() as session:
                 session.run("RETURN 1")
             logger.info(f"Connected to Neo4j at {self.neo4j_uri}")
-            
-            # Ensure constraints and indexes exist
-            self._ensure_neo4j_schema()
-            
-        except (ServiceUnavailable, AuthError) as e:
-            logger.warning(f"Failed to initialize Neo4j: {e}")
-            self.neo4j_driver = None
         except Exception as e:
-            logger.warning(f"Unexpected error initializing Neo4j: {e}")
+            logger.error(f"Failed to connect to Neo4j: {e}")
             self.neo4j_driver = None
-    
-    def _ensure_qdrant_collection(self):
-        """Ensure the Qdrant collection exists with proper configuration"""
+
+    def capture_analysis_start(self, task_name: str, task_input: Dict[str, Any], process_id: str) -> str:
+        """
+        Capture when analysis starts - create task node and input data
+        
+        Returns:
+            analysis_id: Unique identifier for this analysis
+        """
+        if not self.neo4j_driver:
+            logger.warning("Neo4j not available")
+            return str(uuid.uuid4())
+        
+        analysis_id = str(uuid.uuid4())
+        
         try:
-            # Check if collection exists
-            collections = self.qdrant_client.get_collections().collections
-            collection_names = [c.name for c in collections]
-            
-            if self.qdrant_collection not in collection_names:
-                # Create collection
-                self.qdrant_client.create_collection(
-                    collection_name=self.qdrant_collection,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)  # all-MiniLM-L6-v2 size
+            with self.neo4j_driver.session() as session:                # Create Analysis node with proper name
+                session.run("""
+                    CREATE (a:Analysis {
+                        id: $analysis_id,
+                        name: $name,
+                        task_name: $task_name,
+                        process_id: $process_id,
+                        status: 'started',
+                        created_at: datetime(),
+                        input_data: $input_data
+                    })
+                """, 
+                analysis_id=analysis_id,
+                name=f"Analysis: {task_name}",
+                task_name=task_name,
+                process_id=process_id,
+                input_data=json.dumps(task_input)
                 )
-                logger.info(f"Created Qdrant collection: {self.qdrant_collection}")
-            else:
-                logger.info(f"Qdrant collection already exists: {self.qdrant_collection}")
+                
+                # Expand input data into semantic nodes
+                self._expand_json_to_graph(session, task_input, analysis_id, "INPUT")
+                
+                logger.info(f"Captured analysis start: {analysis_id}")
+                return analysis_id
                 
         except Exception as e:
-            logger.error(f"Error ensuring Qdrant collection: {e}")
-            raise
-    
-    def _ensure_neo4j_schema(self):
-        """Ensure Neo4j constraints and indexes exist"""
+            logger.error(f"Error capturing analysis start: {e}")
+            return analysis_id
+
+    def capture_analysis_response(self, analysis_id: str, response_data: Dict[str, Any]):
+        """
+        Capture when analysis response is returned - expand JSON into semantic graph
+        """
+        if not self.neo4j_driver:
+            logger.warning("Neo4j not available")
+            return
+        
         try:
             with self.neo4j_driver.session() as session:
-                # Create constraints and indexes for better performance
-                constraints_and_indexes = [
-                    "CREATE CONSTRAINT run_id_unique IF NOT EXISTS FOR (r:Run) REQUIRE r.run_id IS UNIQUE",
-                    "CREATE CONSTRAINT process_instance_unique IF NOT EXISTS FOR (p:ProcessInstance) REQUIRE p.process_instance_id IS UNIQUE", 
-                    "CREATE CONSTRAINT task_unique IF NOT EXISTS FOR (t:Task) REQUIRE (t.task_name, t.process_instance_id) IS UNIQUE",
-                    "CREATE INDEX task_name_index IF NOT EXISTS FOR (t:Task) ON (t.task_name)",
-                    "CREATE INDEX assistant_id_index IF NOT EXISTS FOR (t:Task) ON (t.assistant_id)",
-                    "CREATE INDEX thread_id_index IF NOT EXISTS FOR (t:Task) ON (t.thread_id)"
-                ]
+                # Update Analysis node with response
+                session.run("""
+                    MATCH (a:Analysis {id: $analysis_id})
+                    SET a.status = 'completed',
+                        a.completed_at = datetime(),
+                        a.response_data = $response_data
+                """, 
+                analysis_id=analysis_id,
+                response_data=json.dumps(response_data)
+                )
+                  # Expand response data into semantic nodes
+                self._expand_json_to_graph(session, response_data, analysis_id, "OUTPUT")
                 
-                for statement in constraints_and_indexes:
-                    try:
-                        session.run(statement)
-                    except Exception as e:
-                        # Constraints might already exist, that's okay
-                        logger.debug(f"Constraint/index statement result: {e}")
+                # Special handling for recommendation field containing JSON strings
+                if 'recommendation' in response_data:
+                    recommendation_content = response_data['recommendation']
+                    if isinstance(recommendation_content, str):
+                        try:
+                            # Try to parse as JSON
+                            parsed_recommendation = json.loads(recommendation_content)
+                            logger.info(f"Expanding parsed JSON recommendation with {len(str(parsed_recommendation))} characters")
+                            self._expand_json_to_graph(session, parsed_recommendation, analysis_id, "RECOMMENDATION")
+                        except json.JSONDecodeError:
+                            logger.info(f"Recommendation is text, not JSON - storing as text value")
+                    else:
+                        # If it's already a dict/object, expand it
+                        self._expand_json_to_graph(session, recommendation_content, analysis_id, "RECOMMENDATION")
                 
-                logger.info("Neo4j schema constraints and indexes ensured")
+                logger.info(f"Captured analysis response: {analysis_id}")
                 
         except Exception as e:
-            logger.error(f"Error ensuring Neo4j schema: {e}")
-    
-    def generate_run_id(self, process_name: str = None) -> str:
-        """Generate a unique run ID"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_suffix = str(uuid.uuid4())[:8]
-        
-        if process_name:
-            # Clean process name for use in ID
-            clean_name = "".join(c for c in process_name if c.isalnum() or c in "-_").lower()
-            return f"{clean_name}_{timestamp}_{unique_suffix}"
-        else:
-            return f"dadm_run_{timestamp}_{unique_suffix}"
-    
-    def store_interaction(self, 
-                         run_id: str,
-                         process_instance_id: str,
-                         task_data: Dict[str, Any],
-                         decision_context: str = None,
-                         supporting_files: List[str] = None) -> bool:
+            logger.error(f"Error capturing analysis response: {e}")
+
+    def _expand_json_to_graph(self, session, data: Any, analysis_id: str, data_type: str, parent_id: Optional[str] = None, key: Optional[str] = None):
         """
-        Store a complete interaction in both Qdrant and Neo4j
-        
-        Args:
-            run_id: Unique identifier for this run
-            process_instance_id: Camunda process instance ID
-            task_data: Complete task data including inputs and outputs
-            decision_context: The DECISION_CONTEXT for this run
-            supporting_files: List of supporting file paths
+        Recursively expand JSON data into semantic graph nodes
+        """
+        try:
+            # Debug: Log the incoming data
+            if parent_id is None:  # Only log top-level calls to avoid excessive logging
+                try:
+                    logger.info(f"=== EXPANDING JSON TO GRAPH ===")
+                    logger.info(f"Data type: {data_type}, Key: {key}")
+                    logger.info(f"Data structure type: {type(data).__name__}")
+                    if isinstance(data, dict):
+                        logger.info(f"Dict keys: {list(data.keys())}")
+                    elif isinstance(data, list):
+                        logger.info(f"List length: {len(data)}")
+                    else:
+                        logger.info(f"Value: {data}")
+                except Exception as e:
+                    logger.info(f"Error logging data: {e}")
             
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        success = True
+            if isinstance(data, dict):
+                # Create a node for this object
+                node_id = str(uuid.uuid4())
+                node_type = self._get_semantic_node_type(key, data)                
+                
+                # Generate meaningful node name based on content
+                node_name = self._generate_node_name(key, data, node_type)
+                logger.info(f"Generated node name: '{node_name}' for node_type: '{node_type}', key: '{key}'")
+                
+                # Use parameterized query to avoid f-string issues
+                query = """
+                    CREATE (n:{node_type} {{
+                        id: $node_id,
+                        name: $name,
+                        analysis_id: $analysis_id,
+                        data_type: $data_type,
+                        key: $key,
+                        created_at: datetime()
+                    }})
+                """.format(node_type=node_type)
+                
+                session.run(query, 
+                    node_id=node_id,
+                    name=node_name,
+                    analysis_id=analysis_id,
+                    data_type=data_type,
+                    key=key or "root"
+                )
+                  # Connect to parent if exists
+                if parent_id:
+                    relationship = self._get_semantic_relationship(key)
+                    query = """
+                        MATCH (parent {{id: $parent_id}})
+                        MATCH (child {{id: $node_id}})
+                        CREATE (parent)-[:{relationship}]->(child)
+                    """.format(relationship=relationship)
+                    
+                    session.run(query, 
+                        parent_id=parent_id,
+                        node_id=node_id
+                    )
+                else:
+                    # Connect to Analysis root
+                    query = """
+                        MATCH (a:Analysis {{id: $analysis_id}})
+                        MATCH (n {{id: $node_id}})
+                        CREATE (a)-[:{rel_type}]->(n)
+                    """.format(rel_type=f"HAS_{data_type}")
+                    
+                    session.run(query, 
+                        analysis_id=analysis_id,
+                        node_id=node_id
+                    )
+                
+                # Recursively process dictionary items
+                for k, v in data.items():
+                    self._expand_json_to_graph(session, v, analysis_id, data_type, node_id, k)
+                    
+            elif isinstance(data, list):
+                # Create nodes for list items
+                for i, item in enumerate(data):
+                    self._expand_json_to_graph(session, item, analysis_id, data_type, parent_id, f"{key}_item_{i}")
+                    
+            else:
+                # Create a value node                
+                if parent_id and data is not None:
+                    value_id = str(uuid.uuid4())
+                    # Generate a descriptive name for the value
+                    value_str = str(data)
+                    truncated_value = value_str[:30] + "..." if len(value_str) > 30 else value_str
+                    clean_key = key.replace('_', ' ').title() if key else "Value"
+                    value_name = f"{clean_key}: {truncated_value}"
+                    logger.info(f"Generated value node name: '{value_name}' for key: '{key}', value: '{truncated_value}'")
+                    
+                    session.run("""
+                        CREATE (v:Value {
+                            id: $value_id,
+                            name: $name,
+                            analysis_id: $analysis_id,
+                            data_type: $data_type,
+                            key: $key,
+                            value: $value,
+                            value_type: $value_type,
+                            created_at: datetime()
+                        })
+                    """, 
+                    value_id=value_id,
+                    name=value_name,
+                    analysis_id=analysis_id,
+                    data_type=data_type,
+                    key=key,
+                    value=str(data),
+                    value_type=type(data).__name__
+                    )
+                      # Connect to parent
+                    relationship = self._get_semantic_relationship(key)
+                    query = """
+                        MATCH (parent {{id: $parent_id}})
+                        MATCH (value {{id: $value_id}})
+                        CREATE (parent)-[:{relationship}]->(value)
+                    """.format(relationship=relationship)
+                    
+                    session.run(query,
+                        parent_id=parent_id,
+                        value_id=value_id
+                    )
+              # Special handling for AIResponse nodes
+            if key and key.upper() == "AIRESPONSE":
+                node_id = str(uuid.uuid4())
+                ai_response_name = "AI Response: " + key if key else "AI Response"
+                logger.info(f"Creating AIResponse node with name: '{ai_response_name}'")
+                
+                session.run("""
+                    CREATE (n:AIResponse {
+                        id: $node_id,
+                        name: $name,
+                        analysis_id: $analysis_id,
+                        data_type: $data_type,
+                        key: $key,
+                        created_at: datetime()
+                    })
+                """,
+                node_id=node_id,
+                name=ai_response_name,
+                analysis_id=analysis_id,
+                data_type=data_type,
+                key=key
+                )
+
+                if parent_id:
+                    session.run("""
+                        MATCH (parent {id: $parent_id})
+                        MATCH (child {id: $node_id})
+                        CREATE (parent)-[:HAS_AI_RESPONSE]->(child)
+                    """,
+                    parent_id=parent_id,
+                    node_id=node_id
+                    )
+
+                # Recursively expand the contents of AIResponse
+                if isinstance(data, dict):
+                    for k, v in data.items():
+                        self._expand_json_to_graph(session, v, analysis_id, data_type, node_id, k)
+                elif isinstance(data, list):
+                    for i, item in enumerate(data):
+                        self._expand_json_to_graph(session, item, analysis_id, data_type, node_id, f"item_{i}")
+                return  # Skip further processing for this node
+                
+        except Exception as e:
+            logger.error(f"Error expanding JSON to graph: {e}")
+
+    def _generate_node_name(self, key: Optional[str], data: Any, node_type: str) -> str:
+        """Generate a meaningful name for a node based on its content and type"""
+        if not key:
+            return f"{node_type}_Root"
         
-        # Store in Qdrant
-        if self.qdrant_client and self.embedding_model:
-            try:
-                self._store_in_qdrant(run_id, process_instance_id, task_data, decision_context, supporting_files)
-                logger.info(f"Stored interaction in Qdrant for run {run_id}")
-            except Exception as e:
-                logger.error(f"Failed to store in Qdrant: {e}")
-                success = False
+        # Clean up the key to make it more readable
+        clean_key = key.replace('_', ' ').title()
+        
+        # For specific node types, try to extract meaningful names from data
+        if isinstance(data, dict):
+            # Look for common name fields
+            name_fields = ['name', 'title', 'label', 'primary_choice', 'methodology', 'task_type']
+            for field in name_fields:
+                if field in data and data[field]:
+                    value = str(data[field])
+                    # Truncate long names
+                    if len(value) > 50:
+                        value = value[:47] + "..."
+                    return f"{clean_key}: {value}"
+            
+            # For stakeholders, try to get role or interests
+            if node_type == "Stakeholder" and 'role' in data:
+                return f"{clean_key}: {data['role']}"
+            
+            # For criteria, try to get the criterion name
+            if node_type == "Criterion" and 'name' in data:
+                return f"Criterion: {data['name']}"
+            
+            # For recommendations, use primary_choice if available
+            if node_type == "Recommendation":
+                if 'primary_choice' in data:
+                    return f"Recommendation: {data['primary_choice']}"
+                elif 'reasoning' in data:
+                    reasoning = str(data['reasoning'])[:50] + "..." if len(str(data['reasoning'])) > 50 else str(data['reasoning'])
+                    return f"Recommendation: {reasoning}"
+        
+        # Default to using the cleaned key
+        return clean_key
+
+    def _get_semantic_node_type(self, key: Optional[str], data: Dict) -> str:
+        """Get semantic node type based on key and data content"""
+        if not key:
+            return "DataObject"
+        
+        key_upper = key.upper()
+        
+        # Map common decision analysis terms to semantic node types
+        if "STAKEHOLDER" in key_upper:
+            return "Stakeholder"
+        elif "ALTERNATIVE" in key_upper:
+            return "Alternative"
+        elif "CRITERIA" in key_upper or "CRITERION" in key_upper:
+            return "Criterion"
+        elif "COST" in key_upper:
+            return "Cost"
+        elif "RISK" in key_upper:
+            return "Risk"
+        elif "BENEFIT" in key_upper:
+            return "Benefit"
+        elif "RECOMMENDATION" in key_upper:
+            return "Recommendation"
+        elif "ANALYSIS" in key_upper:
+            return "AnalysisComponent"
+        elif "SPECIFICATION" in key_upper or "SPEC" in key_upper:
+            return "Specification"
+        elif "CAPABILITY" in key_upper:
+            return "Capability"
+        elif "AIRESPONSE" in key_upper:
+            return "AIResponse"
         else:
-            logger.warning("Qdrant not available, skipping vector storage")
+            return "DecisionComponent"
+
+    def _get_semantic_relationship(self, key: Optional[str]) -> str:
+        """Get semantic relationship name based on key"""
+        if not key:
+            return "CONTAINS"
         
-        # Store in Neo4j  
-        if self.neo4j_driver:
-            try:
-                self._store_in_neo4j(run_id, process_instance_id, task_data, decision_context, supporting_files)
-                logger.info(f"Stored interaction in Neo4j for run {run_id}")
-            except Exception as e:
-                logger.error(f"Failed to store in Neo4j: {e}")
-                success = False
+        key_upper = key.upper()
+        
+        # Map common terms to semantic relationships
+        if "STAKEHOLDER" in key_upper:
+            return "INVOLVES_STAKEHOLDER"
+        elif "ALTERNATIVE" in key_upper:
+            return "HAS_ALTERNATIVE"
+        elif "CRITERIA" in key_upper or "CRITERION" in key_upper:
+            return "EVALUATED_BY"
+        elif "COST" in key_upper:
+            return "HAS_COST"
+        elif "RISK" in key_upper:
+            return "HAS_RISK"
+        elif "BENEFIT" in key_upper:
+            return "HAS_BENEFIT"        
+        elif "RECOMMENDATION" in key_upper:
+            return "HAS_RECOMMENDATION"
+        elif "SPECIFICATION" in key_upper:
+            return "HAS_SPECIFICATION"
+        elif "CAPABILITY" in key_upper:
+            return "HAS_CAPABILITY"
+        elif "AIRESPONSE" in key_upper:
+            return "HAS_AI_RESPONSE"
         else:
-            logger.warning("Neo4j not available, skipping graph storage")
+            return "HAS_PROPERTY"
+
+    def _parse_markdown_response(self, text: str) -> Dict[str, Any]:
+        """Parse markdown text into structured data for semantic expansion"""
+        import re
         
-        return success
-    
-    def _store_in_qdrant(self, 
-                        run_id: str,
-                        process_instance_id: str, 
-                        task_data: Dict[str, Any],
-                        decision_context: str,
-                        supporting_files: List[str]):
-        """Store interaction data in Qdrant vector store"""
-        
-        # Prepare text content for embedding
-        text_content = self._prepare_text_for_embedding(task_data, decision_context)
-        
-        # Generate embedding
-        embedding = self.embedding_model.encode(text_content).tolist()
-        
-        # Create point ID
-        point_id = hashlib.md5(f"{run_id}_{task_data.get('task_name', 'unknown')}_{process_instance_id}".encode()).hexdigest()
-        
-        # Prepare metadata
-        metadata = {
-            "run_id": run_id,
-            "process_instance_id": process_instance_id,
-            "task_name": task_data.get("task_name", "unknown"),
-            "assistant_id": task_data.get("assistant_id", ""),
-            "thread_id": task_data.get("thread_id", ""),
-            "processed_at": task_data.get("processed_at", datetime.now().isoformat()),
-            "processed_by": task_data.get("processed_by", ""),
-            "decision_context": decision_context or "",
-            "supporting_files": supporting_files or [],
-            "recommendation": json.dumps(task_data.get("recommendation", {})) if isinstance(task_data.get("recommendation"), dict) else str(task_data.get("recommendation", "")),
-            "text_content": text_content,
-            "timestamp": datetime.now().isoformat()
+        structured_data = {
+            "response_type": "markdown_analysis",
+            "full_text": text
         }
         
-        # Store point
-        point = PointStruct(
-            id=point_id,
-            vector=embedding, 
-            payload=metadata
-        )
+        # Extract stakeholders
+        stakeholders = []
+        stakeholder_matches = re.findall(r'\*\*([^:]*(?:Teams?|Officers?|Experts?|Authorities?))\*\*[:\s]*([^\.]*)', text, re.IGNORECASE)
+        for name, description in stakeholder_matches:
+            stakeholders.append({
+                "name": name.strip(),
+                "description": description.strip(),
+                "type": "stakeholder"
+            })
         
-        self.qdrant_client.upsert(
-            collection_name=self.qdrant_collection,
-            points=[point]
-        )
+        if stakeholders:
+            structured_data["stakeholders"] = json.dumps(stakeholders)
         
-        logger.debug(f"Stored point {point_id} in Qdrant")
+        # Extract criteria
+        criteria = []
+        criteria_matches = re.findall(r'\*\*([^:]*(?:Requirements?|Capabilities?|Constraints?|Compliance|Speed))\*\*[:\s]*([^\.]*)', text, re.IGNORECASE)
+        for name, description in criteria_matches:
+            criteria.append({
+                "name": name.strip(),
+                "description": description.strip(),
+                "type": "criterion"
+            })
+        
+        if criteria:
+            structured_data["criteria"] = json.dumps(criteria)
+        
+        # Extract alternatives (look for numbered lists or bullet points with specifications)
+        alternatives = []
+        alternative_matches = re.findall(r'### (\d+\.\s*[^#\n]+)\n(.*?)(?=###|\n##|\Z)', text, re.DOTALL)
+        for title, content in alternative_matches:
+            alt = {
+                "name": title.strip(),
+                "description": content.strip(),
+                "type": "alternative"
+            }
+            
+            # Extract costs from the content
+            cost_matches = re.findall(r'\$([0-9,]+(?:\.[0-9]+)?[KMB]?)', content)
+            if cost_matches:
+                alt["costs"] = [{"amount": cost, "type": "budget"} for cost in cost_matches]
+            
+            alternatives.append(alt)
+        
+        if alternatives:
+            structured_data["alternatives"] = json.dumps(alternatives)
+        
+        # Extract constraints
+        constraints = []
+        constraint_matches = re.findall(r'\*\*([^:]*(?:Constraint|Limitation))\*\*[:\s]*([^\.]*)', text, re.IGNORECASE)
+        for name, description in constraint_matches:
+            constraints.append({
+                "name": name.strip(),
+                "description": description.strip(),
+                "type": "constraint"
+            })
+        
+        if constraints:
+            structured_data["constraints"] = json.dumps(constraints)
+        
+        # Extract budget information
+        budget_matches = re.findall(r'\$([0-9,]+(?:\.[0-9]+)?[KMB]?)', text)
+        if budget_matches:
+            structured_data["budget"] = json.dumps({
+                "amounts": budget_matches,
+                "type": "budget_constraint"
+            })
+        
+        return structured_data
     
-    def _store_in_neo4j(self, 
-                       run_id: str,
-                       process_instance_id: str,
-                       task_data: Dict[str, Any], 
-                       decision_context: str,
-                       supporting_files: List[str]):
-        """Store interaction data in Neo4j graph database"""
-        
-        with self.neo4j_driver.session() as session:
-            # Create or merge run node
-            session.run("""
-                MERGE (r:Run {run_id: $run_id})
-                ON CREATE SET 
-                    r.created_at = datetime(),
-                    r.decision_context = $decision_context,
-                    r.supporting_files = $supporting_files
-            """, run_id=run_id, decision_context=decision_context, supporting_files=supporting_files or [])
-            
-            # Create or merge process instance node
-            session.run("""
-                MERGE (p:ProcessInstance {process_instance_id: $process_instance_id})
-                ON CREATE SET p.created_at = datetime()
-            """, process_instance_id=process_instance_id)
-            
-            # Create relationship between run and process instance
-            session.run("""
-                MATCH (r:Run {run_id: $run_id})
-                MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
-                MERGE (r)-[:EXECUTED_PROCESS]->(p)
-            """, run_id=run_id, process_instance_id=process_instance_id)
-            
-            # Create or merge task node
-            task_name = task_data.get("task_name", "unknown")
-            session.run("""
-                MERGE (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                SET 
-                    t.assistant_id = $assistant_id,
-                    t.thread_id = $thread_id,
-                    t.processed_at = $processed_at,
-                    t.processed_by = $processed_by,
-                    t.recommendation = $recommendation,
-                    t.updated_at = datetime()
-            """, 
-            task_name=task_name,
-            process_instance_id=process_instance_id,
-            assistant_id=task_data.get("assistant_id", ""),
-            thread_id=task_data.get("thread_id", ""),
-            processed_at=task_data.get("processed_at", ""),
-            processed_by=task_data.get("processed_by", ""),
-            recommendation=json.dumps(task_data.get("recommendation", {})) if isinstance(task_data.get("recommendation"), dict) else str(task_data.get("recommendation", ""))
-            )
-            
-            # Create relationships
-            session.run("""
-                MATCH (p:ProcessInstance {process_instance_id: $process_instance_id})
-                MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                MERGE (p)-[:HAS_TASK]->(t)
-            """, process_instance_id=process_instance_id, task_name=task_name)
-            
-            session.run("""
-                MATCH (r:Run {run_id: $run_id})
-                MATCH (t:Task {task_name: $task_name, process_instance_id: $process_instance_id})
-                MERGE (r)-[:INCLUDES_TASK]->(t)
-            """, run_id=run_id, task_name=task_name, process_instance_id=process_instance_id)
-            
-            # Expand recommendation JSON into nodes and relationships
-            recommendation = task_data.get("recommendation")
-            if recommendation:
-                self._expand_recommendation_json(session, task_name, process_instance_id, recommendation)
-            
-            logger.debug(f"Stored task {task_name} in Neo4j")
-    
-    def _expand_recommendation_json(self, session, task_name, process_instance_id, recommendation, parent_node_id=None, relationship_name=None):
-        """Recursively expand recommendation JSON into Neo4j nodes and relationships with clear hierarchical structure."""
-        if isinstance(recommendation, dict):
-            for key, value in recommendation.items():
-                node_id = f"{task_name}_{process_instance_id}_{key}_{uuid.uuid4().hex[:8]}"
-                session.run("""
-                    MERGE (n:RecommendationNode {node_id: $node_id})
-                    SET n.key = $key, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-                """, node_id=node_id, key=key, task_name=task_name, process_instance_id=process_instance_id)
-
-                rel_name = key.upper().replace(" ", "_").replace("-", "_")
-                if parent_node_id:
-                    session.run(f"""
-                        MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $node_id}})
-                        MERGE (parent)-[:{rel_name}]->(child)
-                    """, parent_node_id=parent_node_id, node_id=node_id)
-                else:
-                    session.run(f"""
-                        MATCH (task:Task {{task_name: $task_name, process_instance_id: $process_instance_id}}), (child:RecommendationNode {{node_id: $node_id}})
-                        MERGE (task)-[:{rel_name}]->(child)
-                    """, task_name=task_name, process_instance_id=process_instance_id, node_id=node_id)
-
-                self._expand_recommendation_json(session, task_name, process_instance_id, value, node_id, rel_name)
-
-        elif isinstance(recommendation, list):
-            for idx, item in enumerate(recommendation):
-                item_node_id = f"{task_name}_{process_instance_id}_item_{uuid.uuid4().hex[:8]}"
-                session.run("""
-                    MERGE (n:RecommendationNode {node_id: $item_node_id})
-                    SET n.index = $idx, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-                """, item_node_id=item_node_id, idx=idx, task_name=task_name, process_instance_id=process_instance_id)
-
-                if parent_node_id and relationship_name:
-                    session.run(f"""
-                        MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $item_node_id}})
-                        MERGE (parent)-[:{relationship_name}_ITEM]->(child)
-                    """, parent_node_id=parent_node_id, item_node_id=item_node_id)
-
-                self._expand_recommendation_json(session, task_name, process_instance_id, item, item_node_id, relationship_name)
-
-        else:
-            value_node_id = f"{task_name}_{process_instance_id}_value_{uuid.uuid4().hex[:8]}"
-            session.run("""
-                MERGE (n:RecommendationNode {node_id: $value_node_id})
-                SET n.value = $value, n.task_name = $task_name, n.process_instance_id = $process_instance_id
-            """, value_node_id=value_node_id, value=str(recommendation), task_name=task_name, process_instance_id=process_instance_id)
-
-            if parent_node_id and relationship_name:
-                session.run(f"""
-                    MATCH (parent:RecommendationNode {{node_id: $parent_node_id}}), (child:RecommendationNode {{node_id: $value_node_id}})
-                    MERGE (parent)-[:{relationship_name}_VALUE]->(child)
-                """, parent_node_id=parent_node_id, value_node_id=value_node_id)
-    
-    def _prepare_text_for_embedding(self, task_data: Dict[str, Any], decision_context: str) -> str:
-        """Prepare text content for embedding generation"""
-        
-        parts = []
-        
-        # Add decision context
-        if decision_context:
-            parts.append(f"Decision Context: {decision_context}")
-        
-        # Add task name
-        if task_data.get("task_name"):
-            parts.append(f"Task: {task_data['task_name']}")
-        
-        # Add recommendation content
-        recommendation = task_data.get("recommendation", {})
-        if isinstance(recommendation, dict):
-            # Extract key fields from recommendation
-            for key in ["justification", "recommended_platform", "advantages", "next_steps", "implementation_considerations"]:
-                if key in recommendation:
-                    value = recommendation[key]
-                    if isinstance(value, list):
-                        parts.append(f"{key.replace('_', ' ').title()}: {'; '.join(str(v) for v in value)}")
-                    else:
-                        parts.append(f"{key.replace('_', ' ').title()}: {str(value)}")
-        elif recommendation:
-            parts.append(f"Recommendation: {str(recommendation)}")
-        
-        # Add processed by information
-        if task_data.get("processed_by"):
-            parts.append(f"Processed by: {task_data['processed_by']}")
-        
-        return " | ".join(parts)
-    
-    def search_interactions(self, 
-                           query: str, 
-                           run_id: str = None, 
-                           limit: int = 10,
-                           score_threshold: float = 0.7) -> List[Dict[str, Any]]:
+    def store_interaction(self, run_id: str, process_instance_id: str, task_data: Dict[str, Any], decision_context: Optional[str] = None, supporting_files: Optional[List[str]] = None) -> bool:
         """
-        Search interactions in the vector store
-        
-        Args:
-            query: Search query text
-            run_id: Optional run ID to filter by
-            limit: Maximum number of results to return
-            score_threshold: Minimum similarity score threshold
-            
-        Returns:
-            List of matching interactions with scores
+        Main method - captures analysis inputs and expands response JSON
         """
-        if not self.qdrant_client or not self.embedding_model:
-            logger.warning("Qdrant not available for search")
-            return []
-        
         try:
-            # Generate query embedding
-            query_embedding = self.embedding_model.encode(query).tolist()
+            # Extract task info
+            task_name = task_data.get("task_name", "unknown")
             
-            # Prepare filter
-            filter_conditions = None
-            if run_id:
-                filter_conditions = Filter(
-                    must=[FieldCondition(key="run_id", match=MatchValue(value=run_id))]
-                )
+            # Capture analysis start with input data
+            analysis_id = self.capture_analysis_start(task_name, task_data, process_instance_id)
             
-            # Search
-            search_results = self.qdrant_client.search(
-                collection_name=self.qdrant_collection,
-                query_vector=query_embedding,
-                query_filter=filter_conditions,
-                limit=limit,
-                score_threshold=score_threshold
-            )
+            # If there's a recommendation, capture it as response and expand
+            if "recommendation" in task_data:
+                recommendation_data = task_data["recommendation"]
+                
+                # Handle string JSON or markdown text
+                if isinstance(recommendation_data, str):
+                    try:
+                        # Try to parse as JSON first
+                        recommendation_data = json.loads(recommendation_data)
+                    except:
+                        # If not JSON, parse as markdown text
+                        recommendation_data = self._parse_markdown_response(recommendation_data)
+                
+                # Expand the response into semantic graph
+                self.capture_analysis_response(analysis_id, recommendation_data)
             
-            # Format results
-            results = []
-            for result in search_results:
-                result_data = result.payload.copy()
-                result_data["similarity_score"] = result.score
-                results.append(result_data)
-            
-            logger.info(f"Found {len(results)} matching interactions")
-            return results
-            
+            logger.info(f"Successfully stored and expanded interaction: {analysis_id}")
+            return True
+
         except Exception as e:
-            logger.error(f"Error searching interactions: {e}")
-            return []
-    
-    def query_graph(self, cypher_query: str, parameters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-        """
-        Execute a Cypher query against the Neo4j graph database
-        
-        Args:
-            cypher_query: Cypher query string
-            parameters: Query parameters
-            
-        Returns:
-            List of query results
-        """
+            logger.error(f"Error in store_interaction: {e}")
+            return False
+
+    def query_graph(self, cypher_query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Execute a Cypher query against the Neo4j graph database"""
         if not self.neo4j_driver:
             logger.warning("Neo4j not available for graph queries")
             return []
         
         try:
             with self.neo4j_driver.session() as session:
-                result = session.run(cypher_query, parameters or {})
+                # Use type: ignore to suppress Neo4j typing issue with dynamic queries
+                result = session.run(cypher_query, parameters or {})  # type: ignore
                 records = [record.data() for record in result]
                 logger.info(f"Graph query returned {len(records)} records")
                 return records
@@ -496,85 +541,37 @@ class DataPersistenceManager:
         except Exception as e:
             logger.error(f"Error executing graph query: {e}")
             return []
-    
-    def clear_vector_store(self) -> bool:
-        """Clear all data from the Qdrant vector store"""
-        if not self.qdrant_client:
-            logger.warning("Qdrant not available")
-            return False
-        
-        try:
-            # Delete and recreate collection
-            self.qdrant_client.delete_collection(self.qdrant_collection)
-            self._ensure_qdrant_collection()
-            logger.info("Cleared Qdrant vector store")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error clearing vector store: {e}")
-            return False
-    
+
     def clear_graph_database(self) -> bool:
-        """Clear all DADM data from the Neo4j graph database"""
+        """Clear all data from the Neo4j graph database"""
         if not self.neo4j_driver:
             logger.warning("Neo4j not available")
             return False
         
         try:
             with self.neo4j_driver.session() as session:
-                # Delete all DADM-related nodes and relationships
-                session.run("MATCH (n:Run) DETACH DELETE n")
-                session.run("MATCH (n:ProcessInstance) DETACH DELETE n") 
-                session.run("MATCH (n:Task) DETACH DELETE n")
+                session.run("MATCH (n) DETACH DELETE n")
                 logger.info("Cleared Neo4j graph database")
                 return True
                 
         except Exception as e:
             logger.error(f"Error clearing graph database: {e}")
             return False
-    
-    def get_run_summary(self, run_id: str) -> Dict[str, Any]:
-        """Get a summary of a specific run from both databases"""
-        summary = {
-            "run_id": run_id,
-            "vector_data": [],
-            "graph_data": {}
-        }
-        
-        # Get vector data
-        if self.qdrant_client:
-            try:
-                # Search for all points with this run_id
-                search_results = self.qdrant_client.scroll(
-                    collection_name=self.qdrant_collection,
-                    scroll_filter=Filter(
-                        must=[FieldCondition(key="run_id", match=MatchValue(value=run_id))]
-                    ),
-                    limit=100
-                )
-                
-                summary["vector_data"] = [point.payload for point in search_results[0]]
-                
-            except Exception as e:
-                logger.error(f"Error getting vector data for run {run_id}: {e}")
-        
-        # Get graph data
-        if self.neo4j_driver:
-            try:
-                cypher_query = """
-                MATCH (r:Run {run_id: $run_id})-[:EXECUTED_PROCESS]->(p:ProcessInstance)
-                OPTIONAL MATCH (r)-[:INCLUDES_TASK]->(t:Task)
-                RETURN r, p, collect(t) as tasks
-                """
-                
-                results = self.query_graph(cypher_query, {"run_id": run_id})
-                if results:
-                    summary["graph_data"] = results[0]
-            except Exception as e:
-                logger.error(f"Error getting graph data for run {run_id}: {e}")
-    
+
     def close(self):
         """Close database connections"""
         if self.neo4j_driver:
             self.neo4j_driver.close()
             logger.info("Closed Neo4j connection")
+
+    # Legacy compatibility methods
+    def generate_run_id(self, process_name: Optional[str] = None) -> str:
+        """Generate a unique run ID"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_suffix = str(uuid.uuid4())[:8]
+        
+        if process_name:
+            clean_name = "".join(c for c in process_name if c.isalnum() or c in "-_").lower()
+            return f"{clean_name}_{timestamp}_{unique_suffix}"
+        else:
+            return f"dadm_run_{timestamp}_{unique_suffix}"

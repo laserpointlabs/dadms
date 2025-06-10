@@ -314,13 +314,38 @@ class NameBasedAssistantManager:
         """
         try:
             thread = self.client.beta.threads.create()
-            self._session_cache["thread_id"] = thread.id
+            # Don't cache thread ID since we want new threads for each task
             logger.info(f"Created new thread: {thread.id}")
             return thread.id
         except Exception as e:
             logger.error(f"Error creating thread: {e}")
             return None
-    
+      
+    def _cancel_active_runs(self, thread_id: str) -> bool:
+        """Cancel any active runs on a thread"""
+        try:
+            runs = self.client.beta.threads.runs.list(thread_id=thread_id)
+            active_runs = [run for run in runs.data if run.status in ["queued", "in_progress"]]
+            
+            for run in active_runs:
+                try:
+                    logger.info(f"Cancelling active run {run.id} on thread {thread_id}")
+                    self.client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run.id)
+                    # Wait a moment for cancellation to process
+                    import time
+                    time.sleep(1)
+                except Exception as e:
+                    logger.warning(f"Could not cancel run {run.id}: {e}")
+            
+            return len(active_runs) == 0 or all(
+                self.client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id).status 
+                not in ["queued", "in_progress"] 
+                for run in active_runs
+            )
+        except Exception as e:
+            logger.error(f"Error checking/cancelling active runs: {e}")
+            return False
+
     def process_task(self, task_name: str, task_documentation: str = "", variables: Dict = None) -> Dict[str, Any]:
         """
         Process a task using the assistant.
@@ -337,14 +362,15 @@ class NameBasedAssistantManager:
         if not assistant:
             return {"error": "Could not get or create assistant"}
         
-        # Create thread if needed
-        thread_id = self._session_cache.get("thread_id")
+        # Always create a new thread for each task to avoid conflicts
+        thread_id = self.create_thread()
         if not thread_id:
-            thread_id = self.create_thread()
-            if not thread_id:
-                return {"error": "Could not create thread"}
+            return {"error": "Could not create thread"}
         
         try:
+            # Cancel any active runs on this thread (shouldn't be any since it's new, but safety check)
+            self._cancel_active_runs(thread_id)
+            
             # Prepare message content
             content = f"Task: {task_name}\n\n"
             if task_documentation:
@@ -366,9 +392,20 @@ class NameBasedAssistantManager:
                 assistant_id=assistant.id
             )
             
-            # Wait for completion
+            # Wait for completion with timeout
             import time
+            max_wait_time = 120  # 2 minutes timeout
+            start_time = time.time()
+            
             while run.status in ['queued', 'in_progress']:
+                if time.time() - start_time > max_wait_time:
+                    # Cancel the run and return timeout error
+                    try:
+                        self.client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run.id)
+                    except:
+                        pass
+                    return {"error": f"Task timed out after {max_wait_time} seconds"}
+                
                 time.sleep(1)
                 run = self.client.beta.threads.runs.retrieve(
                     thread_id=thread_id,
@@ -385,26 +422,13 @@ class NameBasedAssistantManager:
                 if messages.data:
                     message = messages.data[0]
                     if message.content:
-                        content = message.content[0]
-                        if hasattr(content, 'text'):
-                            response = content.text.value
-                            
-                            # Truncate response if it's too long for Camunda's database
-                            # H2 database has VARCHAR(4000) limit for TEXT_ column
-                            MAX_RESPONSE_LENGTH = 3800  # Leave some buffer for encoding
-                            
-                            if len(response) > MAX_RESPONSE_LENGTH:
-                                logger.warning(f"Response length ({len(response)}) exceeds database limit. Truncating to {MAX_RESPONSE_LENGTH} characters.")
-                                truncated_response = response[:MAX_RESPONSE_LENGTH]
-                                # Try to truncate at a sentence boundary if possible
-                                last_period = truncated_response.rfind('.')
-                                last_newline = truncated_response.rfind('\n')
-                                cut_point = max(last_period, last_newline)
-                                if cut_point > MAX_RESPONSE_LENGTH * 0.8:  # If we can cut at least 80% of the way
-                                    truncated_response = truncated_response[:cut_point + 1]
-                                truncated_response += "\n\n[Response truncated due to length constraints]"
-                                response = truncated_response
-                            
+                        content_block = message.content[0]                        # Only process if the content block is of type 'text'
+                        if getattr(content_block, "type", None) == "text" and hasattr(content_block, "text"):
+                            response = content_block.text.value
+
+                            # Note: Removed response truncation as we now use PostgreSQL which can handle large text fields
+                            logger.info(f"Full response length: {len(response)} characters - storing without truncation")
+
                             return {
                                 "processed_by": f"OpenAI Assistant ({assistant.name})",
                                 "processed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -413,7 +437,28 @@ class NameBasedAssistantManager:
                                 "thread_id": thread_id
                             }
             
-            return {"error": f"Assistant run failed with status: {run.status}"}
+            # If run failed, get detailed error information
+            error_details = {
+                "status": run.status,
+                "run_id": run.id
+            }
+            
+            # Check if there are specific error details available
+            if hasattr(run, 'last_error') and run.last_error:
+                error_details["last_error"] = {
+                    "code": run.last_error.code,
+                    "message": run.last_error.message
+                }
+                logger.error(f"Assistant run failed: {run.last_error.code} - {run.last_error.message}")
+            
+            if hasattr(run, 'required_action') and run.required_action:
+                error_details["required_action"] = str(run.required_action)
+                logger.error(f"Assistant run requires action: {run.required_action}")
+            
+            return {
+                "error": f"Assistant run failed with status: {run.status}",
+                "details": error_details
+            }
             
         except Exception as e:
             logger.error(f"Error processing task: {e}")

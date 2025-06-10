@@ -238,32 +238,78 @@ def remove_docker_images(force=False):
         return False
 
 def start_docker_services():
-    """Start Docker services"""
-    write_status("Starting Docker services...", "info")
+    """Start Docker services with progress indicator"""
+    write_status("Starting Docker services (this may take 5-15 minutes on first run)...", "info")
     
     try:
         # Try from docker directory first
         docker_dir = project_root / "docker"
         if (docker_dir / "docker-compose.yml").exists():
-            result = subprocess.run(['docker-compose', 'up', '-d'], 
-                                  cwd=docker_dir, 
-                                  capture_output=True, 
-                                  text=True)
+            working_dir = docker_dir
         else:
-            # Try from root directory
-            result = subprocess.run(['docker-compose', 'up', '-d'], 
-                                  cwd=project_root, 
-                                  capture_output=True, 
-                                  text=True)
+            working_dir = project_root
+        
+        write_status("Running docker-compose up -d (building images if needed)...", "info")
+        
+        # Start the process without capturing output so we can show progress
+        import threading
+        import queue
+        
+        def run_docker_compose():
+            return subprocess.run(['docker-compose', 'up', '-d'], 
+                                cwd=working_dir, 
+                                capture_output=True, 
+                                text=True,
+                                encoding='utf-8',
+                                errors='replace')
+        
+        # Start docker-compose in a separate thread
+        result_queue = queue.Queue()
+        
+        def docker_thread():
+            result = run_docker_compose()
+            result_queue.put(result)
+        
+        thread = threading.Thread(target=docker_thread)
+        thread.start()
+        
+        # Show progress indicator while waiting
+        progress_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        progress_idx = 0
+        elapsed_time = 0
+        
+        while thread.is_alive():
+            progress_char = progress_chars[progress_idx % len(progress_chars)]
+            mins, secs = divmod(int(elapsed_time), 60)
+            print(f"\r{Colors.CYAN}{progress_char} Building and starting services... ({int(mins):02d}:{int(secs):02d}){Colors.ENDC}", end='', flush=True)
+            
+            time.sleep(0.5)
+            progress_idx += 1
+            elapsed_time += 0.5
+        
+        # Clear the progress line
+        print(f"\r{' ' * 80}\r", end='', flush=True)
+        
+        # Get the result
+        thread.join()
+        result = result_queue.get()
         
         if result.returncode == 0:
-            # Wait for services to start
+            write_status(f"Docker services started successfully (took {elapsed_time:.1f}s)", "success")
+            # Wait for services to initialize
             write_status("Waiting 30 seconds for services to initialize...", "info")
-            time.sleep(30)
-            write_status("Docker services started", "success")
+            for i in range(30):
+                print(f"\r{Colors.CYAN}⏳ Initializing services... {30-i}s remaining{Colors.ENDC}", end='', flush=True)
+                time.sleep(1)
+            print(f"\r{' ' * 50}\r", end='', flush=True)
+            write_status("Services initialization complete", "success")
             return True
         else:
-            write_status(f"Failed to start Docker services: {result.stderr}", "error")
+            write_status(f"Failed to start Docker services after {elapsed_time:.1f}s", "error")
+            if result.stderr:
+                write_status(f"Error output: {result.stderr[:500]}", "error")
+            if result.stdout:
+                write_status(f"Standard output: {result.stdout[:500]}", "info")
             return False
             
     except Exception as e:
