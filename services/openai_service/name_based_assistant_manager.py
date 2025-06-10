@@ -422,27 +422,12 @@ class NameBasedAssistantManager:
                 if messages.data:
                     message = messages.data[0]
                     if message.content:
-                        content_block = message.content[0]
-                        # Only process if the content block is of type 'text'
+                        content_block = message.content[0]                        # Only process if the content block is of type 'text'
                         if getattr(content_block, "type", None) == "text" and hasattr(content_block, "text"):
                             response = content_block.text.value
 
-                            # Truncate response if it's too long for Camunda's database
-                            # H2 database has VARCHAR(4000) limit for TEXT_ column
-                            MAX_RESPONSE_LENGTH = 3800  # Leave some buffer for encoding
-
-                            if len(response) > MAX_RESPONSE_LENGTH:
-                                logger.warning(f"Response length ({len(response)}) exceeds database limit. Truncating to {MAX_RESPONSE_LENGTH} characters.")
-                                truncated_response = response[:MAX_RESPONSE_LENGTH]
-                                # Try to truncate at a sentence boundary if possible
-                                last_period = truncated_response.rfind('.')
-                                last_newline = truncated_response.rfind('\n')
-                                cut_point = max(last_period, last_newline)
-                                
-                                if cut_point > MAX_RESPONSE_LENGTH * 0.8:
-                                    truncated_response = truncated_response[:cut_point + 1]
-                                    truncated_response += "\n\n[Response truncated due to length constraints]"
-                                    response = truncated_response
+                            # Note: Removed response truncation as we now use PostgreSQL which can handle large text fields
+                            logger.info(f"Full response length: {len(response)} characters - storing without truncation")
 
                             return {
                                 "processed_by": f"OpenAI Assistant ({assistant.name})",
