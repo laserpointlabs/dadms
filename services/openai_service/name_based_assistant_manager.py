@@ -422,14 +422,15 @@ class NameBasedAssistantManager:
                 if messages.data:
                     message = messages.data[0]
                     if message.content:
-                        content = message.content[0]
-                        if hasattr(content, 'text'):
-                            response = content.text.value
-                            
+                        content_block = message.content[0]
+                        # Only process if the content block is of type 'text'
+                        if getattr(content_block, "type", None) == "text" and hasattr(content_block, "text"):
+                            response = content_block.text.value
+
                             # Truncate response if it's too long for Camunda's database
                             # H2 database has VARCHAR(4000) limit for TEXT_ column
                             MAX_RESPONSE_LENGTH = 3800  # Leave some buffer for encoding
-                            
+
                             if len(response) > MAX_RESPONSE_LENGTH:
                                 logger.warning(f"Response length ({len(response)}) exceeds database limit. Truncating to {MAX_RESPONSE_LENGTH} characters.")
                                 truncated_response = response[:MAX_RESPONSE_LENGTH]
@@ -437,11 +438,12 @@ class NameBasedAssistantManager:
                                 last_period = truncated_response.rfind('.')
                                 last_newline = truncated_response.rfind('\n')
                                 cut_point = max(last_period, last_newline)
-                                if cut_point > MAX_RESPONSE_LENGTH * 0.8:  # If we can cut at least 80% of the way
+                                
+                                if cut_point > MAX_RESPONSE_LENGTH * 0.8:
                                     truncated_response = truncated_response[:cut_point + 1]
-                                truncated_response += "\n\n[Response truncated due to length constraints]"
-                                response = truncated_response
-                            
+                                    truncated_response += "\n\n[Response truncated due to length constraints]"
+                                    response = truncated_response
+
                             return {
                                 "processed_by": f"OpenAI Assistant ({assistant.name})",
                                 "processed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -450,7 +452,28 @@ class NameBasedAssistantManager:
                                 "thread_id": thread_id
                             }
             
-            return {"error": f"Assistant run failed with status: {run.status}"}
+            # If run failed, get detailed error information
+            error_details = {
+                "status": run.status,
+                "run_id": run.id
+            }
+            
+            # Check if there are specific error details available
+            if hasattr(run, 'last_error') and run.last_error:
+                error_details["last_error"] = {
+                    "code": run.last_error.code,
+                    "message": run.last_error.message
+                }
+                logger.error(f"Assistant run failed: {run.last_error.code} - {run.last_error.message}")
+            
+            if hasattr(run, 'required_action') and run.required_action:
+                error_details["required_action"] = str(run.required_action)
+                logger.error(f"Assistant run requires action: {run.required_action}")
+            
+            return {
+                "error": f"Assistant run failed with status: {run.status}",
+                "details": error_details
+            }
             
         except Exception as e:
             logger.error(f"Error processing task: {e}")
