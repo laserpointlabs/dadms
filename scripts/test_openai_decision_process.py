@@ -40,11 +40,11 @@ from camunda.external_task.external_task_worker import ExternalTaskWorker
 from camunda.external_task.external_task import ExternalTask
 
 # Load service registry
-from config.service_registry import SERVICE_REGISTRY
+from config.service_registry import get_service_registry
 
 # Create orchestrator with metrics enabled
 orchestrator = ServiceOrchestrator(
-    service_registry=SERVICE_REGISTRY,
+    service_registry=get_service_registry(),
     debug=True,
     enable_metrics=True
 )
