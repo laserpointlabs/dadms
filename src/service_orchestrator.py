@@ -39,6 +39,14 @@ try:
 except ImportError:
     DYNAMIC_REGISTRY_AVAILABLE = False
 
+# Import the new analysis service integration
+try:
+    from src.analysis_service_integration import get_analysis_service
+    ANALYSIS_SERVICE_AVAILABLE = True
+except ImportError:
+    ANALYSIS_SERVICE_AVAILABLE = False
+    logger.warning("Analysis service integration not available. Data persistence disabled.")
+
 # Register the namespace for BPMN XML
 ET.register_namespace('bpmn', 'http://www.omg.org/spec/BPMN/20100524/MODEL')
 ET.register_namespace('camunda', 'http://camunda.org/schema/1.0/bpmn')
@@ -251,7 +259,10 @@ class ServiceOrchestrator:
             enable_metrics: Enable performance metrics collection (default: True)
             xml_cache_ttl: Cache TTL in seconds for process XML (default: 1 hour)
             props_cache_ttl: Cache TTL in seconds for service properties (default: 1 hour)
-            docs_cache_ttl: Cache TTL in seconds for task documentation (default: 1 hour)        """        # Default service registry if none provided
+            docs_cache_ttl: Cache TTL in seconds for task documentation (default: 1 hour)        
+            """
+
+        # Default service registry if none provided
         if service_registry:
             # Use provided registry (highest priority)
             self.service_registry = service_registry
@@ -344,12 +355,27 @@ class ServiceOrchestrator:
             'Connection': 'keep-alive',
             'User-Agent': 'DADM-ServiceOrchestrator/1.0'
         })
-        
-        # Performance metrics
+          # Performance metrics
         self.enable_metrics = enable_metrics
         self._metrics = OrchestratorMetrics() if enable_metrics else None
         
+        # Initialize analysis service integration
+        self.analysis_service = None
+        if ANALYSIS_SERVICE_AVAILABLE:
+            try:
+                self.analysis_service = get_analysis_service(
+                    enable_vector_store=True,
+                    enable_graph_db=True,
+                    auto_process=True
+                )
+                logger.info("Analysis service integration initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize analysis service: {e}")
+        else:
+            logger.warning("Analysis service integration not available")
+        
         logger.info(f"Initialized ServiceOrchestrator with registry: {self.service_registry}")
+
     def _get_fallback_registry(self):
         """Get the fallback service registry when other methods fail"""
         return {
@@ -562,6 +588,7 @@ class ServiceOrchestrator:
         self._parsed_xml_cache.set(cache_key, root)
         
         return root
+    
     def _get_default_service_name(self):
         """Get the default service name from discovered services"""
         try:
@@ -913,10 +940,39 @@ class ServiceOrchestrator:
             
             if self.debug:
                 logger.debug(f"Service call took {operation_time:.2f} seconds")
-            
+
             if response.status_code == 200:
                 result = response.json().get("result", {})
                 logger.info(f"Service request succeeded, received result with {len(result)} keys")
+                
+                # Store analysis data after successful task routing
+                if self.analysis_service and result and not result.get("error"):
+                    try:
+                        # Extract task information
+                        task_id = task.get_activity_id()
+                        process_instance_id = task.get_process_instance_id()
+                        
+                        # Store the analysis
+                        analysis_id = self.analysis_service.store_task_analysis(
+                            task_description=task_description,
+                            task_id=task_id,
+                            task_name=task_id,
+                            variables=variables or {},
+                            response_data=result,
+                            thread_id=f"process_{process_instance_id}" if process_instance_id else f"task_{task_id}",
+                            process_instance_id=process_instance_id,
+                            service_name=f"{service_type}/{service_name}",
+                            tags=["task_routing", "orchestration", service_type]
+                        )
+                        
+                        # Add analysis ID to result for tracking
+                        result["analysis_id"] = analysis_id
+                        logger.info(f"Stored task analysis: {analysis_id}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to store task analysis: {e}")
+                        # Don't fail the task routing if analysis storage fails
+                
                 return result
             else:
                 error_msg = response.json().get("message", f"Unknown error, status code: {response.status_code}")

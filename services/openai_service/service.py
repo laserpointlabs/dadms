@@ -23,6 +23,13 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 try:
+    from src.analysis_service_integration import get_analysis_service
+    ANALYSIS_SERVICE_AVAILABLE = True
+except ImportError:
+    ANALYSIS_SERVICE_AVAILABLE = False
+
+# Legacy fallback
+try:
     from src.data_persistence_manager import DataPersistenceManager
 except ImportError:
     DataPersistenceManager = None
@@ -86,45 +93,63 @@ in the workflow.""")
 app = Flask(__name__)
 
 def initialize_persistence_manager():
-    """Initialize DataPersistenceManager if available"""
-    global persistence_manager, current_run_id, _persistence_initialized
+    """Initialize Analysis Service Integration if available"""
+    global analysis_service, current_run_id, _persistence_initialized
     
     if _persistence_initialized:
         return
         
-    logger.info("Attempting to initialize DataPersistenceManager...")
-    logger.info(f"DataPersistenceManager import status: {DataPersistenceManager is not None}")
+    logger.info("Attempting to initialize Analysis Service Integration...")
+    logger.info(f"Analysis Service Integration import status: {ANALYSIS_SERVICE_AVAILABLE}")
     
-    if DataPersistenceManager:
+    if ANALYSIS_SERVICE_AVAILABLE:
         try:
-            logger.info("Creating DataPersistenceManager instance...")
-            persistence_manager = DataPersistenceManager(
-                qdrant_host=os.environ.get('QDRANT_HOST', 'localhost'),
-                qdrant_port=int(os.environ.get('QDRANT_PORT', '6333')),
-                neo4j_uri=os.environ.get('NEO4J_URI', 'bolt://localhost:7687'),
-                neo4j_user=os.environ.get('NEO4J_USER', 'neo4j'),
-                neo4j_password=os.environ.get('NEO4J_PASSWORD', 'password'),
-                embedding_model=os.environ.get('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+            logger.info("Creating Analysis Service Integration instance...")
+            analysis_service = get_analysis_service(
+                enable_vector_store=True,
+                enable_graph_db=True,
+                auto_process=True  # Enable auto-processing for real-time use
             )
             # Generate a run ID for this service session
-            current_run_id = persistence_manager.generate_run_id("openai_service")
-            logger.info(f"Data persistence manager initialized with run ID: {current_run_id}")
+            current_run_id = f"openai_service_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            logger.info(f"Analysis service integration initialized with run ID: {current_run_id}")
             _persistence_initialized = True
         except Exception as e:
-            logger.warning(f"Failed to initialize data persistence manager: {e}")
-            persistence_manager = None
+            logger.warning(f"Failed to initialize analysis service integration: {e}")
+            analysis_service = None
     else:
-        logger.warning("DataPersistenceManager not available - data persistence disabled")
+        logger.warning("Analysis Service Integration not available - data persistence disabled")
+        
+        # Legacy fallback to DataPersistenceManager
+        if DataPersistenceManager:
+            try:
+                logger.info("Creating DataPersistenceManager instance as fallback...")
+                persistence_manager = DataPersistenceManager(
+                    qdrant_host=os.environ.get('QDRANT_HOST', 'localhost'),
+                    qdrant_port=int(os.environ.get('QDRANT_PORT', '6333')),
+                    neo4j_uri=os.environ.get('NEO4J_URI', 'bolt://localhost:7687'),
+                    neo4j_user=os.environ.get('NEO4J_USER', 'neo4j'),
+                    neo4j_password=os.environ.get('NEO4J_PASSWORD', 'password'),
+                    embedding_model=os.environ.get('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+                )
+                # Generate a run ID for this service session
+                current_run_id = persistence_manager.generate_run_id("openai_service")
+                logger.info(f"Data persistence manager initialized with run ID: {current_run_id}")
+                _persistence_initialized = True
+            except Exception as e:
+                logger.warning(f"Failed to initialize data persistence manager: {e}")
+                persistence_manager = None
 
 @app.before_request
 def ensure_persistence_initialized():
     """Ensure persistence manager is initialized before handling requests"""
     initialize_persistence_manager()
 
-# Global service instances - only name-based manager and persistence
+# Global service instances - new analysis service and legacy persistence
 openai_client = None
 name_based_manager = None
-persistence_manager = None
+analysis_service = None  # New analysis service integration
+persistence_manager = None  # Legacy fallback
 current_run_id = None
 
 # Task tracking to prevent duplicate processing
@@ -454,7 +479,7 @@ def initialize():
 @app.route('/process_task', methods=['POST'])
 def process_task():
     """Process a task using the OpenAI assistant with name-based discovery"""
-    global current_run_id, processed_tasks, persistence_manager
+    global current_run_id, processed_tasks, analysis_service, persistence_manager
     
     try:
         data = request.json
@@ -476,7 +501,8 @@ def process_task():
         # Get the name-based manager and process the task
         manager = get_name_based_manager()
         result = manager.process_task(task_description)
-          # Store the result
+        
+        # Store the result
         processed_result = {
             "status": "success",
             "task_id": task_id,
@@ -484,11 +510,37 @@ def process_task():
             "timestamp": datetime.now().isoformat(),
             "approach": "name_based_discovery"
         }
-        processed_tasks[task_id] = processed_result        # Store interaction in databases if persistence manager is available
-        if persistence_manager and current_run_id:
+        processed_tasks[task_id] = processed_result
+        
+        # Store interaction in new analysis service if available
+        if analysis_service and current_run_id:
             try:
                 # Extract the actual response content from the result
-                # NameBasedAssistantManager returns "recommendation" not "response"
+                actual_response = result.get("recommendation", result.get("response", ""))
+                
+                # Store using the new analysis service integration
+                analysis_id = analysis_service.store_openai_interaction(
+                    run_id=current_run_id,
+                    process_instance_id=task_id,
+                    task_data={
+                        "task_name": task_description or "OpenAI Decision Process",
+                        "assistant_id": ASSISTANT_NAME,
+                        "thread_id": task_id,
+                        "processed_at": datetime.now().isoformat(),
+                        "processed_by": "OpenAI Assistant Service",
+                        "recommendation": actual_response
+                    },
+                    decision_context=task_description
+                )
+                logger.info(f"Stored task {task_id} as analysis {analysis_id} using new analysis service")
+                
+            except Exception as e:
+                logger.warning(f"Failed to store interaction in analysis service: {e}")
+                
+        # Fallback to legacy persistence manager
+        elif persistence_manager and current_run_id:
+            try:
+                # Extract the actual response content from the result
                 actual_response = result.get("recommendation", result.get("response", ""))
                 
                 # Try to parse the response as JSON for semantic expansion
