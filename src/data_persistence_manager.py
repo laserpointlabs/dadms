@@ -224,13 +224,12 @@ class DataPersistenceManager:
             else:
                 # Create a value node                
                 if parent_id and data is not None:
-                    value_id = str(uuid.uuid4())
-                    # Generate a descriptive name for the value
+                    value_id = str(uuid.uuid4())                    # Generate a descriptive name for the value
                     value_str = str(data)
-                    truncated_value = value_str[:30] + "..." if len(value_str) > 30 else value_str
+                    # Note: Removed truncation as we now use PostgreSQL which can handle large text fields
                     clean_key = key.replace('_', ' ').title() if key else "Value"
-                    value_name = f"{clean_key}: {truncated_value}"
-                    logger.info(f"Generated value node name: '{value_name}' for key: '{key}', value: '{truncated_value}'")
+                    value_name = f"{clean_key}: {value_str}"
+                    logger.info(f"Generated value node name: '{value_name}' for key: '{key}', value length: {len(value_str)} characters")
                     
                     session.run("""
                         CREATE (v:Value {
@@ -316,17 +315,14 @@ class DataPersistenceManager:
         
         # Clean up the key to make it more readable
         clean_key = key.replace('_', ' ').title()
-        
-        # For specific node types, try to extract meaningful names from data
+          # For specific node types, try to extract meaningful names from data
         if isinstance(data, dict):
             # Look for common name fields
             name_fields = ['name', 'title', 'label', 'primary_choice', 'methodology', 'task_type']
             for field in name_fields:
                 if field in data and data[field]:
                     value = str(data[field])
-                    # Truncate long names
-                    if len(value) > 50:
-                        value = value[:47] + "..."
+                    # Note: Removed truncation as we now use PostgreSQL which can handle large text fields
                     return f"{clean_key}: {value}"
             
             # For stakeholders, try to get role or interests
@@ -336,13 +332,12 @@ class DataPersistenceManager:
             # For criteria, try to get the criterion name
             if node_type == "Criterion" and 'name' in data:
                 return f"Criterion: {data['name']}"
-            
-            # For recommendations, use primary_choice if available
+              # For recommendations, use primary_choice if available
             if node_type == "Recommendation":
                 if 'primary_choice' in data:
                     return f"Recommendation: {data['primary_choice']}"
                 elif 'reasoning' in data:
-                    reasoning = str(data['reasoning'])[:50] + "..." if len(str(data['reasoning'])) > 50 else str(data['reasoning'])
+                    reasoning = str(data['reasoning'])  # Note: Removed truncation as we now use PostgreSQL which can handle large text fields
                     return f"Recommendation: {reasoning}"
         
         # Default to using the cleaned key
