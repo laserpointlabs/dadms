@@ -371,7 +371,75 @@ class AnalysisServiceIntegration:
         ]
         
         return [analysis.to_dict() for analysis in process_analyses]
-
+    
+    def get_openai_thread_id(self, analysis_id: str) -> Optional[str]:
+        """
+        Extract OpenAI thread ID from an analysis
+        
+        Args:
+            analysis_id: Analysis ID
+        
+        Returns:
+            OpenAI thread ID if found, None otherwise
+        """
+        analysis = self.data_manager.get_analysis(analysis_id)
+        if not analysis or not analysis.output_data:
+            return None
+        
+        # Check output data for thread_id
+        return analysis.output_data.get('thread_id')
+    
+    def get_openai_assistant_id(self, analysis_id: str) -> Optional[str]:
+        """
+        Extract OpenAI assistant ID from an analysis
+        
+        Args:
+            analysis_id: Analysis ID
+        
+        Returns:
+            OpenAI assistant ID if found, None otherwise
+        """
+        analysis = self.data_manager.get_analysis(analysis_id)
+        if not analysis or not analysis.output_data:
+            return None
+        
+        # Check output data for assistant_id
+        return analysis.output_data.get('assistant_id')
+    
+    def get_process_openai_context(self, process_instance_id: str) -> Dict[str, Any]:
+        """
+        Get OpenAI context for a specific process instance
+        
+        Args:
+            process_instance_id: Process instance ID
+        
+        Returns:
+            Dictionary with OpenAI thread and assistant information
+        """
+        analyses = self.get_analyses_by_process(process_instance_id)
+        
+        context = {
+            'process_instance_id': process_instance_id,
+            'thread_ids': [],
+            'assistant_ids': [],
+            'analysis_count': len(analyses)
+        }
+        
+        for analysis_dict in analyses:
+            # Extract OpenAI thread ID
+            output_data = analysis_dict.get('output_data', {})
+            if output_data and 'thread_id' in output_data:
+                thread_id = output_data['thread_id']
+                if thread_id and thread_id not in context['thread_ids']:
+                    context['thread_ids'].append(thread_id)
+            
+            # Extract OpenAI assistant ID
+            if output_data and 'assistant_id' in output_data:
+                assistant_id = output_data['assistant_id']
+                if assistant_id and assistant_id not in context['assistant_ids']:
+                    context['assistant_ids'].append(assistant_id)
+        
+        return context
 
 # Global instance for easy service integration
 _global_analysis_service = None

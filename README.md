@@ -438,6 +438,11 @@ dadm docker up -d
 
 # Stop docker containers
 dadm docker down
+
+# Analysis data management
+dadm analysis daemon              # Start background analysis processing
+dadm analysis status              # Show analysis system status
+dadm analysis process --once      # Process pending tasks once
 ```
 
 For complete documentation, see the `docs` folder.
