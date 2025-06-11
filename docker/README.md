@@ -169,6 +169,7 @@ If migration from H2 to PostgreSQL fails:
 
 ## Version History
 
+- **v0.9.0 (June 11, 2025)**: Thread persistence implementation, OpenAI URL generation, live development mounts
 - **v0.8.1 (June 11, 2025)**: Camunda VARCHAR(4000) truncation fix, line ending compatibility
 - **v0.8.0 (June 2025)**: PostgreSQL migration, enhanced reliability
 - **v0.7.0 (May 2025)**: Enhanced JSON recommendation expansion
