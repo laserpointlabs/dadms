@@ -450,6 +450,7 @@ dadm analysis list --detailed     # Show detailed analysis information
 dadm analysis list --process-id <id>  # Filter by process instance
 dadm analysis list --service <name>   # Filter by service name
 dadm analysis list --tags <tag1> <tag2>  # Filter by tags
+dadm analysis list --process-id <id> --get-openai-url  # Get OpenAI Playground URL
 dadm analysis process --once      # Process pending tasks once
 ```
 
