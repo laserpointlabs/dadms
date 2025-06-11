@@ -432,7 +432,8 @@ def initialize():
                 "approach": "name_based_discovery"
             }), 500
           # Initialize processed tasks tracking
-        processed_tasks = {"service_start_time": time.strftime("%Y-%m-%d %H:%M:%S")}        # Initialize persistence manager if not already done
+        processed_tasks = {"service_start_time": time.strftime("%Y-%m-%d %H:%M:%S")}        
+        # Initialize persistence manager if not already done
         if not persistence_manager and DataPersistenceManager:
             try:
                 persistence_manager = DataPersistenceManager(
@@ -480,27 +481,43 @@ def initialize():
 def process_task():
     """Process a task using the OpenAI assistant with name-based discovery"""
     global current_run_id, processed_tasks, analysis_service, persistence_manager
-    
     try:
         data = request.json
-        if not data or 'task_description' not in data:
+        if not data:
             return jsonify({
                 "status": "error", 
-                "message": "task_description is required",
+                "message": "Request data is required",
                 "approach": "name_based_discovery"
             }), 400
         
-        task_description = data['task_description']
+        # Extract parameters with backward compatibility
+        task_description = data.get('task_description', '')
         task_id = data.get('task_id', str(uuid.uuid4()))
+        task_name = data.get('task_name', 'Task')
+        task_documentation = data.get('task_documentation', '')
+        variables = data.get('variables', {})
+        process_instance_id = data.get('process_instance_id')
+        
+        # For backward compatibility: if no individual components but task_description exists, use it
+        if not task_name or task_name == 'Task':
+            if task_description:
+                task_name = task_description
         
         # Check if this task was already processed
         if task_id in processed_tasks:
             logger.info(f"Task {task_id} already processed, returning cached result")
             return jsonify(processed_tasks[task_id])
-        
-        # Get the name-based manager and process the task
+          # Get the name-based manager and process the task
         manager = get_name_based_manager()
-        result = manager.process_task(task_description)
+        
+        # Debug logging for thread persistence
+        logger.info(f"Processing task for process_instance_id: {process_instance_id}")
+        if process_instance_id:
+            logger.info(f"Thread persistence enabled for process: {process_instance_id}")
+        else:
+            logger.warning("No process_instance_id provided - thread persistence disabled")
+        
+        result = manager.process_task(task_name, task_documentation, variables, process_instance_id)
         
         # Store the result
         processed_result = {
