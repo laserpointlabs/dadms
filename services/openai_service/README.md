@@ -10,13 +10,46 @@ The DADM OpenAI Assistant Service provides an API gateway to OpenAI's Assistant 
 ## Features
 
 - **Assistant Management**: Creates and manages OpenAI Assistants
-- **Thread Management**: Maintains conversation threads and interactions
+- **Thread Management**: Maintains conversation threads with process-level persistence
 - **File Management**: Handles knowledge base file uploads for RAG
 - **Database Integration**: Seamless integration with PostgreSQL-backed workflows
 - **Consul Integration**: Auto-registers with Consul for service discovery
 - **Health Monitoring**: Provides health endpoints for system monitoring
 - **Stateful Operation**: Maintains assistant state across restarts
 - **Enhanced Reliability**: Improved error handling and recovery mechanisms
+
+## Thread Management
+
+The service implements sophisticated thread management to maintain conversation continuity across multiple requests within the same business process. This enables coherent multi-step conversations in BPMN workflows.
+
+### Process-Level Thread Persistence
+
+When a `process_instance_id` is provided in task requests, the service:
+
+1. **Creates or Reuses Threads**: Maps each unique combination of `process_instance_id` + `assistant_id` to a specific OpenAI thread
+2. **Maintains Context**: All tasks within the same process instance share the same conversation thread
+3. **Isolates Processes**: Different process instances use separate threads, ensuring conversation isolation
+4. **Validates Thread Health**: Automatically checks if cached threads still exist on OpenAI and recreates if necessary
+
+### Thread Lifecycle
+
+```
+Process Instance A (ID: proc_123)
+├── Task 1 → Creates thread_abc123 
+├── Task 2 → Reuses thread_abc123 (context preserved)
+└── Task 3 → Reuses thread_abc123 (full conversation history)
+
+Process Instance B (ID: proc_456) 
+├── Task 1 → Creates thread_def456 (isolated from Process A)
+└── Task 2 → Reuses thread_def456
+```
+
+### Benefits
+
+- **Conversation Continuity**: Assistants remember previous interactions within a process
+- **Context Preservation**: Critical for multi-step decision making workflows
+- **Process Isolation**: Prevents cross-contamination between different business processes
+- **Automatic Cleanup**: Invalid or expired threads are automatically detected and replaced
 
 ## API Endpoints
 
@@ -73,6 +106,49 @@ The DADM OpenAI Assistant Service provides an API gateway to OpenAI's Assistant 
     "replace_existing": false 
   }
   ```
+
+### Process Task (Primary Endpoint)
+- **URL**: `/process_task`
+- **Method**: `POST`
+- **Description**: Main endpoint for processing tasks with thread persistence support
+- **Example Request**:
+  ```json
+  {
+    "task_description": "Analyze the decision to implement a new software system",
+    "task_id": "task_12345",
+    "task_name": "Software Decision Analysis",
+    "task_documentation": "Consider cost, time, and technical factors",
+    "variables": {
+      "budget": "$100,000",
+      "timeline": "6 months",
+      "team_size": 5
+    },
+    "process_instance_id": "proc_instance_abc123"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": "success",
+    "task_id": "task_12345",
+    "result": {
+      "assistant_id": "asst_UNOI30oiCpdalzRdeLM00qnP",
+      "processed_at": "2025-06-11 16:02:11",
+      "processed_by": "OpenAI Assistant (DADM Decision Analysis Assistant)",
+      "recommendation": "{ ... structured decision analysis ... }",
+      "thread_id": "thread_x83GsMOGVrVhG6qeCASIImgY"
+    },
+    "timestamp": "2025-06-11T16:02:11.531164",
+    "approach": "name_based_discovery"
+  }
+  ```
+
+#### Thread Persistence Behavior
+
+- **With `process_instance_id`**: Tasks with the same process instance ID will reuse the same OpenAI thread, maintaining conversation continuity
+- **Without `process_instance_id`**: Each task creates a new thread (legacy behavior)
+- **Thread Validation**: The service automatically verifies thread existence and recreates if necessary
+- **Process Isolation**: Different process instances always use separate threads
 
 ## Configuration
 

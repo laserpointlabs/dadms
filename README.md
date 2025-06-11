@@ -9,7 +9,8 @@ DADM (Decision Analysis and Decision Management) provides an end-to-end solution
 ### Key Features
 
 - **BPMN-Driven Workflows**: Create and deploy decision process models using the industry-standard BPMN notation
-- **AI-Augmented Decision Support**: Leverage OpenAI's capabilities to analyze complex decision scenarios
+- **AI-Augmented Decision Support**: Leverage OpenAI's capabilities to analyze complex decision scenarios with conversation persistence across process tasks
+- **Thread Persistence Management**: Maintain conversation continuity within business processes for coherent multi-step decision analysis
 - **Knowledge Graph Integration**: Store and query relationships between decision factors using Neo4j with enhanced hierarchical structures and descriptive relationship names
 - **Vector Database Support**: Semantic search and retrieval using Qdrant vector database
 - **High-Performance Orchestration**: Optimized service orchestration with caching and prefetching capabilities
@@ -18,6 +19,7 @@ DADM (Decision Analysis and Decision Management) provides an end-to-end solution
 
 ## Recent Changes
 
+- **June 11, 2025**: Thread Persistence Implementation - Implemented sophisticated thread management for OpenAI Assistant conversations, enabling context preservation across multiple tasks within the same business process. Process instances now maintain dedicated conversation threads for coherent multi-step decision analysis. Added live code mounting in Docker development environment for faster iteration.
 - **June 5, 2025**: PostgreSQL Database Migration - Successfully migrated from H2 to PostgreSQL database for Camunda, resolving VARCHAR(4000) limitations and improving scalability. Updated Docker configurations with proper authentication methods and enhanced container reliability. All 48 Camunda tables now running on PostgreSQL with improved performance and data handling capabilities.
 - **May 29, 2025**: Enhanced JSON recommendation expansion - Significantly improved the data persistence layer with dynamic relationship naming and hierarchical node structures in Neo4j. The system now creates meaningful graph relationships using JSON keys as descriptive names (e.g., "ANALYSIS", "STAKEHOLDERS", "KEY_SPECIFICATIONS"), enabling better decision traceability and more intuitive graph queries. See [release_notes_v0.7.0.md](release_notes_v0.7.0.md) for complete details.
 - **May 28, 2025**: Service monitoring and reliability improvements - Added comprehensive service monitoring system with automatic recovery capabilities, standardized health endpoints across all services, and enhanced Docker configurations. See [release_notes_v0.6.0.md](release_notes_v0.6.0.md) for complete details.

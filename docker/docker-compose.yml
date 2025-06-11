@@ -93,14 +93,15 @@ services:
       - QDRANT_PORT=6333
       - NEO4J_URI=bolt://dadm-neo4j:7687
       - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password
-      - ENABLE_QDRANT=true
+      - NEO4J_PASSWORD=password      - ENABLE_QDRANT=true
       - ENABLE_NEO4J=true
       - DB_RETRY_ATTEMPTS=5
       - DB_RETRY_DELAY=5
     volumes:
       - ../config:/app/config
       - ../services/openai_service/data:/app/services/openai_service/data
+      - ../services:/app/services
+      - ../src:/app/src
     restart: unless-stopped
     networks:
       - dadm-network
