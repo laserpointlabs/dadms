@@ -9,7 +9,8 @@ DADM (Decision Analysis and Decision Management) provides an end-to-end solution
 ### Key Features
 
 - **BPMN-Driven Workflows**: Create and deploy decision process models using the industry-standard BPMN notation
-- **AI-Augmented Decision Support**: Leverage OpenAI's capabilities to analyze complex decision scenarios
+- **AI-Augmented Decision Support**: Leverage OpenAI's capabilities to analyze complex decision scenarios with conversation persistence across process tasks
+- **Thread Persistence Management**: Maintain conversation continuity within business processes for coherent multi-step decision analysis
 - **Knowledge Graph Integration**: Store and query relationships between decision factors using Neo4j with enhanced hierarchical structures and descriptive relationship names
 - **Vector Database Support**: Semantic search and retrieval using Qdrant vector database
 - **High-Performance Orchestration**: Optimized service orchestration with caching and prefetching capabilities
@@ -18,10 +19,11 @@ DADM (Decision Analysis and Decision Management) provides an end-to-end solution
 
 ## Recent Changes
 
+- **June 11, 2025**: Version 0.9.0 Release - Major thread persistence implementation enabling conversation continuity across business process tasks, OpenAI Playground URL generation for debugging, and enhanced development workflow with live code mounting. Added comprehensive analysis data management commands and improved Camunda startup reliability.
+- **June 11, 2025**: Thread Persistence Implementation - Implemented sophisticated thread management for OpenAI Assistant conversations, enabling context preservation across multiple tasks within the same business process. Process instances now maintain dedicated conversation threads for coherent multi-step decision analysis. Added live code mounting in Docker development environment for faster iteration.
 - **June 5, 2025**: PostgreSQL Database Migration - Successfully migrated from H2 to PostgreSQL database for Camunda, resolving VARCHAR(4000) limitations and improving scalability. Updated Docker configurations with proper authentication methods and enhanced container reliability. All 48 Camunda tables now running on PostgreSQL with improved performance and data handling capabilities.
 - **May 29, 2025**: Enhanced JSON recommendation expansion - Significantly improved the data persistence layer with dynamic relationship naming and hierarchical node structures in Neo4j. The system now creates meaningful graph relationships using JSON keys as descriptive names (e.g., "ANALYSIS", "STAKEHOLDERS", "KEY_SPECIFICATIONS"), enabling better decision traceability and more intuitive graph queries. See [release_notes_v0.7.0.md](release_notes_v0.7.0.md) for complete details.
 - **May 28, 2025**: Service monitoring and reliability improvements - Added comprehensive service monitoring system with automatic recovery capabilities, standardized health endpoints across all services, and enhanced Docker configurations. See [release_notes_v0.6.0.md](release_notes_v0.6.0.md) for complete details.
-- **May 21, 2025**: Improved workflow completion detection - Enhanced the system to reliably detect workflow completion based on active tasks and process instance state, fixing issues with premature termination. Added comprehensive documentation on the workflow completion detection system. See [WORKFLOW_COMPLETION_DETECTION.md](docs/WORKFLOW_COMPLETION_DETECTION.md) for details.
 - **May 17, 2025**: Codebase cleanup and restructuring - Reorganized helper scripts, created proper Python package structure, and added comprehensive installation verification scripts. Added automated setup scripts for Windows and Linux/macOS environments.
 - **May 16, 2025**: OpenAI Assistant integration - Added robust OpenAI Assistant integration with file upload capabilities and implemented the UAS selection decision process workflow. Created diagnostic tools for checking OpenAI API integration.
 - **May 15, 2025**: Process management enhancements - Added ability to start a process by name via command line, implemented argument parsing, and added support for passing initial variables to started processes. Added flexible timeout configuration and monitor-only mode.
@@ -443,6 +445,12 @@ dadm docker down
 # Analysis data management
 dadm analysis daemon              # Start background analysis processing
 dadm analysis status              # Show analysis system status
+dadm analysis list --limit 5      # List recent analysis runs
+dadm analysis list --detailed     # Show detailed analysis information
+dadm analysis list --process-id <id>  # Filter by process instance
+dadm analysis list --service <name>   # Filter by service name
+dadm analysis list --tags <tag1> <tag2>  # Filter by tags
+dadm analysis list --process-id <id> --get-openai-url  # Get OpenAI Playground URL
 dadm analysis process --once      # Process pending tasks once
 ```
 

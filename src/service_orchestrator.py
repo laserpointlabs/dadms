@@ -897,11 +897,11 @@ class ServiceOrchestrator:
                 error_msg = f"No service found for type='{service_type}', name='{service_name}'"
                 logger.error(error_msg)
                 raise ValueError(error_msg)
-            
             endpoint = service_config.get("endpoint")
             if not endpoint:
                 raise ValueError(f"No endpoint defined for service {service_type}/{service_name}")
-              # Get task documentation (uses cache if available)
+            
+            # Get task documentation (uses cache if available)
             task_documentation = self.get_task_documentation(task)
             
             # Prepare request
@@ -920,7 +920,8 @@ class ServiceOrchestrator:
                 "task_name": task.get_activity_id(),
                 "task_documentation": task_documentation,
                 "variables": variables or {},
-                "service_properties": properties
+                "service_properties": properties,
+                "process_instance_id": task.get_process_instance_id()  # Add process instance ID for thread persistence
             }
             
             logger.info(f"Sending request to {url}")

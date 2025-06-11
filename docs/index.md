@@ -25,6 +25,7 @@ Welcome to the documentation hub for the Decision Analysis and Decision Manageme
 - [Service Orchestrator Optimizations](service_orchestrator_optimization.md) - Performance features.
 - [Monitor Service Usage](MONITOR_SERVICE_USAGE.md) - Keep services running reliably.
 - [Service Troubleshooting](SERVICE_TROUBLESHOOTING.md) - Common issues and solutions.
+- [Thread Persistence Implementation](THREAD_PERSISTENCE_IMPLEMENTATION.md) - OpenAI conversation persistence across process tasks.
 
 ## Data Management
 - [Analysis Data Management](analysis_data_management.md) - Architecture for storing analysis data.

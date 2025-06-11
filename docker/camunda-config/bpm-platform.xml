@@ -6,11 +6,9 @@
   <job-executor>
     <job-acquisition name="default" />
   </job-executor>
-
   <process-engine name="default">
     <job-acquisition>default</job-acquisition>
     <configuration>org.camunda.bpm.engine.impl.cfg.StandaloneProcessEngineConfiguration</configuration>
-    <datasource>java:comp/env/jdbc/ProcessEngine</datasource>
 
     <properties>
       <property name="history">auto</property>

@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-06-11
+
+### Added
+- **Thread Persistence Management**: Sophisticated thread management for OpenAI Assistant conversations
+  - Process-level thread persistence enabling conversation continuity across multiple tasks
+  - Automatic thread creation, caching, reuse, and validation
+  - Process isolation preventing conversation cross-contamination between different process instances
+  - Self-healing thread validation with automatic recreation of invalid threads
+- **Enhanced Development Workflow**: Live code mounting for faster development iteration
+  - Docker bind mounts for `/services` and `/src` directories enabling instant code changes
+  - Development-friendly Docker configuration without container rebuilds
+  - Comprehensive debug logging for thread persistence operations
+- **Analysis Data Management**: Advanced CLI commands for analysis data interaction
+  - `dadm analysis daemon` - Background analysis processing with detached mode support
+  - `dadm analysis list` - Comprehensive filtering by process ID, service, tags, and detailed views
+  - `dadm analysis status` - Real-time analysis system status monitoring
+  - `dadm analysis process` - Manual processing of pending analysis tasks
+- **OpenAI Playground Integration**: Direct URL generation for debugging OpenAI conversations
+  - `--get-openai-url` flag for generating OpenAI Playground URLs from process instances
+  - Automatic retrieval of assistant and thread information from analysis data
+  - Direct access to conversation context for troubleshooting and analysis
+- **Camunda Service Reliability**: Major improvements to Camunda startup and operation
+  - Fixed VARCHAR(4000) truncation issues with PostgreSQL TEXT migration
+  - Resolved Windows/Linux line ending compatibility for startup scripts
+  - Enhanced container startup orchestration and database migration processes
+
+### Changed
+- **OpenAI Service Architecture**: Enhanced to support conversation continuity
+  - Service orchestrator now passes `process_instance_id` in all OpenAI requests
+  - API response format includes `thread_id` for debugging and tracking
+  - Thread management strategy moved from per-task to per-process persistence
+- **Docker Development Setup**: Optimized for development workflows
+  - Added bind mounts for live code changes during development
+  - Enhanced logging and debug capabilities
+  - Improved container dependency management and startup reliability
+- **Analysis Data Storage**: Enhanced data persistence and retrieval
+  - Improved metadata tracking for analysis runs
+  - Better filtering and search capabilities
+  - Enhanced status tracking for processing pipelines
+
+### Enhanced
+- **Decision Analysis Quality**: AI assistants maintain full context across multi-step processes
+  - Conversation history preserved throughout entire business process execution
+  - Context-aware recommendations based on previous analysis steps
+  - Coherent multi-step decision analysis with cumulative learning
+- **Development Experience**: Streamlined development and debugging workflows
+  - Instant code changes without container rebuilds
+  - Direct access to OpenAI conversations for debugging
+  - Comprehensive logging for troubleshooting thread persistence
+
+### Fixed
+- **Camunda Startup Issues**: Resolved critical startup failures
+  - Fixed `exec /usr/local/bin/startup-with-migration.sh failed: No such file or directory` error
+  - Corrected Windows CRLF to Unix LF line ending conversion
+  - Resolved JNDI datasource configuration conflicts
+- **Database Truncation**: Eliminated VARCHAR(4000) limitations
+  - Migrated affected columns to PostgreSQL TEXT type
+  - Enabled storage of large process definitions and analysis data
+  - Improved data integrity for complex decision analysis workflows
+- **Thread Management**: Robust thread validation and recovery
+  - Automatic detection and recreation of invalid OpenAI threads
+  - Prevention of thread ID conflicts between different processes
+  - Enhanced error handling for OpenAI API interactions
+
+### Technical Details
+- **Thread Persistence Architecture**: Implemented in `NameBasedAssistantManager`
+  - Process-thread mapping cache using `process_instance_id` + `assistant_id`
+  - Thread validation system with automatic OpenAI verification
+  - Comprehensive debug logging for thread operations
+- **Database Migration**: PostgreSQL schema enhancements
+  - Custom migration script with VARCHAR(4000) to TEXT conversion
+  - Idempotent migration logic safe for multiple executions
+  - Enhanced column type detection and conversion
+- **Development Infrastructure**: Live code mounting implementation
+  - Docker Compose bind mounts for active development
+  - Preserved container functionality with live code updates
+  - Enhanced debugging capabilities with real-time logging
+
 ## [0.8.0] - 2025-06-05
 
 ### Added

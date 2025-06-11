@@ -31,11 +31,82 @@ The PostgreSQL service is configured with:
 - Improved container startup with wait-for-it script for database readiness
 - Automatic schema creation and initialization
 
+## Camunda Service Modifications
+
+### VARCHAR(4000) Truncation Fix
+
+The original Camunda installation had significant limitations due to PostgreSQL's default VARCHAR(4000) column sizes, which caused data truncation in process variables, task descriptions, and other text fields. We implemented a comprehensive solution to resolve this issue.
+
+#### Supporting Files and Their Purpose
+
+**`Dockerfile.camunda`**
+- Custom Dockerfile extending the official Camunda 7.15.0 image
+- Installs PostgreSQL JDBC driver (postgresql-42.7.4.jar)
+- Adds essential utilities: `wget`, `curl`, `bash`, `postgresql-client`
+- Downloads and configures `wait-for-it.sh` script for database readiness checks
+- Copies custom startup script with Unix line endings for Linux compatibility
+- Includes custom configuration files for PostgreSQL integration
+
+**`scripts/startup-with-migration.sh`**
+- Custom startup script that orchestrates the complete initialization process
+- **Database Wait**: Uses `wait-for-it.sh` to ensure PostgreSQL is ready before proceeding
+- **Schema Detection**: Checks if Camunda database schema already exists
+- **Migration Logic**: Applies VARCHAR(4000) to TEXT migration only when needed
+- **Column Analysis**: Uses PostgreSQL system catalogs to identify affected columns
+- **Safe Migration**: Creates backup functions and applies changes incrementally
+- **Startup Coordination**: Starts Camunda after database is properly configured
+- **Error Handling**: Provides detailed logging and graceful failure handling
+
+**`camunda-config/bpm-platform.xml`**
+- Camunda Platform configuration for PostgreSQL integration
+- **Standalone Configuration**: Uses direct JDBC properties instead of JNDI datasource
+- **Connection Settings**: Optimized for PostgreSQL with proper connection pooling
+- **Database Properties**: Includes ping queries, timeout settings, and validation
+- **Authentication**: Configured for `dadm_user`/`dadm_password` credentials
+- **Schema Management**: Enables automatic schema updates and history
+
+**`init-scripts/` Directory**
+- Contains PostgreSQL initialization scripts (if any)
+- Reserved for database-level setup scripts that run during PostgreSQL container startup
+- Currently used for any pre-Camunda database preparation
+
+#### Migration Process Details
+
+The VARCHAR(4000) to TEXT migration addresses these specific issues:
+
+1. **Affected Tables and Columns**:
+   - `act_hi_taskinst.description_` - Task descriptions
+   - `act_ru_task.description_` - Running task descriptions  
+   - `act_hi_varinst.text_`, `act_hi_varinst.text2_` - Process variable text values
+   - `act_ru_variable.text_`, `act_ru_variable.text2_` - Runtime variable text values
+   - `act_hi_detail.text_`, `act_hi_detail.text2_` - Historical detail text
+
+2. **Migration Strategy**:
+   - **Detection**: Query `information_schema.columns` to identify VARCHAR(4000) columns
+   - **Conversion**: ALTER TABLE statements to change VARCHAR(4000) to TEXT
+   - **Validation**: Post-migration verification of column types
+   - **Idempotency**: Safe to run multiple times without data loss
+
+3. **Benefits Achieved**:
+   - **No Size Limits**: TEXT columns can store up to 1GB of text data
+   - **Better Performance**: PostgreSQL optimizes TEXT storage automatically
+   - **Future-Proof**: Eliminates truncation issues for complex process data
+   - **Thread Persistence**: Enables storage of large conversation histories
+
+#### Line Ending Compatibility
+
+A critical aspect of the solution involved fixing Windows/Linux line ending compatibility:
+
+- **Problem**: Scripts created on Windows had CRLF (`\r\n`) line endings
+- **Impact**: Linux containers couldn't execute scripts with Windows line endings
+- **Solution**: Converted `startup-with-migration.sh` to Unix LF (`\n`) line endings
+- **Verification**: Used PowerShell `Format-Hex` to confirm proper line ending format
+
 ## Services
 
 The Docker Compose configuration includes:
-- **PostgreSQL**: Database server for Camunda
-- **Camunda**: BPM platform with PostgreSQL backend
+- **PostgreSQL**: Database server for Camunda with custom initialization
+- **Camunda**: BPM platform with PostgreSQL backend and VARCHAR fixes
 - **Consul**: Service discovery and configuration
 - **Neo4j**: Graph database for knowledge representation
 - **Qdrant**: Vector database for semantic search
@@ -98,6 +169,8 @@ If migration from H2 to PostgreSQL fails:
 
 ## Version History
 
+- **v0.9.0 (June 11, 2025)**: Thread persistence implementation, OpenAI URL generation, live development mounts
+- **v0.8.1 (June 11, 2025)**: Camunda VARCHAR(4000) truncation fix, line ending compatibility
 - **v0.8.0 (June 2025)**: PostgreSQL migration, enhanced reliability
 - **v0.7.0 (May 2025)**: Enhanced JSON recommendation expansion
 - **v0.6.0 (May 2025)**: Service monitoring and reliability improvements

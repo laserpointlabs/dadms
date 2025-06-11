@@ -5,12 +5,11 @@ This guide explains how to run the DADM Demonstrator with the integrated OpenAI 
 ## Current Architecture
 
 ```mermaid
-graph TD
-    DADM[DADM Application] --> Camunda[Camunda Engine]
+graph TD    DADM[DADM Application] --> Camunda[Camunda Engine]
     DADM --> OpenAIAssistant[OpenAI Assistant Manager]
     OpenAIAssistant --> OpenAIAPI[OpenAI API]
     OpenAIAssistant --> FileStorage[File Management]
-    OpenAIAssistant --> ThreadMgmt[Thread Management]
+    OpenAIAssistant --> ThreadMgmt[Thread Persistence Manager]
     
     subgraph "Camunda Process"
         FrameDecision[Frame Decision] --> IdentifyAlternatives[Identify Alternatives]
@@ -152,6 +151,54 @@ python scripts/move_metadata_files.py
 
 Both `RAGFileManager` and `AssistantIDManager` check the new directory first and
 fall back to the old paths for backward compatibility.
+
+## Thread Persistence and Conversation Continuity
+
+The OpenAI Assistant integration now supports sophisticated thread persistence to maintain conversation continuity across multiple tasks within the same business process.
+
+### How Thread Persistence Works
+
+When the DADM system processes tasks through Camunda workflows:
+
+1. **Process-Level Threading**: Each Camunda process instance gets its own dedicated OpenAI conversation thread
+2. **Context Preservation**: All tasks within the same process instance share conversation history
+3. **Automatic Management**: Threads are automatically created, reused, and validated
+4. **Process Isolation**: Different process instances use completely separate threads
+
+### Thread Lifecycle Example
+
+```
+Camunda Process Instance: proc_123
+├── Task 1: "Frame the decision problem"
+│   └── Creates OpenAI thread: thread_abc123
+├── Task 2: "Identify stakeholders" 
+│   └── Reuses thread_abc123 (remembers previous context)
+├── Task 3: "Evaluate alternatives"
+│   └── Reuses thread_abc123 (full conversation history available)
+└── Task 4: "Make recommendation"
+    └── Reuses thread_abc123 (can reference all previous steps)
+```
+
+### Benefits for Decision Analysis
+
+- **Coherent Multi-Step Analysis**: The assistant remembers previous decisions and context
+- **Stakeholder Continuity**: References to stakeholders persist across tasks
+- **Alternative Tracking**: Alternatives identified in early tasks are remembered in later evaluations
+- **Decision Rationale**: Final recommendations can reference the entire decision journey
+
+### Configuration
+
+Thread persistence is enabled automatically when:
+- The service orchestrator passes a `process_instance_id` in task requests
+- The OpenAI service is properly configured with thread management enabled
+- Both services are running with the updated codebase
+
+### Monitoring Thread Usage
+
+Thread creation and reuse can be monitored through:
+- Service logs showing "Created new thread" vs "Reusing existing thread" messages
+- OpenAI API usage tracking for thread-related API calls
+- Process-level metrics in Camunda cockpit
 
 ## Viewing Results
 
