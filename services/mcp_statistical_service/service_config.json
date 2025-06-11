@@ -1,0 +1,34 @@
+{  "service": {
+    "name": "mcp-statistical-service",
+    "type": "analytics",
+    "version": "1.0",
+    "port": 5201,
+    "description": "Statistical analysis service powered by MCP servers",
+    "health_endpoint": "/health",
+    "capabilities": [
+      "descriptive_statistics",
+      "hypothesis_testing", 
+      "regression_analysis",
+      "time_series_analysis",
+      "statistical_modeling"
+    ],
+    "mcp_config": {
+      "server_executable": "python",
+      "server_args": ["-m", "mcp_statistical_server"],
+      "supported_tools": [
+        "calculate_statistics",
+        "run_statistical_test", 
+        "fit_regression_model",
+        "analyze_time_series"
+      ]
+    }
+  },
+  "docker": {
+    "image": "dadm/mcp-statistical-service",
+    "ports": ["5201:5201"],
+    "environment": {
+      "MCP_SERVER_PATH": "/app/mcp_servers",
+      "PYTHON_PATH": "/app:/app/mcp_servers"
+    }
+  }
+}

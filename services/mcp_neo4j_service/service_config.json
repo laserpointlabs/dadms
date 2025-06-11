@@ -1,0 +1,45 @@
+{  "service": {
+    "name": "mcp-neo4j-service",
+    "type": "graph_analytics",
+    "version": "1.0",
+    "port": 5202,
+    "description": "Advanced Neo4j graph analysis service powered by MCP servers",
+    "health_endpoint": "/health",
+    "capabilities": [
+      "centrality_analysis",
+      "community_detection",
+      "path_analysis",
+      "graph_metrics",
+      "pattern_matching",
+      "graph_algorithms"
+    ],
+    "mcp_config": {
+      "server_executable": "python",
+      "server_args": ["-m", "mcp_neo4j_server"],
+      "supported_tools": [
+        "calculate_centrality",
+        "detect_communities",
+        "find_shortest_paths",
+        "analyze_graph_structure",
+        "run_graph_algorithm"
+      ]
+    }
+  },
+  "dependencies": {
+    "neo4j": {
+      "uri": "bolt://neo4j:7687",
+      "user": "neo4j",
+      "password": "password"
+    }
+  },
+  "docker": {
+    "image": "dadm/mcp-neo4j-service",
+    "ports": ["5201:5201"],
+    "environment": {
+      "NEO4J_URI": "bolt://neo4j:7687",
+      "NEO4J_USER": "neo4j",
+      "NEO4J_PASSWORD": "password",
+      "MCP_SERVER_PATH": "/app/mcp_servers"
+    }
+  }
+}

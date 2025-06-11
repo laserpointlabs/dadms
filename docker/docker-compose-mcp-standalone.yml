@@ -1,0 +1,116 @@
+# Standalone Docker Compose for MCP Services Testing
+# This runs just the MCP services without external dependencies for testing
+
+version: '3.8'
+
+services:  # MCP Statistical Analysis Service
+  mcp-statistical-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_statistical_service/Dockerfile
+    container_name: dadm-mcp-statistical
+    ports:
+      - "5201:5201"
+    environment:
+      - SERVICE_PORT=5201
+      - USE_CONSUL=false
+      - MCP_SERVER_PATH=/app/mcp_servers
+      - PYTHON_PATH=/usr/bin/python3    
+    volumes:
+      - mcp_statistical_data:/app/data      
+      # Bind mount source code for live development
+      - ../services/mcp_statistical_service:/app/service
+      - ../mcp_servers:/app/mcp_servers
+      - ../src:/app/src
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5201/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped 
+  
+  # MCP Neo4j Graph Analytics Service (standalone mode)
+  mcp-neo4j-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_neo4j_service/Dockerfile
+    container_name: dadm-mcp-neo4j
+    ports:
+      - "5202:5202"
+    environment:
+      - SERVICE_PORT=5202
+      - USE_CONSUL=false
+      - NEO4J_URI=neo4j://localhost:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      - MCP_SERVER_PATH=/app/mcp_servers    
+    volumes:
+      - mcp_neo4j_data:/app/data      
+      # Bind mount source code for live development
+      - ../services/mcp_neo4j_service:/app/service
+      - ../mcp_servers:/app/mcp_servers
+      - ../src:/app/src
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5202/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped  
+  
+  # MCP Script Execution Service
+  mcp-script-execution-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_script_execution_service/Dockerfile
+    container_name: dadm-mcp-script-execution
+    ports:
+      - "5203:5203"
+    environment:
+      - SERVICE_PORT=5203
+      - USE_CONSUL=false      
+      - SCILAB_PATH=/usr/local/scilab/bin/scilab
+      - R_HOME=/usr/lib/R
+      - PYTHON_PATH=/usr/bin/python3
+      - SANDBOX_MODE=true
+      - MAX_EXECUTION_TIME=300
+      - MCP_SERVER_PATH=/app/mcp_servers    
+    volumes:
+      - mcp_execution_output:/app/output:rw
+      - mcp_execution_data:/app/data
+      # Bind mount source code for live development
+      - ../services/mcp_script_execution_service:/app/service
+      - ../mcp_servers:/app/mcp_servers
+      - ../src:/app/src
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5203/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Additional security for script execution
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  mcp_statistical_data:
+  mcp_neo4j_data:
+  mcp_execution_output:
+  mcp_execution_data:

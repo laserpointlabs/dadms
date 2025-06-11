@@ -1,0 +1,56 @@
+{  "service": {
+    "name": "mcp-script-execution-service",
+    "type": "computational",
+    "version": "1.0",
+    "port": 5203,
+    "description": "Script execution service for mathematical computing (Scilab, Python, R, MATLAB)",
+    "health_endpoint": "/health",
+    "capabilities": [
+      "scilab_execution",
+      "python_execution", 
+      "r_execution",
+      "mathematical_modeling",
+      "numerical_analysis",
+      "optimization",
+      "simulation"
+    ],
+    "mcp_config": {
+      "server_executable": "python",
+      "server_args": ["-m", "mcp_script_execution_server"],
+      "supported_tools": [
+        "execute_scilab_script",
+        "execute_python_script",
+        "execute_r_script",
+        "solve_optimization_problem",
+        "run_simulation",
+        "perform_numerical_analysis"
+      ]
+    },
+    "security": {
+      "sandbox_mode": true,
+      "max_execution_time": 300,
+      "allowed_imports": [
+        "numpy",
+        "scipy",
+        "matplotlib",
+        "pandas",
+        "scikit-learn"
+      ]
+    }
+  },
+  "docker": {
+    "image": "dadm/mcp-script-execution-service",
+    "ports": ["5202:5202"],
+    "environment": {
+      "SCILAB_PATH": "/usr/local/scilab",
+      "R_HOME": "/usr/lib/R",
+      "PYTHON_PATH": "/usr/bin/python3",
+      "MCP_SERVER_PATH": "/app/mcp_servers",
+      "SANDBOX_MODE": "true"
+    },
+    "volumes": [
+      "./scripts:/app/scripts:ro",
+      "./output:/app/output:rw"
+    ]
+  }
+}
