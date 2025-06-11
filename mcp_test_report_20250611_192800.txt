@@ -1,0 +1,34 @@
+============================================================
+MCP SERVICES INTEGRATION TEST REPORT
+============================================================
+Test completed at: 2025-06-11 19:28:00
+Total test time: 0.12 seconds
+
+SUMMARY:
+  Services tested: 3
+  Healthy services: 3
+  Functional services: 3
+
+STATISTICAL SERVICE:
+  Health: healthy
+    Response time: 16.9ms
+  Info: success
+    Capabilities: 6 listed
+  Functional: success
+    Response time: 10.4ms
+
+NEO4J SERVICE:
+  Health: healthy
+    Response time: 4.4ms
+  Info: success
+    Capabilities: 6 listed
+  Functional: success
+    Response time: 30.3ms
+
+SCRIPT_EXECUTION SERVICE:
+  Health: healthy
+    Response time: 5.7ms
+  Info: success
+    Capabilities: 5 listed
+  Functional: success
+    Response time: 5.4ms
