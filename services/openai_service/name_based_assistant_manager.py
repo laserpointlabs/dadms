@@ -28,13 +28,16 @@ class NameBasedAssistantManager:
         self.assistant_name = assistant_name or config.ASSISTANT_NAME
         self.assistant_model = assistant_model or config.ASSISTANT_MODEL
         self.assistant_instructions = assistant_instructions or config.ASSISTANT_INSTRUCTIONS
-        
-        # Cache for current session (cleared on restart)
+          # Cache for current session (cleared on restart)
         self._session_cache = {
             "assistant": None,
             "vector_stores": None,
             "thread_id": None
         }
+        
+        # Thread persistence for process instances
+        # Maps process_instance_id + assistant_id to thread_id
+        self._process_threads = {}
         
         logger.info(f"Initialized NameBasedAssistantManager for assistant: {self.assistant_name}")
     
@@ -344,9 +347,9 @@ class NameBasedAssistantManager:
             )
         except Exception as e:
             logger.error(f"Error checking/cancelling active runs: {e}")
-            return False
-
-    def process_task(self, task_name: str, task_documentation: str = "", variables: Dict = None) -> Dict[str, Any]:
+            return False    
+        
+    def process_task(self, task_name: str, task_documentation: str = "", variables: Optional[Dict] = None, process_instance_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Process a task using the assistant.
         
@@ -354,6 +357,7 @@ class NameBasedAssistantManager:
             task_name: Name of the task
             task_documentation: Task documentation/instructions
             variables: Task variables
+            process_instance_id: Process instance ID for thread persistence
             
         Returns:
             Task result
@@ -362,13 +366,18 @@ class NameBasedAssistantManager:
         if not assistant:
             return {"error": "Could not get or create assistant"}
         
-        # Always create a new thread for each task to avoid conflicts
-        thread_id = self.create_thread()
-        if not thread_id:
-            return {"error": "Could not create thread"}
-        
+        # Use process-specific thread if process_instance_id is provided, otherwise create new thread
+        if process_instance_id:
+            thread_id = self.get_or_create_process_thread(process_instance_id, assistant.id)
+            if not thread_id:
+                return {"error": "Could not get or create process thread"}
+        else:
+            # Fallback: create a new thread for each task (legacy behavior)
+            thread_id = self.create_thread()
+            if not thread_id:
+                return {"error": "Could not create thread"}
         try:
-            # Cancel any active runs on this thread (shouldn't be any since it's new, but safety check)
+            # Cancel any active runs on this thread (for existing threads, safety check)
             self._cancel_active_runs(thread_id)
             
             # Prepare message content
@@ -477,7 +486,8 @@ class NameBasedAssistantManager:
         return self.process_task(
             task_name="User Task",
             task_documentation=task_description,
-            variables=None
+            variables=None,
+            process_instance_id=None
         )
     
     def get_service_status(self) -> Dict[str, Any]:
@@ -793,3 +803,62 @@ class NameBasedAssistantManager:
                 "message": f"Error running rebuild script: {str(e)}",
                 "action": "error"
             }
+    
+    def get_or_create_process_thread(self, process_instance_id: str, assistant_id: str) -> Optional[str]:
+        """
+        Get or create a thread for a specific process instance and assistant combination.
+        This ensures that all tasks within the same process instance use the same OpenAI thread,
+        enabling conversation continuity across the entire process.
+        
+        Args:
+            process_instance_id: The Camunda process instance ID
+            assistant_id: The OpenAI assistant ID
+            
+        Returns:
+            Thread ID if successful, None otherwise
+        """
+        if not process_instance_id or not assistant_id:
+            logger.warning("Process instance ID or assistant ID not provided, creating new thread")
+            return self.create_thread()
+        
+        # Create a unique key for this process + assistant combination
+        process_key = f"{process_instance_id}:{assistant_id}"
+        
+        # Check if we already have a thread for this process + assistant
+        if process_key in self._process_threads:
+            thread_id = self._process_threads[process_key]
+            logger.info(f"Reusing existing thread {thread_id} for process {process_instance_id}")
+            
+            # Verify the thread still exists on OpenAI
+            try:
+                self.client.beta.threads.retrieve(thread_id)
+                return thread_id
+            except Exception as e:
+                logger.warning(f"Thread {thread_id} no longer exists on OpenAI: {e}")
+                # Remove invalid thread from cache
+                del self._process_threads[process_key]
+        
+        # Create a new thread for this process + assistant combination
+        thread_id = self.create_thread()
+        if thread_id:
+            self._process_threads[process_key] = thread_id
+            logger.info(f"Created new thread {thread_id} for process {process_instance_id}")
+        
+        return thread_id
+
+    def clear_process_thread(self, process_instance_id: str, assistant_id: str) -> None:
+        """
+        Clear the cached thread for a process instance and assistant combination.
+        This can be called when a process completes to clean up resources.
+        
+        Args:
+            process_instance_id: The Camunda process instance ID
+            assistant_id: The OpenAI assistant ID
+        """
+        if not process_instance_id or not assistant_id:
+            return
+        
+        process_key = f"{process_instance_id}:{assistant_id}"
+        if process_key in self._process_threads:
+            thread_id = self._process_threads.pop(process_key)
+            logger.info(f"Cleared cached thread {thread_id} for process {process_instance_id}")
