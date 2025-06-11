@@ -14,7 +14,7 @@ python deploy_bpmn.py -m model_name -s http://localhost:8080  # Deploy a single 
 python deploy_bpmn.py -a -s http://localhost:8080             # Deploy all models
 ```
 
-See [bpmn_deployment.md](../docs/bpmn_deployment.md) for more details.
+See [BPMN_VALIDATION_DEPLOYMENT.md](../docs/BPMN_VALIDATION_DEPLOYMENT.md) for more details.
 
 ### 2. BPMN TTL Fixer (`fix_bpmn_ttl.py`)
 
