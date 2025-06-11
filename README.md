@@ -303,8 +303,9 @@ python scripts/setup_logs_directory.py
 ## Documentation
 
 Detailed documentation is available in the `docs/` directory:
+- [Documentation Index](docs/index.md) - List of all available guides.
 
-- [BPMN Deployment](docs/bpmn_deployment.md)
+- [BPMN Validation & Deployment](docs/BPMN_VALIDATION_DEPLOYMENT.md)
 - [BPMN TTL Fix](docs/bpmn_ttl_fix.md)
 - [Camunda Docker Configuration](docs/camunda_docker_fix.md)
 - [OpenAI Integration](docs/openai_integration.md)
