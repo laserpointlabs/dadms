@@ -1042,11 +1042,13 @@ def parse_arguments():
     list_parser.add_argument('--process-id', type=str,
                            help='Filter by specific process instance ID')
     list_parser.add_argument('--service', type=str,
-                           help='Filter by source service')
+                           help='Filter by source service')    
     list_parser.add_argument('--tags', nargs='*',
                            help='Filter by tags')
     list_parser.add_argument('--detailed', action='store_true',
                            help='Show detailed information for each analysis')
+    list_parser.add_argument('--get-openai-url', action='store_true',
+                           help='Generate OpenAI Playground URL for the process (requires --process-id)')
     list_parser.add_argument('--storage-dir', type=str,
                            help='Storage directory for analysis data')
 
@@ -1292,10 +1294,44 @@ def handle_analysis_command(args):
                 analyses = [a for a in analyses if a.metadata.process_instance_id == args.process_id]
                 # Limit to requested number after filtering
                 analyses = analyses[:args.limit]
-            
-            # Filter by service if specified
+              # Filter by service if specified
             if args.service:
                 analyses = [a for a in analyses if a.metadata.source_service == args.service]
+            
+            # Handle OpenAI URL generation if requested
+            if args.get_openai_url:
+                if not args.process_id:
+                    print(f"{Fore.RED}Error: --get-openai-url requires --process-id to be specified{Style.RESET_ALL}")
+                    data_manager.close()
+                    return 1
+                
+                # Find analysis with OpenAI thread information for this process
+                openai_analysis = None
+                for analysis in analyses:
+                    if (analysis.output_data and 
+                        'thread_id' in analysis.output_data and 
+                        'assistant_id' in analysis.output_data):
+                        openai_analysis = analysis
+                        break
+                
+                if not openai_analysis:
+                    print(f"{Fore.RED}No OpenAI thread information found for process {args.process_id}{Style.RESET_ALL}")
+                    data_manager.close()
+                    return 1
+                
+                assistant_id = openai_analysis.output_data['assistant_id']
+                thread_id = openai_analysis.output_data['thread_id']
+                
+                # Generate OpenAI Playground URL
+                playground_url = f"https://platform.openai.com/playground/assistants?assistant={assistant_id}&thread={thread_id}"
+                
+                print(f"\n{Fore.GREEN}OpenAI Playground URL for process {args.process_id}:{Style.RESET_ALL}")
+                print(f"{playground_url}")
+                print(f"\n{Fore.CYAN}Assistant ID:{Style.RESET_ALL} {assistant_id}")
+                print(f"{Fore.CYAN}Thread ID:{Style.RESET_ALL} {thread_id}")
+                
+                data_manager.close()
+                return 0
             
             if not analyses:
                 print(f"\n{Fore.YELLOW}No analyses found matching the criteria.{Style.RESET_ALL}")
