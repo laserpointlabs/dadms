@@ -1029,7 +1029,27 @@ def parse_arguments():
                                                   description='Display status of analysis storage and processing')
     status_parser.add_argument('--storage-dir', type=str,
                               help='Storage directory for analysis data')
-    
+      # Analysis list command
+    list_parser = analysis_subparsers.add_parser('list',
+                                                help='List recent analysis runs',
+                                                description='Display recent analysis runs with key information')
+    list_parser.add_argument('--limit', type=int, default=10,
+                           help='Number of recent analyses to show (default: 10)')
+    list_parser.add_argument('--thread-id', type=str,
+                           help='Filter by specific thread ID')
+    list_parser.add_argument('--session-id', type=str,
+                           help='Filter by specific session ID')
+    list_parser.add_argument('--process-id', type=str,
+                           help='Filter by specific process instance ID')
+    list_parser.add_argument('--service', type=str,
+                           help='Filter by source service')
+    list_parser.add_argument('--tags', nargs='*',
+                           help='Filter by tags')
+    list_parser.add_argument('--detailed', action='store_true',
+                           help='Show detailed information for each analysis')
+    list_parser.add_argument('--storage-dir', type=str,
+                           help='Storage directory for analysis data')
+
     # Analysis process command
     process_parser = analysis_subparsers.add_parser('process',
                                                    help='Process pending analysis tasks',
@@ -1232,6 +1252,128 @@ def handle_analysis_command(args):
                 
         except Exception as e:
             print(f"{Fore.RED}Error restarting analysis daemon: {e}{Style.RESET_ALL}")
+            return 1
+            
+    elif args.analysis_command == 'list':
+        # List recent analysis runs
+        print(f"{Fore.CYAN}Recent Analysis Runs{Style.RESET_ALL}")
+        
+        try:
+            # Import analysis data manager
+            import sys
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent
+            sys.path.insert(0, str(project_root))
+            
+            from src.analysis_data_manager import AnalysisDataManager
+            
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+              # Build filters
+            filters = {}
+            if args.thread_id:
+                filters['thread_id'] = args.thread_id
+            if args.session_id:
+                filters['session_id'] = args.session_id
+            if args.tags:
+                filters['tags'] = args.tags
+            
+            # Handle process_id filtering separately since search_analyses doesn't support it directly
+            if args.process_id:
+                # We'll filter by process_instance_id after getting results
+                pass
+              # Search analyses
+            analyses = data_manager.search_analyses(
+                limit=args.limit * 2 if args.process_id else args.limit,  # Get more if we need to filter by process_id
+                **filters
+            )
+            
+            # Filter by process ID if specified (since search_analyses doesn't support it directly)
+            if args.process_id:
+                analyses = [a for a in analyses if a.metadata.process_instance_id == args.process_id]
+                # Limit to requested number after filtering
+                analyses = analyses[:args.limit]
+            
+            # Filter by service if specified
+            if args.service:
+                analyses = [a for a in analyses if a.metadata.source_service == args.service]
+            
+            if not analyses:
+                print(f"\n{Fore.YELLOW}No analyses found matching the criteria.{Style.RESET_ALL}")
+                data_manager.close()
+                return 0
+            
+            print(f"\n{Fore.GREEN}Found {len(analyses)} analyses:{Style.RESET_ALL}")
+            print()
+            
+            # Display analyses
+            for i, analysis in enumerate(analyses, 1):
+                metadata = analysis.metadata
+                
+                # Format timestamps
+                created_at = metadata.created_at.strftime("%Y-%m-%d %H:%M:%S") if hasattr(metadata.created_at, 'strftime') else str(metadata.created_at)
+                
+                # Basic information
+                print(f"{Fore.CYAN}[{i}] Analysis ID:{Style.RESET_ALL} {metadata.analysis_id}")
+                print(f"    Task: {metadata.task_name}")
+                print(f"    Service: {metadata.source_service}")
+                print(f"    Created: {created_at}")
+                print(f"    Status: {metadata.status.value if hasattr(metadata.status, 'value') else metadata.status}")
+                
+                # Thread and session info
+                if metadata.thread_id:
+                    print(f"    Thread ID: {metadata.thread_id}")
+                if metadata.session_id:
+                    print(f"    Session ID: {metadata.session_id}")
+                if metadata.process_instance_id:
+                    print(f"    Process ID: {metadata.process_instance_id}")
+                
+                # Tags
+                if metadata.tags:
+                    tags_str = ", ".join(metadata.tags)
+                    print(f"    Tags: {tags_str}")
+                
+                # OpenAI specific info
+                if analysis.output_data:
+                    if 'thread_id' in analysis.output_data:
+                        print(f"    OpenAI Thread: {analysis.output_data['thread_id']}")
+                    if 'assistant_id' in analysis.output_data:
+                        print(f"    OpenAI Assistant: {analysis.output_data['assistant_id']}")
+                
+                # Detailed view
+                if args.detailed:
+                    # Input data summary
+                    if analysis.input_data:
+                        input_keys = list(analysis.input_data.keys())
+                        print(f"    Input Keys: {', '.join(input_keys[:5])}")
+                        if len(input_keys) > 5:
+                            print(f"                ... and {len(input_keys) - 5} more")
+                    
+                    # Output data summary
+                    if analysis.output_data:
+                        output_keys = list(analysis.output_data.keys())
+                        print(f"    Output Keys: {', '.join(output_keys[:5])}")
+                        if len(output_keys) > 5:
+                            print(f"                 ... and {len(output_keys) - 5} more")
+                    
+                    # Processing status
+                    processing_status = data_manager.get_processing_status(metadata.analysis_id)
+                    if processing_status.get('tasks'):
+                        completed_tasks = len([t for t in processing_status['tasks'] if t['status'] == 'completed'])
+                        total_tasks = len(processing_status['tasks'])
+                        print(f"    Processing: {completed_tasks}/{total_tasks} tasks completed")
+                
+                print()  # Empty line between analyses
+            
+            # Show summary
+            if len(analyses) >= args.limit:
+                print(f"{Fore.YELLOW}Showing first {args.limit} results. Use --limit to see more.{Style.RESET_ALL}")
+            
+            data_manager.close()
+            
+        except Exception as e:
+            print(f"{Fore.RED}Error listing analyses: {e}{Style.RESET_ALL}")
+            import traceback
+            print(f"{Fore.RED}Details: {traceback.format_exc()}{Style.RESET_ALL}")
             return 1
             
     elif args.analysis_command == 'status':

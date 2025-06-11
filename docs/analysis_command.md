@@ -89,6 +89,60 @@ dadm analysis restart [options]
 dadm analysis restart
 ```
 
+### `list` - List Recent Analysis Runs
+
+Displays recent analysis runs with key information for review and monitoring.
+
+```bash
+dadm analysis list [options]
+```
+
+**Options:**
+- `--limit NUMBER` - Number of recent analyses to show (default: 10)
+- `--thread-id ID` - Filter by specific thread ID
+- `--session-id ID` - Filter by specific session ID  
+- `--process-id ID` - Filter by specific process instance ID
+- `--service NAME` - Filter by source service
+- `--tags TAG [TAG...]` - Filter by tags
+- `--detailed` - Show detailed information for each analysis
+- `--storage-dir PATH` - Custom storage directory for analysis data
+
+**Examples:**
+```bash
+# Show last 5 analyses
+dadm analysis list --limit 5
+
+# Show detailed information for last 10 analyses
+dadm analysis list --detailed
+
+# Filter by specific thread
+dadm analysis list --thread-id thread_abc123
+
+# Filter by OpenAI service analyses
+dadm analysis list --service openai_assistant
+
+# Filter by specific process instance
+dadm analysis list --process-id 2904d0a2-46bd-11f0-9a4c-0242ac190006
+
+# Filter by tags
+dadm analysis list --tags openai decision_analysis
+
+# Combine filters for targeted search
+dadm analysis list --limit 20 --service openai_assistant --detailed
+```
+
+**Output Information:**
+- **Analysis ID**: Unique identifier for the analysis
+- **Task Name**: Name of the analysis task
+- **Service**: Source service that generated the analysis
+- **Created**: Timestamp when analysis was created
+- **Status**: Current processing status
+- **Thread ID**: Conversation/thread identifier
+- **Session/Process ID**: Session or process instance identifier
+- **Tags**: Associated tags for categorization
+- **OpenAI Context**: Thread and assistant IDs for OpenAI analyses
+- **Processing Status**: Background processing completion (detailed mode)
+
 ### `status` - Show Analysis System Status
 
 Displays the current status of the analysis storage system including statistics and backend health.
@@ -158,12 +212,33 @@ dadm analysis status
 # 3. Run your DADM workflow (daemon processes automatically)
 dadm -s 'OpenAI Decision Tester'
 
-# 4. Check the analysis status (shows new data)
-dadm analysis status
+# 4. List recent analyses to see what was captured
+dadm analysis list --limit 5
 
-# 5. Continue working - the daemon processes data in background
+# 5. Check specific analysis details
+dadm analysis list --detailed --limit 3
+
+# 6. Continue working - the daemon processes data in background
 # Stop daemon when done
 dadm analysis stop
+```
+
+### Analysis Review Workflow
+```bash
+# List recent analyses
+dadm analysis list
+
+# Show detailed information
+dadm analysis list --detailed --limit 5
+
+# Filter by specific criteria
+dadm analysis list --service openai_assistant --limit 10
+
+# Review specific process analyses
+dadm analysis list --process-id <process-instance-id>
+
+# Check OpenAI conversation threads
+dadm analysis list --tags openai --detailed
 ```
 
 ### Foreground Daemon Workflow
