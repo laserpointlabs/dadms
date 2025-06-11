@@ -443,6 +443,11 @@ dadm docker down
 # Analysis data management
 dadm analysis daemon              # Start background analysis processing
 dadm analysis status              # Show analysis system status
+dadm analysis list --limit 5      # List recent analysis runs
+dadm analysis list --detailed     # Show detailed analysis information
+dadm analysis list --process-id <id>  # Filter by process instance
+dadm analysis list --service <name>   # Filter by service name
+dadm analysis list --tags <tag1> <tag2>  # Filter by tags
 dadm analysis process --once      # Process pending tasks once
 ```
 
