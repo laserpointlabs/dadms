@@ -37,6 +37,71 @@ from config import openai_config
 # Import service discovery module
 from src.consul_app import get_openai_service_url
 
+
+def format_variables_for_display(variables, title="VARIABLES"):
+    """
+    Format variables for human-readable display, detecting and prettifying JSON strings
+    
+    Args:
+        variables: Dictionary of variables to display
+        title: Title to show above the variables
+        
+    Returns:
+        str: Formatted string for display
+    """
+    if not variables:
+        return f"\n{title}: None"
+    
+    def try_parse_and_format_json(value):
+        """Try to parse a value as JSON and format it nicely"""
+        if not isinstance(value, str):
+            return value
+        
+        # Check if this looks like JSON (starts with { or [)
+        stripped = value.strip()
+        if not (stripped.startswith('{') or stripped.startswith('[')):
+            return value
+        
+        try:
+            # Try to parse as JSON
+            parsed = json.loads(value)
+            # If successful, return pretty-formatted JSON
+            return json.dumps(parsed, indent=4, ensure_ascii=False)
+        except (json.JSONDecodeError, ValueError):
+            # If parsing fails, return original value
+            return value
+    
+    # Process each variable
+    formatted_vars = {}
+    for key, value in variables.items():
+        formatted_vars[key] = try_parse_and_format_json(value)
+    
+    # Create the display string
+    lines = [f"\n{title}:"]
+    
+    for key, value in formatted_vars.items():
+        lines.append(f"\n📋 {key}:")
+          # Check if this is a formatted JSON string (has newlines and indentation)
+        if isinstance(value, str) and '\n' in value and ('    ' in value or '  ' in value):
+            # This is likely formatted JSON, display it with proper indentation
+            lines.append("=" * 60)
+            lines.append(value)
+            lines.append("=" * 60)
+        else:
+            # Regular value, display normally
+            # Don't truncate important variables like decision_context, instructions, etc.
+            important_vars = ['decision_context', 'instructions', 'task_documentation', 'context', 'description']
+            
+            if isinstance(value, str) and len(value) > 500 and not any(imp_var in key.lower() for imp_var in important_vars):
+                # Only truncate very long strings that aren't important context
+                lines.append(f"{str(value)[:500]}... (truncated)")
+            else:
+                # Display the full value for important variables
+                lines.append(str(value))
+    
+    return '\n'.join(lines)
+
+
 def namespace_task_output_variables(topic_name, activity_id, output_variables):
     """
     Namespace task output variables to prevent conflicts when parallel streams converge.
@@ -388,11 +453,9 @@ def handle_activity_task(task):
     print("\n" + "="*80)
     print(f"TASK RECEIVED: ID={task_id}, Activity={activity_id}, Topic={topic_name}")
     print("="*80)
-    
-    # Extract input variables from the task
+      # Extract input variables from the task
     variables = task.get_variables()
-    print("\nINPUT VARIABLES:")
-    print(json.dumps(variables, indent=2))
+    print(format_variables_for_display(variables, "INPUT VARIABLES"))
     
     # Determine if this is the first task to include decision context
     if not first_task_done:
@@ -530,13 +593,11 @@ def handle_activity_task(task):
         if not first_task_done:
             output_variables["decision_context"] = DECISION_CONTEXT
             output_variables["context_summary"] = "UAS selection for disaster response, $2M budget, multiple stakeholders"
-            first_task_done = True
-      # Namespace the output variables to prevent conflicts when parallel streams converge
+            first_task_done = True      # Namespace the output variables to prevent conflicts when parallel streams converge
     # This ensures that outputs from parallel analysis tasks don't overwrite each other
     namespaced_variables = namespace_task_output_variables(topic_name, activity_id, output_variables)
     
-    print("\nOUTPUT VARIABLES:")
-    print(json.dumps(namespaced_variables, indent=2))
+    print(format_variables_for_display(namespaced_variables, "OUTPUT VARIABLES"))
       
     # Add this topic to the processed set
     processed_topics.add(topic_name)
@@ -1785,6 +1846,7 @@ def main():
             # Deploy a specific model
             model_path = get_model_path(args.model_name)
               # Check if server is reachable
+           
             import requests
             server_url = args.server
             if not server_url.startswith('http'):

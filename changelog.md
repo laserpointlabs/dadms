@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2025-06-11
+
+### Enhanced
+- **Context Variables Display**: Dramatically improved readability of variables in both terminal and OpenAI threads
+  - Intelligent JSON detection and pretty-formatting for escaped JSON strings
+  - Smart truncation that preserves important variables (`decision_context`, `instructions`, etc.) in full
+  - Increased truncation threshold from 200 to 500 characters for non-essential content
+  - Visual separators and emoji indicators for better organization in terminal output
+  - Clean markdown code block formatting for JSON content in OpenAI Playground threads
+  - Applied to both terminal output during DADM execution and OpenAI thread display
+
+### Fixed
+- **Variable Truncation**: Eliminated premature truncation of critical decision context
+  - Important variables like `decision_context` are no longer truncated regardless of length
+  - Technical, business, and risk recommendations now display in full readable format
+  - Improved analysis quality by ensuring OpenAI assistants receive complete context
+
 ## [0.9.0] - 2025-06-11
 
 ### Added
