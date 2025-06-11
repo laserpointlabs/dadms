@@ -1,0 +1,46 @@
+{
+  "timestamp": "20250611_191936",
+  "test_description": "Neo4j MCP Service Test with Real Data",
+  "data_statistics": {
+    "total_nodes": 22,
+    "total_relationships": 15,
+    "node_counts": {
+      "Stakeholder": 7,
+      "Criterion": 5,
+      "Alternative": 4,
+      "Task": 3,
+      "Run": 1,
+      "Analysis": 1,
+      "Recommendation": 1
+    },
+    "relationship_counts": {
+      "INCLUDES_TASK": 3,
+      "PREFERS": 3,
+      "SCORES": 3,
+      "INFLUENCES": 2,
+      "PRECEDES": 2,
+      "GENERATES": 1,
+      "PRODUCES": 1
+    }
+  },
+  "mcp_service_tests": {
+    "Centrality Analysis": {
+      "status": "error",
+      "error": "500 Server Error: INTERNAL SERVER ERROR for url: http://localhost:5202/process_task"
+    },
+    "Community Detection": {
+      "status": "error",
+      "error": "500 Server Error: INTERNAL SERVER ERROR for url: http://localhost:5202/process_task"
+    },
+    "Graph Structure Analysis": {
+      "status": "error",
+      "error": "500 Server Error: INTERNAL SERVER ERROR for url: http://localhost:5202/process_task"
+    }
+  },
+  "decision_context": null,
+  "summary": {
+    "total_tests": 3,
+    "successful_tests": 0,
+    "failed_tests": 3
+  }
+}
