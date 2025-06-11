@@ -984,7 +984,65 @@ def parse_arguments():
                                help='Only list available services without registering them')
     services_parser.add_argument('--no-browser', action='store_true',
                                help='Do not open Consul UI in browser')
+      # Analysis subcommand
+    analysis_parser = subparsers.add_parser('analysis',
+                                          help='Analysis data management commands',
+                                          description='Manage analysis data storage and processing')
+    analysis_parser.epilog = "Examples:\n  dadm analysis daemon\n  dadm analysis status\n  dadm analysis process --once"
+    analysis_subparsers = analysis_parser.add_subparsers(dest='analysis_command', help='Analysis command to execute')
+      # Analysis daemon command
+    daemon_parser = analysis_subparsers.add_parser('daemon', 
+                                                  help='Start analysis processing daemon',
+                                                  description='Start background daemon for processing analysis data')
+    daemon_parser.add_argument('--interval', type=int, default=30, 
+                              help='Processing interval in seconds (default: 30)')
+    daemon_parser.add_argument('--batch-size', type=int, default=10,
+                              help='Number of tasks to process per batch (default: 10)')
+    daemon_parser.add_argument('--no-vector-store', action='store_true',
+                              help='Disable vector store processing')
+    daemon_parser.add_argument('--no-graph-db', action='store_true',
+                              help='Disable graph database processing')
+    daemon_parser.add_argument('--storage-dir', type=str,
+                              help='Storage directory for analysis data')
+    daemon_parser.add_argument('--detach', action='store_true',
+                              help='Run daemon in background and release terminal')
+    daemon_parser.add_argument('--log-file', type=str,
+                              help='Log file for background daemon (default: logs/analysis_daemon.log)')
     
+    # Analysis stop command
+    stop_parser = analysis_subparsers.add_parser('stop',
+                                                help='Stop background analysis daemon',
+                                                description='Stop running background analysis daemon')
+    stop_parser.add_argument('--storage-dir', type=str,
+                           help='Storage directory for analysis data')
+    
+    # Analysis restart command
+    restart_parser = analysis_subparsers.add_parser('restart',
+                                                   help='Restart background analysis daemon',
+                                                   description='Restart background analysis daemon with previous settings')
+    restart_parser.add_argument('--storage-dir', type=str,
+                               help='Storage directory for analysis data')
+    
+    # Analysis status command
+    status_parser = analysis_subparsers.add_parser('status',
+                                                  help='Show analysis system status',
+                                                  description='Display status of analysis storage and processing')
+    status_parser.add_argument('--storage-dir', type=str,
+                              help='Storage directory for analysis data')
+    
+    # Analysis process command
+    process_parser = analysis_subparsers.add_parser('process',
+                                                   help='Process pending analysis tasks',
+                                                   description='Process pending analysis tasks manually')
+    process_parser.add_argument('--once', action='store_true',
+                               help='Process once and exit (don\'t run as daemon)')
+    process_parser.add_argument('--limit', type=int, default=10,
+                               help='Number of tasks to process (default: 10)')
+    process_parser.add_argument('--processor-type', choices=['vector_store', 'graph_db'],
+                               help='Specific processor type to run')
+    process_parser.add_argument('--storage-dir', type=str,
+                               help='Storage directory for analysis data')
+
     # Docker subcommand
     docker_parser = subparsers.add_parser('docker',
                                         help='Run Docker Compose commands',
@@ -994,6 +1052,280 @@ def parse_arguments():
     docker_parser.add_argument('docker_args', nargs=argparse.REMAINDER, help='Arguments to pass to docker-compose command')
 
     return parser.parse_args()
+
+def handle_analysis_command(args):
+    """Handle analysis subcommands"""
+    from colorama import init, Fore, Style
+    init()  # Initialize colorama
+    
+    if args.analysis_command == 'daemon':
+        # Start analysis processing daemon
+        print(f"{Fore.CYAN}Starting Analysis Processing Daemon...{Style.RESET_ALL}")
+        
+        try:
+            # Import daemon manager
+            from src.daemon_manager import DaemonManager
+            
+            daemon_manager = DaemonManager("analysis_daemon", args.storage_dir)
+            
+            if args.detach:
+                # Start in detached mode
+                if daemon_manager.is_running():
+                    print(f"{Fore.YELLOW}Analysis daemon is already running (PID: {daemon_manager.get_pid()}){Style.RESET_ALL}")
+                    return 0
+                
+                # Prepare arguments for the daemon script
+                daemon_args = [
+                    '--interval', str(args.interval),
+                    '--batch-size', str(args.batch_size)
+                ]
+                
+                if args.no_vector_store:
+                    daemon_args.append('--no-vector-store')
+                if args.no_graph_db:
+                    daemon_args.append('--no-graph-db')
+                if args.storage_dir:
+                    daemon_args.extend(['--storage-dir', args.storage_dir])
+                
+                # Get daemon script path
+                script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'analysis_processing_daemon.py')
+                script_path = os.path.abspath(script_path)
+                  # Save configuration
+                import time
+                config = {
+                    'interval': args.interval,
+                    'batch_size': args.batch_size,
+                    'no_vector_store': args.no_vector_store,
+                    'no_graph_db': args.no_graph_db,
+                    'storage_dir': args.storage_dir,
+                    'log_file': args.log_file,
+                    'started_at': time.time()
+                }
+                daemon_manager.save_config(config)
+                
+                # Start daemon
+                log_file = args.log_file or "logs/analysis_daemon.log"
+                success = daemon_manager.start_detached(script_path, daemon_args, log_file)
+                
+                if success:
+                    pid = daemon_manager.get_pid()
+                    print(f"{Fore.GREEN}✅ Analysis daemon started in background!{Style.RESET_ALL}")
+                    print(f"  PID: {pid}")
+                    print(f"  Processing interval: {args.interval} seconds")
+                    print(f"  Batch size: {args.batch_size}")
+                    print(f"  Vector store: {'disabled' if args.no_vector_store else 'enabled'}")
+                    print(f"  Graph database: {'disabled' if args.no_graph_db else 'enabled'}")
+                    print(f"  Log file: {log_file}")
+                    print(f"\n{Fore.CYAN}Use 'dadm analysis status' to check daemon status{Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}Use 'dadm analysis stop' to stop the daemon{Style.RESET_ALL}")
+                    return 0
+                else:
+                    print(f"{Fore.RED}❌ Failed to start analysis daemon{Style.RESET_ALL}")
+                    return 1
+            
+            else:
+                # Start in foreground mode (original behavior)
+                import sys
+                from pathlib import Path
+                
+                # Add scripts directory to path
+                scripts_dir = Path(__file__).parent.parent / "scripts"
+                sys.path.insert(0, str(scripts_dir))
+                
+                from analysis_processing_daemon import AnalysisProcessingDaemon
+                
+                # Create daemon with args
+                daemon = AnalysisProcessingDaemon(
+                    storage_dir=args.storage_dir,
+                    enable_vector_store=not args.no_vector_store,
+                    enable_graph_db=not args.no_graph_db,
+                    process_interval=args.interval,
+                    batch_size=args.batch_size
+                )
+                
+                print(f"{Fore.GREEN}Analysis daemon started in foreground!{Style.RESET_ALL}")
+                print(f"  Processing interval: {args.interval} seconds")
+                print(f"  Batch size: {args.batch_size}")
+                print(f"  Vector store: {'disabled' if args.no_vector_store else 'enabled'}")
+                print(f"  Graph database: {'disabled' if args.no_graph_db else 'enabled'}")
+                print(f"\n{Fore.YELLOW}Press Ctrl+C to stop the daemon{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}Tip: Use --detach flag to run in background{Style.RESET_ALL}")
+                
+                # Start daemon
+                daemon.start()
+                
+        except ImportError as e:
+            print(f"{Fore.RED}Error: Could not import required modules: {e}{Style.RESET_ALL}")
+            return 1
+        except Exception as e:
+            print(f"{Fore.RED}Error starting analysis daemon: {e}{Style.RESET_ALL}")
+            return 1
+    
+    elif args.analysis_command == 'stop':
+        # Stop background analysis daemon
+        print(f"{Fore.CYAN}Stopping Analysis Daemon...{Style.RESET_ALL}")
+        
+        try:
+            from src.daemon_manager import DaemonManager
+            
+            daemon_manager = DaemonManager("analysis_daemon", args.storage_dir)
+            
+            if not daemon_manager.is_running():
+                print(f"{Fore.YELLOW}Analysis daemon is not running{Style.RESET_ALL}")
+                return 0
+            
+            pid = daemon_manager.get_pid()
+            success = daemon_manager.stop()
+            
+            if success:
+                print(f"{Fore.GREEN}✅ Analysis daemon stopped successfully (was PID: {pid}){Style.RESET_ALL}")
+                return 0
+            else:
+                print(f"{Fore.RED}❌ Failed to stop analysis daemon{Style.RESET_ALL}")
+                return 1
+                
+        except Exception as e:
+            print(f"{Fore.RED}Error stopping analysis daemon: {e}{Style.RESET_ALL}")
+            return 1
+    
+    elif args.analysis_command == 'restart':
+        # Restart background analysis daemon
+        print(f"{Fore.CYAN}Restarting Analysis Daemon...{Style.RESET_ALL}")
+        
+        try:
+            from src.daemon_manager import DaemonManager
+            
+            daemon_manager = DaemonManager("analysis_daemon", args.storage_dir)
+            
+            # Get previous configuration
+            config = daemon_manager.get_config()
+            if not config:
+                print(f"{Fore.RED}No previous daemon configuration found. Use 'dadm analysis daemon' to start.{Style.RESET_ALL}")
+                return 1
+            
+            # Prepare arguments from config
+            daemon_args = [
+                '--interval', str(config.get('interval', 30)),
+                '--batch-size', str(config.get('batch_size', 10))
+            ]
+            
+            if config.get('no_vector_store'):
+                daemon_args.append('--no-vector-store')
+            if config.get('no_graph_db'):
+                daemon_args.append('--no-graph-db')
+            if config.get('storage_dir'):
+                daemon_args.extend(['--storage-dir', config['storage_dir']])
+            
+            # Get daemon script path
+            script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'analysis_processing_daemon.py')
+            script_path = os.path.abspath(script_path)
+            
+            success = daemon_manager.restart(script_path, daemon_args)
+            
+            if success:
+                pid = daemon_manager.get_pid()
+                print(f"{Fore.GREEN}✅ Analysis daemon restarted successfully (PID: {pid}){Style.RESET_ALL}")
+                return 0
+            else:
+                print(f"{Fore.RED}❌ Failed to restart analysis daemon{Style.RESET_ALL}")
+                return 1
+                
+        except Exception as e:
+            print(f"{Fore.RED}Error restarting analysis daemon: {e}{Style.RESET_ALL}")
+            return 1
+            
+    elif args.analysis_command == 'status':
+        # Show analysis system status
+        print(f"{Fore.CYAN}Analysis System Status{Style.RESET_ALL}")
+        
+        try:
+            # Import daemon manager
+            from src.daemon_manager import DaemonManager
+            
+            daemon_manager = DaemonManager("analysis_daemon", args.storage_dir)
+            daemon_status = daemon_manager.get_status()
+            
+            # Show daemon status
+            print(f"\n{Fore.GREEN}Daemon Status:{Style.RESET_ALL}")
+            if daemon_status['running']:
+                print(f"  Status: {Fore.GREEN}Running{Style.RESET_ALL} (PID: {daemon_status['pid']})")
+                config = daemon_status['config']
+                if config:
+                    print(f"  Interval: {config.get('interval', 'unknown')} seconds")
+                    print(f"  Batch size: {config.get('batch_size', 'unknown')}")
+                    print(f"  Vector store: {'disabled' if config.get('no_vector_store') else 'enabled'}")
+                    print(f"  Graph database: {'disabled' if config.get('no_graph_db') else 'enabled'}")
+                    if 'started_at' in config:
+                        import time
+                        uptime = time.time() - config['started_at']
+                        hours, remainder = divmod(uptime, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        print(f"  Uptime: {int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}")
+            else:
+                print(f"  Status: {Fore.RED}Not Running{Style.RESET_ALL}")
+                print(f"  Use 'dadm analysis daemon --detach' to start in background")
+            
+            # Import analysis data manager for storage stats
+            import sys
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent
+            sys.path.insert(0, str(project_root))
+            
+            from src.analysis_data_manager import AnalysisDataManager
+            
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            stats = data_manager.get_stats()
+            
+            print(f"\n{Fore.GREEN}Storage Statistics:{Style.RESET_ALL}")
+            print(f"  Total analyses: {stats['total_analyses']}")
+            print(f"  Processing task status: {stats.get('processing_task_status', {})}")
+            print(f"  Vector store enabled: {stats['backends_enabled']['vector_store']}")
+            print(f"  Graph database enabled: {stats['backends_enabled']['graph_db']}")
+            
+            data_manager.close()
+            
+        except Exception as e:
+            print(f"{Fore.RED}Error getting analysis status: {e}{Style.RESET_ALL}")
+            return 1
+            
+    elif args.analysis_command == 'process':
+        # Process pending analysis tasks
+        print(f"{Fore.CYAN}Processing Analysis Tasks...{Style.RESET_ALL}")
+        
+        try:
+            # Import analysis data manager
+            import sys
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent
+            sys.path.insert(0, str(project_root))
+            
+            from src.analysis_data_manager import AnalysisDataManager
+            
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            
+            if args.once:
+                # Process once
+                processed = data_manager.process_pending_tasks(
+                    limit=args.limit,
+                    processor_type=args.processor_type
+                )
+                print(f"{Fore.GREEN}Processed {processed} tasks{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.YELLOW}Use --once flag to process tasks manually{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}For continuous processing, use: dadm analysis daemon{Style.RESET_ALL}")
+            
+            data_manager.close()
+            
+        except Exception as e:
+            print(f"{Fore.RED}Error processing analysis tasks: {e}{Style.RESET_ALL}")
+            return 1
+    
+    else:
+        print(f"{Fore.RED}Unknown analysis command: {args.analysis_command}{Style.RESET_ALL}")
+        return 1
+    
+    return 0
+
 
 def run_docker_command(args):
     """Run a Docker Compose command with the provided arguments"""
@@ -1236,8 +1568,7 @@ def main():
     print("="*80)
     print("DADM DEMONSTRATOR STARTING")
     print("="*80)
-    
-    # Handle docker subcommand
+      # Handle docker subcommand
     if args.command == 'docker':
         if not args.docker_args:
             print("Error: No Docker command specified")
@@ -1248,6 +1579,10 @@ def main():
             print("  dadm docker ps")
             return 1
         return run_docker_command(args.docker_args)
+    
+    # Handle analysis subcommand
+    if args.command == 'analysis':
+        return handle_analysis_command(args)
         
     # Handle deploy subcommand
     if args.command == 'deploy':
