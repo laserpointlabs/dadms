@@ -375,7 +375,7 @@ class NameBasedAssistantManager:
             # Fallback: create a new thread for each task (legacy behavior)
             thread_id = self.create_thread()
             if not thread_id:
-                return {"error": "Could not create thread"}
+                return {"error": "Could not create thread"}        
         try:
             # Cancel any active runs on this thread (for existing threads, safety check)
             self._cancel_active_runs(thread_id)
@@ -385,7 +385,7 @@ class NameBasedAssistantManager:
             if task_documentation:
                 content += f"Instructions: {task_documentation}\n\n"
             if variables:
-                content += f"Context Variables:\n{json.dumps(variables, indent=2)}\n\n"
+                content += f"Context Variables: {self._format_variables_for_openai(variables)}\n\n"
             content += "Please process this task according to the instructions."
             
             # Create message
@@ -862,3 +862,59 @@ class NameBasedAssistantManager:
         if process_key in self._process_threads:
             thread_id = self._process_threads.pop(process_key)
             logger.info(f"Cleared cached thread {thread_id} for process {process_instance_id}")
+    
+    def _format_variables_for_openai(self, variables: Dict[str, Any]) -> str:
+        """
+        Format variables for OpenAI thread display, detecting and prettifying JSON strings
+        """
+        if not variables:
+            return "None"
+        
+        def try_parse_and_format_json(value):
+            """Try to parse a value as JSON and format it nicely"""
+            if not isinstance(value, str):
+                return value
+            
+            # Check if this looks like JSON (starts with { or [)
+            stripped = value.strip()
+            if not (stripped.startswith('{') or stripped.startswith('[')):
+                return value
+            
+            try:
+                # Try to parse as JSON
+                parsed = json.loads(value)
+                # If successful, return pretty-formatted JSON
+                return json.dumps(parsed, indent=2, ensure_ascii=False)
+            except (json.JSONDecodeError, ValueError):
+                # If parsing fails, return original value
+                return value
+        
+        # Process each variable
+        formatted_vars = {}
+        for key, value in variables.items():
+            formatted_vars[key] = try_parse_and_format_json(value)
+        
+        # Create the display string
+        lines = []
+        
+        for key, value in formatted_vars.items():
+            lines.append(f"- {key}:")
+              # Check if this is a formatted JSON string (has newlines and indentation)
+            if isinstance(value, str) and '\n' in value and ('  ' in value or '    ' in value):
+                # This is likely formatted JSON, display it with code block formatting
+                lines.append("```json")
+                lines.append(value)
+                lines.append("```")
+            else:
+                # Regular value, display normally with proper indentation
+                # Don't truncate important variables like decision_context, instructions, etc.
+                important_vars = ['decision_context', 'instructions', 'task_documentation', 'context', 'description']
+                
+                if isinstance(value, str) and len(value) > 500 and not any(imp_var in key.lower() for imp_var in important_vars):
+                    # Only truncate very long strings that aren't important context
+                    lines.append(f"  {str(value)[:500]}... (truncated)")
+                else:
+                    # Display the full value for important variables
+                    lines.append(f"  {str(value)}")
+        
+        return '\n'.join(lines)
