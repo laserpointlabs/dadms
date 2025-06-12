@@ -176,8 +176,7 @@ async def calculate_statistics(arguments: dict[str, Any]) -> list[TextContent]:
                 "95th": float(np.percentile(data, 95))
             }
         }
-        
-        # Distribution tests if requested
+          # Distribution tests if requested
         if include_tests and len(data) >= 3:
             # Shapiro-Wilk test for normality
             shapiro_stat, shapiro_p = stats.shapiro(data)
@@ -185,7 +184,7 @@ async def calculate_statistics(arguments: dict[str, Any]) -> list[TextContent]:
                 "test": "Shapiro-Wilk",
                 "statistic": float(shapiro_stat),
                 "p_value": float(shapiro_p),
-                "is_normal": shapiro_p > 0.05
+                "is_normal": bool(shapiro_p > 0.05)
             }
             
             # Anderson-Darling test
