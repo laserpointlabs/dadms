@@ -16,6 +16,7 @@ Welcome to the documentation hub for the Decision Analysis and Decision Manageme
 - [BPMN Validation & Deployment](BPMN_VALIDATION_DEPLOYMENT.md) - Validate and deploy BPMN models.
 - [BPMN TTL Fix](bpmn_ttl_fix.md) - Add `historyTimeToLive` to BPMN files.
 - [Workflow Completion Detection](WORKFLOW_COMPLETION_DETECTION.md) - Detect when processes finish.
+- [LLM + MCP BPMN Workflow Overview](LLM_MCP_BPMN_WORKFLOW_OVERVIEW.md) - Quick guide to building pipeline-based processes.
 
 ## Services
 - [Implementing Services](IMPLEMENTING_SERVICES.md) - Create and integrate new services.
