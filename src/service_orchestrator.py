@@ -7,6 +7,7 @@ This module provides an optimized ServiceOrchestrator with advanced performance 
 - Prefetching for predictable workflows
 - Performance metrics collection
 - Batch task processing
+- MCP (Model Context Protocol) service support with tool discovery
 """
 import json
 import logging
@@ -262,6 +263,15 @@ class ServiceOrchestrator:
             docs_cache_ttl: Cache TTL in seconds for task documentation (default: 1 hour)        
             """
 
+        # Import MCP handler
+        try:
+            from src.mcp_service_handler import MCPServiceHandler
+            self.mcp_handler = MCPServiceHandler()
+            logger.info("MCP service handler initialized")
+        except ImportError as e:
+            self.mcp_handler = None
+            logger.warning(f"MCP service handler not available: {e}")
+
         # Default service registry if none provided
         if service_registry:
             # Use provided registry (highest priority)
@@ -358,8 +368,7 @@ class ServiceOrchestrator:
           # Performance metrics
         self.enable_metrics = enable_metrics
         self._metrics = OrchestratorMetrics() if enable_metrics else None
-        
-        # Initialize analysis service integration
+          # Initialize analysis service integration
         self.analysis_service = None
         if ANALYSIS_SERVICE_AVAILABLE:
             try:
@@ -373,6 +382,17 @@ class ServiceOrchestrator:
                 logger.warning(f"Failed to initialize analysis service: {e}")
         else:
             logger.warning("Analysis service integration not available")
+        
+        # Initialize MCP service handler
+        self.mcp_handler = None
+        try:
+            from src.mcp_service_handler import MCPServiceHandler
+            self.mcp_handler = MCPServiceHandler()
+            logger.info("MCP service handler initialized")
+        except ImportError as e:
+            logger.warning(f"MCP service handler not available: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to initialize MCP service handler: {e}")
         
         logger.info(f"Initialized ServiceOrchestrator with registry: {self.service_registry}")
 
@@ -888,7 +908,6 @@ class ServiceOrchestrator:
             service_name = self._get_default_service_name()
         
         logger.info(f"Routing task to service: {service_type}/{service_name}")
-        
         try:
             # Find the service in the registry
             if service_type in self.service_registry and service_name in self.service_registry[service_type]:
@@ -900,6 +919,11 @@ class ServiceOrchestrator:
             endpoint = service_config.get("endpoint")
             if not endpoint:
                 raise ValueError(f"No endpoint defined for service {service_type}/{service_name}")
+            
+            # Handle MCP services specially
+            if service_type == "mcp":
+                logger.info(f"Handling MCP service: {service_name}")
+                return self._route_mcp_task(task, variables, service_config, properties)
             
             # Get task documentation (uses cache if available)
             task_documentation = self.get_task_documentation(task)
@@ -993,281 +1017,97 @@ class ServiceOrchestrator:
                 "task": task.get_activity_id()
             }
     
-    def route_batch_tasks(self, tasks, variables_list=None):
+    def _route_mcp_task(self, task, variables, service_config, properties):
         """
-        Route multiple tasks in a batch for improved efficiency
+        Route a task to an MCP service with enhanced handling.
         
         Args:
-            tasks: List of Camunda external task objects
-            variables_list: List of variables dictionaries, one per task
-                           If None, empty variables will be used for all tasks
-        
-        Returns:
-            list: Results from services, in same order as tasks
-        """
-        if not tasks:
-            return []
-        
-        if variables_list is None:
-            variables_list = [{} for _ in tasks]
-        elif len(variables_list) != len(tasks):
-            raise ValueError("variables_list length must match tasks length")
-        
-        # Process definitions fetched so far (to avoid redundant fetches)
-        processed_definitions = set()
-        
-        # Group tasks by service type/name for batch processing
-        service_groups = defaultdict(list)
-        
-        # First pass: extract properties and group by service
-        for i, (task, variables) in enumerate(zip(tasks, variables_list)):
-            # Extract service properties (will be cached for later use)
-            properties = self.extract_service_properties(task)
-              # Get service endpoint from registry
-            service_type = properties.get("service.type", "assistant")
-            service_name = properties.get("service.name", self._get_default_service_name())
-            
-            # Add to service group
-            service_key = f"{service_type}:{service_name}"
-            service_groups[service_key].append((i, task, variables, properties))
-            
-            # Get process XML if not already fetched
-            process_instance_id = task.get_process_instance_id()
-            if process_instance_id and process_instance_id not in processed_definitions:
-                self._get_process_xml_for_task(task)
-                processed_definitions.add(process_instance_id)
-        
-        # Results list (will be filled with results in correct order)
-        results = [None] * len(tasks)
-        
-        # Process each service group
-        for service_key, group_items in service_groups.items():
-            service_type, service_name = service_key.split(":")
-            
-            try:
-                # Find the service in the registry
-                if service_type in self.service_registry and service_name in self.service_registry[service_type]:
-                    service_config = self.service_registry[service_type][service_name]
-                else:
-                    error_msg = f"No service found for type='{service_type}', name='{service_name}'"
-                    logger.error(error_msg)
-                    for idx, _, _, _ in group_items:
-                        results[idx] = {
-                            "error": error_msg,
-                            "service": f"{service_type}/{service_name}"
-                        }
-                    continue
-                
-                endpoint = service_config.get("endpoint")
-                if not endpoint:
-                    error_msg = f"No endpoint defined for service {service_type}/{service_name}"
-                    logger.error(error_msg)
-                    for idx, _, _, _ in group_items:
-                        results[idx] = {
-                            "error": error_msg,
-                            "service": f"{service_type}/{service_name}"
-                        }
-                    continue
-                
-                # Process each task in the group
-                for idx, task, variables, properties in group_items:
-                    # Get task documentation
-                    task_documentation = self.get_task_documentation(task)
-                    
-                    # Prepare request
-                    url = urljoin(endpoint, '/process_task')
-                    payload = {
-                        "task_name": task.get_activity_id(),
-                        "task_documentation": task_documentation,
-                        "variables": variables or {},
-                        "service_properties": properties
-                    }
-                    
-                    start_time = time.time()
-                    
-                    logger.info(f"Sending request to {url} for task {task.get_activity_id()}")
-                    
-                    if self.enable_metrics:
-                        self._metrics.record_api_call("service_request")
-                    
-                    # Make the request
-                    response = self._session.post(url, json=payload, timeout=300)
-                    
-                    if self.enable_metrics:
-                        self._metrics.record_operation_time(
-                            "service_request", time.time() - start_time
-                        )
-                    
-                    if response.status_code == 200:
-                        result = response.json().get("result", {})
-                        logger.info(f"Service request succeeded for task {task.get_activity_id()}")
-                        results[idx] = result
-                    else:
-                        error_msg = response.json().get("message", f"Unknown error, status code: {response.status_code}")
-                        logger.error(f"Service request failed for task {task.get_activity_id()}: {error_msg}")
-                        results[idx] = {
-                            "error": error_msg,
-                            "service": f"{service_type}/{service_name}",
-                            "task": task.get_activity_id()
-                        }
-            
-            except Exception as e:
-                error_msg = str(e)
-                logger.error(f"Error routing tasks to service: {error_msg}")
-                for idx, task, _, _ in group_items:
-                    results[idx] = {
-                        "error": error_msg,
-                        "service": f"{service_type}/{service_name}",
-                        "task": task.get_activity_id()
-                    }
-        
-        return results
-    
-    def _prefetch_likely_next_tasks(self, current_task_id):
-        """
-        Predict and prefetch next likely tasks based on workflow history
-        
-        Args:
-            current_task_id: Current task ID
-        """
-        # Skip if no transitions recorded
-        if not self._task_transition_counter or current_task_id not in self._task_transition_counter:
-            return
-        
-        # Get transitions from current task
-        transitions = self._task_transition_counter[current_task_id]
-        if not transitions:
-            return
-        
-        # Find most likely next tasks (top 2)
-        likely_next = sorted(transitions.items(), key=lambda x: x[1], reverse=True)[:2]
-        
-        # Get process instance ID from task history
-        process_ids = set()
-        for item in self._task_sequence_history:
-            if isinstance(item, tuple) and len(item) == 2:
-                process_ids.add(item[1])
-        
-        logger.debug(f"Prefetching likely next tasks: {[task_id for task_id, _ in likely_next]}")
-        
-        # We don't actually prefetch the tasks, but we're ready to implement this
-        # feature when needed
-    
-    def prefetch_process_xml(self, process_definition_id):
-        """
-        Prefetch process XML for a given process definition ID
-        
-        Args:
-            process_definition_id: Process definition ID
+            task: Camunda external task object
+            variables: Task variables dict
+            service_config: Service configuration from registry
+            properties: Service properties from BPMN
             
         Returns:
-            bool: True if prefetch was successful, False otherwise
+            dict: Result from the MCP service
         """
-        # Check if already in cache
-        if self._process_xml_cache.get(process_definition_id):
-            return True
+        if not self.mcp_handler:
+            logger.error("MCP service handler not available")
+            return {
+                "error": "MCP service handler not available",
+                "service": properties.get("service.name", "unknown"),
+                "task": task.get_activity_id() if hasattr(task, 'get_activity_id') else "unknown"
+            }
         
-        # Fetch process XML
-        xml_data = self._get_process_xml(process_definition_id)
-        if xml_data:
-            # Cache XML
-            self._process_xml_cache.set(process_definition_id, xml_data)
-            
-            # Parse XML and cache structure for faster access
-            try:
-                self._get_parsed_xml(xml_data)
-            except Exception as e:
-                logger.error(f"Error parsing prefetched XML: {str(e)}")
-            
-            return True
-        
-        return False
-    
-    def prefetch_common_activities(self, process_definition_id):
-        """
-        Prefetch and cache service properties for common activity IDs in a process
-        
-        Args:
-            process_definition_id: Process definition ID
-            
-        Returns:
-            int: Number of activities prefetched
-        """
-        # Get process XML
-        xml_data = self._process_xml_cache.get(process_definition_id)
-        if not xml_data:
-            xml_data = self._get_process_xml(process_definition_id)
-            if not xml_data:
-                return 0
-            self._process_xml_cache.set(process_definition_id, xml_data)
-        
-        # Parse XML
         try:
-            root = self._get_parsed_xml(xml_data)
-            
-            # Find all service tasks
-            prefetched_count = 0
-            for elem in root.iter():
-                if elem.tag.endswith('}serviceTask'):
-                    activity_id = elem.get('id')
-                    if activity_id and not self._service_properties_cache.get(activity_id):
-                        # We'd need a MockTask here to extract properties
-                        # This is just a placeholder for future implementation
-                        prefetched_count += 1
-            
-            return prefetched_count
-            
+            # Use the MCP handler to route the task
+            return self.mcp_handler.route_mcp_task(task, variables, service_config, properties)
         except Exception as e:
-            logger.error(f"Error prefetching activities: {str(e)}")
-            return 0
+            error_msg = f"MCP routing error: {str(e)}"
+            logger.error(error_msg)
+            return {
+                "error": error_msg,
+                "service": properties.get("service.name", "unknown"),
+                "task": task.get_activity_id() if hasattr(task, 'get_activity_id') else "unknown"
+            }
     
-    def clear_caches(self):
-        """Clear all internal caches"""
-        self._process_xml_cache.clear()
-        self._service_properties_cache.clear()
-        self._task_documentation_cache.clear()
-        self._parsed_xml_cache.clear()
-        logger.info("All service orchestrator caches cleared")
-    
-    def clear_cache_item(self, cache_type, key):
+    def discover_mcp_tools(self, service_name=None):
         """
-        Clear a specific item from a cache
+        Discover available tools from MCP services.
         
         Args:
-            cache_type: Type of cache ('xml', 'properties', 'documentation')
-            key: Cache key to remove
+            service_name: Optional specific service name to discover tools for
             
         Returns:
-            bool: True if item was removed, False otherwise
+            dict: Dictionary of service names to their available tools
         """
-        if cache_type == 'xml':
-            return self._process_xml_cache.delete(key)
-        elif cache_type == 'properties':
-            return self._service_properties_cache.delete(key)
-        elif cache_type == 'documentation':
-            return self._task_documentation_cache.delete(key)
-        elif cache_type == 'parsed_xml':
-            return self._parsed_xml_cache.delete(key)
-        else:
-            logger.warning(f"Unknown cache type: {cache_type}")
-            return False
-    
-    def clear_expired_cache_entries(self):
-        """
-        Clear expired entries from all caches
+        if not self.mcp_handler:
+            logger.warning("MCP service handler not available")
+            return {}
         
-        Returns:
-            dict: Number of entries removed from each cache
-        """
-        removed = {
-            'xml': self._process_xml_cache.cleanup_expired(),
-            'properties': self._service_properties_cache.cleanup_expired(),
-            'documentation': self._task_documentation_cache.cleanup_expired(),
-            'parsed_xml': self._parsed_xml_cache.cleanup_expired()
-        }
-        logger.info(f"Cleared {sum(removed.values())} expired cache entries")
-        return removed
+        all_tools = {}
+        
+        # Get MCP services from registry
+        mcp_services = self.service_registry.get("mcp", {})
+        
+        for svc_name, svc_config in mcp_services.items():
+            if service_name and svc_name != service_name:
+                continue
+                
+            try:
+                service_info = self.mcp_handler.discover_tools(svc_config)
+                all_tools[svc_name] = list(service_info.tools.keys())
+                logger.info(f"Discovered {len(service_info.tools)} tools for MCP service: {svc_name}")
+            except Exception as e:
+                logger.warning(f"Failed to discover tools for MCP service {svc_name}: {e}")
+                all_tools[svc_name] = []
+        
+        return all_tools
     
+    def get_mcp_tool_info(self, service_name, tool_name):
+        """
+        Get detailed information about a specific MCP tool.
+        
+        Args:
+            service_name: Name of the MCP service
+            tool_name: Name of the tool
+            
+        Returns:
+            dict: Tool information or None if not found
+        """
+        if not self.mcp_handler:
+            return None
+        
+        tool_info = self.mcp_handler.get_tool_info(service_name, tool_name)
+        if tool_info:
+            return {
+                "name": tool_info.name,
+                "description": tool_info.description,
+                "parameters": tool_info.parameters,
+                "server": tool_info.server,
+                "service_endpoint": tool_info.service_endpoint
+            }
+        return None
+
     def close(self):
         """Close HTTP session and clean up resources"""
         if self._session:
@@ -1303,4 +1143,24 @@ class ServiceOrchestrator:
 
 # Backwards compatibility
 EnhancedServiceOrchestrator = ServiceOrchestrator
+
+@dataclass
+class MCPToolInfo:
+    """Information about an available MCP tool."""
+    name: str
+    description: str
+    parameters: Dict[str, any] = field(default_factory=dict)
+    server: str = ""
+    service_endpoint: str = ""
+
+
+@dataclass
+class MCPServiceInfo:
+    """Information about an MCP service and its available tools."""
+    name: str
+    endpoint: str
+    description: str = ""
+    tools: Dict[str, MCPToolInfo] = field(default_factory=dict)
+    server_type: str = ""
+    last_discovery: float = 0
 

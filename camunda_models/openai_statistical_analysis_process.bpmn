@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0uoeoky" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.34.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:process id="OpenAI_Statistical_Analysis_Process" name="OpenAI Statistical Analysis Process" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_0nd5kef</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:sequenceFlow id="Flow_0nd5kef" sourceRef="StartEvent_1" targetRef="PrepareDataTask" />
+    
+    <bpmn:serviceTask id="PrepareDataTask" name="Prepare Data for Analysis" camunda:type="external" camunda:topic="PrepareDataForAnalysis">
+      <bpmn:documentation>Prepare and validate the data that needs statistical analysis. Your task is to:
+
+1. Examine the input data and ensure it's in the correct format for statistical analysis
+2. Identify the type of statistical analysis needed (descriptive statistics, hypothesis testing, etc.)
+3. Clean and validate the data (check for missing values, outliers, etc.)
+4. Format the data as a JSON array of numbers for the MCP statistical server
+5. Determine what statistical tests or analysis should be performed
+6. Prepare instructions for the statistical analysis
+
+Expected input: Raw data that needs analysis
+Expected output: Cleaned data array and analysis instructions</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0nd5kef</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ae144m</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_1ae144m" sourceRef="PrepareDataTask" targetRef="StatisticalAnalysisTask" />
+      <bpmn:serviceTask id="StatisticalAnalysisTask" name="Perform Statistical Analysis" camunda:type="external" camunda:topic="PerformStatisticalAnalysis">
+      <bpmn:documentation>Execute statistical analysis using the dedicated statistical service. This task will:
+
+1. Take the prepared data from the previous task
+2. Extract numerical values from the cleaned_data variable
+3. Perform comprehensive statistical analysis including descriptive statistics
+4. Run distribution tests (normality, Anderson-Darling) if data size allows
+5. Return complete statistical results for interpretation
+
+Expected input variables:
+- cleaned_data: Array of numerical values for analysis
+- analysis_type: Type of statistical analysis (default: descriptive)
+- include_distribution_tests: Boolean to include normality tests
+
+This task uses the MCP Statistical Service which internally calls the MCP statistical server.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="mcp" />
+          <camunda:property name="service.name" value="statistical" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="mcp.server" value="statistical" />
+          <camunda:property name="mcp.tool" value="enhanced_statistical_analysis" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1ae144m</bpmn:incoming>
+      <bpmn:outgoing>Flow_0c482ek</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_0c482ek" sourceRef="StatisticalAnalysisTask" targetRef="InterpretResultsTask" />
+    
+    <bpmn:serviceTask id="InterpretResultsTask" name="Interpret Statistical Results" camunda:type="external" camunda:topic="InterpretStatisticalResults">
+      <bpmn:documentation>Interpret the statistical analysis results and provide insights. Your task is to:
+
+1. Review the statistical analysis results from the MCP statistical server
+2. Interpret the key statistical measures (mean, median, standard deviation, etc.)
+3. Explain what the distribution tests reveal about the data
+4. Identify any significant patterns, outliers, or anomalies
+5. Provide actionable insights and recommendations based on the analysis
+6. Summarize findings in a clear, non-technical language for decision-makers
+7. Suggest next steps or additional analysis if needed
+
+Focus on practical implications and business relevance of the statistical findings.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0c482ek</bpmn:incoming>
+      <bpmn:outgoing>Flow_1kj5lem</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_1kj5lem" sourceRef="InterpretResultsTask" targetRef="EndEvent_1" />
+    
+    <bpmn:endEvent id="EndEvent_1" name="Analysis Complete">
+      <bpmn:incoming>Flow_1kj5lem</bpmn:incoming>
+    </bpmn:endEvent>
+    
+  </bpmn:process>
+  
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="OpenAI_Statistical_Analysis_Process">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="185" y="142" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1kmjr8w_di" bpmnElement="PrepareDataTask">
+        <dc:Bounds x="270" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0x5zj8q_di" bpmnElement="StatisticalAnalysisTask">
+        <dc:Bounds x="430" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1pf9wbr_di" bpmnElement="InterpretResultsTask">
+        <dc:Bounds x="590" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0kvj1j6_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="752" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="734" y="142" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0nd5kef_di" bpmnElement="Flow_0nd5kef">
+        <di:waypoint x="215" y="117" />
+        <di:waypoint x="270" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ae144m_di" bpmnElement="Flow_1ae144m">
+        <di:waypoint x="370" y="117" />
+        <di:waypoint x="430" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0c482ek_di" bpmnElement="Flow_0c482ek">
+        <di:waypoint x="530" y="117" />
+        <di:waypoint x="590" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kj5lem_di" bpmnElement="Flow_1kj5lem">
+        <di:waypoint x="690" y="117" />
+        <di:waypoint x="752" y="117" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -164,6 +164,20 @@ FALLBACK_SERVICE_REGISTRY = {
             "description": "OpenAI Assistant for processing decision tasks",
             "assistant_id": None
         }
+    },    "mcp": {
+        "statistical": {
+            "endpoint": "http://localhost:5201",
+            "description": "MCP Statistical Analysis Service",
+            "tools": ["enhanced_statistical_analysis", "calculate_statistics", "run_statistical_test"]
+        },
+        "script": {
+            "endpoint": "http://localhost:5202", 
+            "description": "MCP Script Execution Service"
+        },
+        "neo4j": {
+            "endpoint": "http://localhost:5203",
+            "description": "MCP Neo4j Database Service"
+        }
     },
     "test": {
         "echo": {

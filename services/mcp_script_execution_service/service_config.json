@@ -1,10 +1,29 @@
 {  "service": {
     "name": "mcp-script-execution-service",
-    "type": "computational",
+    "type": "mcp",
     "version": "1.0",
     "port": 5203,
     "description": "Script execution service for mathematical computing (Scilab, Python, R, MATLAB)",
     "health_endpoint": "/health",
+    "tags": [
+      "mcp",
+      "computational",
+      "script_execution"
+    ],
+    "metadata": {
+      "api_version": "v1",
+      "mcp_version": "1.0",
+      "service_category": "computational"
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
     "capabilities": [
       "scilab_execution",
       "python_execution", 

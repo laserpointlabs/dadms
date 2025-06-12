@@ -270,6 +270,68 @@ def service_info():
         "endpoints": ["/health", "/info", "/process_task"]
     })
 
+@app.route('/tools', methods=['GET'])
+def get_available_tools():
+    """MCP Tools discovery endpoint"""
+    return jsonify({
+        "tools": [
+            {
+                "name": "enhanced_statistical_analysis",
+                "description": "Perform comprehensive statistical analysis including descriptive statistics, distribution tests, and confidence intervals",
+                "parameters": {
+                    "data": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Array of numerical values for analysis"
+                    },
+                    "analysis_type": {
+                        "type": "string",
+                        "enum": ["descriptive", "inferential", "distribution"],
+                        "default": "descriptive",
+                        "description": "Type of statistical analysis to perform"
+                    },
+                    "include_distribution_tests": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Whether to include normality and distribution tests"
+                    }
+                }
+            },
+            {
+                "name": "calculate_statistics",
+                "description": "Calculate basic descriptive statistics for numerical data",
+                "parameters": {
+                    "data": {
+                        "type": "array", 
+                        "items": {"type": "number"},
+                        "description": "Numerical data array"
+                    }
+                }
+            },
+            {
+                "name": "run_statistical_test",
+                "description": "Run specific statistical tests on data",
+                "parameters": {
+                    "data": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Data for statistical testing"
+                    },
+                    "test_type": {
+                        "type": "string",
+                        "enum": ["shapiro", "anderson", "ttest", "mannwhitney"],
+                        "description": "Type of statistical test to perform"
+                    }
+                }
+            }
+        ],
+        "server_info": {
+            "name": "mcp-statistical-service",
+            "version": SERVICE_VERSION,
+            "capabilities": ["statistical_analysis", "data_extraction", "hypothesis_testing"]
+        }
+    })
+
 @app.route('/process_task', methods=['POST'])
 def process_task():
     """Main task processing endpoint compatible with DADM orchestrator"""
@@ -377,6 +439,29 @@ async def initialize_service():
         logger.info("Enhanced MCP Statistical Service ready")
     else:
         logger.error("Failed to initialize Enhanced MCP Statistical Service")
+    
+    # Register with Consul if enabled
+    try:
+        import atexit
+        from shared.consul_registry import register_mcp_service_with_consul, deregister_mcp_service_from_consul
+        
+        # Get the service config path
+        service_config_path = os.path.join(os.path.dirname(__file__), "service_config.json")
+        
+        # Register with Consul
+        consul_success = register_mcp_service_with_consul(service_config_path, port=5201)
+        if consul_success:
+            logger.info("✅ Service registered with Consul")
+            
+            # Register cleanup function for graceful shutdown
+            def cleanup_consul():
+                deregister_mcp_service_from_consul("mcp-statistical-service")
+            atexit.register(cleanup_consul)
+        else:
+            logger.warning("⚠️ Failed to register with Consul - continuing without service discovery")
+            
+    except Exception as e:
+        logger.warning(f"⚠️ Consul registration error: {e} - continuing without service discovery")
 
 if __name__ == '__main__':
     # Initialize the service

@@ -452,6 +452,29 @@ async def initialize_service():
         logger.info("MCP Neo4j Service ready")
     else:
         logger.error("Failed to initialize MCP Neo4j Service")
+    
+    # Register with Consul if enabled
+    try:
+        import atexit
+        from shared.consul_registry import register_mcp_service_with_consul, deregister_mcp_service_from_consul
+        
+        # Get the service config path
+        service_config_path = os.path.join(os.path.dirname(__file__), "service_config.json")
+        
+        # Register with Consul
+        consul_success = register_mcp_service_with_consul(service_config_path, port=5202)
+        if consul_success:
+            logger.info("✅ Service registered with Consul")
+            
+            # Register cleanup function for graceful shutdown
+            def cleanup_consul():
+                deregister_mcp_service_from_consul("mcp-neo4j-service")
+            atexit.register(cleanup_consul)
+        else:
+            logger.warning("⚠️ Failed to register with Consul - continuing without service discovery")
+            
+    except Exception as e:
+        logger.warning(f"⚠️ Consul registration error: {e} - continuing without service discovery")
 
 if __name__ == '__main__':
     # Initialize the MCP connection

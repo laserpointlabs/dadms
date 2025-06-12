@@ -1,10 +1,29 @@
 {  "service": {
     "name": "mcp-statistical-service",
-    "type": "analytics",
+    "type": "mcp",
     "version": "1.0",
     "port": 5201,
     "description": "Statistical analysis service powered by MCP servers",
     "health_endpoint": "/health",
+    "tags": [
+      "mcp",
+      "analytics",
+      "statistics"
+    ],
+    "metadata": {
+      "api_version": "v1",
+      "mcp_version": "1.0",
+      "service_category": "analytics"
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
     "capabilities": [
       "descriptive_statistics",
       "hypothesis_testing", 

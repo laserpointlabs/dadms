@@ -79,23 +79,26 @@ def get_running_containers() -> Dict[str, Dict[str, Any]]:
             if line:
                 container = json.loads(line)
                 container_name = container["Names"]
-                
-                # Get detailed network information for each container
+                  # Get detailed network information for each container
                 network_result = subprocess.run([
                     "docker", "inspect", container_name, 
-                    "--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"
+                    "--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}"
                 ], capture_output=True, text=True)
                 
                 if network_result.returncode == 0 and network_result.stdout.strip():
-                    ip_address = network_result.stdout.strip()
-                    containers[container_name] = {
-                        "id": container["ID"],
-                        "image": container["Image"],
-                        "status": container["Status"],
-                        "ports": container["Ports"],
-                        "ipAddress": ip_address
-                    }
-                    print(f"🐳 Found container: {container_name} at {ip_address}")
+                    # Get the first IP address (split by space and take first non-empty)
+                    ip_addresses = network_result.stdout.strip().split()
+                    ip_address = ip_addresses[0] if ip_addresses else ""
+                    
+                    if ip_address:
+                        containers[container_name] = {
+                            "id": container["ID"],
+                            "image": container["Image"],
+                            "status": container["Status"],
+                            "ports": container["Ports"],
+                            "ipAddress": ip_address
+                        }
+                        print(f"🐳 Found container: {container_name} at {ip_address}")
     except Exception as e:
         print(f"⚠️ Failed to get container information: {e}")
     

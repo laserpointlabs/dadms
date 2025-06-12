@@ -1,10 +1,29 @@
 {  "service": {
     "name": "mcp-neo4j-service",
-    "type": "graph_analytics",
+    "type": "mcp",
     "version": "1.0",
     "port": 5202,
     "description": "Advanced Neo4j graph analysis service powered by MCP servers",
     "health_endpoint": "/health",
+    "tags": [
+      "mcp",
+      "graph_analytics",
+      "neo4j"
+    ],
+    "metadata": {
+      "api_version": "v1",
+      "mcp_version": "1.0",
+      "service_category": "graph_analytics"
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
     "capabilities": [
       "centrality_analysis",
       "community_detection",
