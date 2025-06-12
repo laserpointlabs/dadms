@@ -166,14 +166,18 @@ services:
       - ../config:/app/config
       - ../logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
-    # Allow Docker commands
-    restart: unless-stopped
+    # Allow Docker commands    restart: unless-stopped
     networks:
       - dadm-network
     depends_on:
       - openai-service
       - echo-service
       - consul
+      - mcp-statistical-service
+      - mcp-neo4j-service
+      - mcp-script-execution-service
+      - llm-mcp-pipeline-service
+      - dadm-wrapper-service
     command: sh -c "python scripts/service_monitor.py --interval $${CHECK_INTERVAL:-60} --port 5200"
     healthcheck:
         test: ["CMD", "curl", "-f", "http://localhost:5200/health"]
@@ -201,7 +205,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-
   # Neo4j Graph Database Service
   neo4j:
     image: neo4j:5.16.0
@@ -228,6 +231,179 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 30s
+
+  # MCP Statistical Service
+  mcp-statistical-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_statistical_service/Dockerfile
+    container_name: mcp-statistical-service
+    ports:
+      - "5201:5201"
+    environment:
+      - PORT=5201
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=mcp-statistical-service
+      - SERVICE_TYPE=mcp
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+    volumes:
+      - ../config:/app/config
+      - ../services:/app/services
+      - ../src:/app/src
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5201/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MCP Neo4j Service
+  mcp-neo4j-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_neo4j_service/Dockerfile
+    container_name: mcp-neo4j-service
+    ports:
+      - "5202:5202"
+    environment:
+      - PORT=5202
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=mcp-neo4j-service
+      - SERVICE_TYPE=mcp
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+      - NEO4J_URI=bolt://dadm-neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+    volumes:
+      - ../config:/app/config
+      - ../services:/app/services
+      - ../src:/app/src
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+      - neo4j
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5202/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # MCP Script Execution Service
+  mcp-script-execution-service:
+    build:
+      context: ..
+      dockerfile: services/mcp_script_execution_service/Dockerfile
+    container_name: mcp-script-execution-service
+    ports:
+      - "5203:5203"
+    environment:
+      - PORT=5203
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=mcp-script-execution-service
+      - SERVICE_TYPE=mcp
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+    volumes:
+      - ../config:/app/config
+      - ../services:/app/services
+      - ../src:/app/src
+      - ../scripts:/app/scripts
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5203/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # LLM-MCP Pipeline Service
+  llm-mcp-pipeline-service:
+    build:
+      context: ..
+      dockerfile: services/llm_mcp_pipeline_service/Dockerfile
+    container_name: llm-mcp-pipeline-service
+    ports:
+      - "5204:5204"
+    environment:
+      - PORT=5204
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=llm-mcp-pipeline-service
+      - SERVICE_TYPE=pipeline
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ASSISTANT_MODEL=${ASSISTANT_MODEL:-gpt-4o}
+    volumes:
+      - ../config:/app/config
+      - ../services:/app/services
+      - ../src:/app/src
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+      - openai-service
+      - mcp-statistical-service
+      - mcp-neo4j-service
+      - mcp-script-execution-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5204/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # DADM Wrapper Service
+  dadm-wrapper-service:
+    build:
+      context: ..
+      dockerfile: services/dadm_wrapper_service/Dockerfile
+    container_name: dadm-wrapper-service
+    ports:
+      - "5205:5205"
+    environment:
+      - PORT=5205
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=dadm-wrapper-service
+      - SERVICE_TYPE=wrapper
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ASSISTANT_MODEL=${ASSISTANT_MODEL:-gpt-4o}
+    volumes:
+      - ../config:/app/config
+      - ../services:/app/services
+      - ../src:/app/src
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+      - openai-service
+      - llm-mcp-pipeline-service
+      - mcp-statistical-service
+      - mcp-neo4j-service
+      - mcp-script-execution-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5205/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
       start_period: 30s
 
 

@@ -1,0 +1,123 @@
+{
+    "service_name": "dadm-application-wrapper",
+    "service_type": "wrapper",
+    "description": "DADM Application Wrapper Service - Exposes entire DADM application as a callable service for Camunda orchestration",
+    "version": "1.0.0",
+    "port": 5205,
+    "host": "0.0.0.0",
+    "capabilities": [
+        "process_execution",
+        "pipeline_analysis",
+        "custom_analysis",
+        "camunda_integration"
+    ],
+    "consul": {
+        "enabled": true,
+        "service_name": "dadm-wrapper-service",
+        "service_type": "wrapper",
+        "health_check_path": "/health",
+        "health_check_interval": "30s",
+        "tags": ["dadm", "wrapper", "application", "orchestration"]
+    },
+    "endpoints": {
+        "health": {
+            "path": "/health",
+            "method": "GET",
+            "description": "Health check endpoint"
+        },
+        "execute_process": {
+            "path": "/execute/process",
+            "method": "POST",
+            "description": "Execute a DADM BPMN process",
+            "parameters": {
+                "process_definition": "BPMN process definition or process ID",
+                "variables": "Process variables"
+            }
+        },
+        "execute_pipeline": {
+            "path": "/execute/pipeline",
+            "method": "POST",
+            "description": "Execute an LLM-MCP analysis pipeline",
+            "parameters": {
+                "pipeline_name": "Name of predefined pipeline or 'custom'",
+                "variables": "Pipeline variables and configuration"
+            }
+        },
+        "execute_analysis": {
+            "path": "/execute/analysis",
+            "method": "POST",
+            "description": "Execute custom analysis",
+            "parameters": {
+                "type": "Analysis type (pipeline, process, custom)",
+                "configuration": "Analysis-specific configuration"
+            }
+        },
+        "process_task": {
+            "path": "/process_task",
+            "method": "POST",
+            "description": "Main DADM service endpoint for Camunda integration",
+            "parameters": {
+                "task_name": "Name of the task",
+                "task_description": "Description of the task",
+                "variables": "Task variables including execution_type"
+            }
+        }
+    },
+    "dependencies": [
+        "llm-mcp-pipeline-service",
+        "openai-service",
+        "statistical-mcp-service",
+        "neo4j-mcp-service",
+        "script-execution-mcp-service"
+    ],
+    "environment_variables": {
+        "PORT": "Service port (default: 5205)",
+        "HOST": "Service host (default: 0.0.0.0)",
+        "DEBUG": "Enable debug mode (default: false)",
+        "USE_CONSUL": "Enable Consul service registration (default: true)",
+        "CONSUL_HTTP_ADDR": "Consul server address (default: localhost:8500)",
+        "SERVICE_HOST": "Service hostname for registration (default: auto-detect)",
+        "SERVICE_TYPE": "Service type for Consul tags (default: wrapper)"
+    },
+    "integration_patterns": {
+        "camunda_service_task": {
+            "description": "Call DADM as a service from Camunda BPMN service tasks",
+            "endpoint": "/process_task",
+            "example": {
+                "task_name": "Execute DADM Analysis",
+                "task_description": "Perform decision analysis using DADM pipeline",
+                "variables": {
+                    "execution_type": "pipeline",
+                    "pipeline_name": "decision_analysis",
+                    "decision_context": "Strategic planning for Q1 2024",
+                    "stakeholders": ["CEO", "CTO", "CFO"],
+                    "criteria": ["cost", "time", "risk", "benefit"]
+                }
+            }
+        },
+        "process_orchestration": {
+            "description": "Execute complex DADM processes from external orchestrators",
+            "endpoint": "/execute/process",
+            "example": {
+                "process_definition": "comprehensive_analysis_process",
+                "variables": {
+                    "analysis_scope": "enterprise_decision",
+                    "data_sources": ["database", "external_api"],
+                    "output_format": "detailed_report"
+                }
+            }
+        },
+        "pipeline_analysis": {
+            "description": "Direct LLM-MCP pipeline execution",
+            "endpoint": "/execute/pipeline",
+            "example": {
+                "pipeline_name": "stakeholder_analysis",
+                "variables": {
+                    "project_name": "Digital Transformation Initiative",
+                    "stakeholder_data": "...",
+                    "analysis_depth": "comprehensive"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+# LLM-MCP Pipeline Service Requirements
+# Optimized for CPU-only builds to reduce build time
+
+# Core dependencies
+flask==3.0.1
+requests==2.31.0
+python-dotenv==1.0.0
+
+# OpenAI API
+openai==1.83.0
+
+# Lightweight logging and utilities
+colorama==0.4.6
+
+# Service discovery and configuration
+python-consul==1.1.0

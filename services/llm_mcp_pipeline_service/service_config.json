@@ -1,0 +1,56 @@
+{
+  "service": {
+    "name": "llm-mcp-pipeline",
+    "type": "pipeline",
+    "version": "1.0.0",
+    "port": 5204,
+    "description": "Streamlined LLM-MCP Pipeline Service for orchestrating AI and mathematical analysis",
+    "health_endpoint": "/health",
+    "capabilities": [
+      "decision_analysis",
+      "stakeholder_analysis", 
+      "optimization_analysis",
+      "custom_pipeline_creation",
+      "llm_mcp_orchestration"
+    ],
+    "endpoints": {
+      "health": "/health",
+      "info": "/info", 
+      "process_task": "/process_task",
+      "list_pipelines": "/pipelines",
+      "validate_pipeline": "/pipelines/validate",
+      "create_pipeline": "/pipelines/create"
+    },
+    "dependencies": {
+      "llm_service": "dadm-openai-assistant",
+      "mcp_services": [
+        "mcp-statistical-service",
+        "mcp-neo4j-service", 
+        "mcp-script-execution-service"
+      ]
+    },
+    "predefined_pipelines": {
+      "decision_analysis": {
+        "description": "Complete decision analysis using statistical analysis and LLM reasoning",
+        "llm_service": "dadm-openai-assistant",
+        "mcp_service": "mcp-statistical-service",
+        "tools": ["calculate_statistics", "run_statistical_test"],
+        "output_format": "structured"
+      },
+      "stakeholder_analysis": {
+        "description": "Stakeholder network analysis using graph analytics and LLM interpretation",
+        "llm_service": "dadm-openai-assistant", 
+        "mcp_service": "mcp-neo4j-service",
+        "tools": ["calculate_centrality", "community_detection"],
+        "output_format": "structured"
+      },
+      "optimization_analysis": {
+        "description": "Optimization analysis using script execution and LLM interpretation",
+        "llm_service": "dadm-openai-assistant",
+        "mcp_service": "mcp-script-execution-service", 
+        "tools": ["optimize_function", "monte_carlo_simulation"],
+        "output_format": "structured"
+      }
+    }
+  }
+}

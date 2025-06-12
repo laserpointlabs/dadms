@@ -7,7 +7,19 @@ colorama==0.4.6
 flask==3.0.1
 tabulate==0.9.0
 qdrant-client==1.7.3
-# Note: torch CPU versions are installed in Dockerfile before this
+
+# CPU-only ML dependencies for faster builds
+# Install PyTorch CPU-only first to avoid GPU package downloads
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+torchaudio==2.1.0+cpu
+
+# Sentence transformers with CPU-only torch backend
 sentence-transformers==2.2.2
+
+# Hugging Face Hub
 huggingface_hub==0.25.2
-# Add other dependencies like pinecone-client, or faiss-cpu as needed
+
+# Service discovery
+python-consul==1.1.0

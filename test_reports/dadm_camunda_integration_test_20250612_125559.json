@@ -1,0 +1,49 @@
+{
+  "test_suite": "DADM-Camunda Integration Test Suite",
+  "timestamp": "2025-06-12T12:55:59.306330",
+  "total_tests": 8,
+  "passed_tests": 5,
+  "failed_tests": 3,
+  "test_results": [
+    {
+      "name": "Service Health Check",
+      "status": "PASSED",
+      "timestamp": "2025-06-12T12:54:35.643926"
+    },
+    {
+      "name": "Pipeline Service Integration",
+      "status": "FAILED",
+      "timestamp": "2025-06-12T12:54:37.701290"
+    },
+    {
+      "name": "DADM Wrapper Service",
+      "status": "PASSED",
+      "timestamp": "2025-06-12T12:54:56.173334"
+    },
+    {
+      "name": "Camunda Service Task Simulation",
+      "status": "PASSED",
+      "timestamp": "2025-06-12T12:55:08.727686"
+    },
+    {
+      "name": "Streamlined Process Pattern",
+      "status": "PASSED",
+      "timestamp": "2025-06-12T12:55:30.707024"
+    },
+    {
+      "name": "Detailed Orchestration Pattern",
+      "status": "FAILED",
+      "timestamp": "2025-06-12T12:55:53.116997"
+    },
+    {
+      "name": "Error Handling",
+      "status": "FAILED",
+      "timestamp": "2025-06-12T12:55:57.235675"
+    },
+    {
+      "name": "Performance Test",
+      "status": "PASSED",
+      "timestamp": "2025-06-12T12:55:59.305330"
+    }
+  ]
+}

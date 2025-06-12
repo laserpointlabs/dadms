@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                  id="Definitions_1" 
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  
+  <bpmn:process id="simple_dadm_analysis" name="Simple DADM Analysis Process" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Analysis Request">
+      <bpmn:outgoing>SequenceFlow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- DADM Analysis Service Task -->
+    <bpmn:serviceTask id="ServiceTask_DADM" name="Execute DADM Analysis" camunda:type="external" camunda:topic="dadm-analysis">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="task_name">Simple DADM Analysis</camunda:inputParameter>
+          <camunda:inputParameter name="task_description">Execute analysis using DADM pipeline service</camunda:inputParameter>
+          <camunda:inputParameter name="execution_type">pipeline</camunda:inputParameter>
+          <camunda:inputParameter name="pipeline_name">${pipeline_name}</camunda:inputParameter>
+          <camunda:inputParameter name="decision_context">${decision_context}</camunda:inputParameter>
+          <camunda:inputParameter name="analysis_parameters">${analysis_parameters}</camunda:inputParameter>
+        </camunda:inputOutput>
+        <camunda:outputParameter name="analysis_results">${analysis_results}</camunda:outputParameter>
+        <camunda:outputParameter name="analysis_status">${analysis_status}</camunda:outputParameter>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Decision Gateway -->
+    <bpmn:exclusiveGateway id="ExclusiveGateway_1" name="Analysis Successful?">
+      <bpmn:incoming>SequenceFlow_2</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_Success</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_Error</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Success Path -->
+    <bpmn:userTask id="UserTask_Review" name="Review Analysis Results" camunda:assignee="${reviewer}">
+      <bpmn:documentation>Review the analysis results from DADM and make a decision</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="analysis_results" label="Analysis Results" type="string" defaultValue="${analysis_results}">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="reviewer_decision" label="Accept Results" type="enum">
+            <camunda:value id="accept" name="Accept"/>
+            <camunda:value id="reject" name="Reject"/>
+            <camunda:value id="modify" name="Request Modification"/>
+          </camunda:formField>
+          <camunda:formField id="reviewer_comments" label="Comments" type="string"/>
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_Success</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <!-- Error Handling -->
+    <bpmn:serviceTask id="ServiceTask_ErrorHandling" name="Handle Analysis Error" camunda:class="com.dadm.ErrorHandler">
+      <bpmn:incoming>SequenceFlow_Error</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Success End Event -->
+    <bpmn:endEvent id="EndEvent_Success" name="Analysis Complete">
+      <bpmn:incoming>SequenceFlow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Error End Event -->
+    <bpmn:endEvent id="EndEvent_Error" name="Analysis Failed">
+      <bpmn:incoming>SequenceFlow_4</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1" errorRef="Error_AnalysisFailed"/>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_DADM"/>
+    <bpmn:sequenceFlow id="SequenceFlow_2" sourceRef="ServiceTask_DADM" targetRef="ExclusiveGateway_1"/>
+    <bpmn:sequenceFlow id="SequenceFlow_Success" name="Success" sourceRef="ExclusiveGateway_1" targetRef="UserTask_Review">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${analysis_status == 'success'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_Error" name="Error" sourceRef="ExclusiveGateway_1" targetRef="ServiceTask_ErrorHandling">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${analysis_status == 'error'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_3" sourceRef="UserTask_Review" targetRef="EndEvent_Success"/>
+    <bpmn:sequenceFlow id="SequenceFlow_4" sourceRef="ServiceTask_ErrorHandling" targetRef="EndEvent_Error"/>
+    
+  </bpmn:process>
+  
+  <!-- Error Definition -->
+  <bpmn:error id="Error_AnalysisFailed" name="AnalysisFailedError" errorCode="ANALYSIS_FAILED"/>
+  
+</bpmn:definitions>
