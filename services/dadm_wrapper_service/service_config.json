@@ -1,24 +1,37 @@
 {
-    "service_name": "dadm-application-wrapper",
-    "service_type": "wrapper",
+  "service": {
+    "name": "dadm-wrapper-service",
+    "type": "wrapper",
     "description": "DADM Application Wrapper Service - Exposes entire DADM application as a callable service for Camunda orchestration",
     "version": "1.0.0",
     "port": 5205,
-    "host": "0.0.0.0",
-    "capabilities": [
-        "process_execution",
-        "pipeline_analysis",
-        "custom_analysis",
-        "camunda_integration"
+    "health_endpoint": "/health",
+    "tags": [
+      "dadm",
+      "wrapper", 
+      "application",
+      "orchestration"
     ],
-    "consul": {
-        "enabled": true,
-        "service_name": "dadm-wrapper-service",
-        "service_type": "wrapper",
-        "health_check_path": "/health",
-        "health_check_interval": "30s",
-        "tags": ["dadm", "wrapper", "application", "orchestration"]
+    "metadata": {
+      "api_version": "v1",
+      "service_category": "wrapper",
+      "capabilities": "process_execution,pipeline_analysis,custom_analysis,camunda_integration"
     },
+    "health_check": {
+      "interval": "30s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
+    "capabilities": [
+      "process_execution",
+      "pipeline_analysis",
+      "custom_analysis",
+      "camunda_integration"
+    ],
     "endpoints": {
         "health": {
             "path": "/health",
@@ -32,6 +45,7 @@
             "parameters": {
                 "process_definition": "BPMN process definition or process ID",
                 "variables": "Process variables"
+            }
             }
         },
         "execute_pipeline": {
@@ -117,7 +131,7 @@
                     "stakeholder_data": "...",
                     "analysis_depth": "comprehensive"
                 }
-            }
+            }        
         }
     }
 }
