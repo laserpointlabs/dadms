@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_StatisticalDemo" 
+                  targetNamespace="http://bpmn.io/schema/bpmn" 
+                  exporter="DADM Generator" 
+                  exporterVersion="1.0">
+
+  <bpmn:process id="statistical_mcp_demo" name="Statistical MCP Demo Process" isExecutable="true">
+    
+    <!-- START EVENT -->
+    <bpmn:startEvent id="start_statistical_demo" name="🚀 Start Statistical Analysis">
+      <bpmn:documentation>
+        Initiates a statistical analysis workflow using MCP services.
+        This process demonstrates real mathematical calculations with LLM interpretation.
+      </bpmn:documentation>
+      <bpmn:outgoing>flow_to_data_input</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- USER TASK: DATA INPUT -->
+    <bpmn:userTask id="collect_statistical_data" name="📊 Enter Statistical Data" camunda:candidateGroups="analysts,data_scientists">
+      <bpmn:documentation>
+        Collect numerical data for statistical analysis.
+        Users can input datasets, specify analysis type, and set parameters.
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="dataset_name" label="Dataset Name" type="string" defaultValue="Sample Dataset">
+            <camunda:validation>
+              <camunda:constraint name="required" />
+              <camunda:constraint name="minlength" config="3" />
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="data_values" label="Data Values (comma-separated)" type="string" defaultValue="85,90,88,92,87,78,82,85,80,83,89,91,86,84,79">
+            <camunda:validation>
+              <camunda:constraint name="required" />
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="analysis_level" label="Analysis Level" type="enum" defaultValue="comprehensive">
+            <camunda:value id="basic" name="Basic (mean, median, std)" />
+            <camunda:value id="comprehensive" name="Comprehensive (includes normality tests)" />
+            <camunda:value id="advanced" name="Advanced (includes distribution fitting)" />
+          </camunda:formField>
+          <camunda:formField id="confidence_level" label="Confidence Level %" type="long" defaultValue="95">
+            <camunda:validation>
+              <camunda:constraint name="min" config="80" />
+              <camunda:constraint name="max" config="99" />
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="data_description" label="Data Description" type="string" defaultValue="Student test scores for statistical analysis">
+            <camunda:validation>
+              <camunda:constraint name="maxlength" config="500" />
+            </camunda:validation>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_data_input</bpmn:incoming>
+      <bpmn:outgoing>flow_to_data_validation</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <!-- SERVICE TASK: DATA VALIDATION -->
+    <bpmn:serviceTask id="validate_input_data" name="✅ Validate Input Data" camunda:type="external" camunda:topic="data_validation">
+      <bpmn:documentation>
+        Validates the input data before statistical analysis:
+        - Checks data format and converts to numbers
+        - Validates sample size (minimum 3 values)
+        - Removes invalid entries and outliers if requested
+        - Prepares data structure for MCP service
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.url" value="http://localhost:5201/validate_data" />
+          <camunda:property name="service.timeout" value="5000" />
+          <camunda:property name="retry.attempts" value="2" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="raw_data">${data_values}</camunda:inputParameter>
+          <camunda:inputParameter name="dataset_name">${dataset_name}</camunda:inputParameter>
+          <camunda:outputParameter name="validated_data">${response.data}</camunda:outputParameter>
+          <camunda:outputParameter name="sample_size">${response.sample_size}</camunda:outputParameter>
+          <camunda:outputParameter name="validation_warnings">${response.warnings}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_data_validation</bpmn:incoming>
+      <bpmn:outgoing>flow_to_statistical_analysis</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- SERVICE TASK: MCP STATISTICAL ANALYSIS -->
+    <bpmn:serviceTask id="mcp_statistical_analysis" name="🧮 MCP Statistical Analysis" camunda:type="external" camunda:topic="mcp_statistical_analysis">
+      <bpmn:documentation>
+        Calls MCP Statistical Service (Port 5201) for REAL mathematical calculations:
+        
+        CALCULATIONS PERFORMED:
+        - Descriptive Statistics: mean, median, mode, std dev, variance
+        - Distribution Analysis: skewness, kurtosis, quartiles
+        - Normality Tests: Shapiro-Wilk, Kolmogorov-Smirnov, Anderson-Darling
+        - Confidence Intervals: for mean and standard deviation
+        - Outlier Detection: using IQR method and Z-scores
+        - Data Quality Metrics: completeness, consistency checks
+        
+        TECHNOLOGY STACK:
+        - NumPy: Core mathematical operations
+        - SciPy: Advanced statistical tests and distributions
+        - Pandas: Data manipulation and analysis
+        - Statsmodels: Statistical modeling and tests
+        
+        NOTE: "Mock" implementation = Real mathematics, bypasses MCP stdio protocol
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.url" value="http://localhost:5201/process_task" />
+          <camunda:property name="service.type" value="statistical" />
+          <camunda:property name="implementation" value="mock_with_real_math" />
+          <camunda:property name="service.timeout" value="10000" />
+          <camunda:property name="retry.attempts" value="3" />
+          <camunda:property name="retry.delay" value="1000" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="task_name">statistical_analysis</camunda:inputParameter>
+          <camunda:inputParameter name="data">${validated_data}</camunda:inputParameter>
+          <camunda:inputParameter name="analysis_level">${analysis_level}</camunda:inputParameter>
+          <camunda:inputParameter name="confidence_level">${confidence_level}</camunda:inputParameter>
+          <camunda:inputParameter name="dataset_name">${dataset_name}</camunda:inputParameter>
+          <camunda:inputParameter name="description">${data_description}</camunda:inputParameter>
+          <camunda:outputParameter name="statistical_results">${response.result}</camunda:outputParameter>
+          <camunda:outputParameter name="execution_time">${response.execution_time_ms}</camunda:outputParameter>
+          <camunda:outputParameter name="analysis_timestamp">${response.timestamp}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_statistical_analysis</bpmn:incoming>
+      <bpmn:outgoing>flow_to_llm_analysis</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- SERVICE TASK: LLM INTERPRETATION -->
+    <bpmn:serviceTask id="llm_statistical_interpretation" name="🤖 LLM Statistical Interpretation" camunda:type="external" camunda:topic="openai_statistical_analysis">
+      <bpmn:documentation>
+        OpenAI GPT-4o interprets the statistical results and provides insights.
+        
+        LLM INSTRUCTIONS:
+        You are a professional data analyst and statistician. Analyze the provided statistical results and provide:
+        
+        1. SUMMARY: Clear, non-technical summary of key findings
+        2. INSIGHTS: What the statistics reveal about the data
+        3. RECOMMENDATIONS: Actionable insights based on the analysis
+        4. QUALITY ASSESSMENT: Data quality and reliability notes
+        5. NEXT STEPS: Suggested follow-up analyses or actions
+        
+        Format your response in clear sections with bullet points.
+        Assume the audience has basic statistical knowledge but explain technical terms.
+        Focus on practical implications and business value.
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.url" value="http://localhost:5000/process_task" />
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="llm.model" value="gpt-4o" />
+          <camunda:property name="llm.temperature" value="0.3" />
+          <camunda:property name="llm.max_tokens" value="1500" />
+          <camunda:property name="service.timeout" value="30000" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="task_name">statistical_interpretation</camunda:inputParameter>
+          <camunda:inputParameter name="statistical_data">${statistical_results}</camunda:inputParameter>
+          <camunda:inputParameter name="dataset_info">
+            {
+              "name": "${dataset_name}",
+              "description": "${data_description}",
+              "sample_size": ${sample_size},
+              "analysis_level": "${analysis_level}",
+              "confidence_level": ${confidence_level}
+            }
+          </camunda:inputParameter>
+          <camunda:inputParameter name="llm_instructions">
+            You are a professional data analyst and statistician. Analyze the provided statistical results and provide:
+            
+            1. EXECUTIVE SUMMARY: Key findings in 2-3 sentences
+            2. STATISTICAL INSIGHTS: What the numbers tell us about the data
+            3. DATA QUALITY: Assessment of data reliability and completeness
+            4. BUSINESS IMPLICATIONS: Practical meaning and actionable insights
+            5. RECOMMENDATIONS: Next steps or follow-up analyses
+            
+            Dataset: ${dataset_name}
+            Description: ${data_description}
+            Sample Size: ${sample_size}
+            Confidence Level: ${confidence_level}%
+            
+            Be clear, concise, and focus on practical value. Explain statistical terms when used.
+          </camunda:inputParameter>
+          <camunda:outputParameter name="llm_analysis">${response.result}</camunda:outputParameter>
+          <camunda:outputParameter name="llm_execution_time">${response.execution_time_ms}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_llm_analysis</bpmn:incoming>
+      <bpmn:outgoing>flow_to_generate_report</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- SERVICE TASK: GENERATE FINAL REPORT -->
+    <bpmn:serviceTask id="generate_analysis_report" name="📋 Generate Analysis Report" camunda:type="external" camunda:topic="report_generation">
+      <bpmn:documentation>
+        Generates a comprehensive analysis report combining:
+        - Statistical calculations from MCP service
+        - LLM interpretation and insights
+        - Process execution metadata
+        - Formatted output for business users
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.url" value="http://localhost:5000/generate_report" />
+          <camunda:property name="output.format" value="json,html,pdf" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="report_type">statistical_analysis</camunda:inputParameter>
+          <camunda:inputParameter name="dataset_info">
+            {
+              "name": "${dataset_name}",
+              "description": "${data_description}",
+              "sample_size": ${sample_size}
+            }
+          </camunda:inputParameter>
+          <camunda:inputParameter name="statistical_results">${statistical_results}</camunda:inputParameter>
+          <camunda:inputParameter name="llm_analysis">${llm_analysis}</camunda:inputParameter>
+          <camunda:inputParameter name="execution_metadata">
+            {
+              "process_id": "${execution.getProcessInstanceId()}",
+              "timestamp": "${analysis_timestamp}",
+              "mcp_execution_time": ${execution_time},
+              "llm_execution_time": ${llm_execution_time},
+              "confidence_level": ${confidence_level},
+              "analysis_level": "${analysis_level}"
+            }
+          </camunda:inputParameter>
+          <camunda:outputParameter name="report_url">${response.report_url}</camunda:outputParameter>
+          <camunda:outputParameter name="report_id">${response.report_id}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_generate_report</bpmn:incoming>
+      <bpmn:outgoing>flow_to_completion</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- END EVENT -->
+    <bpmn:endEvent id="statistical_analysis_complete" name="✅ Statistical Analysis Complete">
+      <bpmn:documentation>
+        Statistical analysis workflow completed successfully.
+        Results available in generated report.
+      </bpmn:documentation>
+      <bpmn:incoming>flow_to_completion</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="flow_to_data_input" sourceRef="start_statistical_demo" targetRef="collect_statistical_data" />
+    <bpmn:sequenceFlow id="flow_to_data_validation" sourceRef="collect_statistical_data" targetRef="validate_input_data" />
+    <bpmn:sequenceFlow id="flow_to_statistical_analysis" sourceRef="validate_input_data" targetRef="mcp_statistical_analysis" />
+    <bpmn:sequenceFlow id="flow_to_llm_analysis" sourceRef="mcp_statistical_analysis" targetRef="llm_statistical_interpretation" />
+    <bpmn:sequenceFlow id="flow_to_generate_report" sourceRef="llm_statistical_interpretation" targetRef="generate_analysis_report" />
+    <bpmn:sequenceFlow id="flow_to_completion" sourceRef="generate_analysis_report" targetRef="statistical_analysis_complete" />
+    
+  </bpmn:process>
+  
+  <!-- BPMN DIAGRAM INFORMATION (GRAPHICS) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_StatisticalDemo">
+    <bpmndi:BPMNPlane id="BPMNPlane_StatisticalDemo" bpmnElement="statistical_mcp_demo">
+      
+      <!-- START EVENT -->
+      <bpmndi:BPMNShape id="shape_start_statistical_demo" bpmnElement="start_statistical_demo">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="127" y="145" width="86" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- USER TASK: DATA INPUT -->
+      <bpmndi:BPMNShape id="shape_collect_statistical_data" bpmnElement="collect_statistical_data">
+        <dc:Bounds x="250" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- SERVICE TASK: DATA VALIDATION -->
+      <bpmndi:BPMNShape id="shape_validate_input_data" bpmnElement="validate_input_data">
+        <dc:Bounds x="410" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- SERVICE TASK: MCP STATISTICAL ANALYSIS -->
+      <bpmndi:BPMNShape id="shape_mcp_statistical_analysis" bpmnElement="mcp_statistical_analysis">
+        <dc:Bounds x="570" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- SERVICE TASK: LLM INTERPRETATION -->
+      <bpmndi:BPMNShape id="shape_llm_statistical_interpretation" bpmnElement="llm_statistical_interpretation">
+        <dc:Bounds x="730" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- SERVICE TASK: GENERATE REPORT -->
+      <bpmndi:BPMNShape id="shape_generate_analysis_report" bpmnElement="generate_analysis_report">
+        <dc:Bounds x="890" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- END EVENT -->
+      <bpmndi:BPMNShape id="shape_statistical_analysis_complete" bpmnElement="statistical_analysis_complete">
+        <dc:Bounds x="1052" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1027" y="145" width="86" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- SEQUENCE FLOWS -->
+      <bpmndi:BPMNEdge id="edge_flow_to_data_input" bpmnElement="flow_to_data_input">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="250" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow_to_data_validation" bpmnElement="flow_to_data_validation">
+        <di:waypoint x="350" y="120" />
+        <di:waypoint x="410" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow_to_statistical_analysis" bpmnElement="flow_to_statistical_analysis">
+        <di:waypoint x="510" y="120" />
+        <di:waypoint x="570" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow_to_llm_analysis" bpmnElement="flow_to_llm_analysis">
+        <di:waypoint x="670" y="120" />
+        <di:waypoint x="730" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow_to_generate_report" bpmnElement="flow_to_generate_report">
+        <di:waypoint x="830" y="120" />
+        <di:waypoint x="890" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow_to_completion" bpmnElement="flow_to_completion">
+        <di:waypoint x="990" y="120" />
+        <di:waypoint x="1052" y="120" />
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  
+</bpmn:definitions>
