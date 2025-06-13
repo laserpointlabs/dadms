@@ -7,7 +7,12 @@ colorama==0.4.6
 flask==3.0.1
 tabulate==0.9.0
 qdrant-client==1.7.3
-# Note: torch CPU versions are installed in Dockerfile before this
+
+# CPU-only PyTorch and related packages
+torch @ https://download.pytorch.org/whl/cpu/torch-2.2.1%2Bcpu-cp310-cp310-linux_x86_64.whl
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.17.1%2Bcpu-cp310-cp310-linux_x86_64.whl
+torchaudio @ https://download.pytorch.org/whl/cpu/torchaudio-2.2.1%2Bcpu-cp310-cp310-linux_x86_64.whl
 sentence-transformers==2.2.2
 huggingface_hub==0.25.2
+
 # Add other dependencies like pinecone-client, or faiss-cpu as needed
