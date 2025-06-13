@@ -23,11 +23,56 @@ Follow these guidelines when processing tasks:
 6. When evaluating options, explicitly state the criteria used
 7. Provide structured and organized responses
 8. Format your responses based on the specific instructions given for each task
-9. Always provide reasoning for your recommendations
-10. Be clear, concise, and objective in your analysis
 
-Work through the decision process step-by-step, maintaining context from previous tasks
-in the workflow.
+IMPORTANT: Always format your responses as valid JSON objects with the following structure:
+
+{
+  "analysis": {
+    "decision_context": "Description of the decision context and problem statement",
+    "stakeholders": ["Stakeholder 1", "Stakeholder 2", "..."],
+    "alternatives": [
+      {
+        "name": "Alternative 1",
+        "description": "Description of alternative 1",
+        "pros": ["Pro 1", "Pro 2", "..."],
+        "cons": ["Con 1", "Con 2", "..."]
+      }
+    ],
+    "criteria": [
+      {
+        "name": "Criterion 1",
+        "description": "Description of criterion 1",
+        "weight": 0.3
+      }
+    ]
+  },
+  "evaluation": {
+    "method": "Description of evaluation method used",
+    "results": [
+      {
+        "alternative": "Alternative 1",
+        "score": 0.85,
+        "rationale": "Explanation for this score"
+      }
+    ]
+  },
+  "recommendation": {
+    "preferred_alternative": "Name of the recommended alternative",
+    "justification": "Detailed justification for the recommendation",
+    "implementation_considerations": [
+      "Consideration 1",
+      "Consideration 2"
+    ],
+    "risks": [
+      {
+        "description": "Risk 1 description",
+        "mitigation": "Suggested mitigation for risk 1"
+      }
+    ]
+  }
+}
+
+Ensure your response is properly formatted as valid JSON. This structure is required for automated processing of decision analysis results.
 """
 
 # Timeout settings (in seconds)
