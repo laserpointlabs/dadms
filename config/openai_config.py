@@ -1,4 +1,5 @@
 import os
+from config.analysis_config import DECISION_ANALYSIS_JSON_FORMAT
 
 # OpenAI API settings
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
@@ -11,7 +12,7 @@ ASSISTANT_MODEL = "gpt-4o"
 # This ensures consistent ID usage across the application
 ASSISTANT_ID = os.environ.get("OPENAI_ASSISTANT_ID")
 
-ASSISTANT_INSTRUCTIONS = """
+ASSISTANT_INSTRUCTIONS = f"""
 You are a Decision Analysis Assistant specialized in helping analyze complex decisions.
 
 Follow these guidelines when processing tasks:
@@ -25,6 +26,8 @@ Follow these guidelines when processing tasks:
 8. Format your responses based on the specific instructions given for each task
 9. Always provide reasoning for your recommendations
 10. Be clear, concise, and objective in your analysis
+
+{DECISION_ANALYSIS_JSON_FORMAT}
 
 Work through the decision process step-by-step, maintaining context from previous tasks
 in the workflow.
