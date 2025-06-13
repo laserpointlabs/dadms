@@ -1,0 +1,19 @@
+{
+  "service": {
+    "name": "dadm-ollama-assistant",
+    "type": "assistant",
+    "port": 5200,
+    "health_endpoint": "/health",
+    "description": "DADM Ollama Assistant Service",
+    "version": "1.0.0",
+    "tags": ["assistant", "ollama", "decision-analysis"],
+    "metadata": {
+      "model_default": "llama3",
+      "format": "json"
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    }
+  }
+}
