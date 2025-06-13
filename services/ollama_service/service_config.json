@@ -1,0 +1,25 @@
+{
+  "service": {
+    "name": "dadm-ollama-assistant",
+    "type": "assistant",
+    "port": 5300,
+    "health_endpoint": "/health",
+    "description": "DADM Ollama Assistant Service for Decision Analysis",
+    "version": "1.0.0",
+    "tags": ["assistant", "ollama", "decision-analysis"],
+    "metadata": {
+      "model_default": "mistral",
+      "api_version": "v1"
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "model": "mistral"
+  }
+}
