@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2025-06-13
+
+### Enhanced
+- **OpenAI Assistant Response Format**: Improved consistency and reliability of decision analysis output
+  - Added strict JSON formatting requirements to assistant instructions
+  - Implemented standardized decision analysis JSON schema
+  - Updated configuration files to enforce consistent JSON structure
+  - Enhanced automated processing capabilities through structured response format
+
 ## [0.9.1] - 2025-06-11
 
 ### Enhanced
