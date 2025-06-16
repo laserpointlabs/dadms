@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0">
+  <bpmn:process id="ServiceHealthTest" name="Service Health Test" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Start Health Test">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Service Task: Check Analysis Service Health -->
+    <bpmn:serviceTask id="ServiceTask_HealthCheck" name="Check Analysis Service Health">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://analysis-service:8002/health</camunda:inputParameter>
+            <camunda:inputParameter name="method">GET</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="service_status">${response.status}</camunda:outputParameter>
+            <camunda:outputParameter name="service_name">${response.service}</camunda:outputParameter>
+            <camunda:outputParameter name="health_response">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    
+    <!-- Service Task: Simple Analysis Call -->
+    <bpmn:serviceTask id="ServiceTask_SimpleAnalysis" name="Simple Analysis Call">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://analysis-service:8002/analyze/integrated</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+  "analysis_type": "simple_test",
+  "data_sources": {
+    "test_data": [1, 2, 3, 4, 5]
+  },
+  "execution_tools": ["python"],
+  "timeout": 60,
+  "metadata": {
+    "test_run": true,
+    "workflow_id": "${execution.getProcessInstanceId()}"
+  }
+}</camunda:inputParameter>
+            <camunda:outputParameter name="analysis_execution_id">${response.execution_id}</camunda:outputParameter>
+            <camunda:outputParameter name="analysis_status">${response.status}</camunda:outputParameter>
+            <camunda:outputParameter name="analysis_response">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    
+    <!-- User Task: Show Test Results -->
+    <bpmn:userTask id="UserTask_ShowTestResults" name="Show Test Results">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="service_status" label="Service Health Status" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="service_name" label="Service Name" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="health_response" label="Health Check Response" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="analysis_execution_id" label="Analysis Execution ID" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="analysis_status" label="Analysis Status" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="analysis_response" label="Analysis Response" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    
+    <!-- End Event -->
+    <bpmn:endEvent id="EndEvent_1" name="Test Complete">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_HealthCheck"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_HealthCheck" targetRef="ServiceTask_SimpleAnalysis"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_SimpleAnalysis" targetRef="UserTask_ShowTestResults"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="UserTask_ShowTestResults" targetRef="EndEvent_1"/>
+    
+  </bpmn:process>
+  
+  <!-- BPMN Diagram Information -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="ServiceHealthTest">
+      
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="130" y="142" width="80" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- Service Task: Health Check -->
+      <bpmndi:BPMNShape id="ServiceTask_HealthCheck_di" bpmnElement="ServiceTask_HealthCheck">
+        <dc:Bounds x="240" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- Service Task: Simple Analysis -->
+      <bpmndi:BPMNShape id="ServiceTask_SimpleAnalysis_di" bpmnElement="ServiceTask_SimpleAnalysis">
+        <dc:Bounds x="390" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- User Task: Show Results -->
+      <bpmndi:BPMNShape id="UserTask_ShowTestResults_di" bpmnElement="UserTask_ShowTestResults">
+        <dc:Bounds x="540" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- End Event -->
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="692" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="676" y="142" width="68" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- Sequence Flows -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="117"/>
+        <di:waypoint x="240" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="117"/>
+        <di:waypoint x="390" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="490" y="117"/>
+        <di:waypoint x="540" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="640" y="117"/>
+        <di:waypoint x="692" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

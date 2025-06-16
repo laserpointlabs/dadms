@@ -1,15 +1,19 @@
-<?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                 xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 id="Definitions_1" 
+                 targetNamespace="http://bpmn.io/schema/bpmn">
 
   <bpmn:process id="comprehensive_market_analysis_process" name="Comprehensive Market Analysis" isExecutable="true" camunda:historyTimeToLive="30">
     
-    
+    <!-- Start Event -->
     <bpmn:startEvent id="start_analysis" name="Start Market Analysis">
       <bpmn:outgoing>flow_to_data_collection</bpmn:outgoing>
     </bpmn:startEvent>
     
-    
-    <bpmn:serviceTask id="collect_market_data" name="Collect Market Data" camunda:type="external" camunda:topic="collect_market_data_task">
+    <!-- Data Collection Task -->
+    <bpmn:serviceTask id="collect_market_data" name="Collect Market Data">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="data_sources">{
@@ -25,8 +29,8 @@
       <bpmn:outgoing>flow_to_llm_analysis</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
-    <bpmn:serviceTask id="llm_market_analysis" name="LLM Market Analysis" camunda:type="external" camunda:topic="llm_market_analysis_task">
+    <!-- LLM Analysis Task -->
+    <bpmn:serviceTask id="llm_market_analysis" name="LLM Market Analysis">
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -60,8 +64,8 @@
       <bpmn:outgoing>flow_to_statistical_analysis</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
-    <bpmn:serviceTask id="statistical_market_analysis" name="Statistical Analysis" camunda:type="external" camunda:topic="statistical_market_analysis_task">
+    <!-- Statistical Analysis Task -->
+    <bpmn:serviceTask id="statistical_market_analysis" name="Statistical Analysis">
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -99,8 +103,8 @@
       <bpmn:outgoing>flow_to_report_generation</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
-    <bpmn:serviceTask id="generate_comprehensive_report" name="Generate Analysis Report" camunda:type="external" camunda:topic="generate_comprehensive_report_task">
+    <!-- Report Generation Task -->
+    <bpmn:serviceTask id="generate_comprehensive_report" name="Generate Analysis Report">
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -143,7 +147,7 @@
       <bpmn:outgoing>flow_to_stakeholder_review</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
+    <!-- Human Task: Stakeholder Review -->
     <bpmn:userTask id="stakeholder_review" name="Stakeholder Review">
       <bpmn:extensionElements>
         <camunda:formData>
@@ -161,7 +165,7 @@
       <bpmn:outgoing>flow_to_decision_gateway</bpmn:outgoing>
     </bpmn:userTask>
     
-    
+    <!-- Decision Gateway -->
     <bpmn:exclusiveGateway id="decision_gateway" name="Analysis Decision">
       <bpmn:incoming>flow_to_decision_gateway</bpmn:incoming>
       <bpmn:outgoing>flow_to_implementation</bpmn:outgoing>
@@ -169,8 +173,8 @@
       <bpmn:outgoing>flow_to_end</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     
-    
-    <bpmn:serviceTask id="initiate_implementation" name="Initiate Implementation" camunda:type="external" camunda:topic="initiate_implementation_task">
+    <!-- Implementation Task -->
+    <bpmn:serviceTask id="initiate_implementation" name="Initiate Implementation">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="implementation_plan">${final_report.recommendations.implementation_roadmap}</camunda:inputParameter>
@@ -181,19 +185,19 @@
       <bpmn:outgoing>flow_implementation_to_end</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
-    <bpmn:serviceTask id="additional_analysis" name="Additional Analysis" camunda:type="external" camunda:topic="additional_analysis_task">
+    <!-- Additional Analysis Task -->
+    <bpmn:serviceTask id="additional_analysis" name="Additional Analysis">
       <bpmn:incoming>flow_to_additional_analysis</bpmn:incoming>
       <bpmn:outgoing>flow_additional_to_llm</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
+    <!-- End Events -->
     <bpmn:endEvent id="end_analysis_complete" name="Analysis Complete">
       <bpmn:incoming>flow_to_end</bpmn:incoming>
       <bpmn:incoming>flow_implementation_to_end</bpmn:incoming>
     </bpmn:endEvent>
     
-    
+    <!-- Sequence Flows -->
     <bpmn:sequenceFlow id="flow_to_data_collection" sourceRef="start_analysis" targetRef="collect_market_data" />
     <bpmn:sequenceFlow id="flow_to_llm_analysis" sourceRef="collect_market_data" targetRef="llm_market_analysis" />
     <bpmn:sequenceFlow id="flow_to_statistical_analysis" sourceRef="llm_market_analysis" targetRef="statistical_market_analysis" />
@@ -201,7 +205,7 @@
     <bpmn:sequenceFlow id="flow_to_stakeholder_review" sourceRef="generate_comprehensive_report" targetRef="stakeholder_review" />
     <bpmn:sequenceFlow id="flow_to_decision_gateway" sourceRef="stakeholder_review" targetRef="decision_gateway" />
     
-    
+    <!-- Conditional Flows -->
     <bpmn:sequenceFlow id="flow_to_implementation" sourceRef="decision_gateway" targetRef="initiate_implementation">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${next_steps == 'implement'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>

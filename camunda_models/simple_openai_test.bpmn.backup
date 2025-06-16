@@ -5,6 +5,7 @@
     
     
     <bpmn:startEvent id="StartEvent_1" name="Start OpenAI Test" camunda:formKey="embedded:deployment:openai-test-form.html">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="user_question" label="Question for OpenAI" type="string" defaultValue="What are the benefits of renewable energy?">
@@ -20,11 +21,12 @@
           <camunda:formField id="llm_model" label="LLM Model (optional)" type="string" defaultValue="gpt-4" />
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     
     
     <bpmn:serviceTask id="ServiceTask_CallOpenAI" name="Call OpenAI via Analysis Service" camunda:type="external" camunda:topic="service_task_call_open_ai_task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -97,12 +99,12 @@
           <camunda:connectorId>http-connector</camunda:connectorId>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
     
     
     <bpmn:userTask id="UserTask_ReviewResponse" name="Review OpenAI Response" camunda:formKey="embedded:deployment:openai-review-form.html">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="original_question" label="Original Question" type="string" defaultValue="${user_question}">
@@ -141,8 +143,6 @@
           <camunda:formField id="comments" label="Additional Comments" type="string" />
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:userTask>
     
     
@@ -154,6 +154,8 @@
     
     
     <bpmn:serviceTask id="ServiceTask_LogFeedback" name="Log Test Results" camunda:type="external" camunda:topic="service_task_log_feedback_task">
+      <bpmn:incoming>Flow_4_Complete</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -191,8 +193,6 @@
           <camunda:connectorId>http-connector</camunda:connectorId>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_4_Complete</bpmn:incoming>
-      <bpmn:outgoing>Flow_5</bpmn:outgoing>
     </bpmn:serviceTask>
     
     
@@ -202,6 +202,8 @@
     
     
     <bpmn:userTask id="UserTask_RetryConfig" name="Configure Retry" camunda:formKey="embedded:deployment:retry-config-form.html">
+      <bpmn:incoming>Flow_4_Retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="retry_question" label="Revised Question" type="string" defaultValue="${user_question}" />
@@ -216,8 +218,6 @@
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_4_Retry</bpmn:incoming>
-      <bpmn:outgoing>Flow_6</bpmn:outgoing>
     </bpmn:userTask>
     
     

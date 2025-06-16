@@ -4,6 +4,7 @@
     
     
     <bpmn:startEvent id="StartEvent_1" name="Start Quick Test" camunda:formKey="embedded:deployment:quick-test-form.html">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="test_data" label="Test Data (numbers)" type="string" defaultValue="1,2,3,4,5">
@@ -14,11 +15,12 @@
           <camunda:formField id="analysis_description" label="What to analyze" type="string" defaultValue="Find the mean and trend of the data" />
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     
     
     <bpmn:serviceTask id="ServiceTask_CallAnalysis" name="Call Analysis Service" camunda:type="external" camunda:topic="service_task_call_analysis_task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -68,12 +70,12 @@
           </camunda:inputOutput>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
     
     
     <bpmn:userTask id="UserTask_ShowResults" name="Review Analysis Results" camunda:formKey="embedded:deployment:results-display.html">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="analysis_execution_id" label="Execution ID" type="string">
@@ -94,8 +96,6 @@
           <camunda:formField id="test_complete" label="Test Completed Successfully" type="boolean" defaultValue="true" />
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:userTask>
     
     

@@ -1,24 +1,26 @@
-<?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ns2="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:ns3="http://www.omg.org/spec/DD/20100524/DC" xmlns:ns4="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0">
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0">
   
-  <bpmn:process id="BasicOpenAITest" name="Basic OpenAI Connectivity Test" isExecutable="true" camunda:historyTimeToLive="30">
+  <bpmn:process id="BasicOpenAITest" name="Basic OpenAI Connectivity Test" isExecutable="true">
     
-    
+    <!-- Start Event with Form -->
     <bpmn:startEvent id="StartEvent_1" name="Start Basic Test">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="test_question" label="Test Question" type="string" defaultValue="What is artificial intelligence?">
             <camunda:validation>
-              <camunda:constraint name="required" />
+              <camunda:constraint name="required"/>
             </camunda:validation>
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     
-    
-    <bpmn:serviceTask id="ServiceTask_TestOpenAI" name="Test OpenAI Connection" camunda:type="external" camunda:topic="service_task_test_open_ai_task">
+    <!-- Service Task: Call OpenAI via Analysis Service -->
+    <bpmn:serviceTask id="ServiceTask_TestOpenAI" name="Test OpenAI Connection">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -32,7 +34,7 @@
             </camunda:inputParameter>
             <camunda:inputParameter name="payload">
               <camunda:script scriptFormat="groovy">
-                
+                <![CDATA[
                 import groovy.json.JsonBuilder
 
                 def request = [
@@ -51,12 +53,12 @@
                 ]
                 
                 return new JsonBuilder(request).toString()
-                
+                ]]>
               </camunda:script>
             </camunda:inputParameter>
             <camunda:outputParameter name="test_result">
               <camunda:script scriptFormat="groovy">
-                
+                <![CDATA[
                 import groovy.json.JsonSlurper
                 
                 def jsonSlurper = new JsonSlurper()
@@ -66,7 +68,7 @@
                 execution.setVariable("response_status", response.status)
                 execution.setVariable("execution_id", response.execution_id)
                 
-                if (response.status == "completed" &amp;&amp; response.llm_analysis) {
+                if (response.status == "completed" && response.llm_analysis) {
                   execution.setVariable("openai_connected", "SUCCESS")
                   execution.setVariable("openai_response", response.llm_analysis.toString())
                 } else {
@@ -75,113 +77,111 @@
                 }
                 
                 return response.status
-                
+                ]]>
               </camunda:script>
             </camunda:outputParameter>
           </camunda:inputOutput>
           <camunda:connectorId>http-connector</camunda:connectorId>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
     
-    
+    <!-- User Task: Display Results -->
     <bpmn:userTask id="UserTask_ShowResults" name="View Test Results">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="test_question_display" label="Test Question" type="string" defaultValue="${test_question}">
             <camunda:properties>
-              <camunda:property id="readonly" value="true" />
+              <camunda:property id="readonly" value="true"/>
             </camunda:properties>
           </camunda:formField>
           <camunda:formField id="connection_status" label="OpenAI Connection Status" type="string" defaultValue="${openai_connected}">
             <camunda:properties>
-              <camunda:property id="readonly" value="true" />
+              <camunda:property id="readonly" value="true"/>
             </camunda:properties>
           </camunda:formField>
           <camunda:formField id="execution_id_display" label="Execution ID" type="string" defaultValue="${execution_id}">
             <camunda:properties>
-              <camunda:property id="readonly" value="true" />
+              <camunda:property id="readonly" value="true"/>
             </camunda:properties>
           </camunda:formField>
           <camunda:formField id="openai_response_display" label="OpenAI Response" type="string" defaultValue="${openai_response}">
             <camunda:properties>
-              <camunda:property id="readonly" value="true" />
-              <camunda:property id="multiline" value="true" />
+              <camunda:property id="readonly" value="true"/>
+              <camunda:property id="multiline" value="true"/>
             </camunda:properties>
           </camunda:formField>
           <camunda:formField id="error_display" label="Error (if any)" type="string" defaultValue="${error_message}">
             <camunda:properties>
-              <camunda:property id="readonly" value="true" />
-              <camunda:property id="multiline" value="true" />
+              <camunda:property id="readonly" value="true"/>
+              <camunda:property id="multiline" value="true"/>
             </camunda:properties>
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:userTask>
     
-    
+    <!-- End Event -->
     <bpmn:endEvent id="EndEvent_1" name="Test Complete">
       <bpmn:incoming>Flow_3</bpmn:incoming>
     </bpmn:endEvent>
     
-    
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_TestOpenAI" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_TestOpenAI" targetRef="UserTask_ShowResults" />
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="UserTask_ShowResults" targetRef="EndEvent_1" />
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_TestOpenAI"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_TestOpenAI" targetRef="UserTask_ShowResults"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="UserTask_ShowResults" targetRef="EndEvent_1"/>
     
   </bpmn:process>
   
-  
-  <ns2:BPMNDiagram id="BPMNDiagram_1">
-    <ns2:BPMNPlane id="BPMNPlane_1" bpmnElement="BasicOpenAITest">
+  <!-- BPMN DI (Diagram Interchange) for Visual Layout -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="BasicOpenAITest">
       
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="133" y="145" width="74" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       
-      <ns2:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <ns3:Bounds x="152" y="102" width="36" height="36" />
-        <ns2:BPMNLabel>
-          <ns3:Bounds x="133" y="145" width="74" height="14" />
-        </ns2:BPMNLabel>
-      </ns2:BPMNShape>
+      <!-- Service Task: Test OpenAI -->
+      <bpmndi:BPMNShape id="ServiceTask_TestOpenAI_di" bpmnElement="ServiceTask_TestOpenAI">
+        <dc:Bounds x="240" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
       
+      <!-- User Task: Show Results -->
+      <bpmndi:BPMNShape id="UserTask_ShowResults_di" bpmnElement="UserTask_ShowResults">
+        <dc:Bounds x="390" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
       
-      <ns2:BPMNShape id="ServiceTask_TestOpenAI_di" bpmnElement="ServiceTask_TestOpenAI">
-        <ns3:Bounds x="240" y="80" width="100" height="80" />
-      </ns2:BPMNShape>
+      <!-- End Event -->
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="542" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="522" y="145" width="76" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       
+      <!-- Sequence Flow Connections -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="120"/>
+        <di:waypoint x="240" y="120"/>
+      </bpmndi:BPMNEdge>
       
-      <ns2:BPMNShape id="UserTask_ShowResults_di" bpmnElement="UserTask_ShowResults">
-        <ns3:Bounds x="390" y="80" width="100" height="80" />
-      </ns2:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="120"/>
+        <di:waypoint x="390" y="120"/>
+      </bpmndi:BPMNEdge>
       
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="490" y="120"/>
+        <di:waypoint x="542" y="120"/>
+      </bpmndi:BPMNEdge>
       
-      <ns2:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <ns3:Bounds x="542" y="102" width="36" height="36" />
-        <ns2:BPMNLabel>
-          <ns3:Bounds x="522" y="145" width="76" height="14" />
-        </ns2:BPMNLabel>
-      </ns2:BPMNShape>
-      
-      
-      <ns2:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <ns4:waypoint x="188" y="120" />
-        <ns4:waypoint x="240" y="120" />
-      </ns2:BPMNEdge>
-      
-      <ns2:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <ns4:waypoint x="340" y="120" />
-        <ns4:waypoint x="390" y="120" />
-      </ns2:BPMNEdge>
-      
-      <ns2:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <ns4:waypoint x="490" y="120" />
-        <ns4:waypoint x="542" y="120" />
-      </ns2:BPMNEdge>
-      
-    </ns2:BPMNPlane>
-  </ns2:BPMNDiagram>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
   
 </bpmn:definitions>

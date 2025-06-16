@@ -9,6 +9,8 @@
     
     
     <bpmn:serviceTask id="ServiceTask_HealthCheck" name="Check Analysis Service Health" camunda:type="external" camunda:topic="service_task_health_check_task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -25,12 +27,12 @@
           </camunda:inputOutput>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
     
     
     <bpmn:serviceTask id="ServiceTask_SimpleAnalysis" name="Simple Analysis Call" camunda:type="external" camunda:topic="service_task_simple_analysis_task">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -60,12 +62,12 @@
           </camunda:inputOutput>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:serviceTask>
     
     
     <bpmn:userTask id="UserTask_ShowTestResults" name="Show Test Results">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="service_status" label="Service Health Status" type="string">
@@ -100,8 +102,6 @@
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_3</bpmn:incoming>
-      <bpmn:outgoing>Flow_4</bpmn:outgoing>
     </bpmn:userTask>
     
     

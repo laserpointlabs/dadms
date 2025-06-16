@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0">
-  <bpmn:process id="SimpleAnalysisTest" name="Simple Analysis Test" isExecutable="true" camunda:historyTimeToLive="30">
+  <bpmn:process id="SimpleAnalysisTest" name="Simple Analysis Test" isExecutable="true">
     
     <!-- Start Event -->
     <bpmn:startEvent id="StartEvent_1" name="Start Analysis Test">
@@ -9,6 +9,8 @@
     
     <!-- User Task: Provide Analysis Parameters -->
     <bpmn:userTask id="UserTask_ProvideData" name="Provide Analysis Data" camunda:formKey="embedded:deployment:analysis-form.html">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="analysis_type" label="Analysis Type" type="enum" defaultValue="simple_analysis">
@@ -24,12 +26,12 @@
           <camunda:formField id="analysis_description" label="Analysis Description" type="string" defaultValue="Analyze the provided data for trends and insights"/>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:userTask>
     
     <!-- Service Task: Execute Integrated Analysis -->
     <bpmn:serviceTask id="ServiceTask_Analysis" name="Execute Integrated Analysis" camunda:type="external" camunda:topic="integrated-analysis">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
@@ -98,8 +100,6 @@
           </camunda:outputParameter>
         </camunda:connector>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:serviceTask>
     
     <!-- Exclusive Gateway: Check Analysis Result -->
@@ -111,6 +111,8 @@
     
     <!-- User Task: Display Results (Success Path) -->
     <bpmn:userTask id="UserTask_DisplayResults" name="Review Analysis Results" camunda:formKey="embedded:deployment:results-form.html">
+      <bpmn:incoming>Flow_Success</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="execution_id" label="Execution ID" type="string">
@@ -140,12 +142,12 @@
           </camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_Success</bpmn:incoming>
-      <bpmn:outgoing>Flow_4</bpmn:outgoing>
     </bpmn:userTask>
     
     <!-- User Task: Handle Error (Failure Path) -->
     <bpmn:userTask id="UserTask_HandleError" name="Handle Analysis Error" camunda:formKey="embedded:deployment:error-form.html">
+      <bpmn:incoming>Flow_Failed</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="error_message" label="Error Message" type="string">
@@ -161,8 +163,6 @@
           <camunda:formField id="retry_analysis" label="Retry Analysis?" type="boolean" defaultValue="false"/>
         </camunda:formData>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_Failed</bpmn:incoming>
-      <bpmn:outgoing>Flow_5</bpmn:outgoing>
     </bpmn:userTask>
     
     <!-- Exclusive Gateway: Retry Decision -->
