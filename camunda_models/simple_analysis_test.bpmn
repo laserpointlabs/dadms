@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0">
+  <bpmn:process id="SimpleAnalysisTest" name="Simple Analysis Test" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Start Analysis Test">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- User Task: Provide Analysis Parameters -->
+    <bpmn:userTask id="UserTask_ProvideData" name="Provide Analysis Data" camunda:formKey="embedded:deployment:analysis-form.html">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="analysis_type" label="Analysis Type" type="enum" defaultValue="simple_analysis">
+            <camunda:value id="simple_analysis" name="Simple Analysis"/>
+            <camunda:value id="market_analysis" name="Market Analysis"/>
+            <camunda:value id="risk_assessment" name="Risk Assessment"/>
+          </camunda:formField>
+          <camunda:formField id="data_input" label="Data (comma-separated numbers)" type="string" defaultValue="10,20,30,40,50">
+            <camunda:validation>
+              <camunda:constraint name="required"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="analysis_description" label="Analysis Description" type="string" defaultValue="Analyze the provided data for trends and insights"/>
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    
+    <!-- Service Task: Execute Integrated Analysis -->
+    <bpmn:serviceTask id="ServiceTask_Analysis" name="Execute Integrated Analysis" camunda:type="external" camunda:topic="integrated-analysis">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://analysis-service:8002/analyze/integrated</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">
+              <camunda:script scriptFormat="javascript">
+                <![CDATA[
+                // Convert comma-separated data to array
+                var dataArray = data_input.split(',').map(function(item) {
+                  return parseFloat(item.trim());
+                });
+                
+                // Build analysis request
+                var analysisRequest = {
+                  "analysis_type": analysis_type,
+                  "data_sources": {
+                    "input_data": dataArray,
+                    "description": analysis_description
+                  },
+                  "execution_tools": ["python"],
+                  "analysis_parameters": {
+                    "statistical_analysis": true,
+                    "trend_analysis": true,
+                    "confidence_level": 0.95
+                  },
+                  "timeout": 120,
+                  "metadata": {
+                    "workflow_id": execution.getProcessInstanceId(),
+                    "task_id": "ServiceTask_Analysis",
+                    "timestamp": new Date().toISOString()
+                  }
+                };
+                
+                JSON.stringify(analysisRequest);
+                ]]>
+              </camunda:script>
+            </camunda:inputParameter>
+          </camunda:inputOutput>
+          <camunda:outputParameter name="analysis_result">
+            <camunda:script scriptFormat="javascript">
+              <![CDATA[
+              // Parse the response from analysis service
+              var response = connector.getVariable("response");
+              if (response) {
+                var result = JSON.parse(response);
+                execution.setVariable("execution_id", result.execution_id);
+                execution.setVariable("analysis_status", result.status);
+                execution.setVariable("llm_insights", JSON.stringify(result.llm_analysis));
+                execution.setVariable("computational_results", JSON.stringify(result.computational_results));
+                execution.setVariable("final_insights", JSON.stringify(result.final_insights));
+                result;
+              } else {
+                execution.setVariable("analysis_status", "failed");
+                execution.setVariable("error_message", "No response from analysis service");
+                null;
+              }
+              ]]>
+            </camunda:script>
+          </camunda:outputParameter>
+        </camunda:connector>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    
+    <!-- Exclusive Gateway: Check Analysis Result -->
+    <bpmn:exclusiveGateway id="Gateway_CheckResult" name="Analysis Successful?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Success</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Failed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- User Task: Display Results (Success Path) -->
+    <bpmn:userTask id="UserTask_DisplayResults" name="Review Analysis Results" camunda:formKey="embedded:deployment:results-form.html">
+      <bpmn:incoming>Flow_Success</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="execution_id" label="Execution ID" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="analysis_status" label="Analysis Status" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="llm_insights" label="LLM Analysis Insights" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="computational_results" label="Computational Results" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="final_insights" label="Final Business Insights" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    
+    <!-- User Task: Handle Error (Failure Path) -->
+    <bpmn:userTask id="UserTask_HandleError" name="Handle Analysis Error" camunda:formKey="embedded:deployment:error-form.html">
+      <bpmn:incoming>Flow_Failed</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="error_message" label="Error Message" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="analysis_status" label="Analysis Status" type="string">
+            <camunda:properties>
+              <camunda:property id="readonly" value="true"/>
+            </camunda:properties>
+          </camunda:formField>
+          <camunda:formField id="retry_analysis" label="Retry Analysis?" type="boolean" defaultValue="false"/>
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    
+    <!-- Exclusive Gateway: Retry Decision -->
+    <bpmn:exclusiveGateway id="Gateway_Retry" name="Retry?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- End Events -->
+    <bpmn:endEvent id="EndEvent_Success" name="Analysis Complete">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:endEvent id="EndEvent_Failed" name="Analysis Failed">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_ProvideData"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_ProvideData" targetRef="ServiceTask_Analysis"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Analysis" targetRef="Gateway_CheckResult"/>
+    
+    <bpmn:sequenceFlow id="Flow_Success" name="Success" sourceRef="Gateway_CheckResult" targetRef="UserTask_DisplayResults">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${analysis_status == "completed"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_Failed" name="Failed" sourceRef="Gateway_CheckResult" targetRef="UserTask_HandleError">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${analysis_status != "completed"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="UserTask_DisplayResults" targetRef="EndEvent_Success"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="UserTask_HandleError" targetRef="Gateway_Retry"/>
+    
+    <bpmn:sequenceFlow id="Flow_Retry" name="Yes" sourceRef="Gateway_Retry" targetRef="ServiceTask_Analysis">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${retry_analysis == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_End" name="No" sourceRef="Gateway_Retry" targetRef="EndEvent_Failed">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${retry_analysis == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+  </bpmn:process>
+  
+  <!-- BPMN Diagram Information -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="SimpleAnalysisTest">
+      
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="142" width="75" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- User Task: Provide Data -->
+      <bpmndi:BPMNShape id="UserTask_ProvideData_di" bpmnElement="UserTask_ProvideData">
+        <dc:Bounds x="270" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- Service Task: Analysis -->
+      <bpmndi:BPMNShape id="ServiceTask_Analysis_di" bpmnElement="ServiceTask_Analysis">
+        <dc:Bounds x="430" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- Gateway: Check Result -->
+      <bpmndi:BPMNShape id="Gateway_CheckResult_di" bpmnElement="Gateway_CheckResult" isMarkerVisible="true">
+        <dc:Bounds x="585" y="92" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="579" y="62" width="63" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- User Task: Display Results -->
+      <bpmndi:BPMNShape id="UserTask_DisplayResults_di" bpmnElement="UserTask_DisplayResults">
+        <dc:Bounds x="700" y="77" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- User Task: Handle Error -->
+      <bpmndi:BPMNShape id="UserTask_HandleError_di" bpmnElement="UserTask_HandleError">
+        <dc:Bounds x="560" y="200" width="100" height="80"/>
+        <bpmndi:BPMNLabel/>
+      </bpmndi:BPMNShape>
+      
+      <!-- Gateway: Retry -->
+      <bpmndi:BPMNShape id="Gateway_Retry_di" bpmnElement="Gateway_Retry" isMarkerVisible="true">
+        <dc:Bounds x="455" y="215" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="464" y="191" width="32" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- End Events -->
+      <bpmndi:BPMNShape id="EndEvent_Success_di" bpmnElement="EndEvent_Success">
+        <dc:Bounds x="862" y="99" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="842" y="142" width="77" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="EndEvent_Failed_di" bpmnElement="EndEvent_Failed">
+        <dc:Bounds x="362" y="222" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="346" y="265" width="68" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- Sequence Flows -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="215" y="117"/>
+        <di:waypoint x="270" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="370" y="117"/>
+        <di:waypoint x="430" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="530" y="117"/>
+        <di:waypoint x="585" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_Success_di" bpmnElement="Flow_Success">
+        <di:waypoint x="635" y="117"/>
+        <di:waypoint x="700" y="117"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="650" y="99" width="41" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_Failed_di" bpmnElement="Flow_Failed">
+        <di:waypoint x="610" y="142"/>
+        <di:waypoint x="610" y="200"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="616" y="168" width="29" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="800" y="117"/>
+        <di:waypoint x="862" y="117"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="560" y="240"/>
+        <di:waypoint x="505" y="240"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_Retry_di" bpmnElement="Flow_Retry">
+        <di:waypoint x="480" y="215"/>
+        <di:waypoint x="480" y="157"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="486" y="183" width="18" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="455" y="240"/>
+        <di:waypoint x="398" y="240"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="419" y="222" width="15" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
