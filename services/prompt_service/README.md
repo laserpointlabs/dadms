@@ -91,7 +91,7 @@ Edit `service_config.json` to change port or Consul settings:
 ```json
 {
   "service_name": "dadm-prompt-service",
-  "port": 5301,
+  "port": 5300,
   "consul_url": "http://localhost:8500",
   "enable_consul": true
 }
@@ -114,23 +114,23 @@ python main.py
 
 #### Custom Port
 ```bash
-PORT=5301 python main.py
+PORT=5300 python main.py
 ```
 
 #### Development Mode (with auto-reload)
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 5301
+uvicorn main:app --reload --host 0.0.0.0 --port 5300
 ```
 
 #### Production Mode (with multiple workers)
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 5301 --workers 4
+uvicorn main:app --host 0.0.0.0 --port 5300 --workers 4
 ```
 
 #### Docker Mode
 ```bash
 docker build -t dadm-prompt-service .
-docker run -p 5301:5301 -v $(pwd)/prompts.json:/app/prompts.json dadm-prompt-service
+docker run -p 5300:5300 -v $(pwd)/prompts.json:/app/prompts.json dadm-prompt-service
 ```
 
 #### Docker Compose (DADM Stack)
@@ -145,7 +145,7 @@ docker-compose up -d prompt-service
 docker-compose up -d
 ```
 
-The service will be available at `http://localhost:5301` and automatically registers with Consul.
+The service will be available at `http://localhost:5300` and automatically registers with Consul.
 
 **Stack Integration Features:**
 - Automatic service discovery via Consul
@@ -160,21 +160,21 @@ Once running, verify the service is working:
 
 1. **Health Check:**
 ```bash
-curl http://localhost:5301/health
+curl http://localhost:5300/health
 ```
 
 2. **API Documentation:**
-Visit `http://localhost:5301/docs` for interactive Swagger UI
+Visit `http://localhost:5300/docs` for interactive Swagger UI
 
 3. **Service Info:**
 ```bash
-curl http://localhost:5301/info
+curl http://localhost:5300/info
 ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
-- `PORT`: Service port (default: 5301)
+- `PORT`: Service port (default: 5300)
 - `CONSUL_URL`: Consul service URL (default: http://localhost:8500)
 - `PROMPTS_FILE`: Path to prompts JSON file (default: prompts.json)
 - `RAG_CACHE_DIR`: RAG cache directory (default: rag_cache)
@@ -185,7 +185,7 @@ Edit `service_config.json`:
 ```json
 {
   "service_name": "dadm-prompt-service",
-  "port": 5301,
+  "port": 5300,
   "consul_url": "http://localhost:8500",
   "enable_consul": true,
   "rag_cache_ttl": 3600,
@@ -219,7 +219,7 @@ Edit `service_config.json`:
   "service": {
     "name": "dadm-prompt-service",
     "type": "prompt",
-    "port": 5301,
+    "port": 5300,
     "version": "1.0.0",
     "health_endpoint": "/health",
     "description": "DADM Prompt Template Service"
@@ -228,7 +228,7 @@ Edit `service_config.json`:
 ```
 
 ### Environment Variables
-- `PORT`: Service port (default: 5301)
+- `PORT`: Service port (default: 5300)
 - `CONSUL_HTTP_ADDR`: Consul server address for service registration
 - `SERVICE_HOST`: Service hostname for registration
 - `DOCKER_CONTAINER`: Set to "true" when running in Docker
@@ -237,22 +237,22 @@ Edit `service_config.json`:
 
 ### List all prompts
 ```bash
-curl -X GET "http://localhost:5301/prompts"
+curl -X GET "http://localhost:5300/prompts"
 ```
 
 ### Get specific prompt
 ```bash
-curl -X GET "http://localhost:5301/prompt/engineering_review"
+curl -X GET "http://localhost:5300/prompt/engineering_review"
 ```
 
 ### Filter prompts by tags
 ```bash
-curl -X GET "http://localhost:5301/prompts?tags=engineering,review"
+curl -X GET "http://localhost:5300/prompts?tags=engineering,review"
 ```
 
 ### Create new prompt
 ```bash
-curl -X POST "http://localhost:5301/prompt" \
+curl -X POST "http://localhost:5300/prompt" \
   -H "Content-Type: application/json" \
   -d '{
     "id": "code_review",
@@ -265,7 +265,7 @@ curl -X POST "http://localhost:5301/prompt" \
 
 ### Update existing prompt
 ```bash
-curl -X PUT "http://localhost:5301/prompt/code_review" \
+curl -X PUT "http://localhost:5300/prompt/code_review" \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Enhanced template for comprehensive code review",
@@ -275,12 +275,12 @@ curl -X PUT "http://localhost:5301/prompt/code_review" \
 
 ### Get RAG content for a prompt
 ```bash
-curl -X GET "http://localhost:5301/prompt/disaster_response/rag-content"
+curl -X GET "http://localhost:5300/prompt/disaster_response/rag-content"
 ```
 
 ### Validate RAG sources
 ```bash
-curl -X POST "http://localhost:5301/rag/validate" \
+curl -X POST "http://localhost:5300/rag/validate" \
   -H "Content-Type: application/json" \
   -d '[{
     "url": "https://raw.githubusercontent.com/owner/repo/main/file.md",
@@ -291,16 +291,16 @@ curl -X POST "http://localhost:5301/rag/validate" \
 
 ### Get RAG cache information
 ```bash
-curl -X GET "http://localhost:5301/rag/cache/info"
+curl -X GET "http://localhost:5300/rag/cache/info"
 ```
 
 ### Clear RAG cache
 ```bash
 # Clear all cache
-curl -X DELETE "http://localhost:5301/rag/cache/clear"
+curl -X DELETE "http://localhost:5300/rag/cache/clear"
 
 # Clear specific URL
-curl -X DELETE "http://localhost:5301/rag/cache/clear?url=https://example.com/file.md"
+curl -X DELETE "http://localhost:5300/rag/cache/clear?url=https://example.com/file.md"
 ```
 
 ## Enhanced RAG Support
@@ -401,7 +401,7 @@ prompt_service/
 Check if the service is running and healthy:
 
 ```bash
-curl http://localhost:5301/health
+curl http://localhost:5300/health
 ```
 
 **Response:**
@@ -418,7 +418,7 @@ curl http://localhost:5301/health
 Get all available prompt templates:
 
 ```bash
-curl http://localhost:5301/prompts
+curl http://localhost:5300/prompts
 ```
 
 **Response:**
@@ -446,7 +446,7 @@ curl http://localhost:5301/prompts
 Find specific types of prompts using tag filtering:
 
 ```bash
-curl "http://localhost:5301/prompts?tags=engineering,technical"
+curl "http://localhost:5300/prompts?tags=engineering,technical"
 ```
 
 This returns only prompts that have both "engineering" AND "technical" tags.
@@ -455,7 +455,7 @@ This returns only prompts that have both "engineering" AND "technical" tags.
 Retrieve details for a specific prompt template:
 
 ```bash
-curl http://localhost:5301/prompt/engineering_review
+curl http://localhost:5300/prompt/engineering_review
 ```
 
 ### Creating and Updating Prompts
@@ -464,7 +464,7 @@ curl http://localhost:5301/prompt/engineering_review
 Add a new prompt template to the service:
 
 ```bash
-curl -X POST http://localhost:5301/prompt \
+curl -X POST http://localhost:5300/prompt \
   -H "Content-Type: application/json" \
   -d '{
     "id": "code_review",
@@ -496,7 +496,7 @@ curl -X POST http://localhost:5301/prompt \
 Modify an existing prompt template:
 
 ```bash
-curl -X PUT http://localhost:5301/prompt/code_review \
+curl -X PUT http://localhost:5300/prompt/code_review \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Enhanced template for comprehensive code review",
@@ -522,7 +522,7 @@ curl -X PUT http://localhost:5301/prompt/code_review \
 See what content will be included from RAG sources:
 
 ```bash
-curl http://localhost:5301/prompt/engineering_review/rag-content
+curl http://localhost:5300/prompt/engineering_review/rag-content
 ```
 
 **Response:**
@@ -554,7 +554,7 @@ curl http://localhost:5301/prompt/engineering_review/rag-content
 Check if RAG sources are accessible before using them:
 
 ```bash
-curl -X POST http://localhost:5301/rag/validate \
+curl -X POST http://localhost:5300/rag/validate \
   -H "Content-Type: application/json" \
   -d '{
     "sources": [
@@ -607,14 +607,14 @@ The service includes a special test prompt that demonstrates both local and remo
 
 ```bash
 # Get the remote files test prompt
-curl http://localhost:5301/prompt/remote_files_test
+curl http://localhost:5300/prompt/remote_files_test
 ```
 
 #### Fetch RAG Content from Mixed Sources
 This demonstrates fetching content from both local and remote sources:
 
 ```bash
-curl http://localhost:5301/prompt/remote_files_test/rag-content
+curl http://localhost:5300/prompt/remote_files_test/rag-content
 ```
 
 **Expected Response Structure:**
@@ -657,7 +657,7 @@ curl http://localhost:5301/prompt/remote_files_test/rag-content
 Test the complete workflow with both local and remote RAG sources:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/remote_files_test/compile \
+curl -X POST http://localhost:5300/prompt/remote_files_test/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -683,7 +683,7 @@ curl -X POST http://localhost:5301/prompt/remote_files_test/compile \
 Compile a prompt with variable injection and RAG content:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/engineering_review/compile \
+curl -X POST http://localhost:5300/prompt/engineering_review/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -748,7 +748,7 @@ curl -X POST http://localhost:5301/prompt/engineering_review/compile \
 Use "inline" style to inject RAG content directly into the template:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/disaster_response/compile \
+curl -X POST http://localhost:5300/prompt/disaster_response/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -766,7 +766,7 @@ curl -X POST http://localhost:5301/prompt/disaster_response/compile \
 Sometimes you want just variable injection without RAG content:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/system_design/compile \
+curl -X POST http://localhost:5300/prompt/system_design/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -784,7 +784,7 @@ curl -X POST http://localhost:5301/prompt/system_design/compile \
 What happens when you don't provide all required template variables:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/engineering_review/compile \
+curl -X POST http://localhost:5300/prompt/engineering_review/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -812,7 +812,7 @@ curl -X POST http://localhost:5301/prompt/engineering_review/compile \
 Attempting to compile a prompt that doesn't exist:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/nonexistent_prompt/compile \
+curl -X POST http://localhost:5300/prompt/nonexistent_prompt/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {"test": "value"}
@@ -830,7 +830,7 @@ curl -X POST http://localhost:5301/prompt/nonexistent_prompt/compile \
 Compilation with token limit exceeded:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/engineering_review/compile \
+curl -X POST http://localhost:5300/prompt/engineering_review/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -856,7 +856,7 @@ curl -X POST http://localhost:5301/prompt/engineering_review/compile \
 When all RAG sources are inaccessible:
 
 ```bash
-curl -X POST http://localhost:5301/prompt/system_design/compile \
+curl -X POST http://localhost:5300/prompt/system_design/compile \
   -H "Content-Type: application/json" \
   -d '{
     "variables": {
@@ -887,21 +887,21 @@ curl -X POST http://localhost:5301/prompt/system_design/compile \
 Monitor what's currently cached:
 
 ```bash
-curl http://localhost:5301/rag/cache/info
+curl http://localhost:5300/rag/cache/info
 ```
 
 #### 17. Clear Specific Cache Entry
 Remove a specific URL from cache:
 
 ```bash
-curl -X DELETE "http://localhost:5301/rag/cache/clear?url=https://raw.githubusercontent.com/user/repo/main/doc.md"
+curl -X DELETE "http://localhost:5300/rag/cache/clear?url=https://raw.githubusercontent.com/user/repo/main/doc.md"
 ```
 
 #### 18. Clear All Cache
 Clear the entire RAG cache:
 
 ```bash
-curl -X DELETE http://localhost:5301/rag/cache/clear
+curl -X DELETE http://localhost:5300/rag/cache/clear
 ```
 
 ### Real-World Integration Examples
@@ -913,7 +913,7 @@ Typical usage in an LLM application:
 import requests
 
 # 1. Compile prompt with context
-response = requests.post('http://localhost:5301/prompt/engineering_review/compile', json={
+response = requests.post('http://localhost:5300/prompt/engineering_review/compile', json={
     'variables': {
         'input': user_submitted_design,
         'criteria': 'security and performance'
@@ -940,7 +940,7 @@ import asyncio
 import aiohttp
 
 async def compile_prompt(session, prompt_id, variables):
-    async with session.post(f'http://localhost:5301/prompt/{prompt_id}/compile', 
+    async with session.post(f'http://localhost:5300/prompt/{prompt_id}/compile', 
                            json={'variables': variables, 'include_rag': True}) as response:
         return await response.json()
 
@@ -968,13 +968,13 @@ Test specific functionality:
 
 ```bash
 # Test health endpoint
-curl http://localhost:5301/health
+curl http://localhost:5300/health
 
 # Test prompt listing
-curl http://localhost:5301/prompts
+curl http://localhost:5300/prompts
 
 # Test compilation
-curl -X POST http://localhost:5301/prompt/engineering_review/compile \
+curl -X POST http://localhost:5300/prompt/engineering_review/compile \
   -H "Content-Type: application/json" \
   -d '{"variables": {"input": "test", "criteria": "test"}, "include_rag": true}'
 ```
@@ -993,9 +993,9 @@ python validate_prompts.py
 1. **Port Already in Use:**
 ```bash
 # Check what's using the port
-lsof -i :5301
+lsof -i :5300
 # Use different port
-PORT=5301 python main.py
+PORT=5300 python main.py
 ```
 
 2. **Missing Dependencies:**
@@ -1023,9 +1023,9 @@ curl http://localhost:8500/v1/status/leader
 3. **Cache Issues:**
 ```bash
 # Clear RAG cache
-curl -X DELETE http://localhost:5301/rag/cache/clear
+curl -X DELETE http://localhost:5300/rag/cache/clear
 # Check cache status  
-curl http://localhost:5301/rag/cache/info
+curl http://localhost:5300/rag/cache/info
 ```
 
 #### Compilation Errors
