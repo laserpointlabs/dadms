@@ -1,0 +1,111 @@
+{
+  "engineering_review": {
+    "id": "engineering_review",
+    "description": "Enhanced template for engineering review",
+    "template": "You are an expert engineer reviewing: {input}. Focus on {criteria}. Consider the following aspects: technical feasibility, scalability, maintainability, and security implications.",
+    "tags": [
+      "engineering",
+      "review",
+      "LLM",
+      "technical",
+      "enhanced"
+    ],
+    "rag_sources": [
+      "/docs/regulations/faa.md",
+      "/docs/engineering_standards.md",
+      "https://raw.githubusercontent.com/laserpointlabs/scripts/refs/heads/main/disaster_response_requirements.md"
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16 00:00:00",
+    "updated_at": "2025-06-16 08:52:17.542522",
+    "metadata": {
+      "author": "DADM System",
+      "category": "technical_review"
+    }
+  },
+  "system_design": {
+    "id": "system_design",
+    "description": "Template for system architecture and design decisions",
+    "template": "As a system architect, analyze the following requirements: {requirements}. Provide a detailed system design considering: {constraints}. Include recommendations for architecture patterns, technology stack, and scalability considerations.",
+    "tags": [
+      "architecture",
+      "design",
+      "system",
+      "technical"
+    ],
+    "rag_sources": [
+      "/docs/architecture_patterns.md",
+      "/docs/best_practices.md"
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16T00:00:00",
+    "updated_at": "2025-06-16T00:00:00",
+    "metadata": {
+      "author": "DADM System",
+      "category": "architecture"
+    }
+  },
+  "decision_analysis": {
+    "id": "decision_analysis",
+    "description": "Template for analyzing complex business or technical decisions",
+    "template": "Analyze the following decision scenario: {scenario}. Consider the stakeholders: {stakeholders}. Evaluate the options: {options}. Provide a structured analysis including pros, cons, risks, and recommendations based on the criteria: {criteria}.",
+    "tags": [
+      "decision",
+      "analysis",
+      "business",
+      "strategy"
+    ],
+    "rag_sources": [
+      "/docs/decision_frameworks.md"
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16T00:00:00",
+    "updated_at": "2025-06-16T00:00:00",
+    "metadata": {
+      "author": "DADM System",
+      "category": "decision_support"
+    }
+  },
+  "disaster_response": {
+    "id": "disaster_response",
+    "description": "Template for disaster response planning and analysis",
+    "template": "As a disaster response coordinator, analyze the following scenario: {scenario}. Consider the requirements from the disaster response documentation and provide a comprehensive response plan addressing: {focus_areas}. Include resource allocation, timeline, and risk mitigation strategies.",
+    "tags": [
+      "disaster",
+      "response",
+      "emergency",
+      "planning",
+      "safety"
+    ],
+    "rag_sources": [
+      "https://raw.githubusercontent.com/laserpointlabs/scripts/refs/heads/main/disaster_response_requirements.md",
+      "/docs/emergency_protocols.md"
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16T00:00:00",
+    "updated_at": "2025-06-16T00:00:00",
+    "metadata": {
+      "author": "DADM System",
+      "category": "emergency_response",
+      "rag_source_types": [
+        "github",
+        "local"
+      ]
+    }
+  },
+  "test_api_prompt": {
+    "id": "test_api_prompt",
+    "description": "Updated test prompt description",
+    "template": "This is a test prompt: {input}",
+    "tags": [
+      "test",
+      "api",
+      "updated"
+    ],
+    "rag_sources": [],
+    "version": "1.0",
+    "created_at": "2025-06-16 09:14:31.024240",
+    "updated_at": "2025-06-16 09:36:40.443555",
+    "metadata": {}
+  }
+}

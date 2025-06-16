@@ -1,0 +1,14 @@
+{
+  "55aecdaaa48da3333ecde06ace874a20": {
+    "url": "https://raw.githubusercontent.com/laserpointlabs/dadm/refs/heads/main/services/openai_service/data/disaster_response_requirements.md",
+    "cached_at": "2025-06-16T09:02:14.567583",
+    "success": false,
+    "size": 41
+  },
+  "2ff37e57a14655c9ffbbbfe00d28aee8": {
+    "url": "https://raw.githubusercontent.com/laserpointlabs/scripts/refs/heads/main/disaster_response_requirements.md",
+    "cached_at": "2025-06-16T09:07:11.911526",
+    "success": true,
+    "size": 4188
+  }
+}
