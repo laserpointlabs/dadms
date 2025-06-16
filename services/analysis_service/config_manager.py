@@ -61,6 +61,8 @@ class ConfigManager:
         # Define environment variable mappings
         env_mappings = {
             "PROMPT_SERVICE_URL": "prompt_service_url",
+            "OPENAI_SERVICE_URL": "openai_service_url",
+            "PYTHON_EXECUTION_URL": "python_execution_url",
             "CAMUNDA_URL": "camunda_base_url", 
             "CAMUNDA_BASE_URL": "camunda_base_url",
             "CONSUL_URL": "consul_url",

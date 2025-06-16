@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                 xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 id="Definitions_1" 
+                 targetNamespace="http://bpmn.io/schema/bpmn">
+
+  <bpmn:process id="comprehensive_market_analysis_process" name="Comprehensive Market Analysis" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="start_analysis" name="Start Market Analysis">
+      <bpmn:outgoing>flow_to_data_collection</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Data Collection Task -->
+    <bpmn:serviceTask id="collect_market_data" name="Collect Market Data">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="data_sources">{
+            "sales_data": "postgresql://prod/sales_2024",
+            "market_trends": "s3://market-data/trends.csv", 
+            "competitor_data": "api://competitor-service/quarterly-data",
+            "customer_surveys": "${customer_survey_results}"
+          }</camunda:inputParameter>
+          <camunda:outputParameter name="collected_data">${response}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_data_collection</bpmn:incoming>
+      <bpmn:outgoing>flow_to_llm_analysis</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- LLM Analysis Task -->
+    <bpmn:serviceTask id="llm_market_analysis" name="LLM Market Analysis">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">{{consul:dadm-analysis-service}}/analyze</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+              "prompt_reference": "market_research_comprehensive",
+              "analysis_reference": "business_analysis", 
+              "context_variables": {
+                "company": "${company_name}",
+                "market": "${target_market}",
+                "time_period": "2024_Q1_Q3",
+                "analysis_scope": "comprehensive_market_entry"
+              },
+              "metadata": {
+                "data_sources": "${collected_data}",
+                "urgency": "high",
+                "stakeholders": ["CEO", "CMO", "Strategy Team"]
+              }
+            }</camunda:inputParameter>
+            <camunda:outputParameter name="llm_analysis_results">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_llm_analysis</bpmn:incoming>
+      <bpmn:outgoing>flow_to_statistical_analysis</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Statistical Analysis Task -->
+    <bpmn:serviceTask id="statistical_market_analysis" name="Statistical Analysis">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">{{consul:dadm-analysis-service}}/execute</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+              "execution_type": "computational_analysis",
+              "data_sources": "${collected_data}",
+              "execution_tools": ["python", "pandas", "matplotlib", "scipy"],
+              "analysis_parameters": {
+                "statistical_tests": ["correlation", "regression", "time_series"],
+                "confidence_level": 0.95,
+                "forecast_periods": 4,
+                "analysis_depth": "comprehensive"
+              },
+              "llm_guidance": "${llm_analysis_results.analysis.analysis_plan}",
+              "visualization_requirements": [
+                "trend_charts", 
+                "correlation_matrix", 
+                "forecast_charts",
+                "competitor_positioning",
+                "market_segmentation"
+              ]
+            }</camunda:inputParameter>
+            <camunda:outputParameter name="statistical_results">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_statistical_analysis</bpmn:incoming>
+      <bpmn:outgoing>flow_to_report_generation</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Report Generation Task -->
+    <bpmn:serviceTask id="generate_comprehensive_report" name="Generate Analysis Report">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">{{consul:dadm-analysis-service}}/report</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+              "report_type": "executive_summary_with_technical_appendix",
+              "llm_insights": "${llm_analysis_results}",
+              "statistical_analysis": "${statistical_results}",
+              "target_audience": ["executives", "strategy_team", "analysts"],
+              "output_formats": [
+                "interactive_dashboard",
+                "pdf_executive_summary", 
+                "jupyter_notebook",
+                "powerpoint_presentation"
+              ],
+              "include_sections": [
+                "executive_summary",
+                "key_findings", 
+                "market_trends",
+                "competitive_analysis",
+                "statistical_analysis",
+                "forecasts_and_projections",
+                "recommendations",
+                "risk_assessment",
+                "implementation_roadmap",
+                "technical_appendix"
+              ]
+            }</camunda:inputParameter>
+            <camunda:outputParameter name="final_report">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_report_generation</bpmn:incoming>
+      <bpmn:outgoing>flow_to_stakeholder_review</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Human Task: Stakeholder Review -->
+    <bpmn:userTask id="stakeholder_review" name="Stakeholder Review">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="analysis_approved" label="Approve Analysis?" type="boolean" />
+          <camunda:formField id="feedback" label="Feedback/Comments" type="string" />
+          <camunda:formField id="next_steps" label="Recommended Next Steps" type="enum">
+            <camunda:value id="implement" name="Implement Recommendations" />
+            <camunda:value id="additional_analysis" name="Request Additional Analysis" />
+            <camunda:value id="modify_approach" name="Modify Approach" />
+            <camunda:value id="reject" name="Reject Analysis" />
+          </camunda:value>
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_stakeholder_review</bpmn:incoming>
+      <bpmn:outgoing>flow_to_decision_gateway</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <!-- Decision Gateway -->
+    <bpmn:exclusiveGateway id="decision_gateway" name="Analysis Decision">
+      <bpmn:incoming>flow_to_decision_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_to_implementation</bpmn:outgoing>
+      <bpmn:outgoing>flow_to_additional_analysis</bpmn:outgoing>
+      <bpmn:outgoing>flow_to_end</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Implementation Task -->
+    <bpmn:serviceTask id="initiate_implementation" name="Initiate Implementation">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="implementation_plan">${final_report.recommendations.implementation_roadmap}</camunda:inputParameter>
+          <camunda:inputParameter name="budget_allocation">${final_report.financial_projections.budget_requirements}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow_to_implementation</bpmn:incoming>
+      <bpmn:outgoing>flow_implementation_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Additional Analysis Task -->
+    <bpmn:serviceTask id="additional_analysis" name="Additional Analysis">
+      <bpmn:incoming>flow_to_additional_analysis</bpmn:incoming>
+      <bpmn:outgoing>flow_additional_to_llm</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- End Events -->
+    <bpmn:endEvent id="end_analysis_complete" name="Analysis Complete">
+      <bpmn:incoming>flow_to_end</bpmn:incoming>
+      <bpmn:incoming>flow_implementation_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="flow_to_data_collection" sourceRef="start_analysis" targetRef="collect_market_data" />
+    <bpmn:sequenceFlow id="flow_to_llm_analysis" sourceRef="collect_market_data" targetRef="llm_market_analysis" />
+    <bpmn:sequenceFlow id="flow_to_statistical_analysis" sourceRef="llm_market_analysis" targetRef="statistical_market_analysis" />
+    <bpmn:sequenceFlow id="flow_to_report_generation" sourceRef="statistical_market_analysis" targetRef="generate_comprehensive_report" />
+    <bpmn:sequenceFlow id="flow_to_stakeholder_review" sourceRef="generate_comprehensive_report" targetRef="stakeholder_review" />
+    <bpmn:sequenceFlow id="flow_to_decision_gateway" sourceRef="stakeholder_review" targetRef="decision_gateway" />
+    
+    <!-- Conditional Flows -->
+    <bpmn:sequenceFlow id="flow_to_implementation" sourceRef="decision_gateway" targetRef="initiate_implementation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${next_steps == 'implement'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="flow_to_additional_analysis" sourceRef="decision_gateway" targetRef="additional_analysis">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${next_steps == 'additional_analysis'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="flow_additional_to_llm" sourceRef="additional_analysis" targetRef="llm_market_analysis" />
+    
+    <bpmn:sequenceFlow id="flow_to_end" sourceRef="decision_gateway" targetRef="end_analysis_complete">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${next_steps == 'reject' || next_steps == 'modify_approach'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="flow_implementation_to_end" sourceRef="initiate_implementation" targetRef="end_analysis_complete" />
+    
+  </bpmn:process>
+</bpmn:definitions>

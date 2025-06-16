@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import asyncio
 import json
 
@@ -23,6 +23,7 @@ from prompt_compiler import AnalysisPromptCompiler
 from analysis_processor import AnalysisProcessor
 from config_manager import load_service_config, get_service_discovery
 from consul_registry import ConsulServiceRegistry
+from service_integrations import IntegratedAnalysisOrchestrator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -53,12 +54,33 @@ class WorkflowAnalysisRequest(BaseModel):
     process_variables: Dict[str, Any] = {}
     task_variables: Dict[str, Any] = {}
 
+# Additional request models for integrated analysis
+class IntegratedAnalysisRequest(BaseModel):
+    """Request for integrated analysis using all services"""
+    analysis_type: str = Field(..., description="Type of analysis to perform")
+    data_sources: Dict[str, Any] = Field(default_factory=dict, description="Data sources for analysis")
+    analysis_parameters: Dict[str, Any] = Field(default_factory=dict, description="Analysis parameters")
+    execution_tools: List[str] = Field(default=["python"], description="Tools to use for execution")
+    llm_model: Optional[str] = Field(None, description="Specific LLM model to use")
+    timeout: int = Field(default=600, description="Maximum execution time in seconds")
+
+class IntegratedAnalysisResponse(BaseModel):
+    """Response from integrated analysis"""
+    execution_id: str
+    status: str
+    llm_analysis: Optional[Dict[str, Any]] = None
+    computational_results: Optional[Dict[str, Any]] = None
+    final_insights: Optional[Dict[str, Any]] = None
+    execution_metadata: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
 # Global service instances
 template_manager: Optional[AnalysisTemplateManager] = None
 prompt_compiler: Optional[AnalysisPromptCompiler] = None
 analysis_processor: Optional[AnalysisProcessor] = None
 service_config: Optional[AnalysisServiceConfig] = None
 consul_registry: Optional[ConsulServiceRegistry] = None
+orchestrator: Optional[IntegratedAnalysisOrchestrator] = None
 
 def load_service_info():
     """Load service information from service_config.json"""
@@ -170,6 +192,14 @@ def get_analysis_processor() -> AnalysisProcessor:
         analysis_processor = AnalysisProcessor(config, tm)
     return analysis_processor
 
+def get_orchestrator() -> IntegratedAnalysisOrchestrator:
+    """Get or create analysis orchestrator"""
+    global orchestrator
+    if orchestrator is None:
+        config = get_service_config()
+        orchestrator = IntegratedAnalysisOrchestrator(config)
+    return orchestrator
+
 # FastAPI app
 app = FastAPI(
     title="DADM Analysis Service",
@@ -187,6 +217,7 @@ async def startup_event():
     get_template_manager()
     get_prompt_compiler()
     get_analysis_processor()
+    get_orchestrator()
     
     # Register with Consul
     register_with_consul()
@@ -197,6 +228,11 @@ async def startup_event():
 async def shutdown_event():
     """Clean up resources on shutdown"""
     logger.info("Shutting down DADM Analysis Service...")
+    
+    # Cleanup orchestrator resources
+    global orchestrator
+    if orchestrator:
+        await orchestrator.cleanup()
     
     # Deregister from Consul
     deregister_from_consul()
@@ -353,6 +389,63 @@ async def workflow_analyze(
             status="failed",
             error=str(e)
         )
+
+@app.post("/analyze/integrated", response_model=IntegratedAnalysisResponse)
+async def integrated_analysis(
+    request: IntegratedAnalysisRequest,
+    orchestrator: IntegratedAnalysisOrchestrator = Depends(get_orchestrator)
+):
+    """Execute integrated analysis using LLM, Python execution, and other services"""
+    try:
+        logger.info(f"Starting integrated analysis: {request.analysis_type}")
+        
+        # Execute complete analysis workflow
+        result = await orchestrator.execute_complete_analysis(request.dict())
+        
+        return IntegratedAnalysisResponse(
+            execution_id=result["execution_id"],
+            status=result["status"],
+            llm_analysis=result.get("llm_analysis"),
+            computational_results=result.get("computational_results"),
+            final_insights=result.get("final_insights"),
+            execution_metadata=result.get("execution_metadata"),
+            error=result.get("error")
+        )
+        
+    except Exception as e:
+        logger.error(f"Integrated analysis failed: {e}")
+        return IntegratedAnalysisResponse(
+            execution_id=f"error_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+            status="failed",
+            error=str(e)
+        )
+
+@app.post("/analyze/computational")
+async def computational_analysis(
+    request: Dict[str, Any],
+    orchestrator: IntegratedAnalysisOrchestrator = Depends(get_orchestrator)
+):
+    """Execute computational analysis using Python execution service"""
+    try:
+        # Extract Python code from request
+        python_code = request.get("python_code", "")
+        if not python_code:
+            raise HTTPException(status_code=400, detail="No Python code provided")
+        
+        # Execute Python analysis
+        result = await orchestrator.python_integration.execute_python_code(
+            code=python_code,
+            environment=request.get("environment", "scientific"),
+            timeout=request.get("timeout", 300),
+            packages=request.get("packages", []),
+            data_sources=request.get("data_sources", {})
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Computational analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/executions/{execution_id}")
 async def get_execution(execution_id: str):

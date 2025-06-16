@@ -1,0 +1,50 @@
+{
+  "service": {
+    "name": "dadm-python-execution-service",
+    "type": "python-execution",
+    "port": 8003,
+    "version": "1.0.0",
+    "health_endpoint": "/health",
+    "description": "DADM Python Execution Service for safe computational analysis in isolated environments",
+    "tags": [
+      "python",
+      "execution",
+      "computational",
+      "scientific-computing",
+      "docker",
+      "analysis"
+    ],
+    "meta": {
+      "execution_environments": "standard,scientific,ml",
+      "supported_packages": "numpy,pandas,matplotlib,seaborn,scikit-learn,scipy",
+      "execution_methods": "docker,subprocess",
+      "security_features": "isolated-containers,resource-limits,timeout-controls",
+      "output_formats": "json,text,files"
+    },
+    "consul": {
+      "register": true,
+      "health_check": {
+        "http": "/health",
+        "interval": "10s",
+        "timeout": "5s",
+        "deregister_critical_service_after": "30s"
+      },
+      "service_id_format": "dadm-python-execution-service-{host}-{port}"
+    },
+    "capabilities": {
+      "docker_execution": true,
+      "subprocess_execution": true,
+      "scientific_computing": true,
+      "file_generation": true,
+      "package_installation": true,
+      "timeout_control": true,
+      "resource_limits": true
+    },
+    "defaults": {
+      "timeout": 300,
+      "environment": "scientific",
+      "max_memory": "512m",
+      "max_cpu_cores": 1
+    }
+  }
+}

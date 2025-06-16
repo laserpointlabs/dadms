@@ -194,6 +194,8 @@ class AnalysisServiceConfig(BaseModel):
     
     # Integration settings
     prompt_service_url: str = Field(default="http://localhost:5300")
+    openai_service_url: str = Field(default="http://localhost:8001")
+    python_execution_url: str = Field(default="http://localhost:8003")
     consul_enabled: bool = Field(default=True)
     consul_url: str = Field(default="http://consul:8500")
     

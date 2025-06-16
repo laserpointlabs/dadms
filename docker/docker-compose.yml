@@ -192,6 +192,8 @@ services:
     environment:
       - ANALYSIS_SERVICE_PORT=8002
       - ANALYSIS_PROMPT_SERVICE_URL=http://prompt-service:5300
+      - ANALYSIS_OPENAI_SERVICE_URL=http://openai-service:5000
+      - ANALYSIS_PYTHON_EXECUTION_URL=http://python-execution-service:8003
       - ANALYSIS_CAMUNDA_BASE_URL=http://dadm-camunda:8080
       - ANALYSIS_CONSUL_ENABLED=true
       - ANALYSIS_CONSUL_URL=http://consul:8500
@@ -311,7 +313,39 @@ services:
       retries: 5
       start_period: 30s
 
-
+  # Python Execution Service (NEW)
+  python-execution-service:
+    build:
+      context: ..
+      dockerfile: services/python_execution_service/Dockerfile
+    container_name: python-execution-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - SERVICE_HOST=python-execution-service
+      - SERVICE_TYPE=python-execution
+      - USE_CONSUL=true
+      - CONSUL_HTTP_ADDR=consul:8500
+      - DOCKER_CONTAINER=true
+      - EXECUTION_TIMEOUT=300
+      - MAX_CONCURRENT_EXECUTIONS=5
+    volumes:
+      - ../services/python_execution_service:/app/services/python_execution_service
+      - ../data:/app/data:ro  # Read-only access to data
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker access for containerized execution
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      
 networks:
   dadm-network:
     driver: bridge
