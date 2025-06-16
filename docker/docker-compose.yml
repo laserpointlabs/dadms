@@ -153,9 +153,9 @@ services:
       dockerfile: services/prompt_service/Dockerfile
     container_name: prompt-service
     ports:
-      - "5301:5301"
+      - "5300:5300"
     environment:
-      - PORT=5301
+      - PORT=5300
       - CONSUL_HTTP_ADDR=consul:8500
       - SERVICE_HOST=prompt-service
       - SERVICE_TYPE=utility
