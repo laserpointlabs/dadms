@@ -107,5 +107,69 @@
     "created_at": "2025-06-16 09:14:31.024240",
     "updated_at": "2025-06-16 09:37:08.423688",
     "metadata": {}
+  },
+  "data_analysis_prompt": {
+    "id": "data_analysis_prompt",
+    "description": "Template for analyzing project data with employee information and requirements",
+    "template": "You are a business analyst reviewing the project: {project_name}. Analyze the requirements and employee data to provide insights on: {analysis_focus}. Consider team composition, budget implications, and resource allocation.",
+    "tags": [
+      "analysis",
+      "business",
+      "data",
+      "project",
+      "csv",
+      "txt"
+    ],
+    "rag_sources": [
+      "test_data/project_requirements.txt",
+      "test_data/sample_data.csv"
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16T10:00:00",
+    "updated_at": "2025-06-16T10:00:00",
+    "metadata": {
+      "author": "DADM System",
+      "category": "business_analysis",
+      "supports_file_types": [
+        "txt",
+        "csv"
+      ]
+    }
+  },
+  "business_analysis_prompt": {
+    "id": "business_analysis_prompt",
+    "description": "Template for analyzing project data with employee information and requirements",
+    "template": "You are a business analyst reviewing the project: {project_name}. Analyze the requirements and employee data to provide insights on: {analysis_focus}. Consider team composition, budget implications, and resource allocation.",
+    "tags": [
+      "analysis",
+      "business",
+      "data",
+      "project",
+      "csv",
+      "txt"
+    ],
+    "rag_sources": [
+      {
+        "url": "/home/jdehart/dadm/services/prompt_service/test_data/project_requirements.txt",
+        "description": "Auto-detected local source",
+        "type": "local"
+      },
+      {
+        "url": "/home/jdehart/dadm/services/prompt_service/test_data/sample_data.csv",
+        "description": "Auto-detected local source",
+        "type": "local"
+      }
+    ],
+    "version": "1.0",
+    "created_at": "2025-06-16 10:00:09.467697",
+    "updated_at": "2025-06-16 10:00:09.467697",
+    "metadata": {
+      "author": "DADM System",
+      "category": "business_analysis",
+      "supports_file_types": [
+        "txt",
+        "csv"
+      ]
+    }
   }
 }

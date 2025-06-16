@@ -7,6 +7,8 @@ import os
 import logging
 import requests
 import hashlib
+import csv
+import io
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -154,14 +156,22 @@ class RAGResourceManager:
         """
         url = source.url
         
+        # Validate file type
+        if not self._is_supported_file_type(url):
+            error_msg = f"Unsupported file type. Supported extensions: .md, .txt, .csv"
+            logger.warning(f"Unsupported file type for {url}")
+            return f"Error: {error_msg}"
+        
         # Handle local files
         if not source.is_remote:
             try:
                 # For local files, try to read directly
                 if os.path.exists(url):
                     with open(url, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    logger.debug(f"Loaded local file: {url}")
+                        raw_content = f.read()
+                    # Process content based on file type
+                    content = self._process_file_content(raw_content, url)
+                    logger.debug(f"Loaded and processed local file: {url}")
                     return content
                 else:
                     logger.warning(f"Local file not found: {url}")
@@ -181,12 +191,18 @@ class RAGResourceManager:
                 return cached_content
         
         # Fetch fresh content
-        content, success = self._fetch_remote_content(url)
+        raw_content, success = self._fetch_remote_content(url)
         
-        # Cache the result
-        self._cache_content(url, content, success)
+        # Process content if fetch was successful
+        if success and not raw_content.startswith("Error:"):
+            processed_content = self._process_file_content(raw_content, url)
+        else:
+            processed_content = raw_content
         
-        return content
+        # Cache the processed result
+        self._cache_content(url, processed_content, success)
+        
+        return processed_content
     
     def get_rag_contents_for_prompt(self, rag_sources: List[RAGSource], use_cache: bool = True) -> Dict[str, str]:
         """
@@ -301,3 +317,143 @@ class RAGResourceManager:
             'cache_metadata_entries': len(self.cache_metadata),
             'cache_ttl_hours': self.cache_ttl.total_seconds() / 3600
         }
+    
+    def _is_supported_file_type(self, file_path_or_url: str) -> bool:
+        """
+        Check if the file type is supported for RAG content
+        
+        Args:
+            file_path_or_url: File path or URL to check
+            
+        Returns:
+            True if file type is supported
+        """
+        supported_extensions = {'.md', '.txt', '.csv'}
+        
+        # Extract file extension
+        path = file_path_or_url.lower()
+        
+        # Handle URLs with query parameters
+        if '?' in path:
+            path = path.split('?')[0]
+        
+        # Get file extension
+        for ext in supported_extensions:
+            if path.endswith(ext):
+                return True
+        
+        return False
+    
+    def _process_file_content(self, content: str, file_path_or_url: str) -> str:
+        """
+        Process file content based on file type
+        
+        Args:
+            content: Raw file content
+            file_path_or_url: File path or URL to determine processing
+            
+        Returns:
+            Processed content suitable for RAG injection
+        """
+        file_path = file_path_or_url.lower()
+        
+        # CSV files - convert to readable format
+        if file_path.endswith('.csv'):
+            return self._process_csv_content(content)
+        
+        # TXT and MD files - use as-is with minimal processing
+        elif file_path.endswith(('.txt', '.md')):
+            return self._process_text_content(content)
+        
+        # Default processing for other files
+        return content
+    
+    def _process_csv_content(self, content: str) -> str:
+        """
+        Process CSV content to make it more readable for LLMs
+        
+        Args:
+            content: Raw CSV content
+            
+        Returns:
+            Formatted CSV content
+        """
+        try:
+            # Parse CSV content
+            csv_reader = csv.reader(io.StringIO(content))
+            rows = list(csv_reader)
+            
+            if not rows:
+                return "Empty CSV file"
+            
+            # Format as table with headers
+            headers = rows[0] if rows else []
+            data_rows = rows[1:] if len(rows) > 1 else []
+            
+            # Create formatted output
+            formatted_content = "## CSV Data\n\n"
+            
+            if headers:
+                formatted_content += "### Headers:\n"
+                formatted_content += " | ".join(headers) + "\n"
+                formatted_content += " | ".join(["---"] * len(headers)) + "\n"
+                
+                # Add data rows (limit to first 20 rows to avoid token explosion)
+                max_rows = min(20, len(data_rows))
+                for i, row in enumerate(data_rows[:max_rows]):
+                    # Pad row to match header length
+                    padded_row = row + [''] * (len(headers) - len(row))
+                    formatted_content += " | ".join(padded_row[:len(headers)]) + "\n"
+                
+                if len(data_rows) > max_rows:
+                    formatted_content += f"\n*Note: Showing first {max_rows} of {len(data_rows)} data rows*\n"
+            
+            return formatted_content
+            
+        except Exception as e:
+            logger.warning(f"Failed to process CSV content: {e}")
+            # Fallback to raw content with simple formatting
+            lines = content.strip().split('\n')
+            formatted_content = "## CSV Data (Raw)\n\n```\n"
+            # Limit to first 50 lines
+            for line in lines[:50]:
+                formatted_content += line + "\n"
+            if len(lines) > 50:
+                formatted_content += f"... ({len(lines) - 50} more lines)\n"
+            formatted_content += "```\n"
+            return formatted_content
+    
+    def _process_text_content(self, content: str) -> str:
+        """
+        Process text/markdown content
+        
+        Args:
+            content: Raw text content
+            
+        Returns:
+            Processed content
+        """
+        # Basic processing for text files
+        # Remove excessive whitespace while preserving structure
+        lines = content.split('\n')
+        processed_lines = []
+        
+        for line in lines:
+            # Keep line structure but trim excessive whitespace
+            processed_line = line.rstrip()
+            processed_lines.append(processed_line)
+        
+        # Remove excessive empty lines (more than 2 consecutive)
+        result_lines = []
+        empty_count = 0
+        
+        for line in processed_lines:
+            if line.strip() == '':
+                empty_count += 1
+                if empty_count <= 2:  # Allow up to 2 consecutive empty lines
+                    result_lines.append(line)
+            else:
+                empty_count = 0
+                result_lines.append(line)
+        
+        return '\n'.join(result_lines)

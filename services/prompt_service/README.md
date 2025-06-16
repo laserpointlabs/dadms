@@ -11,7 +11,10 @@ A powerful FastAPI-based microservice for managing structured prompt templates w
 - **Version Control**: Automatic timestamping and version tracking
 - **Tag Filtering**: Organize and filter prompts by multiple tags
 - **Advanced RAG Integration**: 
-  - Support for local files and remote sources (GitHub, web URLs)
+  - Support for multiple file types: **Markdown (.md)**, **Text (.txt)**, and **CSV (.csv)**
+  - Local files and remote sources (GitHub, web URLs)
+  - Intelligent content processing based on file type
+  - Smart CSV formatting with tabular display and row limits
   - Intelligent caching with configurable TTL
   - Automatic content validation and error handling
   - Mixed source types (local + remote) in single templates
