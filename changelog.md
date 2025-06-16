@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-06-16
+
+### Added
+- **DADM Prompt Service**: Complete RAG-enabled prompt template management system
+  - FastAPI-based microservice for structured prompt templates with REST API
+  - Advanced RAG (Retrieval-Augmented Generation) integration with multi-format support
+  - Support for Markdown (.md), Text (.txt), and CSV (.csv) file processing
+  - Mixed local and remote source capabilities (GitHub, web URLs)
+  - Intelligent CSV-to-markdown table conversion with row limits and formatting
+  - Comprehensive caching system with configurable TTL for performance optimization
+  - Automatic content validation, error handling, and size limits
+  - Variable injection with template processing and context compilation
+  - Token estimation and efficiency metrics for prompt optimization
+  - Consul service discovery integration with health monitoring
+  - Interactive Swagger UI documentation at `/docs` endpoint
+  - Docker and Docker Compose integration for seamless deployment
+
+### Enhanced  
+- **RAG Content Processing**: Intelligent file type detection and processing
+  - Text files: Whitespace optimization and formatting preservation
+  - CSV files: Automatic markdown table conversion with headers and row limits
+  - Markdown files: Direct content processing with metadata extraction
+  - Remote files: HTTP/HTTPS fetching with caching and error recovery
+  - Content validation: Size limits, accessibility checks, and format verification
+
+### Technical Details
+- **Service Architecture**: Production-ready microservice design
+  - Port 5301 with health checks and monitoring endpoints
+  - Volume mounts for persistent data and configuration
+  - Environment-based configuration for different deployment scenarios
+  - Comprehensive logging and debug capabilities
+- **API Endpoints**: Full CRUD operations and advanced features
+  - Core operations: `/health`, `/info`, `/prompts`, `/prompt/{id}`
+  - RAG operations: `/prompt/{id}/rag-content`, `/rag/validate`, `/rag/cache/*`
+  - Advanced compilation: `/prompt/{id}/compile` with variable injection
+  - Tag-based filtering and search capabilities
+- **Testing Infrastructure**: Comprehensive test suite for all features
+  - Local file processing tests with sample data
+  - Remote file integration tests using GitHub sources
+  - Mixed source testing with both local and remote RAG content
+  - Performance and caching validation
+  - Docker integration and health check verification
+
 ## [0.9.2] - 2025-06-13
 
 ### Enhanced

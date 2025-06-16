@@ -1,0 +1,10 @@
+{
+  "service": {
+    "name": "dadm-prompt-service",
+    "type": "prompt",
+    "port": 5300,
+    "version": "0.10.0",
+    "health_endpoint": "/health",
+    "description": "DADM Prompt Template Service for managing structured prompt templates"
+  }
+}
