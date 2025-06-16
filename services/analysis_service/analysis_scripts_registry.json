@@ -1,0 +1,369 @@
+{
+  "adder": {
+    "id": "adder",
+    "name": "Simple Addition",
+    "description": "Add two numbers together",
+    "version": "1.0",
+    "category": "arithmetic",
+    "source_type": "local_file",
+    "source_location": "scripts/arithmetic/adder.py",
+    "execution_type": "python",
+    "input_schema": {
+      "type": "object",
+      "required": ["item1", "item2"],
+      "properties": {
+        "item1": {
+          "type": "number",
+          "description": "First number to add"
+        },
+        "item2": {
+          "type": "number", 
+          "description": "Second number to add"
+        },
+        "context_metadata": {
+          "type": "object",
+          "properties": {
+            "service_task_name": {"type": "string"},
+            "process_instance_id": {"type": "string"},
+            "thread_id": {"type": "string"}
+          }
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": ["result", "operation", "confidence"],
+      "properties": {
+        "service_task_name": {"type": "string"},
+        "instructions": {"type": "string"},
+        "result": {"type": "number"},
+        "operation": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "details": {
+          "type": "object",
+          "properties": {
+            "formula": {"type": "string"},
+            "operands": {"type": "array", "items": {"type": "number"}},
+            "execution_time": {"type": "number"}
+          }
+        },
+        "execution_metadata": {
+          "type": "object",
+          "properties": {
+            "script_id": {"type": "string"},
+            "script_version": {"type": "string"},
+            "execution_timestamp": {"type": "string"},
+            "execution_duration": {"type": "number"},
+            "context_preserved": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "llm_template_instructions": {
+      "format": "Extract numeric values from the current thread context and format them for mathematical analysis. Output a JSON object with the exact structure below:",
+      "output_structure": {
+        "analysis_template": "adder",
+        "item1": "{{extract_number_from_context}}",
+        "item2": "{{extract_number_from_context}}",
+        "context_metadata": {
+          "service_task_name": "{{current_task_name}}",
+          "process_instance_id": "{{process_instance_id}}",
+          "thread_id": "{{thread_id}}"
+        }
+      },
+      "context_instructions": [
+        "Look for numeric values in the conversation history",
+        "If context contains 'budget: 100000', extract 100000 as a number",
+        "If context mentions 'cost of option A: 75000', extract 75000",
+        "Use meaningful variable names based on context"
+      ]
+    },
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["arithmetic", "basic", "addition"],
+      "complexity": "low",
+      "estimated_execution_time": 0.1
+    }
+  },
+  "sensitivity_analysis": {
+    "id": "sensitivity_analysis", 
+    "name": "Decision Sensitivity Analysis",
+    "description": "Perform sensitivity analysis on decision alternatives with weight variations",
+    "version": "1.0",
+    "category": "decision_analysis",
+    "source_type": "local_file",
+    "source_location": "scripts/decision/sensitivity_analysis.py",
+    "execution_type": "python",
+    "input_schema": {
+      "type": "object",
+      "required": ["alternatives", "criteria", "base_weights"],
+      "properties": {
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string"},
+              "scores": {"type": "object"}
+            }
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "type": "object", 
+            "properties": {
+              "criterion": {"type": "string"},
+              "weight": {"type": "number"},
+              "description": {"type": "string"}
+            }
+          }
+        },
+        "base_weights": {
+          "type": "object",
+          "description": "Current weights for each criterion"
+        },
+        "sensitivity_range": {
+          "type": "number",
+          "default": 0.2,
+          "description": "Percentage variation to test (+/- range)"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": ["sensitivity_results", "stability_analysis", "recommendations"],
+      "properties": {
+        "service_task_name": {"type": "string"},
+        "instructions": {"type": "string"},
+        "sensitivity_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "criterion_varied": {"type": "string"},
+              "weight_change": {"type": "number"},
+              "ranking_changes": {"type": "array"},
+              "score_impacts": {"type": "object"}
+            }
+          }
+        },
+        "stability_analysis": {
+          "type": "object",
+          "properties": {
+            "robust_winner": {"type": "string"},
+            "stability_score": {"type": "number"},
+            "critical_thresholds": {"type": "array"}
+          }
+        },
+        "recommendations": {
+          "type": "object",
+          "properties": {
+            "most_stable_option": {"type": "string"},
+            "risk_factors": {"type": "array"},
+            "weight_recommendations": {"type": "object"}
+          }
+        },
+        "execution_metadata": {
+          "type": "object",
+          "properties": {
+            "script_id": {"type": "string"},
+            "script_version": {"type": "string"},
+            "execution_timestamp": {"type": "string"},
+            "execution_duration": {"type": "number"}
+          }
+        }
+      }
+    },
+    "llm_template_instructions": {
+      "format": "Extract decision alternatives, criteria, and weights from the current decision analysis context. Format as structured JSON for sensitivity analysis:",
+      "output_structure": {
+        "analysis_template": "sensitivity_analysis",
+        "alternatives": "{{extract_alternatives_from_context}}",
+        "criteria": "{{extract_criteria_from_context}}",
+        "base_weights": "{{extract_weights_from_context}}",
+        "sensitivity_range": 0.2
+      },
+      "context_instructions": [
+        "Look for decision alternatives in the conversation",
+        "Extract scoring criteria and their weights", 
+        "Find current scores for each alternative against each criterion",
+        "Preserve the structure from any previous decision analysis"
+      ]
+    },
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["decision", "sensitivity", "analysis", "robustness"],
+      "complexity": "medium",
+      "estimated_execution_time": 2.5
+    }
+  },
+  "remote_scilab_connector": {
+    "id": "remote_scilab_connector",
+    "name": "Remote Scilab Analysis Server",
+    "description": "Connect to external Scilab server for engineering analysis",
+    "version": "1.0",
+    "category": "engineering",
+    "source_type": "remote_server",
+    "source_location": "http://scilab-analysis-server:8080/execute",
+    "execution_type": "remote_api",
+    "input_schema": {
+      "type": "object",
+      "required": ["scilab_script", "input_data"],
+      "properties": {
+        "scilab_script": {
+          "type": "string",
+          "description": "Scilab script code to execute"
+        },
+        "input_data": {
+          "type": "object",
+          "description": "Input variables for the Scilab script"
+        },
+        "execution_timeout": {
+          "type": "number",
+          "default": 300,
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": ["scilab_results", "execution_status"],
+      "properties": {
+        "service_task_name": {"type": "string"},
+        "instructions": {"type": "string"},
+        "scilab_results": {
+          "type": "object",
+          "description": "Results from Scilab execution"
+        },
+        "execution_status": {
+          "type": "string",
+          "enum": ["success", "error", "timeout"]
+        },
+        "execution_log": {"type": "string"},
+        "execution_metadata": {
+          "type": "object",
+          "properties": {
+            "remote_server": {"type": "string"},
+            "script_id": {"type": "string"},
+            "execution_timestamp": {"type": "string"},
+            "execution_duration": {"type": "number"}
+          }
+        }
+      }
+    },
+    "llm_template_instructions": {
+      "format": "Generate Scilab script and input data based on engineering analysis requirements from context:",
+      "output_structure": {
+        "analysis_template": "remote_scilab_connector", 
+        "scilab_script": "{{generate_scilab_script_from_context}}",
+        "input_data": "{{extract_engineering_parameters_from_context}}",
+        "execution_timeout": 300
+      },
+      "context_instructions": [
+        "Identify engineering analysis requirements from context",
+        "Generate appropriate Scilab script for the analysis",
+        "Extract numerical parameters and engineering constraints",
+        "Format input data for Scilab processing"
+      ]
+    },
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["engineering", "scilab", "remote", "mathematical"],
+      "complexity": "high",
+      "estimated_execution_time": 15.0
+    }
+  },
+  "git_python_script": {
+    "id": "git_python_script",
+    "name": "Git-hosted Python Analysis",
+    "description": "Execute Python analysis script from Git repository",
+    "version": "1.0", 
+    "category": "data_science",
+    "source_type": "git_repository",
+    "source_location": "https://github.com/dadm-org/analysis-scripts.git",
+    "source_path": "statistical/regression_analysis.py",
+    "execution_type": "python",
+    "input_schema": {
+      "type": "object",
+      "required": ["dataset", "dependent_variable", "independent_variables"],
+      "properties": {
+        "dataset": {
+          "type": "array",
+          "description": "Array of data points"
+        },
+        "dependent_variable": {
+          "type": "string",
+          "description": "Name of dependent variable"
+        },
+        "independent_variables": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Names of independent variables"
+        },
+        "analysis_type": {
+          "type": "string",
+          "enum": ["linear", "polynomial", "logistic"],
+          "default": "linear"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": ["regression_results", "model_statistics"],
+      "properties": {
+        "service_task_name": {"type": "string"},
+        "instructions": {"type": "string"},
+        "regression_results": {
+          "type": "object",
+          "properties": {
+            "coefficients": {"type": "object"},
+            "r_squared": {"type": "number"},
+            "p_values": {"type": "object"},
+            "confidence_intervals": {"type": "object"}
+          }
+        },
+        "model_statistics": {
+          "type": "object",
+          "properties": {
+            "f_statistic": {"type": "number"},
+            "degrees_freedom": {"type": "integer"},
+            "residual_standard_error": {"type": "number"}
+          }
+        },
+        "execution_metadata": {
+          "type": "object",
+          "properties": {
+            "git_commit": {"type": "string"},
+            "script_version": {"type": "string"},
+            "execution_timestamp": {"type": "string"},
+            "execution_duration": {"type": "number"}
+          }
+        }
+      }
+    },
+    "llm_template_instructions": {
+      "format": "Extract dataset and regression requirements from context for statistical analysis:",
+      "output_structure": {
+        "analysis_template": "git_python_script",
+        "dataset": "{{extract_dataset_from_context}}",
+        "dependent_variable": "{{identify_dependent_variable}}",
+        "independent_variables": "{{identify_independent_variables}}",
+        "analysis_type": "linear"
+      },
+      "context_instructions": [
+        "Look for numerical data or data references in context",
+        "Identify what variable needs to be predicted/explained",
+        "Find variables that might influence the dependent variable",
+        "Format data appropriately for statistical analysis"
+      ]
+    },
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["statistics", "regression", "data_science", "git"],
+      "complexity": "medium",
+      "estimated_execution_time": 5.0
+    }
+  }
+}

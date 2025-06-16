@@ -30,35 +30,21 @@
     </bpmn:serviceTask>
     
     
-    <bpmn:serviceTask id="ServiceTask_SimpleAnalysis" name="Simple Analysis Call" camunda:type="external" camunda:topic="service_task_simple_analysis_task">
+    <bpmn:serviceTask id="ServiceTask_SimpleAnalysis" name="Simple Analysis Call" camunda:type="external" camunda:topic="health-test-analysis">
+      <bpmn:documentation>Perform a simple analysis test to verify the analysis service is working correctly. Your task is to:
+
+1. Process a simple test dataset [1, 2, 3, 4, 5]
+2. Calculate basic statistics (mean, sum, count)
+3. Verify the analysis service is responding properly
+4. Return test results for health monitoring
+
+This is a health check task to ensure the analysis service is operational.</bpmn:documentation>
       <bpmn:extensionElements>
-        <camunda:connector>
-          <camunda:inputOutput>
-            <camunda:inputParameter name="url">http://analysis-service:8002/analyze/integrated</camunda:inputParameter>
-            <camunda:inputParameter name="method">POST</camunda:inputParameter>
-            <camunda:inputParameter name="headers">
-              <camunda:map>
-                <camunda:entry key="Content-Type">application/json</camunda:entry>
-                <camunda:entry key="Accept">application/json</camunda:entry>
-              </camunda:map>
-            </camunda:inputParameter>
-            <camunda:inputParameter name="payload">{
-  "analysis_type": "simple_test",
-  "data_sources": {
-    "test_data": [1, 2, 3, 4, 5]
-  },
-  "execution_tools": ["python"],
-  "timeout": 60,
-  "metadata": {
-    "test_run": true,
-    "workflow_id": "${execution.getProcessInstanceId()}"
-  }
-}</camunda:inputParameter>
-            <camunda:outputParameter name="analysis_execution_id">${response.execution_id}</camunda:outputParameter>
-            <camunda:outputParameter name="analysis_status">${response.status}</camunda:outputParameter>
-            <camunda:outputParameter name="analysis_response">${response}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </camunda:connector>
+        <camunda:properties>
+          <camunda:property name="service.type" value="analysis" />
+          <camunda:property name="service.name" value="dadm-analysis-service" />
+          <camunda:property name="service.version" value="0.10.0" />
+        </camunda:properties>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>

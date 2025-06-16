@@ -1,0 +1,35 @@
+{
+  "service": {
+    "name": "dadm-openai-assistant-base",
+    "type": "assistant",
+    "port": 5001,
+    "health_endpoint": "/health",
+    "description": "DADM Basic OpenAI Assistant Service",
+    "version": "1.0.0",
+    "tags": [
+      "assistant",
+      "openai",
+      "basic"
+    ],
+    "metadata": {
+      "api_version": "v1",
+      "model_default": "gpt-4o",
+      "supports_streaming": true,
+      "max_tokens": 4096
+    },
+    "health_check": {
+      "interval": "10s",
+      "timeout": "5s",
+      "retries": 3
+    },
+    "consul": {
+      "register": true,
+      "deregister_on_shutdown": true
+    },
+    "assistant": {
+      "name": "DADM Basic Assistant",
+      "model": "gpt-4o",
+      "instructions": "You are a simple OpenAI Assistant that processes basic tasks and provides structured responses.\n\nYour role is to:\n1. Carefully read and understand task instructions\n2. Provide clear, concise responses\n3. Format your responses as requested\n4. Be helpful and accurate\n\nKeep your responses focused and to the point."
+    }
+  }
+}

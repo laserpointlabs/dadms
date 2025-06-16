@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_simple_adder" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.34.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:process id="Simple_Adder_Process" name="Simple Adder Process" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_start_to_format</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_format" sourceRef="StartEvent_1" targetRef="FormatNumbersTask" />
+    
+    <bpmn:serviceTask id="FormatNumbersTask" name="Format Numbers for Addition" camunda:type="external" camunda:topic="FormatNumbers">
+      <bpmn:documentation>You need to format numbers for an addition operation. 
+
+Please extract any numbers you can find from the context or use default test numbers.
+
+Output your response in this exact JSON format:
+{
+  "analysis_template": "adder",
+  "item1": 10,
+  "item2": 20
+}
+
+Use the numbers 10 and 20 as defaults if no specific numbers are provided.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant-base" />
+          <camunda:property name="service.version" value="1.0" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_start_to_format</bpmn:incoming>
+      <bpmn:outgoing>Flow_format_to_add</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_format_to_add" sourceRef="FormatNumbersTask" targetRef="AddNumbersTask" />
+    
+    <bpmn:serviceTask id="AddNumbersTask" name="Add Numbers" camunda:type="external" camunda:topic="AddNumbers">
+      <bpmn:documentation>Execute the addition calculation using the formatted numbers from the previous step.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="analysis" />
+          <camunda:property name="service.name" value="dadm-analysis-script-registry" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="analysis.script_id" value="adder" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_format_to_add</bpmn:incoming>
+      <bpmn:outgoing>Flow_add_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_add_to_end" sourceRef="AddNumbersTask" targetRef="EndEvent_1" />
+    
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_add_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Simple_Adder_Process">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="99" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_FormatNumbers_di" bpmnElement="FormatNumbersTask">
+        <dc:Bounds x="270" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AddNumbers_di" bpmnElement="AddNumbersTask">
+        <dc:Bounds x="430" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_EndEvent_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="592" y="99" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_to_format_di" bpmnElement="Flow_start_to_format">
+        <di:waypoint x="215" y="117" />
+        <di:waypoint x="270" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_format_to_add_di" bpmnElement="Flow_format_to_add">
+        <di:waypoint x="370" y="117" />
+        <di:waypoint x="430" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_add_to_end_di" bpmnElement="Flow_add_to_end">
+        <di:waypoint x="530" y="117" />
+        <di:waypoint x="592" y="117" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

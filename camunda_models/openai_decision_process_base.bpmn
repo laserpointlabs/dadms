@@ -84,70 +84,10 @@ Your recommendation should be clear, concise, and directly tied to the evaluatio
       <bpmn:incoming>Flow_0l5j81k</bpmn:incoming>
       <bpmn:outgoing>Flow_0e9vly7</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:sequenceFlow id="Flow_0e9vly7" sourceRef="RecommendationTask" targetRef="FormatSensitivityTask" />
-    <bpmn:serviceTask id="FormatSensitivityTask" name="Format for Sensitivity Analysis" camunda:type="external" camunda:topic="FormatSensitivityAnalysis">
-      <bpmn:documentation>Extract decision alternatives, criteria, and weights from the current decision analysis context. Format as structured JSON for sensitivity analysis:
-
-Look for:
-- Decision alternatives in the conversation
-- Extract scoring criteria and their weights
-- Find current scores for each alternative against each criterion
-- Preserve the structure from any previous decision analysis
-
-Output the data in this exact JSON format:
-{
-  "analysis_template": "sensitivity_analysis",
-  "alternatives": [
-    {
-      "id": "alternative_1",
-      "name": "Alternative Name",
-      "scores": {
-        "criterion1": score_value,
-        "criterion2": score_value
-      }
-    }
-  ],
-  "criteria": [
-    {
-      "criterion": "criterion_name",
-      "weight": weight_value,
-      "description": "description"
-    }
-  ],
-  "base_weights": {
-    "criterion1": weight_value,
-    "criterion2": weight_value
-  },
-  "sensitivity_range": 0.2
-}</bpmn:documentation>
-      <bpmn:extensionElements>
-        <camunda:properties>
-          <camunda:property name="service.type" value="assistant" />
-          <camunda:property name="service.name" value="dadm-openai-assistant" />
-          <camunda:property name="service.version" value="1.0" />
-        </camunda:properties>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_0e9vly7</bpmn:incoming>
-      <bpmn:outgoing>Flow_1sn5xyz</bpmn:outgoing>
-    </bpmn:serviceTask>
-    <bpmn:sequenceFlow id="Flow_1sn5xyz" sourceRef="FormatSensitivityTask" targetRef="SensitivityAnalysisTask" />
-    <bpmn:serviceTask id="SensitivityAnalysisTask" name="Perform Sensitivity Analysis" camunda:type="external" camunda:topic="SensitivityAnalysis">
-      <bpmn:documentation>Execute sensitivity analysis using the formatted decision data from the previous step. This computational analysis will test how changes in criterion weights affect the ranking of alternatives, providing insights into the robustness of the recommendation.</bpmn:documentation>
-      <bpmn:extensionElements>
-        <camunda:properties>
-          <camunda:property name="service.type" value="analysis" />
-          <camunda:property name="service.name" value="dadm-analysis-service" />
-          <camunda:property name="service.version" value="1.0" />
-          <camunda:property name="analysis.script_id" value="sensitivity_analysis" />
-        </camunda:properties>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1sn5xyz</bpmn:incoming>
-      <bpmn:outgoing>Flow_2abc123</bpmn:outgoing>
-    </bpmn:serviceTask>
-    <bpmn:sequenceFlow id="Flow_2abc123" sourceRef="SensitivityAnalysisTask" targetRef="EndEvent_1" />
     <bpmn:endEvent id="EndEvent_1">
-      <bpmn:incoming>Flow_2abc123</bpmn:incoming>
+      <bpmn:incoming>Flow_0e9vly7</bpmn:incoming>
     </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0e9vly7" sourceRef="RecommendationTask" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="OpenAI_Decision_Process">
@@ -170,16 +110,8 @@ Output the data in this exact JSON format:
         <dc:Bounds x="750" y="77" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1fmt5sa_di" bpmnElement="FormatSensitivityTask">
-        <dc:Bounds x="910" y="77" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_2sens6ty_di" bpmnElement="SensitivityAnalysisTask">
-        <dc:Bounds x="1070" y="77" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_158z3xi_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="1232" y="99" width="36" height="36" />
+        <dc:Bounds x="912" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0nd5kef_di" bpmnElement="Flow_0nd5kef">
         <di:waypoint x="215" y="117" />
@@ -199,15 +131,7 @@ Output the data in this exact JSON format:
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0e9vly7_di" bpmnElement="Flow_0e9vly7">
         <di:waypoint x="850" y="117" />
-        <di:waypoint x="910" y="117" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1sn5xyz_di" bpmnElement="Flow_1sn5xyz">
-        <di:waypoint x="1010" y="117" />
-        <di:waypoint x="1070" y="117" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2abc123_di" bpmnElement="Flow_2abc123">
-        <di:waypoint x="1170" y="117" />
-        <di:waypoint x="1232" y="117" />
+        <di:waypoint x="912" y="117" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

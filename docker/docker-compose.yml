@@ -117,6 +117,42 @@ services:
       retries: 3
       start_period: 30s
 
+  # OpenAI Basic Assistant Service (NEW)
+  openai-service-base:
+    build:
+      context: ..
+      dockerfile: services/openai_service_base/Dockerfile
+    container_name: openai-service-base
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ASSISTANT_NAME=${ASSISTANT_NAME:-DADM Basic Assistant}
+      - ASSISTANT_MODEL=${ASSISTANT_MODEL:-gpt-4o}
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=openai-service-base
+      - SERVICE_TYPE=assistant
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+    volumes:
+      - ../config:/app/config
+      - ../services/openai_service_base:/app/services/openai_service_base
+      - ../services:/app/services
+      - ../src:/app/src
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - camunda
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   # Echo Test Service
   echo-service:
     build:
@@ -253,9 +289,11 @@ services:
       - dadm-network
     depends_on:
       - openai-service
+      - openai-service-base
       - echo-service
       - prompt-service
       - analysis-service
+      - script-registry-service
       - consul
     command: sh -c "python scripts/service_monitor.py --interval $${CHECK_INTERVAL:-60} --port 5200"
     healthcheck:
@@ -341,6 +379,38 @@ services:
       - consul
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Analysis Script Registry Service (NEW)
+  script-registry-service:
+    build:
+      context: ..
+      dockerfile: services/analysis_service/Dockerfile.script_registry
+    container_name: script-registry-service
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+      - SERVICE_HOST=script-registry-service
+      - SERVICE_TYPE=analysis-registry
+      - USE_CONSUL=true
+      - CONSUL_HTTP_ADDR=consul:8500
+      - DOCKER_CONTAINER=true
+      - PYTHONPATH=/app
+    volumes:
+      - ../services/analysis_service:/app/services/analysis_service
+      - ../config:/app/config:ro
+      - ../data:/app/data:ro
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
       interval: 10s
       timeout: 5s
       retries: 3

@@ -1,0 +1,15 @@
+# OpenAI Service Requirements
+flask==3.0.1
+openai==1.83.0
+requests==2.31.0
+python-dotenv==1.0.1
+colorama==0.4.6
+psutil==5.9.8
+tabulate==0.9.0
+
+# Data Persistence Dependencies
+qdrant-client==1.7.3
+# Note: torch CPU versions are installed in Dockerfile before this
+sentence-transformers==2.2.2
+neo4j==5.16.0
+huggingface_hub==0.25.2
