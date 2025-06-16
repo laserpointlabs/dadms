@@ -1,0 +1,38 @@
+{
+  "basic_analysis_request": {
+    "prompt_reference": "business_strategy_prompt",
+    "analysis_reference": "decision_analysis_v1",
+    "context_variables": {
+      "company": "TestCorp",
+      "decision": "technology_selection",
+      "budget": 100000,
+      "team_size": 10
+    },
+    "metadata": {
+      "priority": "high",
+      "source": "automated_test"
+    }
+  },
+  "workflow_analysis_request": {
+    "workflow_id": "test_workflow_123",
+    "task_id": "analysis_task_001",
+    "prompt_reference": "market_analysis_prompt",
+    "analysis_reference": "business_analysis_v1",
+    "process_variables": {
+      "target_market": "north_america",
+      "budget": 500000,
+      "timeline": "Q3_2024"
+    },
+    "task_variables": {
+      "analysis_depth": "comprehensive",
+      "include_competitive_analysis": true
+    }
+  },
+  "test_instructions": {
+    "basic_analysis": "POST /analyze with basic_analysis_request",
+    "workflow_analysis": "POST /workflow/analyze with workflow_analysis_request",
+    "list_templates": "GET /templates",
+    "health_check": "GET /health",
+    "statistics": "GET /statistics"
+  }
+}

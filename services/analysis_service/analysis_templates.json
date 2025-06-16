@@ -1,0 +1,401 @@
+{
+  "decision_analysis": {
+    "id": "decision_analysis",
+    "name": "Decision Analysis Framework",
+    "description": "Structured decision analysis with stakeholder evaluation, alternatives assessment, and risk analysis",
+    "version": "1.0",
+    "category": "decision_support",
+    "output_format": "json",
+    "schema": {
+      "type": "object",
+      "required": ["decision_context", "stakeholders", "alternatives", "evaluation_criteria", "analysis", "recommendations", "risks"],
+      "properties": {
+        "decision_context": {
+          "type": "object",
+          "properties": {
+            "problem_statement": {"type": "string", "description": "Clear definition of the decision to be made"},
+            "scope": {"type": "string", "description": "Boundaries and limitations of the decision"},
+            "timeline": {"type": "string", "description": "Time constraints and deadlines"},
+            "background": {"type": "string", "description": "Context and background information"}
+          }
+        },
+        "stakeholders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "role": {"type": "string"},
+              "influence": {"type": "string", "enum": ["high", "medium", "low"]},
+              "interest": {"type": "string", "enum": ["high", "medium", "low"]},
+              "concerns": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string"},
+              "description": {"type": "string"},
+              "pros": {"type": "array", "items": {"type": "string"}},
+              "cons": {"type": "array", "items": {"type": "string"}},
+              "cost": {"type": "number"},
+              "feasibility": {"type": "string", "enum": ["high", "medium", "low"]},
+              "risk_level": {"type": "string", "enum": ["high", "medium", "low"]}
+            }
+          }
+        },
+        "evaluation_criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "criterion": {"type": "string"},
+              "weight": {"type": "number", "minimum": 0, "maximum": 1},
+              "description": {"type": "string"}
+            }
+          }
+        },
+        "analysis": {
+          "type": "object",
+          "properties": {
+            "scoring_matrix": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "alternative_id": {"type": "string"},
+                  "scores": {
+                    "type": "object",
+                    "additionalProperties": {"type": "number"}
+                  },
+                  "weighted_score": {"type": "number"},
+                  "ranking": {"type": "integer"}
+                }
+              }
+            },
+            "sensitivity_analysis": {"type": "string"},
+            "key_assumptions": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "recommendations": {
+          "type": "object",
+          "properties": {
+            "primary_recommendation": {"type": "string"},
+            "rationale": {"type": "string"},
+            "implementation_steps": {"type": "array", "items": {"type": "string"}},
+            "success_metrics": {"type": "array", "items": {"type": "string"}},
+            "monitoring_plan": {"type": "string"}
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "risk": {"type": "string"},
+              "probability": {"type": "string", "enum": ["high", "medium", "low"]},
+              "impact": {"type": "string", "enum": ["high", "medium", "low"]},
+              "mitigation": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "instructions": {
+      "format": "You must respond with a valid JSON object that exactly matches the provided schema. Do not include any text outside the JSON structure.",
+      "guidelines": [
+        "Analyze the provided information thoroughly using the decision analysis framework",
+        "Identify and evaluate all stakeholders with their influence and interest levels",
+        "Generate realistic alternatives with detailed pros, cons, and feasibility assessments",
+        "Create quantitative evaluation criteria with appropriate weights",
+        "Provide numerical scoring for each alternative against each criterion",
+        "Calculate weighted scores and rank alternatives accordingly",
+        "Include sensitivity analysis discussing how changes in assumptions affect outcomes",
+        "Provide clear, actionable recommendations with implementation steps",
+        "Identify potential risks with probability, impact, and mitigation strategies"
+      ],
+      "quality_checks": [
+        "Ensure all required fields are populated",
+        "Verify that weights for evaluation criteria sum to 1.0",
+        "Confirm that scoring is consistent and logical",
+        "Check that recommendations align with analysis results",
+        "Validate that risk assessments are comprehensive"
+      ]
+    },
+    "example_output": {
+      "decision_context": {
+        "problem_statement": "Select the optimal customer service platform for our growing e-commerce business",
+        "scope": "Platform selection for customer support operations serving 50,000+ customers",
+        "timeline": "Decision needed within 3 months for Q4 implementation",
+        "background": "Current system capacity insufficient for projected growth"
+      },
+      "stakeholders": [
+        {
+          "name": "Customer Service Manager",
+          "role": "Primary user and system administrator",
+          "influence": "high",
+          "interest": "high",
+          "concerns": ["ease of use", "training requirements", "reporting capabilities"]
+        }
+      ],
+      "alternatives": [
+        {
+          "id": "alt_1",
+          "name": "Cloud-based SaaS Solution",
+          "description": "Fully managed cloud platform with integrated features",
+          "pros": ["Quick deployment", "Automatic updates", "Scalable"],
+          "cons": ["Ongoing costs", "Data control concerns"],
+          "cost": 50000,
+          "feasibility": "high",
+          "risk_level": "low"
+        }
+      ],
+      "evaluation_criteria": [
+        {
+          "criterion": "Cost",
+          "weight": 0.3,
+          "description": "Total cost of ownership over 3 years"
+        }
+      ],
+      "analysis": {
+        "scoring_matrix": [
+          {
+            "alternative_id": "alt_1",
+            "scores": {"Cost": 7, "Functionality": 8, "Ease_of_Use": 9},
+            "weighted_score": 7.9,
+            "ranking": 1
+          }
+        ],
+        "sensitivity_analysis": "Cost weight changes significantly affect ranking",
+        "key_assumptions": ["Growth rate of 25% annually", "Staff training costs"]
+      },
+      "recommendations": {
+        "primary_recommendation": "Implement Cloud-based SaaS Solution",
+        "rationale": "Best balance of functionality, ease of use, and total cost",
+        "implementation_steps": ["Vendor selection", "Pilot testing", "Staff training"],
+        "success_metrics": ["Customer satisfaction", "Response time", "Cost per ticket"],
+        "monitoring_plan": "Monthly reviews with quarterly assessments"
+      },
+      "risks": [
+        {
+          "risk": "Vendor dependency",
+          "probability": "medium",
+          "impact": "medium",
+          "mitigation": "Negotiate service level agreements and data portability"
+        }
+      ]
+    },
+    "created_at": "2025-06-16T15:00:00.000000",
+    "updated_at": "2025-06-16T15:00:00.000000",
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["decision", "analysis", "framework", "structured"],
+      "complexity": "high",
+      "estimated_tokens": 2000
+    }
+  },
+  "risk_analysis": {
+    "id": "risk_analysis",
+    "name": "Risk Assessment Framework",
+    "description": "Comprehensive risk identification, assessment, and mitigation planning",
+    "version": "1.0",
+    "category": "risk_management",
+    "output_format": "json",
+    "schema": {
+      "type": "object",
+      "required": ["risk_context", "risk_identification", "risk_assessment", "mitigation_strategies", "monitoring_plan"],
+      "properties": {
+        "risk_context": {
+          "type": "object",
+          "properties": {
+            "scope": {"type": "string"},
+            "objectives": {"type": "array", "items": {"type": "string"}},
+            "timeframe": {"type": "string"},
+            "stakeholders": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "risk_identification": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "risk_id": {"type": "string"},
+              "category": {"type": "string"},
+              "description": {"type": "string"},
+              "triggers": {"type": "array", "items": {"type": "string"}},
+              "indicators": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "risk_assessment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "risk_id": {"type": "string"},
+              "probability": {"type": "number", "minimum": 0, "maximum": 1},
+              "impact": {"type": "number", "minimum": 1, "maximum": 10},
+              "risk_score": {"type": "number"},
+              "priority": {"type": "string", "enum": ["critical", "high", "medium", "low"]}
+            }
+          }
+        },
+        "mitigation_strategies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "risk_id": {"type": "string"},
+              "strategy": {"type": "string", "enum": ["avoid", "mitigate", "transfer", "accept"]},
+              "actions": {"type": "array", "items": {"type": "string"}},
+              "timeline": {"type": "string"},
+              "responsible_party": {"type": "string"},
+              "cost": {"type": "number"}
+            }
+          }
+        },
+        "monitoring_plan": {
+          "type": "object",
+          "properties": {
+            "review_frequency": {"type": "string"},
+            "key_indicators": {"type": "array", "items": {"type": "string"}},
+            "reporting_structure": {"type": "string"},
+            "escalation_triggers": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "instructions": {
+      "format": "Provide a comprehensive risk analysis in valid JSON format matching the specified schema.",
+      "guidelines": [
+        "Systematically identify risks across all relevant categories",
+        "Use quantitative assessment methods where possible",
+        "Prioritize risks based on probability and impact calculations",
+        "Develop specific, actionable mitigation strategies",
+        "Create practical monitoring and review processes"
+      ]
+    },
+    "created_at": "2025-06-16T15:00:00.000000",
+    "updated_at": "2025-06-16T15:00:00.000000",
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["risk", "assessment", "mitigation", "monitoring"],
+      "complexity": "medium",
+      "estimated_tokens": 1500
+    }
+  },
+  "business_analysis": {
+    "id": "business_analysis",
+    "name": "Business Case Analysis",
+    "description": "Comprehensive business case evaluation with financial and strategic assessment",
+    "version": "1.0",
+    "category": "business_strategy",
+    "output_format": "json",
+    "schema": {
+      "type": "object",
+      "required": ["executive_summary", "situation_analysis", "options_analysis", "financial_analysis", "implementation_plan", "success_metrics"],
+      "properties": {
+        "executive_summary": {
+          "type": "object",
+          "properties": {
+            "problem_statement": {"type": "string"},
+            "recommended_solution": {"type": "string"},
+            "key_benefits": {"type": "array", "items": {"type": "string"}},
+            "investment_required": {"type": "number"},
+            "expected_roi": {"type": "number"}
+          }
+        },
+        "situation_analysis": {
+          "type": "object",
+          "properties": {
+            "current_state": {"type": "string"},
+            "challenges": {"type": "array", "items": {"type": "string"}},
+            "opportunities": {"type": "array", "items": {"type": "string"}},
+            "constraints": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "options_analysis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "option_name": {"type": "string"},
+              "description": {"type": "string"},
+              "benefits": {"type": "array", "items": {"type": "string"}},
+              "drawbacks": {"type": "array", "items": {"type": "string"}},
+              "feasibility": {"type": "string"},
+              "strategic_fit": {"type": "string"}
+            }
+          }
+        },
+        "financial_analysis": {
+          "type": "object",
+          "properties": {
+            "initial_investment": {"type": "number"},
+            "annual_costs": {"type": "array", "items": {"type": "number"}},
+            "annual_benefits": {"type": "array", "items": {"type": "number"}},
+            "npv": {"type": "number"},
+            "irr": {"type": "number"},
+            "payback_period": {"type": "number"},
+            "break_even_point": {"type": "string"}
+          }
+        },
+        "implementation_plan": {
+          "type": "object",
+          "properties": {
+            "phases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "phase_name": {"type": "string"},
+                  "duration": {"type": "string"},
+                  "key_activities": {"type": "array", "items": {"type": "string"}},
+                  "deliverables": {"type": "array", "items": {"type": "string"}},
+                  "resources_required": {"type": "array", "items": {"type": "string"}}
+                }
+              }
+            },
+            "critical_success_factors": {"type": "array", "items": {"type": "string"}},
+            "major_milestones": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "success_metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "metric": {"type": "string"},
+              "baseline": {"type": "string"},
+              "target": {"type": "string"},
+              "measurement_method": {"type": "string"},
+              "frequency": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "instructions": {
+      "format": "Provide a thorough business case analysis in valid JSON format.",
+      "guidelines": [
+        "Focus on quantifiable benefits and costs where possible",
+        "Consider both financial and strategic implications",
+        "Evaluate multiple options objectively",
+        "Provide realistic implementation timelines",
+        "Define measurable success criteria"
+      ]
+    },
+    "created_at": "2025-06-16T15:00:00.000000",
+    "updated_at": "2025-06-16T15:00:00.000000",
+    "metadata": {
+      "author": "DADM Analysis Framework",
+      "tags": ["business", "strategy", "financial", "implementation"],
+      "complexity": "high",
+      "estimated_tokens": 1800
+    }
+  }
+}
