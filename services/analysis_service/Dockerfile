@@ -3,19 +3,28 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY services/analysis_service/requirements.txt ./services/analysis_service/
+RUN pip install --no-cache-dir -r services/analysis_service/requirements.txt
 
 # Copy service files
-COPY . .
+COPY services/analysis_service/ ./services/analysis_service/
+COPY config/ ./config/
 
-# Expose service port
-EXPOSE 8000
+# Set working directory to the service
+WORKDIR /app/services/analysis_service
 
-# Health check
+# Expose service port (will be configured via environment)
+EXPOSE 8002
+
+# Health check (use configured port)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${ANALYSIS_SERVICE_PORT:-8002}/health || exit 1
 
-# Run the service
-CMD ["python", "-m", "uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the service with configuration support
+CMD ["python", "service.py"]

@@ -4,6 +4,7 @@ FastAPI service for handling analysis requests from BPMN workflows
 """
 
 import os
+import json
 import logging
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends
@@ -11,14 +12,17 @@ from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 import asyncio
+import json
 
 from models import (
-    AnalysisRequest, CompiledAnalysisPrompt, ProcessedAnalysis, 
+    AnalysisTemplate, AnalysisRequest, CompiledAnalysisPrompt, ProcessedAnalysis,
     AnalysisExecution, AnalysisServiceConfig, AnalysisWorkflow
 )
-from template_manager import AnalysisTemplateManager
+from template_manager import AnalysisTemplateManager  
 from prompt_compiler import AnalysisPromptCompiler
 from analysis_processor import AnalysisProcessor
+from config_manager import load_service_config, get_service_discovery
+from consul_registry import ConsulServiceRegistry
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,16 +58,90 @@ template_manager: Optional[AnalysisTemplateManager] = None
 prompt_compiler: Optional[AnalysisPromptCompiler] = None
 analysis_processor: Optional[AnalysisProcessor] = None
 service_config: Optional[AnalysisServiceConfig] = None
+consul_registry: Optional[ConsulServiceRegistry] = None
+
+def load_service_info():
+    """Load service information from service_config.json"""
+    config_path = os.path.join(os.path.dirname(__file__), "service_config.json")
+    try:
+        with open(config_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load service_config.json: {e}")
+        return {
+            "service": {
+                "name": "dadm-analysis-service",
+                "type": "analysis",
+                "port": 8002,
+                "version": "0.10.0",
+                "health_endpoint": "/health",
+                "description": "DADM Analysis Service"
+            }
+        }
+
+def register_with_consul():
+    """Register the analysis service with Consul"""
+    global consul_registry
+    
+    # Check if Consul registration is enabled
+    config = get_service_config()
+    if not config.consul_enabled:
+        logger.info("Consul registration disabled, skipping...")
+        return
+    
+    try:
+        # Load service info
+        service_info = load_service_info()["service"]
+        
+        # Initialize Consul registry
+        consul_registry = ConsulServiceRegistry()
+        
+        # Register the service
+        success = consul_registry.register_service(
+            name=service_info["name"],
+            service_type=service_info["type"],
+            host=None,  # Auto-detect from environment
+            port=service_info["port"],
+            tags=service_info.get("tags", ["analysis", "llm", "bpmn"]),
+            meta={
+                "version": service_info["version"],
+                "description": service_info["description"],
+                **service_info.get("meta", {})
+            },
+            health_check_path=service_info["health_endpoint"],
+            health_check_interval="30s"
+        )
+        
+        if success:
+            logger.info(f"✅ Successfully registered {service_info['name']} with Consul")
+        else:
+            logger.warning(f"❌ Failed to register {service_info['name']} with Consul")
+            
+    except Exception as e:
+        logger.error(f"Error registering with Consul: {e}")
+
+def deregister_from_consul():
+    """Deregister the service from Consul on shutdown"""
+    global consul_registry
+    if consul_registry:
+        try:
+            service_info = load_service_info()["service"]
+            success = consul_registry.deregister_service(service_info["name"])
+            if success:
+                logger.info(f"✅ Successfully deregistered {service_info['name']} from Consul")
+            else:
+                logger.warning(f"❌ Failed to deregister {service_info['name']} from Consul")
+        except Exception as e:
+            logger.error(f"Error deregistering from Consul: {e}")
 
 def get_service_config() -> AnalysisServiceConfig:
-    """Get or create service configuration"""
+    """Get or create service configuration from multiple sources"""
     global service_config
     if service_config is None:
-        service_config = AnalysisServiceConfig(
-            prompt_service_url=os.getenv("PROMPT_SERVICE_URL", "http://localhost:5300"),
-            camunda_base_url=os.getenv("CAMUNDA_URL", "http://dadm-camunda:8080"),
-            enable_workflow_integration=True
-        )
+        service_config = load_service_config()
+        logger.info(f"Service configuration loaded: {service_config.service_name} v{service_config.version}")
+        logger.info(f"Prompt service URL: {service_config.prompt_service_url}")
+        logger.info(f"Service port: {service_config.port}")
     return service_config
 
 def get_template_manager() -> AnalysisTemplateManager:
@@ -110,12 +188,35 @@ async def startup_event():
     get_prompt_compiler()
     get_analysis_processor()
     
+    # Register with Consul
+    register_with_consul()
+    
     logger.info("Analysis Service initialized successfully")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown"""
+    logger.info("Shutting down DADM Analysis Service...")
+    
+    # Deregister from Consul
+    deregister_from_consul()
+    
+    logger.info("Service shutdown complete")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "dadm-analysis-service"}
+    """Health check endpoint with configuration info"""
+    config = get_service_config()
+    return {
+        "status": "healthy", 
+        "service": config.service_name,
+        "version": config.version,
+        "port": config.port,
+        "prompt_service_url": config.prompt_service_url,
+        "consul_enabled": config.consul_enabled,
+        "workflow_integration": config.enable_workflow_integration,
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/templates")
 async def list_templates(
@@ -279,6 +380,90 @@ async def get_statistics(
         }
     }
 
+@app.get("/debug/config")
+async def get_debug_config():
+    """Get effective configuration for debugging"""
+    from config_manager import get_config_manager
+    try:
+        config_manager = get_config_manager()
+        effective_config = config_manager.get_effective_config()
+        
+        # Remove sensitive information
+        safe_config = {k: v for k, v in effective_config.items() 
+                      if not any(sensitive in k.lower() for sensitive in ['password', 'key', 'secret', 'token'])}
+        
+        return {
+            "effective_configuration": safe_config,
+            "config_sources": {
+                "config_file": config_manager.config_file,
+                "env_prefix": config_manager.env_prefix,
+                "environment_variables_found": [
+                    key for key in os.environ.keys() 
+                    if key.startswith('ANALYSIS_') or key in [
+                        'PROMPT_SERVICE_URL', 'CAMUNDA_URL', 'CONSUL_URL'
+                    ]
+                ]
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get debug config: {e}")
+        raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
+
+@app.get("/debug/connectivity")
+async def check_connectivity():
+    """Check connectivity to external services"""
+    config = get_service_config()
+    discovery = get_service_discovery()
+    
+    results = {}
+    
+    # Test prompt service connectivity
+    try:
+        prompt_url = discovery.discover_prompt_service()
+        import requests
+        response = requests.get(f"{prompt_url}/health", timeout=5)
+        results["prompt_service"] = {
+            "url": prompt_url,
+            "status": "connected" if response.status_code == 200 else "error",
+            "response_code": response.status_code
+        }
+    except Exception as e:
+        results["prompt_service"] = {
+            "url": config.prompt_service_url,
+            "status": "error",
+            "error": str(e)
+        }
+    
+    # Test Consul connectivity (if enabled)
+    if config.consul_enabled:
+        try:
+            import requests
+            consul_url = f"{config.consul_url}/v1/status/leader"
+            response = requests.get(consul_url, timeout=5)
+            results["consul"] = {
+                "url": config.consul_url,
+                "status": "connected" if response.status_code == 200 else "error",
+                "response_code": response.status_code
+            }
+        except Exception as e:
+            results["consul"] = {
+                "url": config.consul_url,
+                "status": "error", 
+                "error": str(e)
+            }
+    else:
+        results["consul"] = {
+            "status": "disabled",
+            "enabled": False
+        }
+    
+    return {
+        "connectivity_check": results,
+        "timestamp": datetime.now().isoformat()
+    }
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    config = get_service_config()
+    logger.info(f"Starting {config.service_name} on port {config.port}")
+    uvicorn.run(app, host="0.0.0.0", port=config.port)

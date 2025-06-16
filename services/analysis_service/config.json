@@ -1,0 +1,20 @@
+{
+  "service_name": "dadm-analysis-service",
+  "version": "0.10.0",
+  "port": 8002,
+  "default_llm_provider": "openai",
+  "default_model": "gpt-4",
+  "default_temperature": 0.3,
+  "max_tokens_default": 4000,
+  "strict_validation": true,
+  "max_retry_attempts": 3,
+  "validation_timeout": 30.0,
+  "analysis_storage_path": "./analysis_results",
+  "cache_results": true,
+  "cache_ttl": 3600,
+  "prompt_service_url": "http://localhost:5300",
+  "consul_enabled": false,
+  "consul_url": "http://consul:8500",
+  "camunda_base_url": "http://dadm-camunda:8080",
+  "enable_workflow_integration": true
+}

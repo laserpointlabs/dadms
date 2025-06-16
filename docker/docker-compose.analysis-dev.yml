@@ -1,0 +1,33 @@
+# Docker Compose Override for Analysis Service Development
+# Use: docker-compose -f docker-compose.yml -f docker-compose.analysis-dev.yml up
+
+version: '3.8'
+
+services:
+  analysis-service:
+    environment:
+      # Development overrides
+      - ANALYSIS_LLM_PROVIDER=openai
+      - ANALYSIS_LLM_MODEL=gpt-3.5-turbo  # Cheaper for development
+      - ANALYSIS_LLM_TEMPERATURE=0.3
+      - ANALYSIS_STRICT_VALIDATION=false   # More forgiving during development
+      - ANALYSIS_CACHE_RESULTS=false       # Disable caching for development
+      - LOG_LEVEL=DEBUG                    # More verbose logging
+    volumes:
+      # Mount source for live development
+      - ../services/analysis_service:/app/services/analysis_service:ro
+    command: >
+      sh -c "
+      echo 'Starting Analysis Service in Development Mode...' &&
+      cd /app/services/analysis_service &&
+      python -m uvicorn service:app --host 0.0.0.0 --port 8002 --reload
+      "
+
+  # For development, only start essential services
+  prompt-service:
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  consul:
+    ports:
+      - "8500:8500"  # Expose Consul UI for development

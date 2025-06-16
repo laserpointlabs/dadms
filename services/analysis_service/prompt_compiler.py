@@ -14,6 +14,7 @@ from models import (
     AnalysisServiceConfig
 )
 from template_manager import AnalysisTemplateManager
+from config_manager import get_service_discovery
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,9 @@ class AnalysisPromptCompiler:
     def __init__(self, config: AnalysisServiceConfig, template_manager: AnalysisTemplateManager):
         self.config = config
         self.template_manager = template_manager
-        self.prompt_service_url = config.prompt_service_url
+        self.service_discovery = get_service_discovery()
+        # Use service discovery to get actual prompt service URL
+        self.prompt_service_url = self.service_discovery.discover_prompt_service()
         
     def compile_analysis_prompt(self, request: AnalysisRequest) -> CompiledAnalysisPrompt:
         """Compile a prompt with analysis template integration"""
