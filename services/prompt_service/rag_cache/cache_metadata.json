@@ -10,5 +10,17 @@
     "cached_at": "2025-06-16T09:07:11.911526",
     "success": true,
     "size": 4188
+  },
+  "4cd25ac0c4e1b163aac19041940bcbd1": {
+    "url": "https://raw.githubusercontent.com/laserpointlabs/scripts/refs/heads/main/project_requirements.txt",
+    "cached_at": "2025-06-16T14:33:40.533188",
+    "success": true,
+    "size": 1579
+  },
+  "2581fdb1e3fdc6731117bfec133bc2a5": {
+    "url": "https://raw.githubusercontent.com/laserpointlabs/scripts/refs/heads/main/sample_data.csv",
+    "cached_at": "2025-06-16T14:33:40.626735",
+    "success": true,
+    "size": 576
   }
 }

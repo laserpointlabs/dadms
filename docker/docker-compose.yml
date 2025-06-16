@@ -145,6 +145,41 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  # Prompt Template Service
+  prompt-service:
+    build:
+      context: ..
+      dockerfile: services/prompt_service/Dockerfile
+    container_name: prompt-service
+    ports:
+      - "5301:5301"
+    environment:
+      - PORT=5301
+      - CONSUL_HTTP_ADDR=consul:8500
+      - SERVICE_HOST=prompt-service
+      - SERVICE_TYPE=utility
+      - USE_CONSUL=true
+      - DOCKER_CONTAINER=true
+      - PROMPTS_FILE=/app/services/prompt_service/prompts.json
+      - RAG_CACHE_DIR=/app/services/prompt_service/rag_cache
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../services/prompt_service/prompts.json:/app/services/prompt_service/prompts.json
+      - ../services/prompt_service/rag_cache:/app/services/prompt_service/rag_cache
+      - ../services/prompt_service/test_data:/app/services/prompt_service/test_data
+      - ../logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - dadm-network
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5301/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
       
   # Service Monitor
   service-monitor:
@@ -173,6 +208,7 @@ services:
     depends_on:
       - openai-service
       - echo-service
+      - prompt-service
       - consul
     command: sh -c "python scripts/service_monitor.py --interval $${CHECK_INTERVAL:-60} --port 5200"
     healthcheck:

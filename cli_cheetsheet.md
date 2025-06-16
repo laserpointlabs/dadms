@@ -587,4 +587,4 @@ Important configuration files:
 
 ---
 
-*This cheat sheet covers DADM v0.9.0. For the latest updates, check the project documentation and changelog.*
+*This cheat sheet covers DADM v0.10.0. For the latest updates, check the project documentation and changelog.*
