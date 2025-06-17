@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2025-06-17
+
+### Added
+- **Comprehensive Management Presentation**: Created `Presentation.md` with complete management-focused documentation
+  - Executive overview and value proposition for stakeholder communication
+  - Real-world use cases including emergency response, technology selection, and strategic planning
+  - Architecture diagrams with simplified visualizations for non-technical audiences
+  - Business benefits and implementation guidance sections
+- **Presentation Slide Deck**: Added `Presentation_Slides.md` with ready-to-use presentation slides
+  - 10 structured slides suitable for conference presentations and management briefings
+  - Introductory paragraphs for each slide providing context and narrative flow
+  - Visual elements including Mermaid diagrams and code examples
+- **BPMN Workflow Documentation**: Comprehensive documentation of BPMN service task integration
+  - Sample workflow diagrams showing typical decision analysis processes
+  - Detailed Camunda extension properties documentation (`service.name`, `service.type`, `service.operation`)
+  - Technical integration examples showing Service Orchestrator routing capabilities
+  - XML configuration samples for real-world implementation
+
+### Enhanced
+- **Service Orchestrator Architecture**: Updated all architecture diagrams to prominently feature Service Orchestrator
+  - Highlighted as central hub component with distinctive visual styling
+  - Added connections showing comprehensive service routing capabilities
+  - Emphasized role as "nerve center" of the microservices architecture
+- **Analysis Task Store Integration**: Enhanced documentation of analysis storage capabilities
+  - Added to architecture diagrams as core data management component
+  - Documented querying, filtering, and audit trail capabilities
+  - Integrated into usage examples and use case descriptions
+- **Architecture Visualizations**: Improved diagram layouts and formatting
+  - Horizontal deployment architecture for better page fit
+  - Simplified architecture overview for management consumption
+  - Color-coded components for visual clarity and professional presentation
+
+### Documentation
+- **Management-Ready Materials**: Created comprehensive documentation suitable for:
+  - Executive briefings and stakeholder presentations
+  - Conference presentations (INCOSE, technical conferences)
+  - Enterprise sales and demonstration materials
+  - Team onboarding and training resources
+- **Visual Documentation Standards**: Established consistent visual elements throughout
+  - Mermaid diagram styling and color schemes
+  - Code example formatting and structure
+  - Professional layout suitable for formal presentations
+
 ## [0.9.2] - 2025-06-13
 
 ### Enhanced
