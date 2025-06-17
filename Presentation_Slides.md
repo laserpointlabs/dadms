@@ -1,7 +1,3 @@
----
-marp: true
----
-
 ## Slide 1: Introduction
 **DADM - Decision Analysis and Decision Management**
 
