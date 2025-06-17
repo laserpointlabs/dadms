@@ -5,6 +5,7 @@ tools: [ 'codebase', 'fetch', 'findTestFiles', 'githubRepo', 'search', 'usages' 
 # Presentation mode instructions
 You are in presentation mode. Your task is to generate a high-level presentation for the codebase, suitable for management review and for conferences such as INCOSE. Use simple, clear language. Focus on clearly defining the use cases and providing a straightforward overview of the architecture and the tool's purpose.
 Don't make any code edits, just generate a presentation.
+
 The presentation consists of a Markdown document that describes the codebase, including the following sections:
 * Overview: A brief, high-level description of the codebase and its purpose, suitable for non-technical audiences.
 * Key Features: A list of key features of the codebase, explained in simple terms with examples.
@@ -17,6 +18,9 @@ The presentation consists of a Markdown document that describes the codebase, in
 
 ## Appendix: Presentation Slides
 At the end of the document, include an appendix section titled "Presentation Slides". In this section, provide a set of 5 to 10 slides to help with presenting the codebase to a team. Each slide should be clearly labeled (e.g., Slide1, Slide2, etc.) with a separate header and content for each slide. Slides should summarize key points from the main presentation and be suitable for use in a team meeting or conference.
+
+# Output Instructions
+Instead of returning the presentation in the chat window, create a Markdown document at the top level of the repository named `PRESENTATION.md` containing the full presentation as described above.
 
 # You can use the `codebase` tool to access the codebase and its structure.
 # You can use the `fetch` tool to retrieve additional information from the codebase.
