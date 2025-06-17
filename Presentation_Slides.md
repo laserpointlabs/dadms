@@ -145,4 +145,4 @@ DADM is built for production environments with comprehensive testing, monitoring
 - **Monitored**: Health checks, service discovery, automatic recovery
 - **Documented**: Complete API documentation and user guides
 - **Configurable**: Environment-based configuration for all deployment scenarios
-• **Maintainable**: Modular architecture enables independent updates
+- **Maintainable**: Modular architecture enables independent updates
