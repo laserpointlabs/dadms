@@ -80,7 +80,51 @@ graph LR
 
 ---
 
-## Slide 6: Service Example - OpenAI Integration
+## Slide 6: BPMN Workflow Configuration
+**Service Task Integration with Camunda**
+
+DADM uses standard BPMN 2.0 workflows with Camunda extension properties to specify how service tasks connect to microservices through the Service Orchestrator.
+
+**Sample BPMN Workflow:**
+```mermaid
+graph LR
+    Start([Start Process]) --> Input[Collect Requirements]
+    Input --> Analysis[AI Analysis Task]
+    Analysis --> Review[Human Review]
+    Review --> Decision{Approved?}
+    Decision -->|Yes| Deploy[Deploy Solution]
+    Decision -->|No| Revise[Revise Requirements]
+    Revise --> Analysis
+    Deploy --> End([End Process])
+    
+    style Analysis fill:#e8f5e8,stroke:#4caf50
+    style Review fill:#fff3e0,stroke:#ff9800
+```
+
+**Extension Properties for Service Tasks:**
+```xml
+<bpmn:serviceTask id="ai-analysis" name="AI Analysis">
+  <bpmn:extensionElements>
+    <camunda:properties>
+      <camunda:property name="service.name" value="openai" />
+      <camunda:property name="service.type" value="assistant" />
+      <camunda:property name="service.operation" value="analyze" />
+      <camunda:property name="service.analysis" value="sentivity_analysis" />
+      <camunda:property name="service.timeout" value="300" />
+    </camunda:properties>
+  </bpmn:extensionElements>
+</bpmn:serviceTask>
+```
+
+**How It Works:**
+- Service Orchestrator reads extension properties from BPMN tasks
+- Routes requests to appropriate microservices based on `service.name`
+- Handles different operations within services via `service.type` and `service.operation`
+- Manages timeouts and error handling automatically
+
+---
+
+## Slide 7: Service Example - OpenAI Integration
 **API Endpoints and Usage**
 
 The OpenAI service demonstrates DADM's microservice approach with clean REST APIs that support complex decision analysis workflows.
@@ -110,7 +154,7 @@ GET  /openai/files/{id}
 
 ---
 
-## Slide 7: Business Benefits
+## Slide 8: Business Benefits
 **Organizational Impact**
 
 DADM delivers measurable improvements in decision quality and organizational efficiency while building institutional knowledge and ensuring compliance requirements are met.
@@ -123,7 +167,7 @@ DADM delivers measurable improvements in decision quality and organizational eff
 
 ---
 
-## Slide 8: Implementation & Deployment
+## Slide 9: Implementation & Deployment
 **Getting Started**
 
 DADM is designed for rapid deployment and adoption, with comprehensive tooling and documentation that enables organizations to start small and scale to enterprise-wide usage.
@@ -136,7 +180,7 @@ DADM is designed for rapid deployment and adoption, with comprehensive tooling a
 
 ---
 
-## Slide 9: Technical Readiness
+## Slide 10: Technical Readiness
 **Production Capabilities**
 
 DADM is built for production environments with comprehensive testing, monitoring, and operational capabilities that ensure reliable performance at enterprise scale.
