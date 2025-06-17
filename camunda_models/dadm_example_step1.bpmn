@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.34.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:process id="DADM_Example_Step1" name="DADM Example Step 1 - Decision Frame Development" isExecutable="true" camunda:historyTimeToLive="30">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Begin Decision Frame Development">
+      <bpmn:outgoing>Flow_to_identify_stakeholders</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- 1.1 Identify Stakeholders -->
+    <bpmn:serviceTask id="IdentifyStakeholdersTask" name="1.1 Identify Stakeholders" camunda:type="external" camunda:topic="IdentifyStakeholders">
+      <bpmn:documentation>Identify all stakeholders who have an interest in or will be affected by the decision. This includes:
+
+1. Primary stakeholders (directly affected)
+2. Secondary stakeholders (indirectly affected)  
+3. Key influencers and decision makers
+4. Subject matter experts
+5. End users or beneficiaries
+
+For each stakeholder, capture:
+- Name/Organization
+- Role in the decision
+- Level of influence
+- Key interests and concerns
+- Contact information if relevant
+
+Output: Stakeholder list with roles, interests, and influence levels.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.output" value="stakeholder_list" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_identify_stakeholders</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_set_context</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.2 Set Decision Context -->
+    <bpmn:serviceTask id="SetDecisionContextTask" name="1.2 Set Decision Context" camunda:type="external" camunda:topic="SetDecisionContext">
+      <bpmn:documentation>Establish the context and boundaries for the decision. Define:
+
+1. The specific decision to be made
+2. Background and history leading to this decision
+3. Organizational context and strategic alignment
+4. Timeline and urgency
+5. Available resources and budget constraints
+6. Regulatory or policy constraints
+7. Risk tolerance and success criteria
+
+Use the stakeholder input to ensure context captures all relevant perspectives.
+
+Output: Decision context document with clear problem statement and boundaries.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="stakeholder_list" />
+          <camunda:property name="data.output" value="decision_context" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_set_context</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_develop_vision</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.3 Develop Vision -->
+    <bpmn:serviceTask id="DevelopVisionTask" name="1.3 Develop Vision" camunda:type="external" camunda:topic="DevelopVision">
+      <bpmn:documentation>Create a vision statement that describes the desired future state after the decision is implemented. The vision should:
+
+1. Articulate what success looks like
+2. Align with organizational goals and stakeholder values
+3. Be inspiring yet achievable
+4. Provide clear direction for decision-making
+5. Be measurable where possible
+
+Consider multiple perspectives from different stakeholder groups to ensure the vision is comprehensive and inclusive.
+
+Output: Vision statement with supporting rationale and success measures.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="stakeholder_list,decision_context" />
+          <camunda:property name="data.output" value="vision_statement" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_develop_vision</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_raise_issues</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.4 Raise Issues -->
+    <bpmn:serviceTask id="RaiseIssuesTask" name="1.4 Raise Issues" camunda:type="external" camunda:topic="RaiseIssues">
+      <bpmn:documentation>Identify and document all issues, concerns, and challenges that need to be considered in the decision-making process. This includes:
+
+1. Technical challenges and limitations
+2. Resource constraints (budget, time, personnel)
+3. Stakeholder concerns and conflicts
+4. Regulatory or compliance issues
+5. Risk factors and uncertainties
+6. Competing priorities or trade-offs
+7. Implementation challenges
+
+Gather input from all stakeholders to ensure comprehensive issue identification. Document each issue with:
+- Description and impact
+- Affected stakeholders
+- Potential consequences if not addressed
+- Urgency level
+
+Output: Comprehensive issues list with impact assessment.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="stakeholder_list,decision_context,vision_statement" />
+          <camunda:property name="data.output" value="issues_list" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_raise_issues</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_categorize_issues</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.5 Categorize Issues -->
+    <bpmn:serviceTask id="CategorizeIssuesTask" name="1.5 Categorize Issues" camunda:type="external" camunda:topic="CategorizeIssues">
+      <bpmn:documentation>Organize and categorize the identified issues to better understand their relationships and prioritize attention. Categories may include:
+
+1. **By Type**: Technical, Financial, Operational, Strategic, Regulatory
+2. **By Impact**: High, Medium, Low impact on decision outcomes
+3. **By Urgency**: Immediate, Near-term, Long-term attention needed
+4. **By Stakeholder**: Issues specific to different stakeholder groups
+5. **By Domain**: Different functional areas or expertise domains
+6. **By Uncertainty Level**: Well-understood vs. highly uncertain issues
+
+Create a categorization scheme that helps structure the decision-making process and identify patterns or clusters of related issues.
+
+Output: Categorized issues matrix with prioritization recommendations.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="issues_list,stakeholder_list" />
+          <camunda:property name="data.output" value="categorized_issues" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_categorize_issues</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_develop_hierarchy</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.6 Develop/Modify Decision Hierarchy -->
+    <bpmn:serviceTask id="DevelopDecisionHierarchyTask" name="1.6 Develop/Modify Decision Hierarchy" camunda:type="external" camunda:topic="DevelopDecisionHierarchy">
+      <bpmn:documentation>Create a structured hierarchy that breaks down the main decision into sub-decisions and evaluation criteria. The hierarchy should:
+
+1. **Objective Level**: Overall goal and vision
+2. **Criteria Level**: Key factors for evaluation (performance, cost, risk, etc.)
+3. **Sub-criteria Level**: Detailed measures within each criterion
+4. **Alternatives Level**: Specific options to be evaluated
+
+Structure the hierarchy to:
+- Ensure all important aspects are covered
+- Avoid overlap between criteria
+- Make criteria measurable where possible
+- Align with stakeholder values and concerns
+- Support systematic evaluation
+
+Consider using established frameworks (e.g., performance, cost, schedule, risk) while adapting to the specific decision context.
+
+Output: Decision hierarchy with clear levels, criteria, and sub-criteria definitions.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="vision_statement,categorized_issues,stakeholder_list" />
+          <camunda:property name="data.output" value="decision_hierarchy" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_develop_hierarchy</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_develop_influence_diagram</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.7 Develop/Modify Influence Diagram -->
+    <bpmn:serviceTask id="DevelopInfluenceDiagramTask" name="1.7 Develop/Modify Influence Diagram" camunda:type="external" camunda:topic="DevelopInfluenceDiagram">
+      <bpmn:documentation>Create an influence diagram that maps the relationships between key factors affecting the decision. The diagram should include:
+
+1. **Decision Nodes**: Choices that need to be made
+2. **Chance Nodes**: Uncertain events or factors
+3. **Value Nodes**: Outcomes or consequences we care about
+4. **Influence Arcs**: Relationships between nodes
+
+The influence diagram helps to:
+- Visualize the decision structure
+- Identify key uncertainties and their impacts
+- Understand cause-and-effect relationships
+- Highlight information needs
+- Support decision modeling and analysis
+
+Include factors such as:
+- External environment and market conditions
+- Resource availability and constraints
+- Stakeholder reactions and behaviors
+- Technical performance and risks
+- Cost and schedule factors
+
+Output: Influence diagram with documented relationships and assumptions.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="decision_hierarchy,categorized_issues,decision_context" />
+          <camunda:property name="data.output" value="influence_diagram" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_develop_influence_diagram</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_finalize_frame</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- 1.8 Finalize Decision Frame -->
+    <bpmn:serviceTask id="FinalizeDecisionFrameTask" name="1.8 Finalize Decision Frame" camunda:type="external" camunda:topic="FinalizeDecisionFrame">
+      <bpmn:documentation>Synthesize all previous work into a comprehensive decision frame that will guide the rest of the decision-making process. The finalized frame should include:
+
+1. **Executive Summary**: Key decision, stakeholders, and approach
+2. **Stakeholder Analysis**: Complete stakeholder map with interests and concerns
+3. **Decision Context**: Background, constraints, and success criteria
+4. **Vision Statement**: Clear description of desired outcomes
+5. **Issues Analysis**: Categorized issues with priorities and mitigation approaches
+6. **Decision Hierarchy**: Structured criteria for evaluation
+7. **Influence Diagram**: Key factors and their relationships
+8. **Next Steps**: Plan for alternative identification and evaluation
+
+Review the frame for:
+- Completeness and logical consistency
+- Stakeholder buy-in and alignment
+- Clarity and actionability
+- Realistic scope and timeline
+
+Output: Complete decision frame document ready for stakeholder review and approval.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="service.type" value="assistant" />
+          <camunda:property name="service.name" value="dadm-openai-assistant" />
+          <camunda:property name="service.version" value="1.0" />
+          <camunda:property name="data.input" value="stakeholder_list,decision_context,vision_statement,categorized_issues,decision_hierarchy,influence_diagram" />
+          <camunda:property name="data.output" value="final_decision_frame" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_finalize_frame</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- End Event -->
+    <bpmn:endEvent id="EndEvent_1" name="Decision Frame Complete">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_to_identify_stakeholders" sourceRef="StartEvent_1" targetRef="IdentifyStakeholdersTask" />
+    <bpmn:sequenceFlow id="Flow_to_set_context" sourceRef="IdentifyStakeholdersTask" targetRef="SetDecisionContextTask" />
+    <bpmn:sequenceFlow id="Flow_to_develop_vision" sourceRef="SetDecisionContextTask" targetRef="DevelopVisionTask" />
+    <bpmn:sequenceFlow id="Flow_to_raise_issues" sourceRef="DevelopVisionTask" targetRef="RaiseIssuesTask" />
+    <bpmn:sequenceFlow id="Flow_to_categorize_issues" sourceRef="RaiseIssuesTask" targetRef="CategorizeIssuesTask" />
+    <bpmn:sequenceFlow id="Flow_to_develop_hierarchy" sourceRef="CategorizeIssuesTask" targetRef="DevelopDecisionHierarchyTask" />
+    <bpmn:sequenceFlow id="Flow_to_develop_influence_diagram" sourceRef="DevelopDecisionHierarchyTask" targetRef="DevelopInfluenceDiagramTask" />
+    <bpmn:sequenceFlow id="Flow_to_finalize_frame" sourceRef="DevelopInfluenceDiagramTask" targetRef="FinalizeDecisionFrameTask" />
+    <bpmn:sequenceFlow id="Flow_to_end" sourceRef="FinalizeDecisionFrameTask" targetRef="EndEvent_1" />
+    
+  </bpmn:process>
+  
+  <!-- Diagram Layout -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="DADM_Example_Step1">
+      
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="99" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="142" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- Task Shapes -->
+      <bpmndi:BPMNShape id="Activity_IdentifyStakeholders_di" bpmnElement="IdentifyStakeholdersTask">
+        <dc:Bounds x="270" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_SetDecisionContext_di" bpmnElement="SetDecisionContextTask">
+        <dc:Bounds x="430" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_DevelopVision_di" bpmnElement="DevelopVisionTask">
+        <dc:Bounds x="590" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_RaiseIssues_di" bpmnElement="RaiseIssuesTask">
+        <dc:Bounds x="750" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_CategorizeIssues_di" bpmnElement="CategorizeIssuesTask">
+        <dc:Bounds x="270" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_DevelopHierarchy_di" bpmnElement="DevelopDecisionHierarchyTask">
+        <dc:Bounds x="430" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_DevelopInfluenceDiagram_di" bpmnElement="DevelopInfluenceDiagramTask">
+        <dc:Bounds x="590" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Activity_FinalizeFrame_di" bpmnElement="FinalizeDecisionFrameTask">
+        <dc:Bounds x="750" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      
+      <!-- End Event -->
+      <bpmndi:BPMNShape id="Event_End_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="912" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="893" y="295" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      
+      <!-- Sequence Flow Edges -->
+      <bpmndi:BPMNEdge id="Flow_to_identify_stakeholders_di" bpmnElement="Flow_to_identify_stakeholders">
+        <di:waypoint x="215" y="117" />
+        <di:waypoint x="270" y="117" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_set_context_di" bpmnElement="Flow_to_set_context">
+        <di:waypoint x="370" y="117" />
+        <di:waypoint x="430" y="117" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_develop_vision_di" bpmnElement="Flow_to_develop_vision">
+        <di:waypoint x="530" y="117" />
+        <di:waypoint x="590" y="117" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_raise_issues_di" bpmnElement="Flow_to_raise_issues">
+        <di:waypoint x="690" y="117" />
+        <di:waypoint x="750" y="117" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_categorize_issues_di" bpmnElement="Flow_to_categorize_issues">
+        <di:waypoint x="800" y="157" />
+        <di:waypoint x="800" y="190" />
+        <di:waypoint x="320" y="190" />
+        <di:waypoint x="320" y="230" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_develop_hierarchy_di" bpmnElement="Flow_to_develop_hierarchy">
+        <di:waypoint x="370" y="270" />
+        <di:waypoint x="430" y="270" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_develop_influence_diagram_di" bpmnElement="Flow_to_develop_influence_diagram">
+        <di:waypoint x="530" y="270" />
+        <di:waypoint x="590" y="270" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_finalize_frame_di" bpmnElement="Flow_to_finalize_frame">
+        <di:waypoint x="690" y="270" />
+        <di:waypoint x="750" y="270" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_to_end_di" bpmnElement="Flow_to_end">
+        <di:waypoint x="850" y="270" />
+        <di:waypoint x="912" y="270" />
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

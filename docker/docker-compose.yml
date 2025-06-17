@@ -12,7 +12,7 @@ services:
     networks:
       - dadm-network
     healthcheck:
-      test: ["CMD", "consul", "members"]
+      test: [ "CMD", "consul", "members" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,11 +29,11 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d    
+      - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       - dadm-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,12 +64,12 @@ services:
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/engine-rest/engine"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/engine-rest/engine" ]
       interval: 10s
       timeout: 10s
       retries: 3
       start_period: 60s
-  
+
   # OpenAI Assistant Service
   openai-service:
     build:
@@ -93,7 +93,8 @@ services:
       - QDRANT_PORT=6333
       - NEO4J_URI=bolt://dadm-neo4j:7687
       - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password      - ENABLE_QDRANT=true
+      - NEO4J_PASSWORD=password
+      - ENABLE_QDRANT=true
       - ENABLE_NEO4J=true
       - DB_RETRY_ATTEMPTS=5
       - DB_RETRY_DELAY=5
@@ -111,7 +112,7 @@ services:
       - qdrant
       - neo4j
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -140,12 +141,12 @@ services:
       - consul
       - openai-service
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5100/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5100/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
-      
+
   # Service Monitor
   service-monitor:
     build:
@@ -176,11 +177,11 @@ services:
       - consul
     command: sh -c "python scripts/service_monitor.py --interval $${CHECK_INTERVAL:-60} --port 5200"
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:5200/health"]
-        interval: 10s
-        timeout: 5s
-        retries: 3
-        start_period: 30s
+      test: [ "CMD", "curl", "-f", "http://localhost:5200/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # Qdrant Vector Database Service
   qdrant:
@@ -196,7 +197,7 @@ services:
       - dadm-network
     # Qdrant Vector Database Service Healthcheck
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      test: [ "CMD", "curl", "-f", "http://localhost:6333/collections" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -207,8 +208,8 @@ services:
     image: neo4j:5.16.0
     container_name: dadm-neo4j
     ports:
-      - "7474:7474"  # Web interface
-      - "7687:7687"  # Bolt protocol
+      - "7474:7474" # Web interface
+      - "7687:7687" # Bolt protocol
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -223,13 +224,12 @@ services:
     restart: unless-stopped
     networks:
       - dadm-network
-    healthcheck:  
-      test: ["CMD", "wget", "-O", "/dev/null", "http://localhost:7474"]
+    healthcheck:
+      test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:7474" ]
       interval: 10s
       timeout: 10s
       retries: 5
       start_period: 30s
-
 
 networks:
   dadm-network:
