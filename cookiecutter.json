@@ -1,0 +1,12 @@
+{
+  "project_name": "dadm-microservice",
+  "service_name": "api",
+  "python_version": "3.10",
+  "docker_base": "python:3.10-alpine",
+  "description": "A microservice for the DADM project",
+  "author_name": "Your Name",
+  "author_email": "your.email@example.com",
+  "license": "MIT",
+  "version": "0.1.0",
+  "url": "https://github.com/yourusername/dadm-microservice"
+}

@@ -1,0 +1,14 @@
+name: "Python DADM Microservice"
+language: python
+components:
+  - type: service
+    name: api
+    generates:
+      - fastapi_app
+      - dockerfile
+      - pytest_suite
+  - type: infra
+    name: infra
+    generates:
+      - docker_compose
+      - k8s_manifests
