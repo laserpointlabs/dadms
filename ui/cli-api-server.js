@@ -147,6 +147,47 @@ app.get('/api/process/definitions', async (req, res) => {
     }
 });
 
+// Get all process definition versions grouped by key
+app.get('/api/process/definitions/all-versions', async (req, res) => {
+    try {
+        console.log('Fetching all process definition versions...');
+
+        const response = await fetch('http://localhost:8080/engine-rest/process-definition');
+        if (!response.ok) {
+            throw new Error(`Camunda API error: ${response.status}`);
+        }
+
+        const definitions = await response.json();
+
+        // Group by key and keep all versions
+        const groupedDefinitions = {};
+        definitions.forEach(def => {
+            if (!groupedDefinitions[def.key]) {
+                groupedDefinitions[def.key] = [];
+            }
+            groupedDefinitions[def.key].push(def);
+        });
+
+        // Sort versions in descending order (highest version first)
+        Object.keys(groupedDefinitions).forEach(key => {
+            groupedDefinitions[key].sort((a, b) => b.version - a.version);
+        });
+
+        res.json({
+            success: true,
+            data: groupedDefinitions,
+            total: Object.keys(groupedDefinitions).length
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch all process definition versions:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Process management endpoints
 
 // Get all process instances (active and history)
@@ -335,28 +376,42 @@ app.delete('/api/process/instances/:instanceId', async (req, res) => {
     }
 });
 
-// Start a new process instance - analysis daemon will handle analysis data writing
+// Start a new process instance - will start external task worker in background
 app.post('/api/process/instances/start', async (req, res) => {
     try {
-        const { processDefinitionKey, variables = {} } = req.body;
+        const { processDefinitionKey, processDefinitionId, variables = {} } = req.body;
 
-        if (!processDefinitionKey) {
+        if (!processDefinitionKey && !processDefinitionId) {
             return res.status(400).json({
                 success: false,
-                error: 'Process definition key is required'
+                error: 'Either processDefinitionKey or processDefinitionId is required'
             });
         }
 
-        console.log(`Starting process instance: ${processDefinitionKey}`);
+        console.log(`Starting process instance: ${processDefinitionId || processDefinitionKey}`);
 
-        // Get the process definition details
-        const processDefResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}`);
-        if (!processDefResponse.ok) {
-            throw new Error(`Process definition not found: ${processDefinitionKey}`);
+        let processDef;
+        let startEndpoint;
+
+        if (processDefinitionId) {
+            // Use specific process definition ID
+            const processDefResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/${processDefinitionId}`);
+            if (!processDefResponse.ok) {
+                throw new Error(`Process definition not found: ${processDefinitionId}`);
+            }
+            processDef = await processDefResponse.json();
+            startEndpoint = `http://localhost:8080/engine-rest/process-definition/${processDefinitionId}/start`;
+        } else {
+            // Use process definition key (latest version)
+            const processDefResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}`);
+            if (!processDefResponse.ok) {
+                throw new Error(`Process definition not found: ${processDefinitionKey}`);
+            }
+            processDef = await processDefResponse.json();
+            startEndpoint = `http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}/start`;
         }
 
-        const processDef = await processDefResponse.json();
-        const processName = processDef.name || processDefinitionKey;
+        const processName = processDef.name || processDef.key;
 
         // Prepare variables in Camunda format
         const camundaVariables = {};
@@ -367,7 +422,7 @@ app.post('/api/process/instances/start', async (req, res) => {
         }
 
         // Start the process instance via Camunda REST API
-        const startResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}/start`, {
+        const startResponse = await fetch(startEndpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -385,27 +440,30 @@ app.post('/api/process/instances/start', async (req, res) => {
         const processInstance = await startResponse.json();
         const processInstanceId = processInstance.id;
 
-        console.log(`✅ Started process instance: ${processInstanceId}`);
+        console.log(`✅ Started process instance: ${processInstanceId} (${processName} v${processDef.version})`);
         console.log(`📋 Variables:`, variables);
-        console.log(`🔄 Analysis daemon will automatically process external tasks and write analysis data`);
 
-        // Return immediate response - the analysis daemon handles task processing and data writing
+        // Start external task worker in background for this process
+        startBackgroundWorker(processInstanceId, processDef.key);
+
+        console.log(`🔄 Background external task worker started for process instance`);
+
         res.json({
             success: true,
             data: {
-                processDefinitionKey,
+                processDefinitionKey: processDefinitionKey || processDef.key,
                 processName,
                 processInstanceId,
                 variables,
                 status: 'started',
-                analysisInfo: 'Process started - analysis daemon will process tasks and write analysis data'
+                analysisInfo: 'Process started with background external task worker'
             },
             message: `Process ${processName} started successfully`,
-            executionSummary: 'Process instance created and submitted for background processing by analysis daemon'
+            executionSummary: 'Process instance created and background external task worker started'
         });
 
     } catch (error) {
-        console.error('Failed to start process via DADM CLI:', error);
+        console.error('Failed to start process:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -1104,6 +1162,40 @@ app.get('/api/process/definitions/:id/documentation', async (req, res) => {
     }
 });
 
+// Function to start a background external task worker for a specific process
+async function startBackgroundWorker(processInstanceId, processKey) {
+    try {
+        console.log(`Starting background worker for process instance: ${processInstanceId}`);
+
+        // Use Python to run the external task worker in background
+        const pythonPath = path.join(CONFIG.DADM_ROOT, '.venv', 'bin', 'python');
+        const workerScript = path.join(CONFIG.DADM_ROOT, 'src', 'app.py');
+
+        const args = [
+            workerScript,
+            '--monitor-only',  // Don't start a new process, just monitor
+            '--timeout', '120'  // 2 minute timeout
+        ];
+
+        // Start the worker in background
+        const { spawn } = require('child_process');
+        const worker = spawn(pythonPath, args, {
+            cwd: CONFIG.DADM_ROOT,
+            detached: true,
+            stdio: 'ignore'
+        });
+
+        // Detach the worker so it runs independently
+        worker.unref();
+
+        console.log(`Background worker started with PID: ${worker.pid}`);
+        return worker.pid;
+    } catch (error) {
+        console.error('Failed to start background worker:', error);
+        throw error;
+    }
+}
+
 // Special command execution function for shell commands that need proper quoting
 async function executeCommandWithShell(command, args = []) {
     return new Promise((resolve, reject) => {
@@ -1504,6 +1596,7 @@ server.listen(PORT, async () => {
     console.log(`  DELETE http://localhost:${PORT}/api/analysis/process/:processInstanceId`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/definitions/all-versions`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions/:id/documentation`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances/:instanceId`);

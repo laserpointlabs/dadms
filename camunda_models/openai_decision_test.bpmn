@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0uoeoky" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.34.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
   <bpmn:process id="OpenAI_Decision_Tester" name="OpenAI Decision Tester" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:documentation>This is a test of the openai assistant integration - V3</bpmn:documentation>
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_0nd5kef</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="Flow_0nd5kef" sourceRef="StartEvent_1" targetRef="FrameDecisionTask" />
     <bpmn:serviceTask id="FrameDecisionTask" name="Frame Decision" camunda:type="external" camunda:topic="FrameDecision">
-      <bpmn:documentation>Analyze the decision context to frame the problem appropriately. Your task is to:
-
-1. Identify the key decision that needs to be made
-2. List all stakeholders and their interests
-3. Define the main criteria for evaluating options
-4. Identify any constraints or limitations
-5. Clarify the timeline for the decision
-
-Format your response as a structured analysis with clear sections for each of these elements.</bpmn:documentation>
+      <bpmn:documentation>Tell what UAVs we can choose from to perform our disaster response scenario.</bpmn:documentation>
       <bpmn:extensionElements>
         <camunda:properties>
           <camunda:property name="service.type" value="assistant" />
@@ -35,19 +28,19 @@ Format your response as a structured analysis with clear sections for each of th
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
         <dc:Bounds x="179" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_15vfmqo_di" bpmnElement="FrameDecisionTask">
-        <dc:Bounds x="270" y="77" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_158z3xi_di" bpmnElement="EndEvent_1">
         <dc:Bounds x="452" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_15vfmqo_di" bpmnElement="FrameDecisionTask">
+        <dc:Bounds x="273" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0nd5kef_di" bpmnElement="Flow_0nd5kef">
         <di:waypoint x="215" y="117" />
-        <di:waypoint x="270" y="117" />
+        <di:waypoint x="273" y="117" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1ae144m_di" bpmnElement="Flow_1ae144m">
-        <di:waypoint x="370" y="117" />
+        <di:waypoint x="373" y="117" />
         <di:waypoint x="452" y="117" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
