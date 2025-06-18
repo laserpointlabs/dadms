@@ -461,7 +461,9 @@ const CLIManager: React.FC = () => {
                         </Button>
                     </Box>
                 </Box>
-            )}            {/* Template Mode */}
+            )}
+
+            {/* Template Mode */}
             {commandMode === 'template' && (
                 <>
                     {/* Category Filter */}
@@ -481,62 +483,61 @@ const CLIManager: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Box>
+
+                    {/* Command Templates Grid */}
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} lg={6}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Available Commands
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {filteredCommands.map(template => (
+                                        <Card key={template.id} variant="outlined">
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                    <Typography variant="h6" component="h3">
+                                                        {template.name}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={template.category}
+                                                        size="small"
+                                                        variant="outlined"
+                                                    />
+                                                </Box>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                    {template.description}
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 2, bgcolor: 'background.default', p: 1, borderRadius: 1 }}>
+                                                    {template.command}
+                                                </Typography>
+                                            </CardContent>
+                                            <CardActions>
+                                                <Button
+                                                    size="small"
+                                                    startIcon={<PlayArrow />}
+                                                    onClick={() => template.parameters && template.parameters.length > 0 ? openCommandDialog(template.id) : handleExecuteCommand(template)}
+                                                    variant="contained"
+                                                >
+                                                    {template.parameters && template.parameters.length > 0 ? 'Configure & Execute' : 'Execute'}
+                                                </Button>
+                                            </CardActions>
+                                        </Card>
+                                    ))}
+                                </Box>
+                            </Paper>
+                        </Grid>
+                    </Grid>
                 </>
             )}
 
-            {/* Main Layout Grid */}
-            <Grid container spacing={3}>
-                {/* Left Column - Command Input & Templates (25%) */}
-                <Grid item xs={12} lg={4}>
-                    {commandMode === 'template' && (
-                        <Paper sx={{ p: 2, mb: 3 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Available Commands
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                {filteredCommands.map(template => (
-                                    <Card key={template.id} variant="outlined">
-                                        <CardContent>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                                <Typography variant="h6" component="h3">
-                                                    {template.name}
-                                                </Typography>
-                                                <Chip
-                                                    label={template.category}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
-                                            </Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                                {template.description}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 2, bgcolor: 'background.default', p: 1, borderRadius: 1 }}>
-                                                {template.command}
-                                            </Typography>
-                                        </CardContent>
-                                        <CardActions>
-                                            <Button
-                                                size="small"
-                                                startIcon={<PlayArrow />}
-                                                onClick={() => template.parameters && template.parameters.length > 0 ? openCommandDialog(template.id) : handleExecuteCommand(template)}
-                                                variant="contained"
-                                            >
-                                                {template.parameters && template.parameters.length > 0 ? 'Configure & Execute' : 'Execute'}
-                                            </Button>
-                                        </CardActions>
-                                    </Card>
-                                ))}
-                            </Box>
-                        </Paper>
-                    )}
-                </Grid>
-
-                {/* Right Column - Command History & Results (75%) */}
-                <Grid item xs={12} lg={8}>
+            {/* Command History */}
+            <Grid container spacing={3} sx={{ mt: 2 }}>
+                <Grid item xs={12}>
                     <Paper sx={{ p: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="h6">
-                                Command History & Results
+                                Command History
                             </Typography>
                             <Button
                                 size="small"
@@ -549,7 +550,7 @@ const CLIManager: React.FC = () => {
 
                         {executions.length === 0 ? (
                             <Alert severity="info">
-                                No commands executed yet. Use the command forms on the left to execute DADM commands.
+                                No commands executed yet. Use the command forms above to execute DADM commands.
                             </Alert>
                         ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -565,8 +566,8 @@ const CLIManager: React.FC = () => {
                                                     }
                                                     size="small"
                                                 />
-                                                <Typography sx={{ fontFamily: 'monospace', flexGrow: 1, fontSize: '0.875rem' }}>
-                                                    {execution.command.length > 40 ? `${execution.command.substring(0, 40)}...` : execution.command}
+                                                <Typography sx={{ fontFamily: 'monospace', flexGrow: 1 }}>
+                                                    {execution.command}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {execution.startTime.toLocaleTimeString()}
@@ -585,9 +586,6 @@ const CLIManager: React.FC = () => {
                                             </Box>
                                         </AccordionSummary>
                                         <AccordionDetails>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1, fontWeight: 'bold' }}>
-                                                Command: {execution.command}
-                                            </Typography>
                                             <Box
                                                 sx={{
                                                     fontFamily: 'monospace',
