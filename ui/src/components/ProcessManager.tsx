@@ -4,7 +4,6 @@ import {
     PlayArrow,
     Refresh,
     Settings,
-    Stop,
     Visibility,
     Warning
 } from '@mui/icons-material';
@@ -499,20 +498,18 @@ const ProcessManager: React.FC = () => {
                                             <Visibility />
                                         </IconButton>
                                     </Tooltip>
-                                    {instance.isActive && (
-                                        <Tooltip title="Terminate Process">
-                                            <IconButton
-                                                size="small"
-                                                color="error"
-                                                onClick={() => {
-                                                    setSelectedInstance(instance);
-                                                    setDeleteDialogOpen(true);
-                                                }}
-                                            >
-                                                <Stop />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
+                                    <Tooltip title={instance.isActive ? "Terminate Process" : "Delete Process Instance"}>
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => {
+                                                setSelectedInstance(instance);
+                                                setDeleteDialogOpen(true);
+                                            }}
+                                        >
+                                            <Delete />
+                                        </IconButton>
+                                    </Tooltip>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -524,21 +521,24 @@ const ProcessManager: React.FC = () => {
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
                 <DialogTitle>
                     <Warning color="warning" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Terminate Process Instance
+                    {selectedInstance?.isActive ? 'Terminate Process Instance' : 'Delete Process Instance'}
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to terminate process instance{' '}
+                        Are you sure you want to {selectedInstance?.isActive ? 'terminate' : 'delete'} process instance{' '}
                         <strong>{selectedInstance?.id}</strong>?
                         <br />
                         <br />
-                        This action cannot be undone and will stop all active tasks in this process.
+                        {selectedInstance?.isActive
+                            ? 'This action cannot be undone and will stop all active tasks in this process.'
+                            : 'This action will permanently remove this process instance from the system.'
+                        }
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
                     <Button onClick={handleDeleteProcess} color="error" variant="contained">
-                        Terminate
+                        {selectedInstance?.isActive ? 'Terminate' : 'Delete'}
                     </Button>
                 </DialogActions>
             </Dialog>
