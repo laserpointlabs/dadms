@@ -24,8 +24,8 @@ module.exports = {
         },
         {
             name: 'dadm-analysis-daemon',
-            script: '/home/jdehart/miniconda3/bin/python',
-            args: ['-m', 'src.core.analysis_daemon', 'start'],
+            script: '/home/jdehart/dadm/.venv/bin/python',
+            args: ['scripts/analysis_processing_daemon.py'],
             cwd: '/home/jdehart/dadm',
             instances: 1,
             autorestart: true,

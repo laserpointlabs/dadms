@@ -279,7 +279,7 @@ app.get('/api/system/status', async (req, res) => {
         // Get analysis daemon status
         let analysisDaemonStatus = 'stopped';
         try {
-            const { stdout } = await execAsync('pgrep -f "dadm.*analysis.*daemon" | wc -l');
+            const { stdout } = await execAsync('pgrep -f "analysis_processing_daemon.py" | wc -l');
             analysisDaemonStatus = parseInt(stdout.trim()) > 0 ? 'running' : 'stopped';
         } catch (error) {
             analysisDaemonStatus = 'unknown';
@@ -395,16 +395,16 @@ app.post('/api/system/daemon/:action', async (req, res) => {
         let command;
         switch (action) {
             case 'start':
-                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon start';
+                command = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo "Daemon started with PID $!"';
                 break;
             case 'stop':
-                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon stop';
+                command = 'pkill -f "analysis_processing_daemon.py"';
                 break;
             case 'restart':
-                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon restart';
+                command = 'pkill -f "analysis_processing_daemon.py"; sleep 2; cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo "Daemon restarted with PID $!"';
                 break;
             case 'status':
-                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon status';
+                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py --status';
                 break;
             default:
                 return res.status(400).json({
