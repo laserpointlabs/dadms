@@ -1,7 +1,7 @@
-# DADM Release v0.10.0 Summary
+# DADM Release v0.11.0 Summary
 
 **Release Date:** June 18, 2025  
-**Version:** 0.10.0  
+**Version:** 0.11.0  
 **Theme:** Enhanced Dashboard & Analysis Visualization
 
 ## 🎯 Key Achievements
@@ -115,7 +115,7 @@
 
 ## 🔮 Foundation for Future
 
-Version 0.10.0 establishes critical infrastructure for:
+Version 0.11.0 establishes critical infrastructure for:
 - **Advanced Analytics**: Foundation for reporting and metrics
 - **Process Intelligence**: Deep integration with business process data
 - **Monitoring Ecosystem**: Extensible monitoring and alerting
