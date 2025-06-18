@@ -133,6 +133,183 @@ app.get('/api/analysis/list', async (req, res) => {
     }
 });
 
+/*
+// This route moved below to avoid conflicts with /api/analysis/threads
+app.get('/api/analysis/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`Fetching analysis details for ID: ${id}`);
+
+        // Use DADM CLI to get specific analysis data
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
+
+        // Parse and find the specific analysis
+        const analyses = await parseAnalysisListOutput(result.output);
+        const enrichedAnalyses = await enrichAnalysisWithProcessDefinitions(analyses);
+        const analysis = enrichedAnalyses.find(a => a.analysis_id === id);
+
+        if (!analysis) {
+            return res.status(404).json({
+                success: false,
+                error: 'Analysis not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: analysis
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch analysis details:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+*/
+
+// Get unique OpenAI thread combinations for Thread Context Viewer
+app.get('/api/analysis/threads', async (req, res) => {
+    try {
+        console.log('Fetching unique OpenAI thread combinations...');
+
+        // Get analysis data first
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
+        const analyses = await parseAnalysisListOutput(result.output);
+
+        // Enrich with process definitions like we do for analysis list
+        const enrichedAnalyses = await enrichAnalysisWithProcessDefinitions(analyses);
+
+        // Extract unique combinations of openai_assistant and openai_thread
+        const threadCombinations = new Map();
+
+        enrichedAnalyses.forEach(analysis => {
+            if (analysis.openai_thread && analysis.openai_assistant) {
+                const key = `${analysis.openai_assistant}_${analysis.openai_thread}`;
+                if (!threadCombinations.has(key)) {
+                    threadCombinations.set(key, {
+                        openai_thread: analysis.openai_thread,
+                        openai_assistant: analysis.openai_assistant,
+                        analysis_ids: [analysis.analysis_id],
+                        created_at: analysis.created_at,
+                        status: analysis.status,
+                        process_definition: analysis.process_definition || null
+                    });
+                } else {
+                    // Add to existing combination
+                    const existing = threadCombinations.get(key);
+                    existing.analysis_ids.push(analysis.analysis_id);
+                    // Update to most recent creation date
+                    if (new Date(analysis.created_at) > new Date(existing.created_at)) {
+                        existing.created_at = analysis.created_at;
+                        existing.status = analysis.status;
+                    }
+                }
+            }
+        });
+
+        // Convert to array and add metadata
+        const uniqueThreads = Array.from(threadCombinations.values()).map(thread => ({
+            id: thread.openai_thread,
+            openai_thread: thread.openai_thread,
+            openai_assistant: thread.openai_assistant,
+            name: thread.process_definition?.name || 'Unknown Process',
+            status: thread.status === 'completed' ? 'completed' : 'active',
+            created_at: thread.created_at,
+            last_activity: thread.created_at,
+            analysis_count: thread.analysis_ids.length,
+            analysis_ids: thread.analysis_ids,
+            process_definition: thread.process_definition
+        }));
+
+        // Sort by creation date (most recent first)
+        uniqueThreads.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        res.json({
+            success: true,
+            data: uniqueThreads,
+            total: uniqueThreads.length
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch thread combinations:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get OpenAI thread context from OpenAI API
+app.get('/api/analysis/threads/:threadId/context', async (req, res) => {
+    try {
+        const { threadId } = req.params;
+        console.log(`Fetching OpenAI thread context for: ${threadId}`);
+
+        // Check if OpenAI API key is available
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                error: 'OpenAI API key not configured'
+            });
+        }
+
+        // Fetch thread messages from OpenAI
+        const response = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        }
+
+        const threadData = await response.json();
+
+        // Also get thread metadata
+        const threadMetaResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}`, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            }
+        });
+
+        let threadMetadata = {};
+        if (threadMetaResponse.ok) {
+            threadMetadata = await threadMetaResponse.json();
+        }
+
+        // Format the response
+        const formattedData = {
+            thread_id: threadId,
+            created_at: threadMetadata.created_at ? new Date(threadMetadata.created_at * 1000).toISOString() : null,
+            metadata: threadMetadata.metadata || {},
+            messages: threadData.data || [],
+            message_count: threadData.data ? threadData.data.length : 0,
+            status: 'active'
+        };
+
+        res.json({
+            success: true,
+            data: formattedData
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch OpenAI thread context:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get analysis by ID (moved here to avoid conflicts with thread routes)
 app.get('/api/analysis/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -859,4 +1036,6 @@ server.listen(PORT, async () => {
     console.log(`  POST   http://localhost:${PORT}/api/system/backend/:action`);
     console.log(`  POST   http://localhost:${PORT}/api/system/daemon/:action`);
     console.log(`  GET    http://localhost:${PORT}/api/system/docker`);
+    console.log(`  GET    http://localhost:${PORT}/api/analysis/threads`);
+    console.log(`  GET    http://localhost:${PORT}/api/analysis/threads/:threadId/context`);
 });
