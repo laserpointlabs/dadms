@@ -331,7 +331,7 @@ app.get('/api/process/definitions/list', async (req, res) => {
 app.delete('/api/process/instances/:instanceId', async (req, res) => {
     try {
         const { instanceId } = req.params;
-        const { reason = 'Terminated via DADM UI' } = req.body;
+        const { reason = 'Deleted via DADM UI' } = req.body;
 
         console.log(`Attempting to delete process instance: ${instanceId}`);
 
@@ -351,14 +351,35 @@ app.delete('/api/process/instances/:instanceId', async (req, res) => {
         if (deleteResponse.ok) {
             res.json({
                 success: true,
-                message: `Process instance ${instanceId} deleted successfully`,
+                message: `Process instance ${instanceId} terminated successfully`,
                 instanceId: instanceId
             });
         } else if (deleteResponse.status === 404) {
-            res.status(404).json({
-                success: false,
-                error: `Process instance ${instanceId} not found or already completed`
+            // If not found as active instance, try to delete from history
+            console.log(`Process instance ${instanceId} not active, attempting to delete from history...`);
+
+            const historyDeleteResponse = await fetch(`http://localhost:8080/engine-rest/history/process-instance/${instanceId}`, {
+                method: 'DELETE'
             });
+
+            if (historyDeleteResponse.ok) {
+                res.json({
+                    success: true,
+                    message: `Historical process instance ${instanceId} deleted successfully`,
+                    instanceId: instanceId
+                });
+            } else if (historyDeleteResponse.status === 404) {
+                res.status(404).json({
+                    success: false,
+                    error: `Process instance ${instanceId} not found in active or historical data`
+                });
+            } else {
+                const historyErrorData = await historyDeleteResponse.text();
+                res.status(historyDeleteResponse.status).json({
+                    success: false,
+                    error: `Failed to delete historical process instance: ${historyErrorData}`
+                });
+            }
         } else {
             const errorData = await deleteResponse.text();
             res.status(deleteResponse.status).json({
