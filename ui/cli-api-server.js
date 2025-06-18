@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const http = require('http');
+const https = require('https');
 const { spawn } = require('child_process');
 
 const app = express();
@@ -111,7 +112,7 @@ app.get('/api/analysis/list', async (req, res) => {
         const result = await executeCommand('dadm', args);
 
         // Parse the output to extract structured data
-        const analyses = parseAnalysisListOutput(result.output);
+        const analyses = await parseAnalysisListOutput(result.output);
 
         res.json({
             success: true,
@@ -138,7 +139,7 @@ app.get('/api/analysis/:id', async (req, res) => {
         const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
 
         // Parse and find the specific analysis
-        const analyses = parseAnalysisListOutput(result.output);
+        const analyses = await parseAnalysisListOutput(result.output);
         const analysis = analyses.find(a => a.analysis_id === id);
 
         if (!analysis) {
@@ -235,8 +236,50 @@ function inferProcessName(taskNames) {
     return 'Unknown Process';
 }
 
+// Helper function to get process definition name from Camunda
+async function getProcessDefinitionName(processInstanceId) {
+    return new Promise((resolve) => {
+        try {
+            const url = `http://localhost:8080/engine-rest/history/process-instance?processInstanceId=${processInstanceId}`;
+
+            http.get(url, (response) => {
+                let data = '';
+
+                response.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                response.on('end', () => {
+                    try {
+                        const jsonData = JSON.parse(data);
+                        if (jsonData && jsonData.length > 0) {
+                            resolve({
+                                name: jsonData[0].processDefinitionName || 'Unknown Process',
+                                key: jsonData[0].processDefinitionKey || '',
+                                version: jsonData[0].processDefinitionVersion || 1
+                            });
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (parseError) {
+                        console.warn(`Error parsing process definition response for ${processInstanceId}:`, parseError.message);
+                        resolve(null);
+                    }
+                });
+            }).on('error', (error) => {
+                console.warn(`Error fetching process definition for ${processInstanceId}:`, error.message);
+                resolve(null);
+            });
+
+        } catch (error) {
+            console.warn(`Error setting up request for process definition ${processInstanceId}:`, error.message);
+            resolve(null);
+        }
+    });
+}
+
 // Helper function to parse DADM analysis list output into structured data
-function parseAnalysisListOutput(output) {
+async function parseAnalysisListOutput(output) {
     const analyses = [];
     let currentAnalysis = null;
 
@@ -295,23 +338,28 @@ function parseAnalysisListOutput(output) {
         analyses.push(currentAnalysis);
     }
 
-    // Group by process ID and infer process names
-    const processTasks = {};
-    analyses.forEach(analysis => {
-        const processId = analysis.metadata.process_id;
-        if (!processTasks[processId]) {
-            processTasks[processId] = [];
-        }
-        if (analysis.metadata.task_name) {
-            processTasks[processId].push(analysis.metadata.task_name);
-        }
-    });
+    // Get real process definition names from Camunda for each unique process ID
+    const uniqueProcessIds = [...new Set(analyses.map(a => a.metadata.process_id).filter(id => id))];
+    const processDefinitions = {};
 
-    // Add inferred process names to each analysis
+    for (const processId of uniqueProcessIds) {
+        const definition = await getProcessDefinitionName(processId);
+        if (definition) {
+            processDefinitions[processId] = definition;
+        }
+    }
+
+    // Add real process names to each analysis
     analyses.forEach(analysis => {
         const processId = analysis.metadata.process_id;
-        const taskNames = processTasks[processId] || [];
-        analysis.metadata.process_name = inferProcessName(taskNames);
+        const definition = processDefinitions[processId];
+        if (definition) {
+            analysis.metadata.process_name = `${definition.name} (v${definition.version})`;
+            analysis.metadata.process_definition_key = definition.key;
+            analysis.metadata.process_definition_version = definition.version;
+        } else {
+            analysis.metadata.process_name = 'Unknown Process';
+        }
     });
 
     return analyses;
