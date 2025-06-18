@@ -1,5 +1,6 @@
 import {
     Clear,
+    Delete,
     Download,
     ExpandMore,
     Refresh,
@@ -74,6 +75,7 @@ interface GroupedAnalysisDisplayProps {
     analyses: AnalysisData[];
     onViewAnalysis: (analysis: AnalysisData) => void;
     onExportAnalysis: (analysis: AnalysisData) => void;
+    onDeleteProcess: (processInstanceId: string) => void;
     getStatusColor: (status: string) => string;
     groupAnalysesByProcess: (analyses: AnalysisData[]) => Record<string, AnalysisData[]>;
 }
@@ -82,6 +84,7 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
     analyses,
     onViewAnalysis,
     onExportAnalysis,
+    onDeleteProcess,
     getStatusColor,
     groupAnalysesByProcess
 }) => {
@@ -137,6 +140,19 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
                                             variant="outlined"
                                         />
                                     )}
+                                    <Tooltip title="Delete all analyses for this process">
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDeleteProcess(processId);
+                                            }}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
                                 </Box>
                             </Box>
                         </AccordionSummary>
@@ -241,8 +257,9 @@ const AnalysisDataViewer: React.FC = () => {
         source_service: '',
         thread_id: ''
     });
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    // Pagination state (for future use)
+    // const [page, setPage] = useState(0);
+    // const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchAnalysisData = async () => {
@@ -370,6 +387,43 @@ const AnalysisDataViewer: React.FC = () => {
         URL.revokeObjectURL(url);
     };
 
+    const handleDeleteProcess = async (processInstanceId: string) => {
+        if (!window.confirm('Are you sure you want to delete all analyses for this process? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            console.log(`Deleting analyses for process instance: ${processInstanceId}`);
+
+            const response = await fetch(
+                `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/process/${processInstanceId}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Remove deleted analyses from state
+                setAnalyses(prevAnalyses =>
+                    prevAnalyses.filter(analysis =>
+                        analysis.metadata.process_instance_id !== processInstanceId
+                    )
+                );
+                console.log(`Successfully deleted analyses for process ${processInstanceId}`);
+            } else {
+                alert(`Failed to delete analyses: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting analyses:', error);
+            alert('Failed to delete analyses. Please try again.');
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'completed': return 'success';
@@ -484,6 +538,7 @@ const AnalysisDataViewer: React.FC = () => {
                         analyses={filteredAnalyses}
                         onViewAnalysis={handleViewAnalysis}
                         onExportAnalysis={handleExportAnalysis}
+                        onDeleteProcess={handleDeleteProcess}
                         getStatusColor={getStatusColor}
                         groupAnalysesByProcess={groupAnalysesByProcess}
                     />
