@@ -31,7 +31,6 @@ import {
     TableCell,
     TableContainer,
     TableHead,
-    TablePagination,
     TableRow,
     TextField,
     Tooltip,
@@ -69,6 +68,163 @@ interface FilterState {
     source_service: string;
     thread_id: string;
 }
+
+interface GroupedAnalysisDisplayProps {
+    analyses: AnalysisData[];
+    onViewAnalysis: (analysis: AnalysisData) => void;
+    onExportAnalysis: (analysis: AnalysisData) => void;
+    getStatusColor: (status: string) => string;
+    groupAnalysesByProcess: (analyses: AnalysisData[]) => Record<string, AnalysisData[]>;
+}
+
+const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
+    analyses,
+    onViewAnalysis,
+    onExportAnalysis,
+    getStatusColor,
+    groupAnalysesByProcess
+}) => {
+    const groupedAnalyses = groupAnalysesByProcess(analyses);
+    const processIds = Object.keys(groupedAnalyses);
+
+    if (processIds.length === 0) {
+        return (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" color="text.secondary">
+                    No analyses found matching your criteria
+                </Typography>
+            </Paper>
+        );
+    }
+
+    return (
+        <>
+            {processIds.map((processId) => {
+                const processAnalyses = groupedAnalyses[processId];
+                const latestAnalysis = processAnalyses[0];
+                const processStartTime = new Date(
+                    Math.min(...processAnalyses.map(a => new Date(a.metadata.created_at).getTime()))
+                );
+
+                return (
+                    <Accordion key={processId} defaultExpanded={processIds.length <= 3}>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                                <Box sx={{ flexGrow: 1 }}>
+                                    <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
+                                        Process: {processId.substring(0, 13)}...
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {processAnalyses.length} analyses • Started: {processStartTime.toLocaleString()}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                    <Chip
+                                        label={`${processAnalyses.length} analyses`}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                    />
+                                    {latestAnalysis.metadata.source_service && (
+                                        <Chip
+                                            label={latestAnalysis.metadata.source_service.split('/').pop()}
+                                            size="small"
+                                            color="secondary"
+                                            variant="outlined"
+                                        />
+                                    )}
+                                </Box>
+                            </Box>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Analysis ID</TableCell>
+                                            <TableCell>Task</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell>Created</TableCell>
+                                            <TableCell>Tags</TableCell>
+                                            <TableCell>Actions</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {processAnalyses.map((analysis) => (
+                                            <TableRow key={analysis.metadata.analysis_id} hover>
+                                                <TableCell>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {analysis.metadata.analysis_id.substring(0, 8)}...
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {analysis.metadata.task_name}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={analysis.metadata.status}
+                                                        color={getStatusColor(analysis.metadata.status) as any}
+                                                        size="small"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {new Date(analysis.metadata.created_at).toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                                        {analysis.metadata.tags.slice(0, 2).map((tag) => (
+                                                            <Chip
+                                                                key={tag}
+                                                                label={tag}
+                                                                size="small"
+                                                                variant="outlined"
+                                                            />
+                                                        ))}
+                                                        {analysis.metadata.tags.length > 2 && (
+                                                            <Chip
+                                                                label={`+${analysis.metadata.tags.length - 2}`}
+                                                                size="small"
+                                                                variant="outlined"
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                                        <Tooltip title="View Details">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => onViewAnalysis(analysis)}
+                                                            >
+                                                                <Visibility />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Export">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => onExportAnalysis(analysis)}
+                                                            >
+                                                                <Download />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </AccordionDetails>
+                    </Accordion>
+                );
+            })}
+        </>
+    );
+};
 
 const AnalysisDataViewer: React.FC = () => {
     const [analyses, setAnalyses] = useState<AnalysisData[]>([]);
@@ -144,6 +300,27 @@ const AnalysisDataViewer: React.FC = () => {
         fetchAnalysisData();
     }, []);
 
+    // Group analyses by process ID
+    const groupAnalysesByProcess = (analysisData: AnalysisData[]) => {
+        const grouped = analysisData.reduce((acc, analysis) => {
+            const processId = analysis.metadata.process_instance_id || 'unknown';
+            if (!acc[processId]) {
+                acc[processId] = [];
+            }
+            acc[processId].push(analysis);
+            return acc;
+        }, {} as Record<string, AnalysisData[]>);
+
+        // Sort each group by creation date (newest first)
+        Object.keys(grouped).forEach(processId => {
+            grouped[processId].sort((a, b) =>
+                new Date(b.metadata.created_at).getTime() - new Date(a.metadata.created_at).getTime()
+            );
+        });
+
+        return grouped;
+    };
+
     useEffect(() => {
         // Apply filters
         let filtered = analyses;
@@ -152,7 +329,8 @@ const AnalysisDataViewer: React.FC = () => {
             filtered = filtered.filter(analysis =>
                 analysis.metadata.analysis_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 analysis.metadata.task_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                analysis.metadata.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                analysis.metadata.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                analysis.metadata.process_instance_id?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
 
@@ -297,107 +475,13 @@ const AnalysisDataViewer: React.FC = () => {
                         </Box>
                     </Alert>
                 ) : (
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Analysis ID</TableCell>
-                                    <TableCell>Task</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Service</TableCell>
-                                    <TableCell>Created</TableCell>
-                                    <TableCell>Tags</TableCell>
-                                    <TableCell>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredAnalyses
-                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    .map((analysis) => (
-                                        <TableRow key={analysis.metadata.analysis_id} hover>
-                                            <TableCell>
-                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                    {analysis.metadata.analysis_id.substring(0, 8)}...
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {analysis.metadata.task_name}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={analysis.metadata.status}
-                                                    color={getStatusColor(analysis.metadata.status) as any}
-                                                    size="small"
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {analysis.metadata.source_service}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {new Date(analysis.metadata.created_at).toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                                    {analysis.metadata.tags.slice(0, 2).map((tag) => (
-                                                        <Chip
-                                                            key={tag}
-                                                            label={tag}
-                                                            size="small"
-                                                            variant="outlined"
-                                                        />
-                                                    ))}
-                                                    {analysis.metadata.tags.length > 2 && (
-                                                        <Chip
-                                                            label={`+${analysis.metadata.tags.length - 2}`}
-                                                            size="small"
-                                                            variant="outlined"
-                                                        />
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <Tooltip title="View Details">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleViewAnalysis(analysis)}
-                                                        >
-                                                            <Visibility />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Export">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleExportAnalysis(analysis)}
-                                                        >
-                                                            <Download />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                            </TableBody>
-                        </Table>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
-                            component="div"
-                            count={filteredAnalyses.length}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={(_, newPage) => setPage(newPage)}
-                            onRowsPerPageChange={(e) => {
-                                setRowsPerPage(parseInt(e.target.value, 10));
-                                setPage(0);
-                            }}
-                        />
-                    </TableContainer>
+                    <GroupedAnalysisDisplay
+                        analyses={filteredAnalyses}
+                        onViewAnalysis={handleViewAnalysis}
+                        onExportAnalysis={handleExportAnalysis}
+                        getStatusColor={getStatusColor}
+                        groupAnalysesByProcess={groupAnalysesByProcess}
+                    />
                 )}
             </Paper>
 
