@@ -163,6 +163,89 @@ app.get('/api/analysis/:id', async (req, res) => {
     }
 });
 
+// Delete analyses by process instance ID
+app.delete('/api/analysis/process/:processInstanceId', async (req, res) => {
+    try {
+        const { processInstanceId } = req.params;
+        console.log(`Deleting all analyses for process instance: ${processInstanceId}`);
+
+        // Use SQLite to delete analyses for this process instance
+        const sqlite3 = require('sqlite3').verbose();
+        const dbPath = '/home/jdehart/dadm/data/analysis_storage/analysis_data.db';
+
+        // First, get the analysis IDs to delete
+        const getAnalysisIds = () => {
+            return new Promise((resolve, reject) => {
+                const db = new sqlite3.Database(dbPath);
+                db.all(
+                    "SELECT analysis_id FROM analysis_metadata WHERE process_instance_id = ?",
+                    [processInstanceId],
+                    (err, rows) => {
+                        db.close();
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(rows.map(row => row.analysis_id));
+                        }
+                    }
+                );
+            });
+        };
+
+        // Delete from all tables
+        const deleteAnalyses = (analysisIds) => {
+            return new Promise((resolve, reject) => {
+                if (analysisIds.length === 0) {
+                    resolve({ deletedCount: 0 });
+                    return;
+                }
+
+                const db = new sqlite3.Database(dbPath);
+                const placeholders = analysisIds.map(() => '?').join(',');
+
+                db.serialize(() => {
+                    // Delete from processing_tasks first (foreign key constraint)
+                    db.run(`DELETE FROM processing_tasks WHERE analysis_id IN (${placeholders})`, analysisIds);
+
+                    // Delete from analysis_data
+                    db.run(`DELETE FROM analysis_data WHERE analysis_id IN (${placeholders})`, analysisIds);
+
+                    // Delete from analysis_metadata
+                    db.run(
+                        `DELETE FROM analysis_metadata WHERE analysis_id IN (${placeholders})`,
+                        analysisIds,
+                        function (err) {
+                            db.close();
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve({ deletedCount: this.changes });
+                            }
+                        }
+                    );
+                });
+            });
+        };
+
+        const analysisIds = await getAnalysisIds();
+        const result = await deleteAnalyses(analysisIds);
+
+        res.json({
+            success: true,
+            message: `Deleted ${result.deletedCount} analyses for process instance ${processInstanceId}`,
+            processInstanceId,
+            deletedAnalysisIds: analysisIds
+        });
+
+    } catch (error) {
+        console.error('Failed to delete analyses:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Helper function to parse DADM process definitions output
 function parseProcessDefinitions(output) {
     const definitions = [];
@@ -530,10 +613,11 @@ server.listen(PORT, () => {
     console.log(`📡 Accepting connections from http://localhost:3000`);
     console.log('');
     console.log('Available endpoints:');
-    console.log(`  GET  http://localhost:${PORT}/api/health`);
-    console.log(`  POST http://localhost:${PORT}/api/cli/execute`);
-    console.log(`  GET  http://localhost:${PORT}/api/cli/commands`);
-    console.log(`  GET  http://localhost:${PORT}/api/analysis/list`);
-    console.log(`  GET  http://localhost:${PORT}/api/analysis/:id`);
-    console.log(`  GET  http://localhost:${PORT}/api/process/definitions`);
+    console.log(`  GET    http://localhost:${PORT}/api/health`);
+    console.log(`  POST   http://localhost:${PORT}/api/cli/execute`);
+    console.log(`  GET    http://localhost:${PORT}/api/cli/commands`);
+    console.log(`  GET    http://localhost:${PORT}/api/analysis/list`);
+    console.log(`  GET    http://localhost:${PORT}/api/analysis/:id`);
+    console.log(`  DELETE http://localhost:${PORT}/api/analysis/process/:processInstanceId`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/definitions`);
 });
