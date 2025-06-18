@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  dadm-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8001
+      - REACT_APP_ENABLE_REAL_TIME=true
+      - REACT_APP_ENABLE_AI_CHAT=true
+      - REACT_APP_ENABLE_THREAD_CONTEXT=true
+      - REACT_APP_ENABLE_CLI_MANAGER=true
+      - REACT_APP_LOG_LEVEL=info
+    networks:
+      - dadm-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development server (alternative to production build)
+  dadm-ui-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8001
+      - REACT_APP_ENABLE_REAL_TIME=true
+      - REACT_APP_ENABLE_AI_CHAT=true
+      - REACT_APP_LOG_LEVEL=debug
+      - BROWSER=none
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - dadm-network
+    profiles:
+      - dev
+
+networks:
+  dadm-network:
+    driver: bridge
+    external: false
