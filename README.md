@@ -13,12 +13,16 @@ DADM (Decision Analysis and Decision Management) provides an end-to-end solution
 - **Thread Persistence Management**: Maintain conversation continuity within business processes for coherent multi-step decision analysis
 - **Knowledge Graph Integration**: Store and query relationships between decision factors using Neo4j with enhanced hierarchical structures and descriptive relationship names
 - **Vector Database Support**: Semantic search and retrieval using Qdrant vector database
+- **Live System Dashboard**: Real-time monitoring and control of all system components with web-based interface
+- **Analysis Data Visualization**: Interactive viewer for analysis results with process definition integration
+- **Service Management**: Start/stop/restart controls for backend services and analysis daemon via PM2
 - **High-Performance Orchestration**: Optimized service orchestration with caching and prefetching capabilities
 - **Containerized Deployment**: Simple deployment with Docker and docker-compose
 - **Extensible Architecture**: Modular design allows for easy integration with additional tools and services
 
 ## Recent Changes
 
+- **June 18, 2025**: Version 0.10.0 Release - Enhanced DADM Dashboard with comprehensive system monitoring and control capabilities. Added live analysis data viewer with process definition integration, real-time service status monitoring, and robust Camunda API integration. Implemented start/stop/restart controls for backend services and analysis daemon. Fixed "Unknown Process" display issue by adding proper process definition lookup from Camunda history API.
 - **June 11, 2025**: Version 0.9.0 Release - Major thread persistence implementation enabling conversation continuity across business process tasks, OpenAI Playground URL generation for debugging, and enhanced development workflow with live code mounting. Added comprehensive analysis data management commands and improved Camunda startup reliability.
 - **June 11, 2025**: Thread Persistence Implementation - Implemented sophisticated thread management for OpenAI Assistant conversations, enabling context preservation across multiple tasks within the same business process. Process instances now maintain dedicated conversation threads for coherent multi-step decision analysis. Added live code mounting in Docker development environment for faster iteration.
 - **June 5, 2025**: PostgreSQL Database Migration - Successfully migrated from H2 to PostgreSQL database for Camunda, resolving VARCHAR(4000) limitations and improving scalability. Updated Docker configurations with proper authentication methods and enhanced container reliability. All 48 Camunda tables now running on PostgreSQL with improved performance and data handling capabilities.

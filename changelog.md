@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-06-18
+
+### Added
+- **Enhanced DADM Dashboard**: Complete implementation of live system monitoring and control
+  - Real-time status monitoring for backend services, analysis daemon, and Docker containers
+  - Start/Stop/Restart controls for backend and daemon services via PM2 integration
+  - System resource monitoring including memory usage and CPU load
+  - Docker container health status monitoring for all infrastructure components
+- **Analysis Data Viewer**: Full implementation of analysis results visualization
+  - Real-time display of analysis data from DADM CLI integration
+  - Process definition name and version display via Camunda REST API integration
+  - Support for both active and historical process instances
+  - Structured data transformation from flat API response to nested UI format
+- **Camunda Integration**: Robust process definition lookup functionality
+  - Integration with Camunda REST API for process definition details
+  - Support for historical process instances via Camunda history API
+  - Automatic fallback handling for missing or completed process instances
+  - Process name and version enrichment for analysis data display
+
+### Enhanced
+- **Backend API Server**: Improved robustness and functionality
+  - Enhanced analysis data parsing with proper error handling
+  - Fixed function scope issues preventing analysis data retrieval
+  - Added comprehensive system status endpoints with live service monitoring
+  - Improved daemon management with process monitoring and force kill capabilities
+- **Frontend Data Management**: Optimized data flow and display
+  - Updated data transformation logic to handle enriched process definition data
+  - Fixed mapping between flat API structure and nested UI components
+  - Added process version display in analysis viewer interface
+  - Improved error handling and fallback mechanisms for missing data
+
+### Fixed
+- **Analysis Data Display**: Resolved "Unknown Process" issue
+  - Fixed process definition lookup using correct process instance IDs
+  - Implemented proper Camunda API integration for process name resolution
+  - Added support for completed process instances via history API
+  - Corrected frontend data transformation to use enriched process definition data
+- **System Management**: Improved service control reliability
+  - Enhanced daemon stop/start logic with better process detection
+  - Fixed PM2 integration for consistent service management
+  - Improved error handling and status reporting for system operations
+
 ## [0.9.3] - 2025-06-17
 
 ### Added
