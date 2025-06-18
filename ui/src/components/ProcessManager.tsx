@@ -1,4 +1,5 @@
 import {
+    Delete,
     Info,
     PlayArrow,
     Refresh,
@@ -233,6 +234,31 @@ const ProcessManager: React.FC = () => {
         }
     };
 
+    const handleDeleteProcessDefinition = async (processDefinition: ProcessDefinition) => {
+        if (!window.confirm(`Are you sure you want to delete the process definition "${processDefinition.name || processDefinition.key}"? This will remove the process definition from Camunda.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:8000/api/process/definitions/${processDefinition.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setError(null);
+                await fetchProcessDefinitions(); // Refresh the list
+            } else {
+                setError(data.error || 'Failed to delete process definition');
+            }
+        } catch (err) {
+            setError('Failed to delete process definition');
+            console.error('Error deleting process definition:', err);
+        }
+    };
+
     const getStatusColor = (status: string, isActive: boolean) => {
         if (isActive) return 'success';
         if (status === 'COMPLETED') return 'info';
@@ -367,27 +393,38 @@ const ProcessManager: React.FC = () => {
                                                 </Select>
                                             </FormControl>
                                         </Box>
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                                size="small"
-                                                variant="contained"
-                                                startIcon={<PlayArrow />}
-                                                onClick={() => {
-                                                    setSelectedDefinition(selectedDefinition);
-                                                    setStartDialogOpen(true);
-                                                }}
-                                                disabled={!selectedDefinition}
-                                            >
-                                                Start Process
-                                            </Button>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    startIcon={<PlayArrow />}
+                                                    onClick={() => {
+                                                        setSelectedDefinition(selectedDefinition);
+                                                        setStartDialogOpen(true);
+                                                    }}
+                                                    disabled={!selectedDefinition}
+                                                >
+                                                    Start Process
+                                                </Button>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={() => selectedDefinition && fetchDocumentation(selectedDefinition)}
+                                                    disabled={loadingDocumentation || !selectedDefinition}
+                                                    title="View process documentation"
+                                                >
+                                                    <Info />
+                                                </IconButton>
+                                            </Box>
                                             <IconButton
                                                 size="small"
-                                                color="primary"
-                                                onClick={() => selectedDefinition && fetchDocumentation(selectedDefinition)}
-                                                disabled={loadingDocumentation || !selectedDefinition}
-                                                title="View process documentation"
+                                                color="error"
+                                                onClick={() => selectedDefinition && handleDeleteProcessDefinition(selectedDefinition)}
+                                                disabled={!selectedDefinition}
+                                                title="Delete process definition"
                                             >
-                                                <Info />
+                                                <Delete />
                                             </IconButton>
                                         </Box>
                                     </CardContent>

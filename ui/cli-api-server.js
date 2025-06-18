@@ -1162,6 +1162,59 @@ app.get('/api/process/definitions/:id/documentation', async (req, res) => {
     }
 });
 
+// Delete a process definition
+app.delete('/api/process/definitions/:definitionId', async (req, res) => {
+    try {
+        const { definitionId } = req.params;
+        console.log(`Attempting to delete process definition: ${definitionId}`);
+
+        // Get process definition details first
+        const defResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/${definitionId}`);
+        if (!defResponse.ok) {
+            return res.status(404).json({
+                success: false,
+                error: 'Process definition not found'
+            });
+        }
+
+        const processDefinition = await defResponse.json();
+        const deploymentId = processDefinition.deploymentId;
+
+        if (!deploymentId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Process definition has no deployment ID'
+            });
+        }
+
+        // Delete the deployment (this removes the process definition)
+        const deleteResponse = await fetch(`http://localhost:8080/engine-rest/deployment/${deploymentId}?cascade=true`, {
+            method: 'DELETE'
+        });
+
+        if (deleteResponse.ok) {
+            res.json({
+                success: true,
+                message: `Process definition ${processDefinition.name || processDefinition.key} deleted successfully`,
+                data: { definitionId, deploymentId, name: processDefinition.name, key: processDefinition.key }
+            });
+        } else {
+            const errorData = await deleteResponse.text();
+            res.status(deleteResponse.status).json({
+                success: false,
+                error: `Failed to delete process definition: ${errorData}`
+            });
+        }
+
+    } catch (error) {
+        console.error('Failed to delete process definition:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Function to start a background external task worker for a specific process
 async function startBackgroundWorker(processInstanceId, processKey) {
     try {
