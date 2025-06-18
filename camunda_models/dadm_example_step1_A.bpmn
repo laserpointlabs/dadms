@@ -300,160 +300,196 @@ Output: Complete decision frame document ready for stakeholder review and approv
     <bpmn:sequenceFlow id="Flow_sync2_to_influence_diagram" sourceRef="ParallelGateway_Sync2" targetRef="DevelopInfluenceDiagramTask" />
     <bpmn:sequenceFlow id="Flow_to_end" sourceRef="FinalizeDecisionFrameTask" targetRef="EndEvent_1" />
     <bpmn:sequenceFlow id="Flow_1waqxeq" sourceRef="DevelopInfluenceDiagramTask" targetRef="FinalizeDecisionFrameTask" />
+    <bpmn:textAnnotation id="TextAnnotation_1c5xchy">
+      <bpmn:text>Working on injecting:
+1. Tools
+2. Decision switches</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0yh7nks" associationDirection="None" sourceRef="Flow_1waqxeq" targetRef="TextAnnotation_1c5xchy" />
+    <bpmn:textAnnotation id="TextAnnotation_0fpw69g">
+      <bpmn:text>Need a prompt service to reuse tested prompts</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0ci6zov" associationDirection="None" sourceRef="IdentifyStakeholdersTask" targetRef="TextAnnotation_0fpw69g" />
+    <bpmn:textAnnotation id="TextAnnotation_1e6eix7">
+      <bpmn:text>Include forms in the ui next to the modeler</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1ty0sx2" associationDirection="None" sourceRef="IdentifyStakeholdersTask" targetRef="TextAnnotation_1e6eix7" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1A">
     <bpmndi:BPMNPlane id="BPMNPlane_1A" bpmnElement="DADM_Example_Step1_Advanced">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2A" bpmnElement="StartEvent_1">
-        <dc:Bounds x="232" y="219" width="36" height="36" />
+        <dc:Bounds x="232" y="279" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="214" y="262" width="74" height="40" />
+          <dc:Bounds x="214" y="322" width="74" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_IdentifyStakeholders_diA" bpmnElement="IdentifyStakeholdersTask">
-        <dc:Bounds x="320" y="197" width="100" height="80" />
+        <dc:Bounds x="320" y="257" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ParallelSplit_di" bpmnElement="ParallelGateway_Split">
-        <dc:Bounds x="475" y="212" width="50" height="50" />
+        <dc:Bounds x="475" y="272" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="522.5" y="206" width="55" height="27" />
+          <dc:Bounds x="523" y="266" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_SetDecisionContext_diA" bpmnElement="SetDecisionContextTask">
-        <dc:Bounds x="590" y="82" width="100" height="80" />
+        <dc:Bounds x="590" y="142" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DevelopVision_diA" bpmnElement="DevelopVisionTask">
-        <dc:Bounds x="590" y="185" width="100" height="80" />
+        <dc:Bounds x="590" y="245" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_RaiseIssues_diA" bpmnElement="RaiseIssuesTask">
-        <dc:Bounds x="590" y="320" width="100" height="80" />
+        <dc:Bounds x="590" y="380" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ParallelSync1_di" bpmnElement="ParallelGateway_Sync1">
-        <dc:Bounds x="755" y="204" width="50" height="50" />
+        <dc:Bounds x="755" y="264" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="685" y="262" width="90" height="27" />
+          <dc:Bounds x="685" y="316" width="90" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_EnhanceIssues_di" bpmnElement="EnhanceIssuesTask">
-        <dc:Bounds x="870" y="189" width="100" height="80" />
+        <dc:Bounds x="870" y="249" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ParallelSplit2_di" bpmnElement="ParallelGateway_Split2">
-        <dc:Bounds x="1035" y="204" width="50" height="50" />
+        <dc:Bounds x="1035" y="264" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1019.5" y="180" width="81" height="14" />
+          <dc:Bounds x="1059.5" y="213" width="81" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_CategorizeIssues_diA" bpmnElement="CategorizeIssuesTask">
-        <dc:Bounds x="1150" y="160" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DevelopHierarchy_diA" bpmnElement="DevelopDecisionHierarchyTask">
-        <dc:Bounds x="1150" y="280" width="100" height="80" />
+        <dc:Bounds x="1150" y="340" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_ParallelSync2_di" bpmnElement="ParallelGateway_Sync2">
-        <dc:Bounds x="1315" y="216" width="50" height="50" />
+        <dc:Bounds x="1315" y="276" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1349" y="272" width="61" height="27" />
+          <dc:Bounds x="1349" y="332" width="61" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_DevelopInfluenceDiagram_diA" bpmnElement="DevelopInfluenceDiagramTask">
-        <dc:Bounds x="1430" y="201" width="100" height="80" />
+        <dc:Bounds x="1430" y="261" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_FinalizeFrame_diA" bpmnElement="FinalizeDecisionFrameTask">
-        <dc:Bounds x="160" y="440" width="100" height="80" />
+        <dc:Bounds x="160" y="500" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_End_diA" bpmnElement="EndEvent_1">
-        <dc:Bounds x="192" y="562" width="36" height="36" />
+        <dc:Bounds x="192" y="622" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="171" y="605" width="78" height="27" />
+          <dc:Bounds x="171" y="665" width="78" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_CategorizeIssues_diA" bpmnElement="CategorizeIssuesTask">
+        <dc:Bounds x="1150" y="199" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_0yh7nks_di" bpmnElement="Association_0yh7nks">
+        <di:waypoint x="969.5" y="540" />
+        <di:waypoint x="1013" y="507" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0ci6zov_di" bpmnElement="Association_0ci6zov">
+        <di:waypoint x="349" y="257" />
+        <di:waypoint x="323" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1ty0sx2_di" bpmnElement="Association_1ty0sx2">
+        <di:waypoint x="386" y="257" />
+        <di:waypoint x="454" y="85" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_identify_stakeholders_diA" bpmnElement="Flow_to_identify_stakeholders">
-        <di:waypoint x="268" y="237" />
-        <di:waypoint x="320" y="237" />
+        <di:waypoint x="268" y="297" />
+        <di:waypoint x="320" y="297" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_stakeholders_to_parallel_gateway_di" bpmnElement="Flow_stakeholders_to_parallel_gateway">
-        <di:waypoint x="420" y="237" />
-        <di:waypoint x="475" y="237" />
+        <di:waypoint x="420" y="297" />
+        <di:waypoint x="475" y="297" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_set_context_diA" bpmnElement="Flow_to_set_context">
-        <di:waypoint x="500" y="212" />
-        <di:waypoint x="500" y="122" />
-        <di:waypoint x="590" y="122" />
+        <di:waypoint x="500" y="272" />
+        <di:waypoint x="500" y="182" />
+        <di:waypoint x="590" y="182" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_develop_vision_diA" bpmnElement="Flow_to_develop_vision">
-        <di:waypoint x="525" y="237" />
-        <di:waypoint x="590" y="237" />
+        <di:waypoint x="525" y="297" />
+        <di:waypoint x="590" y="297" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_raise_issues_diA" bpmnElement="Flow_to_raise_issues">
-        <di:waypoint x="500" y="262" />
-        <di:waypoint x="500" y="360" />
-        <di:waypoint x="590" y="360" />
+        <di:waypoint x="500" y="322" />
+        <di:waypoint x="500" y="420" />
+        <di:waypoint x="590" y="420" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_context_to_sync_gateway_di" bpmnElement="Flow_context_to_sync_gateway">
-        <di:waypoint x="690" y="122" />
-        <di:waypoint x="780" y="122" />
-        <di:waypoint x="780" y="204" />
+        <di:waypoint x="690" y="182" />
+        <di:waypoint x="780" y="182" />
+        <di:waypoint x="780" y="264" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_vision_to_sync_gateway_di" bpmnElement="Flow_vision_to_sync_gateway">
-        <di:waypoint x="690" y="234" />
-        <di:waypoint x="760" y="234" />
+        <di:waypoint x="690" y="294" />
+        <di:waypoint x="760" y="294" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_issues_to_sync_gateway_di" bpmnElement="Flow_issues_to_sync_gateway">
-        <di:waypoint x="690" y="360" />
-        <di:waypoint x="780" y="360" />
-        <di:waypoint x="780" y="254" />
+        <di:waypoint x="690" y="420" />
+        <di:waypoint x="780" y="420" />
+        <di:waypoint x="780" y="314" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_sync_to_enhance_issues_di" bpmnElement="Flow_sync_to_enhance_issues">
-        <di:waypoint x="805" y="229" />
-        <di:waypoint x="870" y="229" />
+        <di:waypoint x="805" y="289" />
+        <di:waypoint x="870" y="289" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_parallel_analysis_di" bpmnElement="Flow_to_parallel_analysis">
-        <di:waypoint x="970" y="229" />
-        <di:waypoint x="1035" y="229" />
+        <di:waypoint x="970" y="289" />
+        <di:waypoint x="1035" y="289" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_categorize_issues_diA" bpmnElement="Flow_to_categorize_issues">
-        <di:waypoint x="1085" y="229" />
-        <di:waypoint x="1118" y="229" />
-        <di:waypoint x="1118" y="200" />
-        <di:waypoint x="1150" y="200" />
+        <di:waypoint x="1060" y="264" />
+        <di:waypoint x="1060" y="239" />
+        <di:waypoint x="1150" y="239" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_develop_hierarchy_diA" bpmnElement="Flow_to_develop_hierarchy">
-        <di:waypoint x="1060" y="254" />
-        <di:waypoint x="1060" y="320" />
-        <di:waypoint x="1150" y="320" />
+        <di:waypoint x="1060" y="314" />
+        <di:waypoint x="1060" y="380" />
+        <di:waypoint x="1150" y="380" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_categorized_to_sync2_di" bpmnElement="Flow_categorized_to_sync2">
-        <di:waypoint x="1250" y="200" />
-        <di:waypoint x="1283" y="200" />
-        <di:waypoint x="1283" y="241" />
-        <di:waypoint x="1315" y="241" />
+        <di:waypoint x="1250" y="239" />
+        <di:waypoint x="1340" y="239" />
+        <di:waypoint x="1340" y="276" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_hierarchy_to_sync2_di" bpmnElement="Flow_hierarchy_to_sync2">
-        <di:waypoint x="1250" y="320" />
-        <di:waypoint x="1340" y="320" />
-        <di:waypoint x="1340" y="266" />
+        <di:waypoint x="1250" y="380" />
+        <di:waypoint x="1340" y="380" />
+        <di:waypoint x="1340" y="326" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_sync2_to_influence_diagram_di" bpmnElement="Flow_sync2_to_influence_diagram">
-        <di:waypoint x="1365" y="241" />
-        <di:waypoint x="1430" y="241" />
+        <di:waypoint x="1365" y="301" />
+        <di:waypoint x="1430" y="301" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_to_end_diA" bpmnElement="Flow_to_end">
-        <di:waypoint x="210" y="520" />
-        <di:waypoint x="210" y="562" />
+        <di:waypoint x="210" y="580" />
+        <di:waypoint x="210" y="622" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1waqxeq_di" bpmnElement="Flow_1waqxeq">
-        <di:waypoint x="1480" y="281" />
-        <di:waypoint x="1480" y="480" />
-        <di:waypoint x="260" y="480" />
+        <di:waypoint x="1480" y="341" />
+        <di:waypoint x="1480" y="540" />
+        <di:waypoint x="260" y="540" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1c5xchy_di" bpmnElement="TextAnnotation_1c5xchy">
+        <dc:Bounds x="1013" y="460" width="209.984756097561" height="54.587688734030195" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_0fpw69g_di" bpmnElement="TextAnnotation_0fpw69g">
+        <dc:Bounds x="190" y="170" width="160" height="40" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1e6eix7_di" bpmnElement="TextAnnotation_1e6eix7">
+        <dc:Bounds x="420" y="30" width="99.99156545209178" height="55.330634278002705" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

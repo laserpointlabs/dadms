@@ -199,7 +199,31 @@ const SystemManager: React.FC = () => {
 
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-                    {error}
+                    <Typography variant="body1" gutterBottom>
+                        {error}
+                    </Typography>
+                    {error.includes('Failed to connect to backend') && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" gutterBottom>
+                                <strong>Backend is down!</strong> Use the terminal to manage servers:
+                            </Typography>
+                            <Box sx={{
+                                fontFamily: 'monospace',
+                                fontSize: '0.875rem',
+                                bgcolor: 'rgba(0,0,0,0.1)',
+                                p: 1,
+                                borderRadius: 1,
+                                mt: 1
+                            }}>
+                                <div>cd /home/jdehart/dadm/ui</div>
+                                <div>./manage-backend.sh start</div>
+                                <div># Or use: npm run backend:start</div>
+                            </Box>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                                Available commands: start, stop, restart, status, logs, monitor
+                            </Typography>
+                        </Box>
+                    )}
                 </Alert>
             )}
 
