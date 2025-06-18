@@ -73,6 +73,29 @@ app.get('/api/cli/commands', (req, res) => {
     ]);
 });
 
+// Process definitions endpoint
+app.get('/api/process/definitions', async (req, res) => {
+    try {
+        console.log('Fetching process definitions via DADM CLI...');
+
+        const result = await executeCommand('dadm', ['--list']);
+        const processDefinitions = parseProcessDefinitions(result.output);
+
+        res.json({
+            success: true,
+            data: processDefinitions,
+            raw_output: result.output
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch process definitions:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Analysis API endpoints
 app.get('/api/analysis/list', async (req, res) => {
     try {
@@ -139,6 +162,79 @@ app.get('/api/analysis/:id', async (req, res) => {
     }
 });
 
+// Helper function to parse DADM process definitions output
+function parseProcessDefinitions(output) {
+    const definitions = [];
+    let parsingDefinitions = false;
+
+    for (const line of output) {
+        if (line.includes('PROCESS DEFINITIONS ON CAMUNDA SERVER')) {
+            parsingDefinitions = true;
+            continue;
+        }
+
+        if (parsingDefinitions && line.includes('---')) {
+            continue; // Skip header separator
+        }
+
+        if (parsingDefinitions && line.trim() && !line.includes('Found') && !line.includes('Name') && !line.includes('Key')) {
+            // Parse process definition line
+            // Format: Name    Key    Version   ID
+            const parts = line.trim().split(/\s{2,}/); // Split on multiple spaces
+            if (parts.length >= 4) {
+                definitions.push({
+                    name: parts[0]?.trim() || '',
+                    key: parts[1]?.trim() || '',
+                    version: parts[2]?.trim() || '',
+                    id: parts[3]?.trim() || ''
+                });
+            }
+        }
+    }
+
+    return definitions;
+}
+
+// Helper function to infer process name from task names
+function inferProcessName(taskNames) {
+    const taskSet = new Set(taskNames.map(name => name.toLowerCase()));
+
+    // Check for OpenAI Decision Process tasks
+    const openaiDecisionTasks = [
+        'finalizdecisionframetask',
+        'developinfluencediagramtask',
+        'developdecisionhierarchytask',
+        'categorizeissuestask',
+        'enhanceissuestask',
+        'raiseissuestask',
+        'developvisiontask',
+        'setdecisioncontexttask',
+        'identifystakeholderstask'
+    ];
+
+    if (openaiDecisionTasks.some(task =>
+        Array.from(taskSet).some(userTask => userTask.includes(task.slice(0, -4)))
+    )) {
+        return 'OpenAI Decision Process';
+    }
+
+    // Check for other known process patterns
+    if (Array.from(taskSet).some(task => task.includes('echo'))) {
+        return 'Echo Test Process';
+    }
+
+    if (Array.from(taskSet).some(task => task.includes('adder'))) {
+        return 'Simple Adder Process';
+    }
+
+    if (Array.from(taskSet).some(task => task.includes('invoice'))) {
+        return 'Invoice Receipt';
+    }
+
+    // Default fallback
+    return 'Unknown Process';
+}
+
 // Helper function to parse DADM analysis list output into structured data
 function parseAnalysisListOutput(output) {
     const analyses = [];
@@ -198,6 +294,25 @@ function parseAnalysisListOutput(output) {
     if (currentAnalysis) {
         analyses.push(currentAnalysis);
     }
+
+    // Group by process ID and infer process names
+    const processTasks = {};
+    analyses.forEach(analysis => {
+        const processId = analysis.metadata.process_id;
+        if (!processTasks[processId]) {
+            processTasks[processId] = [];
+        }
+        if (analysis.metadata.task_name) {
+            processTasks[processId].push(analysis.metadata.task_name);
+        }
+    });
+
+    // Add inferred process names to each analysis
+    analyses.forEach(analysis => {
+        const processId = analysis.metadata.process_id;
+        const taskNames = processTasks[processId] || [];
+        analysis.metadata.process_name = inferProcessName(taskNames);
+    });
 
     return analyses;
 }
@@ -372,4 +487,5 @@ server.listen(PORT, () => {
     console.log(`  GET  http://localhost:${PORT}/api/cli/commands`);
     console.log(`  GET  http://localhost:${PORT}/api/analysis/list`);
     console.log(`  GET  http://localhost:${PORT}/api/analysis/:id`);
+    console.log(`  GET  http://localhost:${PORT}/api/process/definitions`);
 });
