@@ -19,9 +19,13 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
+    FormControl,
     Grid,
     IconButton,
+    InputLabel,
+    MenuItem,
     Paper,
+    Select,
     Table,
     TableBody,
     TableCell,
@@ -56,6 +60,10 @@ interface ProcessDefinition {
     deploymentId: string;
 }
 
+interface GroupedProcessDefinitions {
+    [key: string]: ProcessDefinition[];
+}
+
 interface ProcessDocumentation {
     processDefinitionId: string;
     processName: string;
@@ -70,7 +78,7 @@ interface ProcessCounts {
 
 const ProcessManager: React.FC = () => {
     const [processInstances, setProcessInstances] = useState<ProcessInstance[]>([]);
-    const [processDefinitions, setProcessDefinitions] = useState<ProcessDefinition[]>([]);
+    const [groupedProcessDefinitions, setGroupedProcessDefinitions] = useState<GroupedProcessDefinitions>({});
     const [counts, setCounts] = useState<ProcessCounts>({ active: 0, total: 0, completed: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -82,6 +90,7 @@ const ProcessManager: React.FC = () => {
     const [documentationDialogOpen, setDocumentationDialogOpen] = useState(false);
     const [selectedDocumentation, setSelectedDocumentation] = useState<ProcessDocumentation | null>(null);
     const [loadingDocumentation, setLoadingDocumentation] = useState(false);
+    const [selectedVersions, setSelectedVersions] = useState<{ [key: string]: string }>({});
 
     const fetchProcessInstances = useCallback(async () => {
         try {
@@ -103,11 +112,11 @@ const ProcessManager: React.FC = () => {
 
     const fetchProcessDefinitions = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/process/definitions/list');
+            const response = await fetch('http://localhost:8000/api/process/definitions/all-versions');
             const data = await response.json();
 
             if (data.success) {
-                setProcessDefinitions(data.data);
+                setGroupedProcessDefinitions(data.data);
             } else {
                 setError(data.error || 'Failed to fetch process definitions');
             }
@@ -190,7 +199,7 @@ const ProcessManager: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    processDefinitionKey: selectedDefinition.key,
+                    processDefinitionId: selectedDefinition.id,
                     variables
                 })
             });
@@ -311,7 +320,7 @@ const ProcessManager: React.FC = () => {
                                 Available Definitions
                             </Typography>
                             <Typography variant="h4" color="primary.main">
-                                {processDefinitions.length}
+                                {Object.keys(groupedProcessDefinitions).length}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -325,45 +334,67 @@ const ProcessManager: React.FC = () => {
                     Process Definitions
                 </Typography>
                 <Grid container spacing={2}>
-                    {processDefinitions.map((definition) => (
-                        <Grid item xs={12} sm={6} md={4} key={definition.id}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="subtitle1" noWrap>
-                                        {definition.name || definition.key}
-                                    </Typography>
-                                    <Typography variant="body2" color="textSecondary">
-                                        Version: {definition.version}
-                                    </Typography>
-                                    <Typography variant="body2" color="textSecondary">
-                                        Key: {definition.key}
-                                    </Typography>
-                                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                        <Button
-                                            size="small"
-                                            variant="contained"
-                                            startIcon={<PlayArrow />}
-                                            onClick={() => {
-                                                setSelectedDefinition(definition);
-                                                setStartDialogOpen(true);
-                                            }}
-                                        >
-                                            Start Process
-                                        </Button>
-                                        <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={() => fetchDocumentation(definition)}
-                                            disabled={loadingDocumentation}
-                                            title="View process documentation"
-                                        >
-                                            <Info />
-                                        </IconButton>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
+                    {Object.entries(groupedProcessDefinitions).map(([key, definitions]) => {
+                        const selectedVersion = selectedVersions[key] || definitions[0]?.id || '';
+                        const selectedDefinition = definitions.find(def => def.id === selectedVersion) || definitions[0];
+
+                        return (
+                            <Grid item xs={12} sm={6} md={4} key={key}>
+                                <Card variant="outlined">
+                                    <CardContent>
+                                        <Typography variant="subtitle1" noWrap>
+                                            {selectedDefinition?.name || key}
+                                        </Typography>
+                                        <Typography variant="body2" color="textSecondary">
+                                            Key: {key}
+                                        </Typography>
+                                        <Box sx={{ mt: 1, mb: 2 }}>
+                                            <FormControl size="small" fullWidth>
+                                                <InputLabel>Version</InputLabel>
+                                                <Select
+                                                    value={selectedVersion}
+                                                    label="Version"
+                                                    onChange={(e) => setSelectedVersions(prev => ({
+                                                        ...prev,
+                                                        [key]: e.target.value
+                                                    }))}
+                                                >
+                                                    {definitions.map((def) => (
+                                                        <MenuItem key={def.id} value={def.id}>
+                                                            v{def.version} {def.version === Math.max(...definitions.map(d => d.version)) && '(latest)'}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                startIcon={<PlayArrow />}
+                                                onClick={() => {
+                                                    setSelectedDefinition(selectedDefinition);
+                                                    setStartDialogOpen(true);
+                                                }}
+                                                disabled={!selectedDefinition}
+                                            >
+                                                Start Process
+                                            </Button>
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={() => selectedDefinition && fetchDocumentation(selectedDefinition)}
+                                                disabled={loadingDocumentation || !selectedDefinition}
+                                                title="View process documentation"
+                                            >
+                                                <Info />
+                                            </IconButton>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        );
+                    })}
                 </Grid>
             </Paper>
 
