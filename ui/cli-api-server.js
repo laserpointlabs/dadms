@@ -114,10 +114,13 @@ app.get('/api/analysis/list', async (req, res) => {
         // Parse the output to extract structured data
         const analyses = await parseAnalysisListOutput(result.output);
 
+        // Enrich with process definition details from Camunda
+        const enrichedAnalyses = await enrichAnalysisWithProcessDefinitions(analyses);
+
         res.json({
             success: true,
-            data: analyses,
-            total: analyses.length,
+            data: enrichedAnalyses,
+            total: enrichedAnalyses.length,
             raw_output: result.output
         });
 
@@ -140,7 +143,8 @@ app.get('/api/analysis/:id', async (req, res) => {
 
         // Parse and find the specific analysis
         const analyses = await parseAnalysisListOutput(result.output);
-        const analysis = analyses.find(a => a.analysis_id === id);
+        const enrichedAnalyses = await enrichAnalysisWithProcessDefinitions(analyses);
+        const analysis = enrichedAnalyses.find(a => a.analysis_id === id);
 
         if (!analysis) {
             return res.status(404).json({
@@ -392,19 +396,56 @@ app.post('/api/system/daemon/:action', async (req, res) => {
         const util = require('util');
         const execAsync = util.promisify(exec);
 
-        let command;
+        let result;
         switch (action) {
             case 'start':
-                command = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo "Daemon started with PID $!"';
+                const startCommand = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo $!';
+                result = await execAsync(startCommand);
                 break;
             case 'stop':
-                command = 'pkill -f "analysis_processing_daemon.py"';
+                // Use a simpler, more direct approach
+                try {
+                    const killResult = await execAsync('pkill -9 -f "analysis_processing_daemon.py"');
+                    // Wait a moment and verify
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    try {
+                        const checkResult = await execAsync('pgrep -f "analysis_processing_daemon.py"');
+                        if (checkResult.stdout.trim()) {
+                            result = { stdout: 'Daemon stop attempted but process may still be running', stderr: '' };
+                        } else {
+                            result = { stdout: 'Daemon stopped successfully', stderr: '' };
+                        }
+                    } catch (e) {
+                        result = { stdout: 'Daemon stopped successfully', stderr: '' };
+                    }
+                } catch (killError) {
+                    // Try to check if process was already stopped
+                    try {
+                        await execAsync('pgrep -f "analysis_processing_daemon.py"');
+                        result = { stdout: 'Failed to stop daemon process', stderr: killError.message };
+                    } catch (e) {
+                        result = { stdout: 'No daemon process found to stop', stderr: '' };
+                    }
+                }
                 break;
             case 'restart':
-                command = 'pkill -f "analysis_processing_daemon.py"; sleep 2; cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo "Daemon restarted with PID $!"';
+                // Stop first, then start
+                try {
+                    await execAsync('pkill -f "analysis_processing_daemon.py"');
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                } catch (e) {
+                    // Process might not be running, that's ok
+                }
+                const restartCommand = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-restart.log 2>&1 & echo $!';
+                result = await execAsync(restartCommand);
                 break;
             case 'status':
-                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py --status';
+                try {
+                    const statusResult = await execAsync('pgrep -f "analysis_processing_daemon.py"');
+                    result = { stdout: statusResult.stdout.trim() ? 'running' : 'stopped', stderr: '' };
+                } catch (e) {
+                    result = { stdout: 'stopped', stderr: '' };
+                }
                 break;
             default:
                 return res.status(400).json({
@@ -413,15 +454,13 @@ app.post('/api/system/daemon/:action', async (req, res) => {
                 });
         }
 
-        console.log(`Executing daemon command: ${command}`);
-        const { stdout, stderr } = await execAsync(command);
-
+        console.log(`Daemon ${action} completed successfully`);
         res.json({
             success: true,
             action,
             message: `Analysis daemon ${action} command executed successfully`,
-            output: stdout,
-            error: stderr || null
+            output: result.stdout || '',
+            error: result.stderr || null
         });
     } catch (error) {
         console.error(`Failed to ${req.params.action} analysis daemon:`, error);
@@ -464,371 +503,349 @@ app.get('/api/system/docker', async (req, res) => {
     }
 });
 
-// Helper function to parse DADM process definitions output
-function parseProcessDefinitions(output) {
-    const definitions = [];
-    let parsingDefinitions = false;
-
-    for (const line of output) {
-        if (line.includes('PROCESS DEFINITIONS ON CAMUNDA SERVER')) {
-            parsingDefinitions = true;
-            continue;
-        }
-
-        if (parsingDefinitions && line.includes('---')) {
-            continue; // Skip header separator
-        }
-
-        if (parsingDefinitions && line.trim() && !line.includes('Found') && !line.includes('Name') && !line.includes('Key')) {
-            // Parse process definition line
-            // Format: Name    Key    Version   ID
-            const parts = line.trim().split(/\s{2,}/); // Split on multiple spaces
-            if (parts.length >= 4) {
-                definitions.push({
-                    name: parts[0]?.trim() || '',
-                    key: parts[1]?.trim() || '',
-                    version: parts[2]?.trim() || '',
-                    id: parts[3]?.trim() || ''
-                });
-            }
-        }
-    }
-
-    return definitions;
-}
-
-// Helper function to infer process name from task names
-function inferProcessName(taskNames) {
-    const taskSet = new Set(taskNames.map(name => name.toLowerCase()));
-
-    // Check for OpenAI Decision Process tasks
-    const openaiDecisionTasks = [
-        'finalizdecisionframetask',
-        'developinfluencediagramtask',
-        'developdecisionhierarchytask',
-        'categorizeissuestask',
-        'enhanceissuestask',
-        'raiseissuestask',
-        'developvisiontask',
-        'setdecisioncontexttask',
-        'identifystakeholderstask'
-    ];
-
-    if (openaiDecisionTasks.some(task =>
-        Array.from(taskSet).some(userTask => userTask.includes(task.slice(0, -4)))
-    )) {
-        return 'OpenAI Decision Process';
-    }
-
-    // Check for other known process patterns
-    if (Array.from(taskSet).some(task => task.includes('echo'))) {
-        return 'Echo Test Process';
-    }
-
-    if (Array.from(taskSet).some(task => task.includes('adder'))) {
-        return 'Simple Adder Process';
-    }
-
-    if (Array.from(taskSet).some(task => task.includes('invoice'))) {
-        return 'Invoice Receipt';
-    }
-
-    // Default fallback
-    return 'Unknown Process';
-}
-
-// Helper function to get process definition name from Camunda
-async function getProcessDefinitionName(processInstanceId) {
-    return new Promise((resolve) => {
-        try {
-            const url = `http://localhost:8080/engine-rest/history/process-instance?processInstanceId=${processInstanceId}`;
-
-            http.get(url, (response) => {
-                let data = '';
-
-                response.on('data', (chunk) => {
-                    data += chunk;
-                });
-
-                response.on('end', () => {
-                    try {
-                        const jsonData = JSON.parse(data);
-                        if (jsonData && jsonData.length > 0) {
-                            resolve({
-                                name: jsonData[0].processDefinitionName || 'Unknown Process',
-                                key: jsonData[0].processDefinitionKey || '',
-                                version: jsonData[0].processDefinitionVersion || 1
-                            });
-                        } else {
-                            resolve(null);
-                        }
-                    } catch (parseError) {
-                        console.warn(`Error parsing process definition response for ${processInstanceId}:`, parseError.message);
-                        resolve(null);
-                    }
-                });
-            }).on('error', (error) => {
-                console.warn(`Error fetching process definition for ${processInstanceId}:`, error.message);
-                resolve(null);
-            });
-
-        } catch (error) {
-            console.warn(`Error setting up request for process definition ${processInstanceId}:`, error.message);
-            resolve(null);
-        }
-    });
-}
-
-// Helper function to parse DADM analysis list output into structured data
+// Helper function to parse analysis list output from DADM CLI
 async function parseAnalysisListOutput(output) {
-    const analyses = [];
-    let currentAnalysis = null;
+    try {
+        // First try to see if it's already JSON
+        if (output.trim().startsWith('[') || output.trim().startsWith('{')) {
+            return JSON.parse(output);
+        }
 
-    for (const line of output) {
-        if (line.startsWith('[') && line.includes('] Analysis ID:')) {
-            // Start of new analysis entry
-            if (currentAnalysis) {
-                analyses.push(currentAnalysis);
-            }
+        // Parse the detailed text output
+        const lines = output.split('\n').filter(line => line.trim());
+        const analyses = [];
+        let currentAnalysis = null;
 
-            const match = line.match(/\[(\d+)\] Analysis ID: (.+)/);
-            if (match) {
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            // Match analysis entries like "[1] Analysis ID: ca11ab83-8aed-4787-8375-d53e59545c7b"
+            const analysisMatch = trimmedLine.match(/^\[(\d+)\]\s*Analysis ID:\s*([a-f0-9-]{36})/);
+            if (analysisMatch) {
+                // Save previous analysis if exists
+                if (currentAnalysis) {
+                    analyses.push(currentAnalysis);
+                }
+
+                // Start new analysis
                 currentAnalysis = {
-                    analysis_id: match[2],
-                    metadata: {
-                        analysis_id: match[2],
-                        task_name: '',
-                        service: '',
-                        created_at: '',
-                        status: '',
-                        thread_id: '',
-                        process_id: '',
-                        tags: [],
-                        openai_thread: '',
-                        openai_assistant: ''
-                    }
+                    analysis_id: analysisMatch[2],
+                    order: parseInt(analysisMatch[1]),
+                    task: '',
+                    service: '',
+                    created_at: '',
+                    status: 'unknown',
+                    thread_id: '',
+                    process_id: '',
+                    tags: [],
+                    openai_thread: '',
+                    openai_assistant: ''
                 };
             }
-        } else if (currentAnalysis && line.trim()) {
-            // Parse analysis details
-            if (line.includes('Task:')) {
-                currentAnalysis.metadata.task_name = line.split('Task:')[1]?.trim() || '';
-            } else if (line.includes('Service:')) {
-                currentAnalysis.metadata.service = line.split('Service:')[1]?.trim() || '';
-            } else if (line.includes('Created:')) {
-                currentAnalysis.metadata.created_at = line.split('Created:')[1]?.trim() || '';
-            } else if (line.includes('Status:')) {
-                currentAnalysis.metadata.status = line.split('Status:')[1]?.trim() || '';
-            } else if (line.includes('Thread ID:')) {
-                currentAnalysis.metadata.thread_id = line.split('Thread ID:')[1]?.trim() || '';
-            } else if (line.includes('Process ID:')) {
-                currentAnalysis.metadata.process_id = line.split('Process ID:')[1]?.trim() || '';
-            } else if (line.includes('Tags:')) {
-                const tagsStr = line.split('Tags:')[1]?.trim() || '';
-                currentAnalysis.metadata.tags = tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag);
-            } else if (line.includes('OpenAI Thread:')) {
-                currentAnalysis.metadata.openai_thread = line.split('OpenAI Thread:')[1]?.trim() || '';
-            } else if (line.includes('OpenAI Assistant:')) {
-                currentAnalysis.metadata.openai_assistant = line.split('OpenAI Assistant:')[1]?.trim() || '';
+            // Parse subsequent fields
+            else if (currentAnalysis && trimmedLine.includes(':')) {
+                const parts = trimmedLine.split(':');
+                const key = parts[0].trim();
+                const value = parts.slice(1).join(':').trim();
+
+                switch (key) {
+                    case 'Task':
+                        currentAnalysis.task = value;
+                        break;
+                    case 'Service':
+                        currentAnalysis.service = value;
+                        break;
+                    case 'Created':
+                        currentAnalysis.created_at = value;
+                        break;
+                    case 'Status':
+                        currentAnalysis.status = value;
+                        break;
+                    case 'Thread ID':
+                        currentAnalysis.thread_id = value;
+                        break;
+                    case 'Process ID':
+                        currentAnalysis.process_id = value;
+                        break;
+                    case 'Tags':
+                        currentAnalysis.tags = value.split(',').map(tag => tag.trim());
+                        break;
+                    case 'OpenAI Thread':
+                        currentAnalysis.openai_thread = value;
+                        break;
+                    case 'OpenAI Assistant':
+                        currentAnalysis.openai_assistant = value;
+                        break;
+                }
             }
         }
-    }
 
-    // Don't forget the last analysis
-    if (currentAnalysis) {
-        analyses.push(currentAnalysis);
-    }
-
-    // Get real process definition names from Camunda for each unique process ID
-    const uniqueProcessIds = [...new Set(analyses.map(a => a.metadata.process_id).filter(id => id))];
-    const processDefinitions = {};
-
-    for (const processId of uniqueProcessIds) {
-        const definition = await getProcessDefinitionName(processId);
-        if (definition) {
-            processDefinitions[processId] = definition;
+        // Add the last analysis
+        if (currentAnalysis) {
+            analyses.push(currentAnalysis);
         }
-    }
 
-    // Add real process names to each analysis
-    analyses.forEach(analysis => {
-        const processId = analysis.metadata.process_id;
-        const definition = processDefinitions[processId];
-        if (definition) {
-            analysis.metadata.process_name = `${definition.name} (v${definition.version})`;
-            analysis.metadata.process_definition_key = definition.key;
-            analysis.metadata.process_definition_version = definition.version;
+        // If no structured data found, try to get from database directly
+        if (analyses.length === 0) {
+            return await getAnalysisFromDatabase();
+        }
+
+        return analyses;
+    } catch (error) {
+        console.error('Error parsing analysis output:', error);
+        // Fallback to database query
+        return await getAnalysisFromDatabase();
+    }
+}
+
+// Helper function to get analysis data from SQLite database
+async function getAnalysisFromDatabase() {
+    return new Promise((resolve, reject) => {
+        const sqlite3 = require('sqlite3').verbose();
+        const path = require('path');
+        const dbPath = path.join('/home/jdehart/dadm/data/analysis_storage', 'analysis_data.db');
+
+        // Check if database exists
+        const fs = require('fs');
+        if (!fs.existsSync(dbPath)) {
+            console.log('Analysis database not found, returning empty results');
+            resolve([]);
+            return;
+        }
+
+        const db = new sqlite3.Database(dbPath);
+
+        db.all(`
+            SELECT 
+                am.analysis_id,
+                am.process_instance_id,
+                am.status,
+                am.created_at,
+                am.completed_at,
+                ad.data_type,
+                ad.data_content
+            FROM analysis_metadata am
+            LEFT JOIN analysis_data ad ON am.analysis_id = ad.analysis_id
+            ORDER BY am.created_at DESC
+            LIMIT 50
+        `, [], (err, rows) => {
+            db.close();
+
+            if (err) {
+                console.error('Database query error:', err);
+                resolve([]);
+                return;
+            }
+
+            // Group by analysis_id and structure the data
+            const analysisMap = new Map();
+
+            rows.forEach(row => {
+                if (!analysisMap.has(row.analysis_id)) {
+                    analysisMap.set(row.analysis_id, {
+                        analysis_id: row.analysis_id,
+                        process_instance_id: row.process_instance_id,
+                        status: row.status,
+                        created_at: row.created_at,
+                        completed_at: row.completed_at,
+                        data: []
+                    });
+                }
+
+                if (row.data_type && row.data_content) {
+                    analysisMap.get(row.analysis_id).data.push({
+                        type: row.data_type,
+                        content: row.data_content
+                    });
+                }
+            });
+
+            resolve(Array.from(analysisMap.values()));
+        });
+    });
+}
+
+// Helper function to parse process definitions from DADM CLI output
+function parseProcessDefinitions(output) {
+    // This is a placeholder implementation
+    // You might need to adjust this based on the actual output format of 'dadm --list'
+    try {
+        const lines = output.split('\n').filter(line => line.trim());
+        return lines.map(line => ({
+            id: line.trim(),
+            name: line.trim(),
+            category: 'process'
+        }));
+    } catch (error) {
+        console.error('Failed to parse process definitions:', error);
+        return [];
+    }
+}
+
+// Helper function to execute shell commands
+async function executeCommand(command, args = []) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const { spawn } = require('child_process');
+
+        const child = spawn(command, args, {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: true
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', (code) => {
+            const executionTime = Date.now() - startTime;
+            resolve({
+                output: stdout,
+                stderr: stderr,
+                exitCode: code,
+                executionTime: executionTime
+            });
+        });
+
+        child.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
+
+// Auto-start analysis daemon on server startup
+async function autoStartDaemon() {
+    try {
+        console.log('🔍 Checking analysis daemon status...');
+
+        // Check if daemon is already running
+        const checkCommand = "pgrep -f 'analysis_processing_daemon.py'";
+        const checkResult = await executeCommand('bash', ['-c', checkCommand]);
+
+        if (checkResult.exitCode === 0) {
+            console.log('✅ Analysis daemon is already running');
+            return;
+        }
+
+        console.log('🚀 Starting analysis daemon...');
+
+        // Start the daemon using the same method as the API
+        const startCommand = `cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > logs/daemon-autostart.log 2>&1 & echo $!`;
+        const startResult = await executeCommand('bash', ['-c', startCommand]);
+
+        if (startResult.exitCode === 0 && startResult.output.trim()) {
+            const pid = startResult.output.trim();
+            console.log(`✅ Analysis daemon started successfully with PID: ${pid}`);
         } else {
-            analysis.metadata.process_name = 'Unknown Process';
+            console.log(`⚠️  Failed to start analysis daemon. Exit code: ${startResult.exitCode}`);
+            if (startResult.stderr) {
+                console.log(`   Error: ${startResult.stderr}`);
+            }
         }
-    });
 
-    return analyses;
+    } catch (error) {
+        console.log(`⚠️  Error checking/starting daemon: ${error.message}`);
+    }
 }
 
-// Command execution function
-function executeCommand(command, args = []) {
-    return new Promise((resolve, reject) => {
-        const startTime = Date.now();
-        const output = [];
-        const stderr = [];
+// Helper function to get process definition details from Camunda
+async function getProcessDefinitionFromCamunda(processInstanceId) {
+    try {
+        // First, try to get the active process instance
+        let instanceResponse = await fetch(`http://localhost:8080/engine-rest/process-instance/${processInstanceId}`);
+        let processInstance = null;
 
-        // Build the full command
-        const fullCommand = `${command} ${args.join(' ')}`;
-        console.log(`Executing command: ${fullCommand}`);
+        if (instanceResponse.ok) {
+            processInstance = await instanceResponse.json();
+        } else {
+            // If not found, check the history
+            const historyResponse = await fetch(`http://localhost:8080/engine-rest/history/process-instance?processInstanceId=${processInstanceId}`);
+            if (historyResponse.ok) {
+                const historyInstances = await historyResponse.json();
+                if (historyInstances && historyInstances.length > 0) {
+                    const historyInstance = historyInstances[0];
+                    // For history instances, we already have the process definition details
+                    return {
+                        name: historyInstance.processDefinitionName || historyInstance.processDefinitionKey || 'Unknown Process',
+                        version: historyInstance.processDefinitionVersion || 1,
+                        key: historyInstance.processDefinitionKey || processInstanceId,
+                        deploymentId: null
+                    };
+                }
+            }
+        }
 
-        // Execute the actual command using child_process
-        const childProcess = spawn(command, args, {
-            cwd: '/home/jdehart/dadm', // Set working directory to DADM root
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false,
-            env: { ...process.env, PATH: process.env.PATH }
-        });
+        // If we have an active instance, get the process definition
+        if (processInstance) {
+            const processDefinitionId = processInstance.definitionId;
+            const defResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/${processDefinitionId}`);
+            if (defResponse.ok) {
+                const processDefinition = await defResponse.json();
+                return {
+                    name: processDefinition.name || processDefinition.key || 'Unknown Process',
+                    version: processDefinition.version || 1,
+                    key: processDefinition.key || processInstanceId,
+                    deploymentId: processDefinition.deploymentId
+                };
+            }
+        }
+    } catch (error) {
+        console.log(`Could not fetch process definition for instance ${processInstanceId}:`, error.message);
+    }
 
-        childProcess.stdout.on('data', (data) => {
-            const lines = data.toString().split('\n').filter(line => line.trim());
-            output.push(...lines);
-            console.log('STDOUT:', data.toString());
-        });
-
-        childProcess.stderr.on('data', (data) => {
-            const lines = data.toString().split('\n').filter(line => line.trim());
-            stderr.push(...lines);
-            console.log('STDERR:', data.toString());
-        });
-
-        childProcess.on('close', (code) => {
-            const executionTime = Date.now() - startTime;
-            console.log(`Command finished with exit code: ${code}`);
-
-            resolve({
-                output: output.length > 0 ? output : ['Command completed successfully'],
-                stderr,
-                exitCode: code,
-                executionTime
-            });
-        });
-
-        childProcess.on('error', (error) => {
-            console.error(`Command execution failed: ${error.message}`);
-            reject(error);
-        });
-
-        // Set a timeout to prevent hanging commands
-        setTimeout(() => {
-            childProcess.kill('SIGTERM');
-            reject(new Error('Command execution timeout'));
-        }, 30000); // 30 second timeout
-    });
+    // Fallback
+    return {
+        name: 'Unknown Process',
+        version: 1,
+        key: processInstanceId,
+        deploymentId: null
+    };
 }
 
-// WebSocket command execution with streaming
-function executeCommandWithStreaming(command, args = [], executionId, socket) {
-    return new Promise((resolve, reject) => {
-        const startTime = Date.now();
-        const output = [];
-        const stderr = [];
+// Helper function to enrich analysis data with process definition details
+async function enrichAnalysisWithProcessDefinitions(analyses) {
+    const enrichedAnalyses = [];
 
-        console.log(`Streaming command: ${command} ${args.join(' ')}`);
-
-        const childProcess = spawn(command, args, {
-            cwd: '/home/jdehart/dadm',
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false,
-            env: { ...process.env, PATH: process.env.PATH }
-        });
-
-        childProcess.stdout.on('data', (data) => {
-            const lines = data.toString().split('\n').filter(line => line.trim());
-            output.push(...lines);
-
-            // Send real-time output to client
-            socket.emit('command_output', {
-                executionId,
-                output: lines
+    for (const analysis of analyses) {
+        if (analysis.process_id) {
+            const processDefinition = await getProcessDefinitionFromCamunda(analysis.process_id);
+            enrichedAnalyses.push({
+                ...analysis,
+                process_definition: processDefinition
             });
-        });
-
-        childProcess.stderr.on('data', (data) => {
-            const lines = data.toString().split('\n').filter(line => line.trim());
-            stderr.push(...lines);
-
-            // Send real-time stderr to client
-            socket.emit('command_output', {
-                executionId,
-                output: lines,
-                isError: true
-            });
-        });
-
-        childProcess.on('close', (code) => {
-            const executionTime = Date.now() - startTime;
-
-            // Send completion notification
-            socket.emit('command_completed', {
-                executionId,
-                success: code === 0,
-                exitCode: code,
-                executionTime
-            });
-
-            resolve({
-                output,
-                stderr,
-                exitCode: code,
-                executionTime
-            });
-        });
-
-        childProcess.on('error', (error) => {
-            console.error(`Streaming command failed: ${error.message}`);
-
-            socket.emit('command_completed', {
-                executionId,
-                success: false,
-                error: error.message
-            });
-
-            reject(error);
-        });
-
-        // Timeout handling
-        setTimeout(() => {
-            childProcess.kill('SIGTERM');
-            reject(new Error('Command execution timeout'));
-        }, 30000);
-    });
-}
-
-// WebSocket handling
-io.on('connection', (socket) => {
-    console.log('Client connected to WebSocket');
-
-    socket.on('execute_command_with_id', async (data) => {
-        const { executionId, command, args = [] } = data;
-
-        try {
-            await executeCommandWithStreaming(command, args, executionId, socket);
-        } catch (error) {
-            console.error('WebSocket command execution failed:', error);
-            socket.emit('command_completed', {
-                executionId,
-                success: false,
-                error: error.message
+        } else {
+            enrichedAnalyses.push({
+                ...analysis,
+                process_definition: {
+                    name: 'Unknown Process',
+                    version: 1,
+                    key: analysis.process_id || 'unknown',
+                    deploymentId: null
+                }
             });
         }
-    });
+    }
 
-    socket.on('disconnect', () => {
-        console.log('Client disconnected from WebSocket');
-    });
-});
+    return enrichedAnalyses;
+}
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`🚀 DADM CLI API Server running on port ${PORT}`);
     console.log(`🔌 WebSocket server running on port ${PORT}`);
     console.log(`📡 Accepting connections from http://localhost:3000`);
+    console.log('');
+
+    // Auto-start the analysis daemon
+    await autoStartDaemon();
+
     console.log('');
     console.log('Available endpoints:');
     console.log(`  GET    http://localhost:${PORT}/api/health`);
