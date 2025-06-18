@@ -79,7 +79,7 @@ app.get('/api/process/definitions', async (req, res) => {
     try {
         console.log('Fetching process definitions via DADM CLI...');
 
-        const result = await executeCommand('dadm', ['--list']);
+        const result = await executeCommand('dadm', ['--list'], '/home/jdehart/dadm');
         const processDefinitions = parseProcessDefinitions(result.output);
 
         res.json({
@@ -90,6 +90,317 @@ app.get('/api/process/definitions', async (req, res) => {
 
     } catch (error) {
         console.error('Failed to fetch process definitions:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Process management endpoints
+
+// Get all process instances (active and history)
+app.get('/api/process/instances', async (req, res) => {
+    try {
+        console.log('Fetching all process instances...');
+
+        // Get active process instances
+        const activeResponse = await fetch('http://localhost:8080/engine-rest/process-instance');
+        let activeInstances = [];
+        if (activeResponse.ok) {
+            activeInstances = await activeResponse.json();
+        }
+
+        // Get process instance history
+        const historyResponse = await fetch('http://localhost:8080/engine-rest/history/process-instance');
+        let historyInstances = [];
+        if (historyResponse.ok) {
+            historyInstances = await historyResponse.json();
+        }
+
+        // Enrich active instances with additional data
+        const enrichedActiveInstances = [];
+        for (const instance of activeInstances) {
+            try {
+                // Get process definition details
+                const defResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/${instance.definitionId}`);
+                let processDefinition = {};
+                if (defResponse.ok) {
+                    processDefinition = await defResponse.json();
+                }
+
+                // Try to get start time from history (it might be there even for active processes)
+                const historyDetailResponse = await fetch(`http://localhost:8080/engine-rest/history/process-instance?processInstanceId=${instance.id}`);
+                let historyDetail = {};
+                if (historyDetailResponse.ok) {
+                    const historyDetails = await historyDetailResponse.json();
+                    if (historyDetails.length > 0) {
+                        historyDetail = historyDetails[0];
+                    }
+                }
+
+                enrichedActiveInstances.push({
+                    ...instance,
+                    processDefinitionKey: processDefinition.key || instance.definitionId?.split(':')[0] || 'Unknown',
+                    processDefinitionName: processDefinition.name || processDefinition.key || 'Unknown Process',
+                    processDefinitionVersion: processDefinition.version || 1,
+                    startTime: historyDetail.startTime || new Date().toISOString(),
+                    status: 'active',
+                    isActive: true
+                });
+            } catch (err) {
+                console.log(`Error enriching active instance ${instance.id}:`, err.message);
+                // Fallback with minimal data
+                enrichedActiveInstances.push({
+                    ...instance,
+                    processDefinitionKey: instance.definitionId?.split(':')[0] || 'Unknown',
+                    processDefinitionName: 'Unknown Process',
+                    processDefinitionVersion: 1,
+                    startTime: new Date().toISOString(),
+                    status: 'active',
+                    isActive: true
+                });
+            }
+        }
+
+        // Combine and enrich data
+        const allInstances = [
+            ...enrichedActiveInstances,
+            ...historyInstances
+                .filter(hist => !activeInstances.find(active => active.id === hist.id))
+                .map(instance => ({
+                    ...instance,
+                    status: instance.state || 'completed',
+                    isActive: false
+                }))
+        ];
+
+        // Sort by start time (newest first)
+        allInstances.sort((a, b) => {
+            const aTime = new Date(a.startTime || 0);
+            const bTime = new Date(b.startTime || 0);
+            return bTime - aTime;
+        });
+
+        res.json({
+            success: true,
+            data: allInstances,
+            counts: {
+                active: enrichedActiveInstances.length,
+                total: allInstances.length,
+                completed: historyInstances.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch process instances:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get process definition list
+app.get('/api/process/definitions/list', async (req, res) => {
+    try {
+        console.log('Fetching process definitions list...');
+
+        const response = await fetch('http://localhost:8080/engine-rest/process-definition');
+        if (!response.ok) {
+            throw new Error(`Camunda API error: ${response.status}`);
+        }
+
+        const definitions = await response.json();
+
+        // Group by key and get latest version of each
+        const latestDefinitions = {};
+        definitions.forEach(def => {
+            if (!latestDefinitions[def.key] || def.version > latestDefinitions[def.key].version) {
+                latestDefinitions[def.key] = def;
+            }
+        });
+
+        res.json({
+            success: true,
+            data: Object.values(latestDefinitions),
+            total: Object.keys(latestDefinitions).length
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch process definitions:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Kill/delete a process instance
+app.delete('/api/process/instances/:instanceId', async (req, res) => {
+    try {
+        const { instanceId } = req.params;
+        const { reason = 'Terminated via DADM UI' } = req.body;
+
+        console.log(`Attempting to delete process instance: ${instanceId}`);
+
+        // First try to delete an active process instance
+        const deleteResponse = await fetch(`http://localhost:8080/engine-rest/process-instance/${instanceId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                reason: reason,
+                skipCustomListeners: false,
+                skipIoMappings: false
+            })
+        });
+
+        if (deleteResponse.ok) {
+            res.json({
+                success: true,
+                message: `Process instance ${instanceId} deleted successfully`,
+                instanceId: instanceId
+            });
+        } else if (deleteResponse.status === 404) {
+            res.status(404).json({
+                success: false,
+                error: `Process instance ${instanceId} not found or already completed`
+            });
+        } else {
+            const errorData = await deleteResponse.text();
+            res.status(deleteResponse.status).json({
+                success: false,
+                error: `Failed to delete process instance: ${errorData}`
+            });
+        }
+
+    } catch (error) {
+        console.error('Failed to delete process instance:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Start a new process instance - analysis daemon will handle analysis data writing
+app.post('/api/process/instances/start', async (req, res) => {
+    try {
+        const { processDefinitionKey, variables = {} } = req.body;
+
+        if (!processDefinitionKey) {
+            return res.status(400).json({
+                success: false,
+                error: 'Process definition key is required'
+            });
+        }
+
+        console.log(`Starting process instance: ${processDefinitionKey}`);
+
+        // Get the process definition details
+        const processDefResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}`);
+        if (!processDefResponse.ok) {
+            throw new Error(`Process definition not found: ${processDefinitionKey}`);
+        }
+
+        const processDef = await processDefResponse.json();
+        const processName = processDef.name || processDefinitionKey;
+
+        // Prepare variables in Camunda format
+        const camundaVariables = {};
+        if (Object.keys(variables).length > 0) {
+            Object.entries(variables).forEach(([key, value]) => {
+                camundaVariables[key] = { value: value };
+            });
+        }
+
+        // Start the process instance via Camunda REST API
+        const startResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/key/${processDefinitionKey}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                variables: camundaVariables
+            })
+        });
+
+        if (!startResponse.ok) {
+            const errorData = await startResponse.text();
+            throw new Error(`Failed to start process instance: ${errorData}`);
+        }
+
+        const processInstance = await startResponse.json();
+        const processInstanceId = processInstance.id;
+
+        console.log(`✅ Started process instance: ${processInstanceId}`);
+        console.log(`📋 Variables:`, variables);
+        console.log(`🔄 Analysis daemon will automatically process external tasks and write analysis data`);
+
+        // Return immediate response - the analysis daemon handles task processing and data writing
+        res.json({
+            success: true,
+            data: {
+                processDefinitionKey,
+                processName,
+                processInstanceId,
+                variables,
+                status: 'started',
+                analysisInfo: 'Process started - analysis daemon will process tasks and write analysis data'
+            },
+            message: `Process ${processName} started successfully`,
+            executionSummary: 'Process instance created and submitted for background processing by analysis daemon'
+        });
+
+    } catch (error) {
+        console.error('Failed to start process via DADM CLI:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get process instance details
+app.get('/api/process/instances/:instanceId', async (req, res) => {
+    try {
+        const { instanceId } = req.params;
+
+        // Try active instances first
+        let response = await fetch(`http://localhost:8080/engine-rest/process-instance/${instanceId}`);
+        let processInstance = null;
+        let isActive = true;
+
+        if (response.ok) {
+            processInstance = await response.json();
+        } else {
+            // Check history
+            response = await fetch(`http://localhost:8080/engine-rest/history/process-instance/${instanceId}`);
+            if (response.ok) {
+                processInstance = await response.json();
+                isActive = false;
+            }
+        }
+
+        if (!processInstance) {
+            return res.status(404).json({
+                success: false,
+                error: `Process instance ${instanceId} not found`
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                ...processInstance,
+                isActive
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch process instance details:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -109,7 +420,7 @@ app.get('/api/analysis/list', async (req, res) => {
         if (limit) args.push('--limit', limit.toString());
         if (detailed === 'true') args.push('--detailed');
 
-        const result = await executeCommand('dadm', args);
+        const result = await executeCommand('dadm', args, '/home/jdehart/dadm');
 
         // Parse the output to extract structured data
         const analyses = await parseAnalysisListOutput(result.output);
@@ -141,7 +452,7 @@ app.get('/api/analysis/:id', async (req, res) => {
         console.log(`Fetching analysis details for ID: ${id}`);
 
         // Use DADM CLI to get specific analysis data
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
 
         // Parse and find the specific analysis
         const analyses = await parseAnalysisListOutput(result.output);
@@ -176,7 +487,7 @@ app.get('/api/analysis/threads', async (req, res) => {
         console.log('Fetching unique OpenAI thread combinations...');
 
         // Get analysis data first
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
         const analyses = await parseAnalysisListOutput(result.output);
 
         // Enrich with process definitions like we do for analysis list
@@ -316,7 +627,7 @@ app.get('/api/analysis/:id', async (req, res) => {
         console.log(`Fetching analysis details for ID: ${id}`);
 
         // Use DADM CLI to get specific analysis data
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed']);
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
 
         // Parse and find the specific analysis
         const analyses = await parseAnalysisListOutput(result.output);
@@ -680,6 +991,47 @@ app.get('/api/system/docker', async (req, res) => {
     }
 });
 
+// Special command execution function for shell commands that need proper quoting
+async function executeCommandWithShell(command, args = []) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const { exec } = require('child_process');
+
+        // Build the full command string with proper shell escaping
+        const fullCommand = `${command} ${args.join(' ')}`;
+        console.log(`Executing shell command: ${fullCommand}`);
+
+        const child = exec(fullCommand, {
+            cwd: '/home/jdehart/dadm'
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', (code) => {
+            const executionTime = Date.now() - startTime;
+            resolve({
+                output: stdout,
+                stderr: stderr,
+                exitCode: code,
+                executionTime: executionTime
+            });
+        });
+
+        child.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
+
 // Helper function to parse analysis list output from DADM CLI
 async function parseAnalysisListOutput(output) {
     try {
@@ -860,15 +1212,21 @@ function parseProcessDefinitions(output) {
 }
 
 // Helper function to execute shell commands
-async function executeCommand(command, args = []) {
+async function executeCommand(command, args = [], cwd = null) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
         const { spawn } = require('child_process');
 
-        const child = spawn(command, args, {
+        const options = {
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: true
-        });
+        };
+
+        if (cwd) {
+            options.cwd = cwd;
+        }
+
+        const child = spawn(command, args, options);
 
         let stdout = '';
         let stderr = '';
@@ -1032,10 +1390,17 @@ server.listen(PORT, async () => {
     console.log(`  GET    http://localhost:${PORT}/api/analysis/:id`);
     console.log(`  DELETE http://localhost:${PORT}/api/analysis/process/:processInstanceId`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/instances/:instanceId`);
+    console.log(`  POST   http://localhost:${PORT}/api/process/instances/start`);
+    console.log(`  DELETE http://localhost:${PORT}/api/process/instances/:instanceId`);
     console.log(`  GET    http://localhost:${PORT}/api/system/status`);
     console.log(`  POST   http://localhost:${PORT}/api/system/backend/:action`);
     console.log(`  POST   http://localhost:${PORT}/api/system/daemon/:action`);
     console.log(`  GET    http://localhost:${PORT}/api/system/docker`);
     console.log(`  GET    http://localhost:${PORT}/api/analysis/threads`);
     console.log(`  GET    http://localhost:${PORT}/api/analysis/threads/:threadId/context`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
 });
