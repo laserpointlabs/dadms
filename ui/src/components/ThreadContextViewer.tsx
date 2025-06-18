@@ -13,7 +13,6 @@ import {
     Chip,
     CircularProgress,
     Divider,
-    Grid,
     IconButton,
     InputAdornment,
     List,
@@ -153,8 +152,31 @@ const ThreadContextViewer: React.FC = () => {
             overflow: 'hidden',
             '& .MuiGrid-container': {
                 maxWidth: '100%'
+            },
+            '& *': {
+                boxSizing: 'border-box'
             }
         }}>
+            <style>
+                {`
+                .thread-context-viewer * {
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    max-width: 100% !important;
+                }
+                .thread-context-viewer pre {
+                    white-space: pre-wrap !important;
+                    word-wrap: break-word !important;
+                    overflow-x: auto !important;
+                    max-width: 100% !important;
+                }
+                .thread-context-viewer code {
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    white-space: pre-wrap !important;
+                }
+                `}
+            </style>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" component="h1">
                     Thread Context Viewer
@@ -172,25 +194,24 @@ const ThreadContextViewer: React.FC = () => {
                 </Alert>
             )}
 
-            <Grid container spacing={3} sx={{
+            <Box sx={{
+                display: 'flex',
+                gap: 3,
+                height: '70vh',
                 maxWidth: '100%',
-                margin: 0,
-                width: '100%',
-                '& .MuiGrid-item': {
-                    maxWidth: 'none'
-                }
+                overflow: 'hidden'
             }}>
                 {/* Thread List */}
-                <Grid item xs={12} md={4} sx={{
-                    maxWidth: { md: '33.333333%' },
-                    flexBasis: { md: '33.333333%' },
-                    width: { md: '33.333333%' }
+                <Box sx={{
+                    width: '400px',
+                    minWidth: '400px',
+                    maxWidth: '400px',
+                    flexShrink: 0
                 }}>
                     <Paper sx={{
                         p: 2,
-                        height: '70vh',
+                        height: '100%',
                         overflow: 'auto',
-                        maxWidth: '100%',
                         width: '100%'
                     }}>
                         <Box sx={{ mb: 2 }}>
@@ -302,25 +323,36 @@ const ThreadContextViewer: React.FC = () => {
                             </List>
                         )}
                     </Paper>
-                </Grid>
+                </Box>
 
                 {/* Thread Details */}
-                <Grid item xs={12} md={8} sx={{
-                    maxWidth: { md: '66.666667%' },
-                    flexBasis: { md: '66.666667%' },
-                    width: { md: '66.666667%' }
+                <Box sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    maxWidth: 'calc(100vw - 450px)', // Force max width based on viewport
+                    width: '100%'
                 }}>
                     {loading && selectedThread ? (
-                        <Paper sx={{ p: 3, height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Paper sx={{ p: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <CircularProgress />
                         </Paper>
                     ) : selectedThread ? (
                         <Paper sx={{
                             p: 0,
-                            height: '70vh',
+                            height: '100%',
                             overflow: 'auto',
+                            width: '100%',
                             maxWidth: '100%',
-                            width: '100%'
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            hyphens: 'auto',
+                            '& *': {
+                                maxWidth: '100% !important',
+                                wordWrap: 'break-word !important',
+                                overflowWrap: 'break-word !important',
+                                whiteSpace: 'pre-wrap'
+                            }
                         }}>
                             {/* Thread Header */}
                             <Box sx={{
@@ -328,57 +360,67 @@ const ThreadContextViewer: React.FC = () => {
                                 borderBottom: 1,
                                 borderColor: 'divider',
                                 bgcolor: 'grey.50',
-                                maxWidth: '100%'
+                                maxWidth: '100%',
+                                overflow: 'hidden'
                             }}>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
-                                        <Card>
-                                            <CardHeader
-                                                title="Thread Information"
-                                                titleTypographyProps={{ variant: 'h6' }}
-                                                avatar={<DataObject />}
-                                            />
-                                            <CardContent>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Card sx={{ maxWidth: '100%', overflow: 'hidden' }}>
+                                        <CardHeader
+                                            title="Thread Information"
+                                            titleTypographyProps={{ variant: 'h6' }}
+                                            avatar={<DataObject />}
+                                        />
+                                        <CardContent>
+                                            <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                                                <strong>Thread ID:</strong> {selectedThread.thread_id}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                <strong>Created:</strong> {selectedThread.created_at ? new Date(selectedThread.created_at).toLocaleString() : 'Unknown'}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                <strong>Status:</strong> {selectedThread.status}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                <strong>Messages:</strong> {selectedThread.message_count}
+                                            </Typography>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card sx={{ maxWidth: '100%', overflow: 'hidden' }}>
+                                        <CardHeader
+                                            title="Thread Metadata"
+                                            titleTypographyProps={{ variant: 'h6' }}
+                                            avatar={<Psychology />}
+                                        />
+                                        <CardContent>
+                                            {selectedThread.metadata && Object.keys(selectedThread.metadata).length > 0 ? (
+                                                <pre style={{
+                                                    fontSize: '0.75rem',
+                                                    overflow: 'auto',
+                                                    maxHeight: '150px',
+                                                    maxWidth: '100%',
+                                                    wordWrap: 'break-word',
+                                                    whiteSpace: 'pre-wrap'
+                                                }}>
+                                                    {JSON.stringify(selectedThread.metadata, null, 2)}
+                                                </pre>
+                                            ) : (
                                                 <Typography variant="body2" color="text.secondary">
-                                                    <strong>Thread ID:</strong> {selectedThread.thread_id}
+                                                    No metadata available
                                                 </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    <strong>Created:</strong> {selectedThread.created_at ? new Date(selectedThread.created_at).toLocaleString() : 'Unknown'}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    <strong>Status:</strong> {selectedThread.status}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    <strong>Messages:</strong> {selectedThread.message_count}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                    <Grid item xs={12} md={6}>
-                                        <Card>
-                                            <CardHeader
-                                                title="Thread Metadata"
-                                                titleTypographyProps={{ variant: 'h6' }}
-                                                avatar={<Psychology />}
-                                            />
-                                            <CardContent>
-                                                {selectedThread.metadata && Object.keys(selectedThread.metadata).length > 0 ? (
-                                                    <pre style={{ fontSize: '0.75rem', overflow: 'auto', maxHeight: '150px' }}>
-                                                        {JSON.stringify(selectedThread.metadata, null, 2)}
-                                                    </pre>
-                                                ) : (
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        No metadata available
-                                                    </Typography>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                </Grid>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </Box>
                             </Box>
 
                             {/* Messages */}
-                            <Box sx={{ p: 2, maxWidth: '100%' }}>
+                            <Box sx={{
+                                p: 2,
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                wordWrap: 'break-word'
+                            }}>
                                 <Typography variant="h6" gutterBottom>
                                     Conversation History ({selectedThread.messages.length} messages)
                                 </Typography>
@@ -418,39 +460,66 @@ const ThreadContextViewer: React.FC = () => {
                                             {message.content.map((contentItem, contentIndex) => (
                                                 <Box key={contentIndex} sx={{ maxWidth: '100%' }}>
                                                     {contentItem.type === 'text' && contentItem.text ? (
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm]}
-                                                            components={{
-                                                                code({ node, inline, className, children, ...props }: any) {
-                                                                    const match = /language-(\w+)/.exec(className || '');
-                                                                    return !inline && match ? (
-                                                                        <SyntaxHighlighter
-                                                                            style={tomorrow as any}
-                                                                            language={match[1]}
-                                                                            PreTag="div"
-                                                                            wrapLongLines={true}
-                                                                            customStyle={{
+                                                        <Box sx={{
+                                                            maxWidth: '100%',
+                                                            overflow: 'hidden',
+                                                            wordWrap: 'break-word',
+                                                            '& p': {
+                                                                margin: '0 0 1em 0',
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word',
+                                                                hyphens: 'auto'
+                                                            },
+                                                            '& pre': {
+                                                                maxWidth: '100%',
+                                                                overflow: 'auto',
+                                                                whiteSpace: 'pre-wrap',
+                                                                wordWrap: 'break-word'
+                                                            },
+                                                            '& code': {
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word'
+                                                            }
+                                                        }}>
+                                                            <ReactMarkdown
+                                                                remarkPlugins={[remarkGfm]}
+                                                                components={{
+                                                                    code({ node, inline, className, children, ...props }: any) {
+                                                                        const match = /language-(\w+)/.exec(className || '');
+                                                                        return !inline && match ? (
+                                                                            <SyntaxHighlighter
+                                                                                style={tomorrow as any}
+                                                                                language={match[1]}
+                                                                                PreTag="div"
+                                                                                wrapLongLines={true}
+                                                                                customStyle={{
+                                                                                    maxWidth: '100%',
+                                                                                    overflow: 'auto',
+                                                                                    fontSize: '0.875rem'
+                                                                                }}
+                                                                                {...props}
+                                                                            >
+                                                                                {String(children).replace(/\n$/, '')}
+                                                                            </SyntaxHighlighter>
+                                                                        ) : (
+                                                                            <code className={className} {...props} style={{
                                                                                 maxWidth: '100%',
-                                                                                overflow: 'auto'
-                                                                            }}
-                                                                            {...props}
-                                                                        >
-                                                                            {String(children).replace(/\n$/, '')}
-                                                                        </SyntaxHighlighter>
-                                                                    ) : (
-                                                                        <code className={className} {...props} style={{
-                                                                            maxWidth: '100%',
-                                                                            overflow: 'auto',
-                                                                            wordWrap: 'break-word'
-                                                                        }}>
-                                                                            {children}
-                                                                        </code>
-                                                                    );
-                                                                }
-                                                            }}
-                                                        >
-                                                            {contentItem.text.value}
-                                                        </ReactMarkdown>
+                                                                                overflow: 'auto',
+                                                                                wordWrap: 'break-word',
+                                                                                fontSize: '0.875rem',
+                                                                                padding: '2px 4px',
+                                                                                backgroundColor: '#f5f5f5',
+                                                                                borderRadius: '3px'
+                                                                            }}>
+                                                                                {children}
+                                                                            </code>
+                                                                        );
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {contentItem.text.value}
+                                                            </ReactMarkdown>
+                                                        </Box>
                                                     ) : (
                                                         <Typography variant="body2" color="text.secondary">
                                                             [Unsupported content type: {contentItem.type}]
@@ -464,14 +533,14 @@ const ThreadContextViewer: React.FC = () => {
                             </Box>
                         </Paper>
                     ) : (
-                        <Paper sx={{ p: 3, height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Paper sx={{ p: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Typography variant="h6" color="text.secondary">
                                 Select a thread to view its context and conversation history
                             </Typography>
                         </Paper>
                     )}
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
         </Box>
     );
 };
