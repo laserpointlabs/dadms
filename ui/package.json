@@ -39,7 +39,13 @@
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject",
-        "serve": "npx serve -s build -l 3000"
+        "serve": "npx serve -s build -l 3000",
+        "backend:start": "pm2 start ecosystem.config.js",
+        "backend:stop": "pm2 stop dadm-backend",
+        "backend:restart": "pm2 restart dadm-backend",
+        "backend:status": "pm2 status",
+        "backend:logs": "pm2 logs dadm-backend",
+        "backend:monitor": "pm2 monit"
     },
     "eslintConfig": {
         "extends": [
