@@ -424,7 +424,7 @@ const ThreadContextViewer: React.FC = () => {
                                 <Typography variant="h6" gutterBottom>
                                     Conversation History ({selectedThread.messages.length} messages)
                                 </Typography>
-                                {selectedThread.messages.map((message, index) => (
+                                {selectedThread.messages.slice().reverse().map((message, index) => (
                                     <Card key={message.id} sx={{
                                         mb: 2,
                                         maxWidth: '100%',
@@ -506,10 +506,7 @@ const ThreadContextViewer: React.FC = () => {
                                                                                 maxWidth: '100%',
                                                                                 overflow: 'auto',
                                                                                 wordWrap: 'break-word',
-                                                                                fontSize: '0.875rem',
-                                                                                padding: '2px 4px',
-                                                                                backgroundColor: '#f5f5f5',
-                                                                                borderRadius: '3px'
+                                                                                fontSize: '0.875rem'
                                                                             }}>
                                                                                 {children}
                                                                             </code>
