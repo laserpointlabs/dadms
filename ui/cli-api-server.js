@@ -1,9 +1,59 @@
+/**
+ * DADM CLI API Server
+ * 
+ * This server provides a REST API interface to the DADM (Decision Analysis Decision Management) system.
+ * It handles process management, analysis data retrieval, and system management functions.
+ * 
+ * Configuration:
+ * The server uses environment variables for configuration to make it portable across different systems:
+ * 
+ * - DADM_ROOT: Root directory of the DADM installation (default: parent directory of this script)
+ * - UI_ROOT: Root directory of the UI (default: directory containing this script)
+ * - DADM_VENV_PATH: Path to Python virtual environment (default: DADM_ROOT/.venv)
+ * - DADM_LOGS_DIR: Directory for log files (default: DADM_ROOT/logs)
+ * - DADM_DATA_DIR: Directory containing analysis database (default: DADM_ROOT/data/analysis_storage)
+ * 
+ * Example usage with custom paths:
+ * DADM_ROOT=/opt/dadm DADM_DATA_DIR=/var/dadm/data node cli-api-server.js
+ */
+
 const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const http = require('http');
 const https = require('https');
 const { spawn } = require('child_process');
+const path = require('path');
+
+// Configuration - Use environment variables with fallbacks
+// This makes the server portable and not tied to specific user directories
+const CONFIG = {
+    // Determine DADM root directory - assume UI is in a subdirectory of DADM
+    DADM_ROOT: process.env.DADM_ROOT || path.resolve(__dirname, '..'),
+    UI_ROOT: process.env.UI_ROOT || __dirname,
+    VENV_PATH: process.env.DADM_VENV_PATH || path.resolve(__dirname, '..', '.venv'),
+    LOGS_DIR: process.env.DADM_LOGS_DIR || path.resolve(__dirname, '..', 'logs'),
+    DATA_DIR: process.env.DADM_DATA_DIR || path.resolve(__dirname, '..', 'data', 'analysis_storage')
+};
+
+// Optional: Verify critical paths exist (log warnings, don't fail)
+try {
+    if (!require('fs').existsSync(CONFIG.DADM_ROOT)) {
+        console.warn(`⚠️  DADM root directory not found: ${CONFIG.DADM_ROOT}`);
+    }
+    if (!require('fs').existsSync(CONFIG.DATA_DIR)) {
+        console.warn(`⚠️  Data directory not found: ${CONFIG.DATA_DIR}`);
+    }
+
+    console.log(`📁 DADM Configuration:
+   DADM Root: ${CONFIG.DADM_ROOT}
+   UI Root: ${CONFIG.UI_ROOT}
+   Virtual Env: ${CONFIG.VENV_PATH}
+   Logs: ${CONFIG.LOGS_DIR}
+   Data: ${CONFIG.DATA_DIR}`);
+} catch (err) {
+    console.warn('⚠️  Error checking configuration paths:', err.message);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -79,7 +129,7 @@ app.get('/api/process/definitions', async (req, res) => {
     try {
         console.log('Fetching process definitions via DADM CLI...');
 
-        const result = await executeCommand('dadm', ['--list'], '/home/jdehart/dadm');
+        const result = await executeCommand('dadm', ['--list'], CONFIG.DADM_ROOT);
         const processDefinitions = parseProcessDefinitions(result.output);
 
         res.json({
@@ -420,7 +470,7 @@ app.get('/api/analysis/list', async (req, res) => {
         if (limit) args.push('--limit', limit.toString());
         if (detailed === 'true') args.push('--detailed');
 
-        const result = await executeCommand('dadm', args, '/home/jdehart/dadm');
+        const result = await executeCommand('dadm', args, CONFIG.DADM_ROOT);
 
         // Parse the output to extract structured data
         const analyses = await parseAnalysisListOutput(result.output);
@@ -452,7 +502,7 @@ app.get('/api/analysis/:id', async (req, res) => {
         console.log(`Fetching analysis details for ID: ${id}`);
 
         // Use DADM CLI to get specific analysis data
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], CONFIG.DADM_ROOT);
 
         // Parse and find the specific analysis
         const analyses = await parseAnalysisListOutput(result.output);
@@ -487,7 +537,7 @@ app.get('/api/analysis/threads', async (req, res) => {
         console.log('Fetching unique OpenAI thread combinations...');
 
         // Get analysis data first
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], CONFIG.DADM_ROOT);
         const analyses = await parseAnalysisListOutput(result.output);
 
         // Enrich with process definitions like we do for analysis list
@@ -627,7 +677,7 @@ app.get('/api/analysis/:id', async (req, res) => {
         console.log(`Fetching analysis details for ID: ${id}`);
 
         // Use DADM CLI to get specific analysis data
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], '/home/jdehart/dadm');
+        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], CONFIG.DADM_ROOT);
 
         // Parse and find the specific analysis
         const analyses = await parseAnalysisListOutput(result.output);
@@ -663,7 +713,7 @@ app.delete('/api/analysis/process/:processInstanceId', async (req, res) => {
 
         // Use SQLite to delete analyses for this process instance
         const sqlite3 = require('sqlite3').verbose();
-        const dbPath = '/home/jdehart/dadm/data/analysis_storage/analysis_data.db';
+        const dbPath = path.join(CONFIG.DATA_DIR, 'analysis_data.db');
 
         // First, get the analysis IDs to delete
         const getAnalysisIds = () => {
@@ -838,7 +888,7 @@ app.post('/api/system/backend/:action', async (req, res) => {
         let command;
         switch (action) {
             case 'start':
-                command = 'cd /home/jdehart/dadm/ui && pm2 start ecosystem.config.js';
+                command = `cd ${CONFIG.UI_ROOT} && pm2 start ecosystem.config.js`;
                 break;
             case 'stop':
                 command = 'pm2 stop dadm-backend';
@@ -887,7 +937,7 @@ app.post('/api/system/daemon/:action', async (req, res) => {
         let result;
         switch (action) {
             case 'start':
-                const startCommand = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-start.log 2>&1 & echo $!';
+                const startCommand = `cd ${CONFIG.DADM_ROOT} && nohup ${CONFIG.VENV_PATH}/bin/python scripts/analysis_processing_daemon.py > ${CONFIG.LOGS_DIR}/daemon-start.log 2>&1 & echo $!`;
                 result = await execAsync(startCommand);
                 break;
             case 'stop':
@@ -924,7 +974,7 @@ app.post('/api/system/daemon/:action', async (req, res) => {
                 } catch (e) {
                     // Process might not be running, that's ok
                 }
-                const restartCommand = 'cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > /home/jdehart/dadm/logs/daemon-restart.log 2>&1 & echo $!';
+                const restartCommand = `cd ${CONFIG.DADM_ROOT} && nohup ${CONFIG.VENV_PATH}/bin/python scripts/analysis_processing_daemon.py > ${CONFIG.LOGS_DIR}/daemon-restart.log 2>&1 & echo $!`;
                 result = await execAsync(restartCommand);
                 break;
             case 'status':
@@ -1002,7 +1052,7 @@ async function executeCommandWithShell(command, args = []) {
         console.log(`Executing shell command: ${fullCommand}`);
 
         const child = exec(fullCommand, {
-            cwd: '/home/jdehart/dadm'
+            cwd: CONFIG.DADM_ROOT
         });
 
         let stdout = '';
@@ -1132,7 +1182,7 @@ async function getAnalysisFromDatabase() {
     return new Promise((resolve, reject) => {
         const sqlite3 = require('sqlite3').verbose();
         const path = require('path');
-        const dbPath = path.join('/home/jdehart/dadm/data/analysis_storage', 'analysis_data.db');
+        const dbPath = path.join(CONFIG.DATA_DIR, 'analysis_data.db');
 
         // Check if database exists
         const fs = require('fs');
@@ -1272,7 +1322,7 @@ async function autoStartDaemon() {
         console.log('🚀 Starting analysis daemon...');
 
         // Start the daemon using the same method as the API
-        const startCommand = `cd /home/jdehart/dadm && nohup /home/jdehart/dadm/.venv/bin/python scripts/analysis_processing_daemon.py > logs/daemon-autostart.log 2>&1 & echo $!`;
+        const startCommand = `cd ${CONFIG.DADM_ROOT} && nohup ${CONFIG.VENV_PATH}/bin/python scripts/analysis_processing_daemon.py > logs/daemon-autostart.log 2>&1 & echo $!`;
         const startResult = await executeCommand('bash', ['-c', startCommand]);
 
         if (startResult.exitCode === 0 && startResult.output.trim()) {
