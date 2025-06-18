@@ -45,6 +45,7 @@ interface AnalysisMetadata {
     session_id?: string;
     process_instance_id?: string;
     process_name?: string;
+    process_version?: number;
     task_name: string;
     created_at: string;
     updated_at?: string;
@@ -120,6 +121,7 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
                                     </Typography>
                                     <Typography variant="body1" color="primary" sx={{ fontWeight: 'medium' }}>
                                         {latestAnalysis.metadata.process_name || 'Unknown Process'}
+                                        {latestAnalysis.metadata.process_version && ` (v${latestAnalysis.metadata.process_version})`}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         {processAnalyses.length} analyses • Started: {processStartTime.toLocaleString()}
@@ -275,32 +277,33 @@ const AnalysisDataViewer: React.FC = () => {
                 // Transform DADM data to match our interface
                 const transformedAnalyses: AnalysisData[] = result.data.map((item: any) => ({
                     metadata: {
-                        analysis_id: item.metadata.analysis_id,
-                        thread_id: item.metadata.thread_id,
-                        session_id: item.metadata.session_id || '',
-                        process_instance_id: item.metadata.process_id,
-                        process_name: item.metadata.process_name || 'Unknown Process',
-                        task_name: item.metadata.task_name,
-                        created_at: item.metadata.created_at,
-                        updated_at: item.metadata.created_at,
-                        status: item.metadata.status,
-                        tags: Array.isArray(item.metadata.tags) ? item.metadata.tags : [],
-                        source_service: item.metadata.service
+                        analysis_id: item.analysis_id,
+                        thread_id: item.thread_id,
+                        session_id: item.session_id || '',
+                        process_instance_id: item.process_id,
+                        process_name: item.process_definition?.name || 'Unknown Process',
+                        process_version: item.process_definition?.version || 1,
+                        task_name: item.task,
+                        created_at: item.created_at,
+                        updated_at: item.created_at,
+                        status: item.status,
+                        tags: Array.isArray(item.tags) ? item.tags : [],
+                        source_service: item.service
                     },
                     input_data: {
-                        openai_thread: item.metadata.openai_thread || '',
-                        openai_assistant: item.metadata.openai_assistant || ''
+                        openai_thread: item.openai_thread || '',
+                        openai_assistant: item.openai_assistant || ''
                     },
                     output_data: {
-                        thread_id: item.metadata.thread_id,
-                        assistant_id: item.metadata.openai_assistant
+                        thread_id: item.thread_id,
+                        assistant_id: item.openai_assistant
                     },
-                    raw_response: `Analysis ID: ${item.metadata.analysis_id}\nTask: ${item.metadata.task_name}\nStatus: ${item.metadata.status}`,
+                    raw_response: `Analysis ID: ${item.analysis_id}\nTask: ${item.task}\nStatus: ${item.status}`,
                     processing_log: [
                         {
-                            timestamp: item.metadata.created_at,
+                            timestamp: item.created_at,
                             level: 'INFO',
-                            message: `Analysis created: ${item.metadata.task_name}`
+                            message: `Analysis created: ${item.task}`
                         }
                     ]
                 }));
