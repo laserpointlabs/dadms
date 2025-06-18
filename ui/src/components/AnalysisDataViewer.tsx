@@ -43,6 +43,7 @@ interface AnalysisMetadata {
     thread_id: string;
     session_id?: string;
     process_instance_id?: string;
+    process_name?: string;
     task_name: string;
     created_at: string;
     updated_at?: string;
@@ -111,8 +112,11 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
                         <AccordionSummary expandIcon={<ExpandMore />}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
                                 <Box sx={{ flexGrow: 1 }}>
-                                    <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
-                                        Process: {processId.substring(0, 13)}...
+                                    <Typography variant="h6" sx={{ fontFamily: 'monospace', fontSize: '1rem' }}>
+                                        {processId}
+                                    </Typography>
+                                    <Typography variant="body1" color="primary" sx={{ fontWeight: 'medium' }}>
+                                        {latestAnalysis.metadata.process_name || 'Unknown Process'}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         {processAnalyses.length} analyses • Started: {processStartTime.toLocaleString()}
@@ -258,6 +262,7 @@ const AnalysisDataViewer: React.FC = () => {
                         thread_id: item.metadata.thread_id,
                         session_id: item.metadata.session_id || '',
                         process_instance_id: item.metadata.process_id,
+                        process_name: item.metadata.process_name || 'Unknown Process',
                         task_name: item.metadata.task_name,
                         created_at: item.metadata.created_at,
                         updated_at: item.metadata.created_at,
