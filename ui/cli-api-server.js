@@ -1041,6 +1041,69 @@ app.get('/api/system/docker', async (req, res) => {
     }
 });
 
+// Get process definition documentation
+app.get('/api/process/definitions/:id/documentation', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`Fetching documentation for process definition: ${id}`);
+
+        // Get the BPMN XML from Camunda
+        const response = await fetch(`http://localhost:8080/engine-rest/process-definition/${id}/xml`);
+        if (!response.ok) {
+            throw new Error(`Camunda API error: ${response.status}`);
+        }
+
+        const xmlData = await response.json();
+        const bpmnXml = xmlData.bpmn20Xml;
+
+        // Parse the XML to extract documentation
+        const documentationExtractor = (xml) => {
+            const processMatch = xml.match(/<bpmn:process[^>]*name="([^"]*)"[^>]*>/);
+            const processName = processMatch ? processMatch[1] : 'Unknown Process';
+
+            // Extract only process-level documentation (not from tasks)
+            // Look for <bpmn:documentation> that comes directly after <bpmn:process> opening tag
+            // but before any other BPMN elements like <bpmn:startEvent>, <bpmn:serviceTask>, etc.
+            const processDocPattern = /<bpmn:process[^>]*>([\s\S]*?)<bpmn:documentation>([\s\S]*?)<\/bpmn:documentation>([\s\S]*?)(?=<bpmn:(?:startEvent|endEvent|serviceTask|userTask|scriptTask|sequenceFlow|parallelGateway|exclusiveGateway))/;
+            const processDocMatch = xml.match(processDocPattern);
+
+            let processDocumentation = '';
+            if (processDocMatch) {
+                // Check that the documentation appears before any BPMN elements (not inside a task)
+                const beforeDoc = processDocMatch[1];
+                const afterDoc = processDocMatch[3];
+
+                // If there are no BPMN elements between process start and documentation, it's process-level
+                if (!beforeDoc.includes('<bpmn:') || beforeDoc.trim() === '') {
+                    processDocumentation = processDocMatch[2].trim();
+                }
+            }
+
+            return {
+                processName,
+                processDocumentation: processDocumentation || 'No documentation available for this process.'
+            };
+        };
+
+        const documentation = documentationExtractor(bpmnXml);
+
+        res.json({
+            success: true,
+            data: {
+                processDefinitionId: id,
+                ...documentation
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch process documentation:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Special command execution function for shell commands that need proper quoting
 async function executeCommandWithShell(command, args = []) {
     return new Promise((resolve, reject) => {
@@ -1441,6 +1504,7 @@ server.listen(PORT, async () => {
     console.log(`  DELETE http://localhost:${PORT}/api/analysis/process/:processInstanceId`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
+    console.log(`  GET    http://localhost:${PORT}/api/process/definitions/:id/documentation`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances/:instanceId`);
     console.log(`  POST   http://localhost:${PORT}/api/process/instances/start`);

@@ -1,4 +1,5 @@
 import {
+    Info,
     PlayArrow,
     Refresh,
     Settings,
@@ -55,6 +56,12 @@ interface ProcessDefinition {
     deploymentId: string;
 }
 
+interface ProcessDocumentation {
+    processDefinitionId: string;
+    processName: string;
+    processDocumentation: string;
+}
+
 interface ProcessCounts {
     active: number;
     total: number;
@@ -72,6 +79,9 @@ const ProcessManager: React.FC = () => {
     const [startDialogOpen, setStartDialogOpen] = useState(false);
     const [selectedDefinition, setSelectedDefinition] = useState<ProcessDefinition | null>(null);
     const [startVariables, setStartVariables] = useState('{}');
+    const [documentationDialogOpen, setDocumentationDialogOpen] = useState(false);
+    const [selectedDocumentation, setSelectedDocumentation] = useState<ProcessDocumentation | null>(null);
+    const [loadingDocumentation, setLoadingDocumentation] = useState(false);
 
     const fetchProcessInstances = useCallback(async () => {
         try {
@@ -106,6 +116,28 @@ const ProcessManager: React.FC = () => {
             console.error('Error fetching process definitions:', err);
         }
     }, []);
+
+    const fetchDocumentation = async (processDefinition: ProcessDefinition) => {
+        try {
+            setLoadingDocumentation(true);
+            setSelectedDocumentation(null);
+
+            const response = await fetch(`http://localhost:8000/api/process/definitions/${processDefinition.id}/documentation`);
+            const data = await response.json();
+
+            if (data.success) {
+                setSelectedDocumentation(data.data);
+                setDocumentationDialogOpen(true);
+            } else {
+                setError(data.error || 'Failed to fetch process documentation');
+            }
+        } catch (err) {
+            setError('Failed to connect to backend for documentation');
+            console.error('Error fetching documentation:', err);
+        } finally {
+            setLoadingDocumentation(false);
+        }
+    };
 
     const handleRefresh = async () => {
         setLoading(true);
@@ -306,7 +338,7 @@ const ProcessManager: React.FC = () => {
                                     <Typography variant="body2" color="textSecondary">
                                         Key: {definition.key}
                                     </Typography>
-                                    <Box sx={{ mt: 2 }}>
+                                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                                         <Button
                                             size="small"
                                             variant="contained"
@@ -318,6 +350,15 @@ const ProcessManager: React.FC = () => {
                                         >
                                             Start Process
                                         </Button>
+                                        <IconButton
+                                            size="small"
+                                            color="primary"
+                                            onClick={() => fetchDocumentation(definition)}
+                                            disabled={loadingDocumentation}
+                                            title="View process documentation"
+                                        >
+                                            <Info />
+                                        </IconButton>
                                     </Box>
                                 </CardContent>
                             </Card>
@@ -460,6 +501,31 @@ const ProcessManager: React.FC = () => {
                     <Button onClick={handleStartProcess} variant="contained" color="primary">
                         Start Process
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Documentation Dialog */}
+            <Dialog open={documentationDialogOpen} onClose={() => setDocumentationDialogOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle>
+                    Process Documentation: {selectedDocumentation?.processName}
+                </DialogTitle>
+                <DialogContent>
+                    {loadingDocumentation ? (
+                        <Typography variant="body2" color="textSecondary">
+                            Loading documentation...
+                        </Typography>
+                    ) : selectedDocumentation?.processDocumentation ? (
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {selectedDocumentation.processDocumentation}
+                        </Typography>
+                    ) : (
+                        <Typography variant="body2" color="textSecondary">
+                            No documentation available for this process.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDocumentationDialogOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>
