@@ -33,7 +33,9 @@ import {
     Tooltip,
     Typography
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { cliService } from '../services/api';
+import webSocketService from '../services/websocket';
 
 interface CommandTemplate {
     id: string;
@@ -247,6 +249,49 @@ const CLIManager: React.FC = () => {
     const [helpDialog, setHelpDialog] = useState<string | null>(null);
     const [parameterValues, setParameterValues] = useState<{ [key: string]: any }>({});
 
+    // WebSocket listeners for real-time command output
+    useEffect(() => {
+        // Listen for command output updates
+        const handleCommandOutput = (data: any) => {
+            setExecutions(prev =>
+                prev.map(exec =>
+                    exec.id === data.executionId
+                        ? {
+                            ...exec,
+                            output: [...exec.output, ...data.output]
+                        }
+                        : exec
+                )
+            );
+        };
+
+        // Listen for command completion
+        const handleCommandCompleted = (data: any) => {
+            setExecutions(prev =>
+                prev.map(exec =>
+                    exec.id === data.executionId
+                        ? {
+                            ...exec,
+                            status: data.success ? 'completed' : 'failed',
+                            output: [...exec.output, '', `Command ${data.success ? 'completed' : 'failed'}.`],
+                            endTime: new Date()
+                        }
+                        : exec
+                )
+            );
+        };
+
+        // Subscribe to WebSocket events
+        webSocketService.on('command_output', handleCommandOutput);
+        webSocketService.on('command_completed', handleCommandCompleted);
+
+        // Cleanup on unmount
+        return () => {
+            webSocketService.off('command_output', handleCommandOutput);
+            webSocketService.off('command_completed', handleCommandCompleted);
+        };
+    }, []);
+
     const categories = ['all', 'process', 'analysis', 'deploy', 'docker', 'monitor'];
 
     const filteredCommands = selectedCategory === 'all'
@@ -330,28 +375,74 @@ const CLIManager: React.FC = () => {
         setOpenDialog(null);
         setParameterValues({});
 
-        // Simulate command execution
-        // In a real implementation, this would make an API call to execute the command
-        setTimeout(() => {
+        try {
+            // Parse the command to extract the base command and arguments
+            const commandParts = command.trim().split(/\s+/);
+            const baseCommand = commandParts[0]; // e.g., 'dadm'
+            const args = commandParts.slice(1); // e.g., ['analysis', 'run', '--config', 'file.yaml']
+
+            console.log('Executing command:', baseCommand, 'with args:', args);
+
+            // Execute via REST API for reliable command execution
+            const response = await cliService.executeCommand(baseCommand, args);
+
+            console.log('API response:', response);
+
+            // Update execution with API response
             setExecutions(prev =>
                 prev.map(exec =>
                     exec.id === execution.id
                         ? {
                             ...exec,
-                            status: Math.random() > 0.8 ? 'failed' : 'completed',
+                            status: response.data.success ? 'completed' : 'failed',
                             output: [
                                 ...exec.output,
-                                'Command executed successfully.',
-                                'Output would appear here...',
+                                '=== Command Output ===',
+                                ...(Array.isArray(response.data.output)
+                                    ? response.data.output
+                                    : [response.data.output || 'Command completed successfully']
+                                ),
+                                ...(response.data.stderr && response.data.stderr.length > 0
+                                    ? ['', '=== Error Output ===', ...response.data.stderr]
+                                    : []
+                                ),
                                 '',
-                                'Process completed.'
+                                `Exit code: ${response.data.exitCode || 0}`,
+                                `Execution time: ${response.data.executionTime || 'N/A'}ms`
                             ],
                             endTime: new Date()
                         }
                         : exec
                 )
             );
-        }, 2000 + Math.random() * 3000);
+
+        } catch (error: any) {
+            // Handle command execution errors
+            console.error('Command execution failed:', error);
+
+            setExecutions(prev =>
+                prev.map(exec =>
+                    exec.id === execution.id
+                        ? {
+                            ...exec,
+                            status: 'failed',
+                            output: [
+                                ...exec.output,
+                                '=== Command Failed ===',
+                                `Error: ${error.response?.data?.message || error.message || 'Unknown error occurred'}`,
+                                ...(error.response?.data?.stderr
+                                    ? ['', 'stderr:', ...error.response.data.stderr]
+                                    : []
+                                ),
+                                '',
+                                `Exit code: ${error.response?.data?.exitCode || 1}`
+                            ],
+                            endTime: new Date()
+                        }
+                        : exec
+                )
+            );
+        }
     };
 
     const openCommandDialog = (templateId: string) => {
@@ -379,9 +470,28 @@ const CLIManager: React.FC = () => {
 
     return (
         <Box>
-            <Typography variant="h4" gutterBottom>
-                CLI Command Manager
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    CLI Command Manager
+                </Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {/* Connection Status */}
+                    <Chip
+                        label={webSocketService.getConnectionStatus().connected ? 'Real-time Connected' : 'API Mode'}
+                        color={webSocketService.getConnectionStatus().connected ? 'success' : 'warning'}
+                        variant="outlined"
+                        size="small"
+                    />
+
+                    {/* Refresh Button */}
+                    <Tooltip title="Refresh commands">
+                        <IconButton onClick={() => window.location.reload()}>
+                            <Refresh />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+            </Box>
 
             {/* Category Filter */}
             <Box sx={{ mb: 3 }}>
