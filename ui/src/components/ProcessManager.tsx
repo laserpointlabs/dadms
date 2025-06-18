@@ -91,6 +91,9 @@ const ProcessManager: React.FC = () => {
     const [selectedDocumentation, setSelectedDocumentation] = useState<ProcessDocumentation | null>(null);
     const [loadingDocumentation, setLoadingDocumentation] = useState(false);
     const [selectedVersions, setSelectedVersions] = useState<{ [key: string]: string }>({});
+    const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+    const [troubleshootData, setTroubleshootData] = useState<any>(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     const fetchProcessInstances = useCallback(async () => {
         try {
@@ -255,6 +258,30 @@ const ProcessManager: React.FC = () => {
         } catch (err) {
             setError('Failed to delete process definition');
             console.error('Error deleting process definition:', err);
+        }
+    };
+
+    const handleViewDetails = async (instance: ProcessInstance) => {
+        setSelectedInstance(instance);
+        setDetailsDialogOpen(true);
+        setLoadingDetails(true);
+        setTroubleshootData(null);
+
+        try {
+            const response = await fetch(`http://localhost:8000/api/process/instances/${instance.id}/troubleshoot`);
+            const data = await response.json();
+
+            if (data.success) {
+                setTroubleshootData(data.data);
+                setError(null);
+            } else {
+                setError(data.error || 'Failed to fetch troubleshooting details');
+            }
+        } catch (err) {
+            setError('Failed to fetch troubleshooting details');
+            console.error('Error fetching troubleshooting details:', err);
+        } finally {
+            setLoadingDetails(false);
         }
     };
 
@@ -491,8 +518,7 @@ const ProcessManager: React.FC = () => {
                                         <IconButton
                                             size="small"
                                             onClick={() => {
-                                                // Could implement a detail view
-                                                console.log('View details for:', instance.id);
+                                                handleViewDetails(instance);
                                             }}
                                         >
                                             <Visibility />
@@ -594,6 +620,201 @@ const ProcessManager: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDocumentationDialogOpen(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Details Dialog */}
+            <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="lg" fullWidth>
+                <DialogTitle>
+                    Process Instance Details: {selectedInstance?.id.substring(0, 8)}...
+                </DialogTitle>
+                <DialogContent>
+                    {loadingDetails ? (
+                        <Typography variant="body2" color="textSecondary">
+                            Loading troubleshooting details...
+                        </Typography>
+                    ) : troubleshootData ? (
+                        <Box>
+                            {/* Basic Info */}
+                            <Paper sx={{ p: 2, mb: 2 }}>
+                                <Typography variant="h6" sx={{ mb: 1 }}>Process Instance Info</Typography>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <Typography variant="body2"><strong>Process Name:</strong> {troubleshootData.processInstance?.processDefinitionName}</Typography>
+                                        <Typography variant="body2"><strong>Status:</strong> {troubleshootData.processInstance?.state}</Typography>
+                                        <Typography variant="body2"><strong>Start Time:</strong> {formatDateTime(troubleshootData.processInstance?.startTime)}</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="body2"><strong>End Time:</strong> {formatDateTime(troubleshootData.processInstance?.endTime) || 'N/A'}</Typography>
+                                        <Typography variant="body2"><strong>Duration:</strong> {getDuration(troubleshootData.processInstance?.startTime, troubleshootData.processInstance?.endTime)}</Typography>
+                                        <Typography variant="body2"><strong>Business Key:</strong> {troubleshootData.processInstance?.businessKey || 'N/A'}</Typography>
+                                    </Grid>
+                                </Grid>
+                            </Paper>
+
+                            {/* Activity Execution Timeline */}
+                            <Paper sx={{ p: 2, mb: 2 }}>
+                                <Typography variant="h6" sx={{ mb: 1 }}>Execution Timeline</Typography>
+                                {troubleshootData.activityInstances && troubleshootData.activityInstances.length > 0 ? (
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Activity</TableCell>
+                                                    <TableCell>Type</TableCell>
+                                                    <TableCell>Start Time</TableCell>
+                                                    <TableCell>Duration</TableCell>
+                                                    <TableCell>Status</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {troubleshootData.activityInstances.map((activity: any, index: number) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>{activity.activityName || activity.activityId}</TableCell>
+                                                        <TableCell>{activity.activityType}</TableCell>
+                                                        <TableCell>{formatDateTime(activity.startTime)}</TableCell>
+                                                        <TableCell>{getDuration(activity.startTime, activity.endTime)}</TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={activity.canceled ? 'CANCELED' : (activity.endTime ? 'COMPLETED' : 'RUNNING')}
+                                                                color={activity.canceled ? 'error' : (activity.endTime ? 'success' : 'warning')}
+                                                                size="small"
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                ) : (
+                                    <Typography variant="body2" color="textSecondary">No activity instances found</Typography>
+                                )}
+                            </Paper>
+
+                            {/* External Task Logs */}
+                            {troubleshootData.externalTaskLogs && troubleshootData.externalTaskLogs.length > 0 && (
+                                <Paper sx={{ p: 2, mb: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 1 }}>External Task Logs</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Timestamp</TableCell>
+                                                    <TableCell>Topic</TableCell>
+                                                    <TableCell>Worker</TableCell>
+                                                    <TableCell>Activity</TableCell>
+                                                    <TableCell>Event Type</TableCell>
+                                                    <TableCell>Error</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {troubleshootData.externalTaskLogs.map((log: any, index: number) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>{formatDateTime(log.timestamp)}</TableCell>
+                                                        <TableCell>{log.topicName}</TableCell>
+                                                        <TableCell>{log.workerId || 'N/A'}</TableCell>
+                                                        <TableCell>{log.activityId}</TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={
+                                                                    log.creationLog ? 'CREATED' :
+                                                                        log.successLog ? 'SUCCESS' :
+                                                                            log.failureLog ? 'FAILURE' :
+                                                                                log.deletionLog ? 'DELETED' : 'UNKNOWN'
+                                                                }
+                                                                color={
+                                                                    log.successLog ? 'success' :
+                                                                        log.failureLog ? 'error' :
+                                                                            log.creationLog ? 'info' : 'default'
+                                                                }
+                                                                size="small"
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>{log.errorMessage || 'N/A'}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Paper>
+                            )}
+
+                            {/* Incidents/Errors */}
+                            {troubleshootData.incidentHistory && troubleshootData.incidentHistory.length > 0 && (
+                                <Paper sx={{ p: 2, mb: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 1, color: 'error.main' }}>Incidents & Errors</Typography>
+                                    {troubleshootData.incidentHistory.map((incident: any, index: number) => (
+                                        <Alert severity="error" key={index} sx={{ mb: 1 }}>
+                                            <Typography variant="body2">
+                                                <strong>{incident.incidentType}:</strong> {incident.incidentMessage}
+                                            </Typography>
+                                            <Typography variant="caption">
+                                                Activity: {incident.activityId} | Time: {formatDateTime(incident.incidentTimestamp)}
+                                            </Typography>
+                                        </Alert>
+                                    ))}
+                                </Paper>
+                            )}
+
+                            {/* Analysis Data */}
+                            {troubleshootData.analysisData && troubleshootData.analysisData.length > 0 && (
+                                <Paper sx={{ p: 2, mb: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 1 }}>DADM Analysis Data</Typography>
+                                    {troubleshootData.analysisData.map((analysis: any, index: number) => (
+                                        <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                {analysis.type} - {formatDateTime(analysis.createdAt)}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>
+                                                {JSON.stringify(analysis.data, null, 2)}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </Paper>
+                            )}
+
+                            {/* Variable History */}
+                            {troubleshootData.variableHistory && troubleshootData.variableHistory.length > 0 && (
+                                <Paper sx={{ p: 2, mb: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 1 }}>Variable History</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Variable Name</TableCell>
+                                                    <TableCell>Value</TableCell>
+                                                    <TableCell>Type</TableCell>
+                                                    <TableCell>Activity</TableCell>
+                                                    <TableCell>Time</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {troubleshootData.variableHistory.map((variable: any, index: number) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>{variable.variableName}</TableCell>
+                                                        <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {variable.value?.toString().substring(0, 100)}
+                                                            {variable.value?.toString().length > 100 && '...'}
+                                                        </TableCell>
+                                                        <TableCell>{variable.variableType}</TableCell>
+                                                        <TableCell>{variable.activityInstanceId || 'Process'}</TableCell>
+                                                        <TableCell>{formatDateTime(variable.createTime)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Paper>
+                            )}
+                        </Box>
+                    ) : (
+                        <Typography variant="body2" color="textSecondary">
+                            No details available for this process instance.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>

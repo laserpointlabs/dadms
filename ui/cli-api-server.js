@@ -1236,6 +1236,157 @@ app.delete('/api/process/definitions/:definitionId', async (req, res) => {
     }
 });
 
+// Get comprehensive troubleshooting details for a process instance
+app.get('/api/process/instances/:instanceId/troubleshoot', async (req, res) => {
+    try {
+        const { instanceId } = req.params;
+        console.log(`Fetching troubleshooting details for process instance: ${instanceId}`);
+
+        const troubleshootData = {
+            processInstance: null,
+            activityInstances: [],
+            variableHistory: [],
+            incidentHistory: [],
+            externalTaskLogs: [],
+            userTaskHistory: [],
+            jobLogs: [],
+            isActive: false
+        };
+
+        // 1. Get process instance details
+        let response = await fetch(`http://localhost:8080/engine-rest/process-instance/${instanceId}`);
+        if (response.ok) {
+            troubleshootData.processInstance = await response.json();
+            troubleshootData.isActive = true;
+        } else {
+            // Check history for completed instances
+            response = await fetch(`http://localhost:8080/engine-rest/history/process-instance/${instanceId}`);
+            if (response.ok) {
+                troubleshootData.processInstance = await response.json();
+                troubleshootData.isActive = false;
+            }
+        }
+
+        if (!troubleshootData.processInstance) {
+            return res.status(404).json({
+                success: false,
+                error: `Process instance ${instanceId} not found`
+            });
+        }
+
+        // 2. Get activity instance history (execution path)
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/activity-instance?processInstanceId=${instanceId}&sortBy=startTime&sortOrder=asc`);
+            if (response.ok) {
+                troubleshootData.activityInstances = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch activity instances:', error);
+        }
+
+        // 3. Get variable history
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/variable-instance?processInstanceId=${instanceId}&sortBy=time&sortOrder=asc`);
+            if (response.ok) {
+                troubleshootData.variableHistory = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch variable history:', error);
+        }
+
+        // 4. Get incident history (errors/problems)
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/incident?processInstanceId=${instanceId}`);
+            if (response.ok) {
+                troubleshootData.incidentHistory = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch incident history:', error);
+        }
+
+        // 5. Get external task logs
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/external-task-log?processInstanceId=${instanceId}&sortBy=timestamp&sortOrder=asc`);
+            if (response.ok) {
+                troubleshootData.externalTaskLogs = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch external task logs:', error);
+        }
+
+        // 6. Get user task history
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/task?processInstanceId=${instanceId}&sortBy=startTime&sortOrder=asc`);
+            if (response.ok) {
+                troubleshootData.userTaskHistory = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch user task history:', error);
+        }
+
+        // 7. Get job logs (for async operations, timers, etc.)
+        try {
+            response = await fetch(`http://localhost:8080/engine-rest/history/job-log?processInstanceId=${instanceId}&sortBy=timestamp&sortOrder=asc`);
+            if (response.ok) {
+                troubleshootData.jobLogs = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch job logs:', error);
+        }        // 8. Try to get analysis data from our database
+        try {
+            const sqlite3 = require('sqlite3').verbose();
+            const dbPath = path.join(CONFIG.DATA_DIR, 'analysis_data.db');
+            const db = new sqlite3.Database(dbPath);
+
+            const query = `
+                SELECT 
+                    id, 
+                    analysis_type,
+                    analysis_data,
+                    created_at,
+                    metadata
+                FROM analysis_data 
+                WHERE JSON_EXTRACT(metadata, '$.process_instance_id') = ?
+                ORDER BY created_at ASC
+            `;
+
+            troubleshootData.analysisData = await new Promise((resolve, reject) => {
+                db.all(query, [instanceId], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const analysisRecords = rows.map(record => ({
+                            id: record.id,
+                            type: record.analysis_type,
+                            data: JSON.parse(record.analysis_data),
+                            createdAt: record.created_at,
+                            metadata: JSON.parse(record.metadata || '{}')
+                        }));
+                        resolve(analysisRecords);
+                    }
+                });
+            });
+
+            db.close();
+        } catch (error) {
+            console.error('Failed to fetch analysis data:', error);
+            troubleshootData.analysisData = [];
+        }
+
+        res.json({
+            success: true,
+            data: troubleshootData
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch troubleshooting data:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Function to start a background external task worker for a specific process
 async function startBackgroundWorker(processInstanceId, processKey) {
     try {
