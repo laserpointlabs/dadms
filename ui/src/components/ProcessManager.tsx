@@ -20,12 +20,14 @@ import {
     DialogContentText,
     DialogTitle,
     FormControl,
+    FormControlLabel,
     Grid,
     IconButton,
     InputLabel,
     MenuItem,
     Paper,
     Select,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -94,6 +96,9 @@ const ProcessManager: React.FC = () => {
     const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
     const [troubleshootData, setTroubleshootData] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+    const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+    const [detailsRefreshInterval, setDetailsRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
     const fetchProcessInstances = useCallback(async () => {
         try {
@@ -285,6 +290,21 @@ const ProcessManager: React.FC = () => {
         }
     };
 
+    const refreshTroubleshootDataBackground = async (instanceId: string) => {
+        try {
+            const response = await fetch(`http://localhost:8000/api/process/instances/${instanceId}/troubleshoot`);
+            const data = await response.json();
+
+            if (data.success) {
+                setTroubleshootData(data.data);
+                // Don't clear errors during background refresh to avoid flickering
+            }
+        } catch (err) {
+            console.error('Error during background refresh of troubleshooting details:', err);
+            // Don't set error state during background refresh to avoid disrupting user
+        }
+    };
+
     const getStatusColor = (status: string, isActive: boolean) => {
         if (isActive) return 'success';
         if (status === 'COMPLETED') return 'info';
@@ -317,20 +337,96 @@ const ProcessManager: React.FC = () => {
         handleRefresh();
     }, []);
 
+    // Auto-refresh effect
+    useEffect(() => {
+        if (autoRefresh) {
+            const interval = setInterval(() => {
+                fetchProcessInstances();
+            }, 5000); // Refresh every 5 seconds
+
+            setRefreshInterval(interval);
+
+            return () => clearInterval(interval);
+        } else {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                setRefreshInterval(null);
+            }
+        }
+    }, [autoRefresh, fetchProcessInstances]);
+
+    // Cleanup interval on unmount
+    useEffect(() => {
+        return () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        };
+    }, [refreshInterval]);
+
+    // Details dialog auto-refresh effect
+    useEffect(() => {
+        if (detailsDialogOpen && selectedInstance) {
+            const interval = setInterval(() => {
+                refreshTroubleshootDataBackground(selectedInstance.id);
+            }, 5000); // Refresh every 5 seconds
+
+            setDetailsRefreshInterval(interval);
+
+            return () => clearInterval(interval);
+        } else {
+            if (detailsRefreshInterval) {
+                clearInterval(detailsRefreshInterval);
+                setDetailsRefreshInterval(null);
+            }
+        }
+    }, [detailsDialogOpen, selectedInstance]);
+
+    // Cleanup details interval on unmount
+    useEffect(() => {
+        return () => {
+            if (detailsRefreshInterval) {
+                clearInterval(detailsRefreshInterval);
+            }
+        };
+    }, [detailsRefreshInterval]);
+
+    const handleCloseDetailsDialog = () => {
+        setDetailsDialogOpen(false);
+        setSelectedInstance(null);
+        setTroubleshootData(null);
+        if (detailsRefreshInterval) {
+            clearInterval(detailsRefreshInterval);
+            setDetailsRefreshInterval(null);
+        }
+    };
+
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" component="h1">
                     Process Management
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<Refresh />}
-                    onClick={handleRefresh}
-                    disabled={loading}
-                >
-                    Refresh
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={autoRefresh}
+                                onChange={(e) => setAutoRefresh(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="Auto-refresh (5s)"
+                    />
+                    <Button
+                        variant="contained"
+                        startIcon={<Refresh />}
+                        onClick={handleRefresh}
+                        disabled={loading}
+                    >
+                        Refresh
+                    </Button>
+                </Box>
             </Box>
 
             {error && (
@@ -624,9 +720,14 @@ const ProcessManager: React.FC = () => {
             </Dialog>
 
             {/* Details Dialog */}
-            <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="lg" fullWidth>
-                <DialogTitle>
-                    Process Instance Details: {selectedInstance?.id.substring(0, 8)}...
+            <Dialog open={detailsDialogOpen} onClose={handleCloseDetailsDialog} maxWidth="lg" fullWidth>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">
+                        Process Instance Details: {selectedInstance?.id.substring(0, 8)}...
+                    </Typography>
+                    <Typography variant="caption" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
+                        🔄 Auto-refreshing every 5s
+                    </Typography>
                 </DialogTitle>
                 <DialogContent>
                     {loadingDetails ? (
@@ -814,7 +915,7 @@ const ProcessManager: React.FC = () => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+                    <Button onClick={handleCloseDetailsDialog}>Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>
