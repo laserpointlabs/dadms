@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2025-06-18
+
+### Added
+- **Enhanced Process Management UI**: Complete overhaul of process management interface
+  - Comprehensive process troubleshooting dialog with real-time data aggregation
+  - Auto-refresh functionality for process instances table (5-second intervals with toggle)
+  - Real-time details dialog auto-refresh for live process monitoring
+  - Process definition grouping by key with version selection dropdown
+  - Process-level documentation extraction and display via info button
+  - Delete functionality for both process definitions and process instances
+  - Rich troubleshooting data including activity timeline, logs, incidents, and analysis data
+- **Backend Process Management API**: Robust backend endpoints for process lifecycle management
+  - Process instance troubleshooting endpoint aggregating execution history, logs, and analysis data
+  - Process definition documentation extraction from BPMN files
+  - Enhanced process start endpoint with analysis database integration
+  - Delete endpoints for process definitions and instances with proper cleanup
+  - All-versions process definitions endpoint with grouping support
+
+### Enhanced
+- **Real-time Process Monitoring**: Advanced monitoring capabilities
+  - Activity execution timeline with status indicators and duration tracking
+  - External task logs with detailed worker information and error tracking
+  - Incident and error history with proper categorization and timestamps
+  - Variable history tracking with value changes and activity context
+  - Analysis data integration showing DADM-specific process insights
+- **User Experience**: Significantly improved process management workflow
+  - Clean, modern UI with Material-UI components and proper responsive design
+  - Visual status indicators for process states (active, completed, terminated)
+  - Intuitive action buttons (play, info, view details, delete) with tooltips
+  - Auto-refresh indicators and toggle controls for real-time monitoring
+  - Process duration calculations and human-readable time formatting
+
+### Fixed
+- **Database Integration**: Ensured analysis data persistence
+  - Fixed backend to use correct analysis database path configuration
+  - Cleaned up duplicate database files and established single source of truth
+  - Verified process execution writes analysis data to proper database location
+- **UI Stability**: Resolved blocking and hanging issues
+  - Implemented proper background external task worker spawning
+  - Fixed UI hanging when starting processes from the interface
+  - Ensured process start operations don't block the user interface
+  - Added proper error handling and timeout management for process operations
+
 ## [0.11.0] - 2025-06-18
 
 ### Added
