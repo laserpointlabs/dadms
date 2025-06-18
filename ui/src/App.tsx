@@ -1,4 +1,4 @@
-import { Analytics, Chat, Dashboard, Monitor, Storage, Terminal } from '@mui/icons-material';
+import { Analytics, Chat, Dashboard, Monitor, Settings, Storage, Terminal } from '@mui/icons-material';
 import { AppBar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
 import { useState } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
@@ -8,6 +8,7 @@ import AIChat from './components/AIChat';
 import AnalysisDataViewer from './components/AnalysisDataViewer';
 import CLIManager from './components/CLIManager';
 import DashboardOverview from './components/DashboardOverview';
+import SystemManager from './components/SystemManager';
 import TechStackMonitor from './components/TechStackMonitor';
 import ThreadContextViewer from './components/ThreadContextViewer';
 
@@ -15,6 +16,7 @@ const drawerWidth = 240;
 
 const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+    { text: 'System Management', icon: <Settings />, path: '/system' },
     { text: 'CLI Manager', icon: <Terminal />, path: '/cli' },
     { text: 'Tech Stack Monitor', icon: <Monitor />, path: '/monitor' },
     { text: 'Analysis Data', icon: <Analytics />, path: '/analysis' },
@@ -96,6 +98,7 @@ function App() {
                 >
                     <Routes>
                         <Route path="/" element={<DashboardOverview />} />
+                        <Route path="/system" element={<SystemManager />} />
                         <Route path="/cli" element={<CLIManager />} />
                         <Route path="/monitor" element={<TechStackMonitor />} />
                         <Route path="/analysis" element={<AnalysisDataViewer />} />

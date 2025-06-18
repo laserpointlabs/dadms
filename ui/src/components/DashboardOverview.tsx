@@ -12,6 +12,7 @@ import {
     Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import SystemStatusWidget from './SystemStatusWidget';
 
 interface SystemStatus {
     services: {
@@ -164,6 +165,9 @@ const DashboardOverview: React.FC = () => {
                 {/* Quick Stats */}
                 <Grid item xs={12} lg={4}>
                     <Grid container spacing={3}>
+                        <Grid item xs={12}>
+                            <SystemStatusWidget />
+                        </Grid>
                         <Grid item xs={12}>
                             <Paper sx={{ p: 2 }}>
                                 <Typography variant="h6" gutterBottom>

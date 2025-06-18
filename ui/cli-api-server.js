@@ -246,6 +246,224 @@ app.delete('/api/analysis/process/:processInstanceId', async (req, res) => {
     }
 });
 
+// System Management Endpoints
+
+// Get system status
+app.get('/api/system/status', async (req, res) => {
+    try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        // Get PM2 status
+        let pm2Status = [];
+        try {
+            const { stdout } = await execAsync('pm2 jlist');
+            pm2Status = JSON.parse(stdout);
+        } catch (error) {
+            console.log('PM2 not available or no processes running');
+        }
+
+        // Get Docker status
+        let dockerStatus = [];
+        try {
+            const { stdout } = await execAsync('docker ps --format "{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"');
+            dockerStatus = stdout.trim().split('\n').filter(line => line).map(line => {
+                const [name, status, image, ports] = line.split('\t');
+                return { name, status, image, ports };
+            });
+        } catch (error) {
+            console.log('Docker not available or no containers running');
+        }
+
+        // Get analysis daemon status
+        let analysisDaemonStatus = 'stopped';
+        try {
+            const { stdout } = await execAsync('pgrep -f "dadm.*analysis.*daemon" | wc -l');
+            analysisDaemonStatus = parseInt(stdout.trim()) > 0 ? 'running' : 'stopped';
+        } catch (error) {
+            analysisDaemonStatus = 'unknown';
+        }
+
+        // Get system resource usage
+        let systemResources = {};
+        try {
+            const [memInfo, cpuInfo] = await Promise.all([
+                execAsync('free -m | grep "Mem:"'),
+                execAsync('top -bn1 | grep "load average"')
+            ]);
+
+            const memLine = memInfo.stdout.trim().split(/\s+/);
+            systemResources = {
+                memory: {
+                    total: parseInt(memLine[1]),
+                    used: parseInt(memLine[2]),
+                    free: parseInt(memLine[3]),
+                    available: parseInt(memLine[6])
+                },
+                loadAverage: cpuInfo.stdout.match(/load average: ([\d.]+)/)?.[1] || 'unknown'
+            };
+        } catch (error) {
+            console.log('Could not get system resources');
+        }
+
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            services: {
+                backend: {
+                    name: 'DADM Backend API',
+                    status: 'running',
+                    port: PORT,
+                    uptime: process.uptime(),
+                    pm2: pm2Status.find(p => p.name === 'dadm-backend') || null
+                },
+                analysisDaemon: {
+                    name: 'Analysis Daemon',
+                    status: analysisDaemonStatus
+                }
+            },
+            docker: dockerStatus,
+            system: systemResources
+        });
+    } catch (error) {
+        console.error('Failed to get system status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Control PM2 backend service
+app.post('/api/system/backend/:action', async (req, res) => {
+    try {
+        const { action } = req.params;
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        let command;
+        switch (action) {
+            case 'start':
+                command = 'cd /home/jdehart/dadm/ui && pm2 start ecosystem.config.js';
+                break;
+            case 'stop':
+                command = 'pm2 stop dadm-backend';
+                break;
+            case 'restart':
+                command = 'pm2 restart dadm-backend';
+                break;
+            case 'reload':
+                command = 'pm2 reload dadm-backend';
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    error: `Invalid action: ${action}. Valid actions: start, stop, restart, reload`
+                });
+        }
+
+        console.log(`Executing PM2 command: ${command}`);
+        const { stdout, stderr } = await execAsync(command);
+
+        res.json({
+            success: true,
+            action,
+            message: `Backend ${action} command executed successfully`,
+            output: stdout,
+            error: stderr || null
+        });
+    } catch (error) {
+        console.error(`Failed to ${req.params.action} backend:`, error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stderr: error.stderr || null
+        });
+    }
+});
+
+// Control analysis daemon
+app.post('/api/system/daemon/:action', async (req, res) => {
+    try {
+        const { action } = req.params;
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        let command;
+        switch (action) {
+            case 'start':
+                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon start';
+                break;
+            case 'stop':
+                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon stop';
+                break;
+            case 'restart':
+                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon restart';
+                break;
+            case 'status':
+                command = 'cd /home/jdehart/dadm && /home/jdehart/dadm/.venv/bin/python -m src.core.analysis_daemon status';
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    error: `Invalid action: ${action}. Valid actions: start, stop, restart, status`
+                });
+        }
+
+        console.log(`Executing daemon command: ${command}`);
+        const { stdout, stderr } = await execAsync(command);
+
+        res.json({
+            success: true,
+            action,
+            message: `Analysis daemon ${action} command executed successfully`,
+            output: stdout,
+            error: stderr || null
+        });
+    } catch (error) {
+        console.error(`Failed to ${req.params.action} analysis daemon:`, error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stderr: error.stderr || null
+        });
+    }
+});
+
+// Get Docker container status
+app.get('/api/system/docker', async (req, res) => {
+    try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        const { stdout } = await execAsync('docker ps --format "json" | jq -s "."');
+        const containers = JSON.parse(stdout);
+
+        res.json({
+            success: true,
+            containers: containers.map(container => ({
+                id: container.ID,
+                name: container.Names,
+                image: container.Image,
+                status: container.Status,
+                ports: container.Ports,
+                created: container.CreatedAt
+            }))
+        });
+    } catch (error) {
+        console.error('Failed to get Docker status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            containers: []
+        });
+    }
+});
+
 // Helper function to parse DADM process definitions output
 function parseProcessDefinitions(output) {
     const definitions = [];
@@ -620,4 +838,8 @@ server.listen(PORT, () => {
     console.log(`  GET    http://localhost:${PORT}/api/analysis/:id`);
     console.log(`  DELETE http://localhost:${PORT}/api/analysis/process/:processInstanceId`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions`);
+    console.log(`  GET    http://localhost:${PORT}/api/system/status`);
+    console.log(`  POST   http://localhost:${PORT}/api/system/backend/:action`);
+    console.log(`  POST   http://localhost:${PORT}/api/system/daemon/:action`);
+    console.log(`  GET    http://localhost:${PORT}/api/system/docker`);
 });
