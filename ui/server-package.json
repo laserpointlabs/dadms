@@ -1,0 +1,26 @@
+{
+    "name": "dadm-cli-api-server",
+    "version": "1.0.0",
+    "description": "Simple API server for DADM CLI command execution",
+    "main": "cli-api-server.js",
+    "scripts": {
+        "start": "node cli-api-server.js",
+        "dev": "nodemon cli-api-server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "socket.io": "^4.7.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    },
+    "keywords": [
+        "dadm",
+        "cli",
+        "api",
+        "server"
+    ],
+    "author": "DADM Team",
+    "license": "MIT"
+}
