@@ -1,0 +1,25 @@
+# Development Dockerfile
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Set environment variables
+ENV BROWSER=none
+ENV REACT_APP_API_BASE_URL=http://localhost:8000
+ENV REACT_APP_WS_URL=ws://localhost:8001
+
+# Command to run the development server
+CMD ["npm", "start"]
