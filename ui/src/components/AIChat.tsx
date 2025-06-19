@@ -34,6 +34,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
+import MermaidDiagram from './MermaidDiagram';
 
 interface ChatMessage {
     id: string;
@@ -216,6 +217,16 @@ I'm here to help you with:
 - Chart interpretation
 - Statistical analysis explanation
 - Reporting suggestions
+
+## 🎨 **Diagram Support**
+I can render interactive diagrams like this simple workflow:
+
+\`\`\`mermaid
+graph LR
+    A[Question] --> B[AI Analysis]
+    B --> C[Response]
+    C --> D[Action]
+\`\`\`
 
 **Choose a mode:**
 - **Standalone**: General AI assistance (always available)
@@ -564,6 +575,63 @@ Which specific command would you like help with?`;
 - **Relevance**: Do results address business needs?
 
 What type of analysis are you working on?`;
+        }
+
+        if (lowerInput.includes('diagram') || lowerInput.includes('chart') || lowerInput.includes('mermaid') || lowerInput.includes('flowchart')) {
+            return `# Diagram & Visualization Support 📊
+
+I can help you understand and create various types of diagrams! Here are some examples:
+
+## **Process Flow Example**
+\`\`\`mermaid
+graph TD
+    A[Start Analysis] --> B{Data Available?}
+    B -->|Yes| C[Validate Data]
+    B -->|No| D[Collect Data]
+    D --> C
+    C --> E[Run Analysis]
+    E --> F{Results Valid?}
+    F -->|Yes| G[Generate Report]
+    F -->|No| H[Adjust Parameters]
+    H --> E
+    G --> I[End]
+\`\`\`
+
+## **Decision Tree Example**
+\`\`\`mermaid
+graph TD
+    A[Decision Point] --> B{Criteria 1}
+    B -->|High| C{Criteria 2}
+    B -->|Low| D[Option A]
+    C -->|Met| E[Option B]
+    C -->|Not Met| F[Option C]
+\`\`\`
+
+## **System Architecture**
+\`\`\`mermaid
+graph LR
+    UI[Frontend UI] --> API[Backend API]
+    API --> DB[(Database)]
+    API --> AI[AI Service]
+    API --> BPM[Process Engine]
+    BPM --> DB
+    AI --> Vector[(Vector DB)]
+\`\`\`
+
+## **Timeline Visualization**
+\`\`\`mermaid
+gantt
+    title Analysis Timeline
+    dateFormat  YYYY-MM-DD
+    section Phase 1
+    Data Collection    :2024-01-01, 7d
+    Data Validation    :2024-01-08, 3d
+    section Phase 2
+    Analysis           :2024-01-11, 5d
+    Review             :2024-01-16, 2d
+\`\`\`
+
+What type of diagram would help visualize your process or data?`;
         }
 
         // Default response
@@ -961,6 +1029,18 @@ What would you like to explore?`;
                                             components={{
                                                 code({ node, inline, className, children, ...props }: any) {
                                                     const match = /language-(\w+)/.exec(className || '');
+                                                    const language = match ? match[1] : '';
+
+                                                    // Handle mermaid diagrams
+                                                    if (language === 'mermaid' && !inline) {
+                                                        return (
+                                                            <MermaidDiagram
+                                                                chart={String(children).replace(/\n$/, '')}
+                                                                id={`mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`}
+                                                            />
+                                                        );
+                                                    }
+
                                                     return !inline && match ? (
                                                         <SyntaxHighlighter
                                                             style={tomorrow as any}
