@@ -70,7 +70,24 @@ const AIChat: React.FC = () => {
     const [selectedThread, setSelectedThread] = useState<string>('');
     const [availableThreads, setAvailableThreads] = useState<ThreadContext[]>([]);
     const [chatMode, setChatMode] = useState<'standalone' | 'thread-context'>('standalone');
+    const [apiConnected, setApiConnected] = useState<boolean>(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+    const [totalThreads, setTotalThreads] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Check API connectivity
+    const checkApiConnection = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/health`);
+            setApiConnected(response.ok);
+            return response.ok;
+        } catch (err) {
+            console.error('API connection check failed:', err);
+            setApiConnected(false);
+            return false;
+        }
+    };
 
     // Load thread messages when a thread is selected
     const loadThreadMessages = async (threadId: string) => {
@@ -103,6 +120,23 @@ const AIChat: React.FC = () => {
         }
     };
 
+    // Handle chat mode change
+    const handleChatModeChange = (newMode: 'standalone' | 'thread-context') => {
+        setChatMode(newMode);
+
+        // Clear thread selection when switching to standalone
+        if (newMode === 'standalone') {
+            setSelectedThread('');
+        }
+    };
+
+    // Reset chat when mode changes
+    useEffect(() => {
+        setMessages([getWelcomeMessage()]);
+        setError(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatMode]);
+
     // Handle thread selection change
     const handleThreadChange = (newThreadId: string) => {
         setSelectedThread(newThreadId);
@@ -113,23 +147,43 @@ const AIChat: React.FC = () => {
         }
     };
 
-    // Fetch real thread data from API
-    const fetchThreads = async () => {
+    // Fetch real thread data from API with pagination
+    const fetchThreads = async (page: number = 1) => {
         try {
             setThreadsLoading(true);
-            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/threads`);
+            setError(null);
+
+            // Check API connection first
+            const isConnected = await checkApiConnection();
+            if (!isConnected) {
+                setError('Cannot connect to backend API. Please check if the backend is running.');
+                return;
+            }
+
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/threads?page=${page}&limit=${itemsPerPage}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const result = await response.json();
 
             if (result.success) {
-                setAvailableThreads(result.data);
-                console.log(`Loaded ${result.data.length} thread combinations for AI Chat`);
+                if (page === 1) {
+                    setAvailableThreads(result.data);
+                } else {
+                    setAvailableThreads(prev => [...prev, ...result.data]);
+                }
+                setTotalThreads(result.total || result.data.length);
+                setCurrentPage(page);
+                console.log(`Loaded ${result.data.length} threads for AI Chat (page ${page})`);
             } else {
-                console.error('Failed to fetch threads:', result.error);
-                setError(`Failed to load threads: ${result.error}`);
+                throw new Error(result.error || 'Failed to fetch threads');
             }
         } catch (err) {
             console.error('Error fetching threads for AI Chat:', err);
-            setError('Failed to connect to thread API');
+            setError(err instanceof Error ? err.message : 'Failed to connect to thread API');
+            setApiConnected(false);
         } finally {
             setThreadsLoading(false);
         }
@@ -164,24 +218,36 @@ I'm here to help you with:
 - Reporting suggestions
 
 **Choose a mode:**
-- **Standalone**: General AI assistance
-- **Thread Context**: Focus on specific analysis threads${availableThreads.length > 0 ? ` (${availableThreads.length} threads available)` : ' (loading threads...)'}
+- **Standalone**: General AI assistance (always available)
+- **Thread Context**: Focus on specific analysis threads${!apiConnected
+                ? ' (⚠️ Backend API not connected)'
+                : availableThreads.length > 0
+                    ? ` (${availableThreads.length}${totalThreads > availableThreads.length ? `/${totalThreads}` : ''} threads available)`
+                    : threadsLoading
+                        ? ' (loading threads...)'
+                        : ' (no threads available)'
+            }
 
-What would you like to explore today?`,
+${!apiConnected
+                ? '⚠️ **Note**: Backend API is not accessible. Some features may be limited.'
+                : 'What would you like to explore today?'
+            }`,
         timestamp: new Date().toISOString()
     });
 
     useEffect(() => {
-        fetchThreads();
+        fetchThreads(1);
         setMessages([getWelcomeMessage()]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array is intentional for initialization
 
-    // Update welcome message when threads are loaded
+    // Update welcome message when threads are loaded or API connection changes
     useEffect(() => {
         if (messages.length === 1 && messages[0].id === 'welcome') {
             setMessages([getWelcomeMessage()]);
         }
-    }, [availableThreads.length]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [availableThreads.length, apiConnected, threadsLoading, totalThreads]);
 
     useEffect(() => {
         scrollToBottom();
@@ -205,8 +271,25 @@ What would you like to explore today?`,
         setMessages(prev => [...prev, userMessage]);
         setInputMessage('');
         setLoading(true);
+        setError(null);
 
         try {
+            // Check API connection first
+            const isConnected = await checkApiConnection();
+            if (!isConnected) {
+                // Fall back to local AI simulation if API is not available
+                const localResponse = generateAIResponse(inputMessage, chatMode, selectedThread);
+                const assistantMessage: ChatMessage = {
+                    id: `local_${Date.now()}`,
+                    role: 'assistant',
+                    content: `⚠️ **Backend API Unavailable - Local Response**\n\n${localResponse}`,
+                    timestamp: new Date().toISOString(),
+                    thread_id: chatMode === 'thread-context' ? selectedThread : undefined
+                };
+                setMessages(prev => [...prev, assistantMessage]);
+                return;
+            }
+
             if (chatMode === 'thread-context' && selectedThread) {
                 // Real OpenAI API call for thread context mode
                 const selectedThreadData = availableThreads.find(t => t.openai_thread === selectedThread);
@@ -226,6 +309,10 @@ What would you like to explore today?`,
                         assistantId: selectedThreadData.openai_assistant
                     })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
                 const result = await response.json();
 
@@ -254,6 +341,10 @@ What would you like to explore today?`,
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
 
                 if (!result.success) {
@@ -272,6 +363,18 @@ What would you like to explore today?`,
         } catch (err) {
             console.error('Error sending message:', err);
             setError(err instanceof Error ? err.message : 'Failed to get AI response');
+            setApiConnected(false);
+
+            // Provide a fallback response
+            const fallbackResponse = generateAIResponse(inputMessage, chatMode, selectedThread);
+            const assistantMessage: ChatMessage = {
+                id: `fallback_${Date.now()}`,
+                role: 'assistant',
+                content: `⚠️ **Error - Fallback Response**\n\n${err instanceof Error ? err.message : 'Unknown error'}\n\n${fallbackResponse}`,
+                timestamp: new Date().toISOString(),
+                thread_id: chatMode === 'thread-context' ? selectedThread : undefined
+            };
+            setMessages(prev => [...prev, assistantMessage]);
         } finally {
             setLoading(false);
         }
@@ -614,7 +717,7 @@ What would you like to explore?`;
                             <Select
                                 value={chatMode}
                                 label="Chat Mode"
-                                onChange={(e) => setChatMode(e.target.value as any)}
+                                onChange={(e) => handleChatModeChange(e.target.value as 'standalone' | 'thread-context')}
                             >
                                 <MenuItem value="standalone">Standalone</MenuItem>
                                 <MenuItem value="thread-context">Thread Context</MenuItem>
@@ -648,6 +751,22 @@ What would you like to explore?`;
                                                     </Typography>
                                                 </MenuItem>
                                             ))
+                                        )}
+
+                                        {!threadsLoading && availableThreads.length > 0 && totalThreads > availableThreads.length && (
+                                            <MenuItem
+                                                onClick={() => fetchThreads(currentPage + 1)}
+                                                sx={{
+                                                    bgcolor: 'action.hover',
+                                                    fontStyle: 'italic',
+                                                    borderTop: '1px solid',
+                                                    borderColor: 'divider'
+                                                }}
+                                            >
+                                                <Typography variant="body2" color="primary">
+                                                    📂 Load More Threads ({availableThreads.length}/{totalThreads})
+                                                </Typography>
+                                            </MenuItem>
                                         )}
                                     </Select>
                                 </FormControl>
@@ -690,15 +809,24 @@ What would you like to explore?`;
 
                         <Chip
                             icon={chatMode === 'standalone' ? <Psychology /> : <History />}
-                            label={chatMode === 'standalone' ? 'General AI' : `Thread Context (${availableThreads.length} available)`}
+                            label={chatMode === 'standalone' ? 'General AI' : `Thread Context (${availableThreads.length}${totalThreads > availableThreads.length ? `/${totalThreads}` : ''} available)`}
                             color="primary"
                             variant="outlined"
+                        />
+
+                        {/* API Connection Status */}
+                        <Chip
+                            icon={apiConnected ? <Psychology /> : <Clear />}
+                            label={apiConnected ? 'API Connected' : 'API Disconnected'}
+                            color={apiConnected ? 'success' : 'error'}
+                            variant="outlined"
+                            size="small"
                         />
 
                         {chatMode === 'thread-context' && (
                             <Tooltip title="Refresh threads">
                                 <IconButton
-                                    onClick={fetchThreads}
+                                    onClick={() => fetchThreads(1)}
                                     disabled={threadsLoading}
                                     size="small"
                                 >
