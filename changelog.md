@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.3] - 2025-06-19
+
+### Added
+- **AI Assistant Mermaid Diagram Integration**: Comprehensive diagram rendering in chat interface
+  - Robust MermaidDiagram React component with stable SVG rendering using dangerouslySetInnerHTML
+  - Automatic mermaid code block detection and rendering in both user and AI assistant messages
+  - Error handling for invalid diagram syntax with user-friendly error messages
+  - Responsive diagram styling with proper container sizing and visibility controls
+  - Sample mermaid diagram in AI chat welcome message for feature demonstration
+
+### Enhanced
+- **Chat Interface User Experience**: Improved markdown and code rendering capabilities
+  - Unified ReactMarkdown rendering for both user and assistant messages
+  - Syntax highlighting support for all code blocks in user messages
+  - Consistent styling and theming across user and assistant message contexts
+  - Proper word wrapping and responsive design for complex content
+
+### Fixed
+- **React DOM Manipulation Conflicts**: Resolved critical rendering stability issues
+  - Eliminated React DOM removeChild errors through proper component lifecycle management
+  - Replaced manual innerHTML manipulation with React-safe dangerouslySetInnerHTML pattern
+  - Implemented proper component mounting checks to prevent state updates on unmounted components
+  - Enhanced error boundaries and graceful fallback handling for diagram rendering failures
+
+### Documentation
+- **Comprehensive Solution Documentation**: Complete implementation guide and troubleshooting
+  - Created detailed MERMAID_INTEGRATION_SOLUTION.md with architectural decisions and best practices
+  - Documented React DOM conflict resolution with before/after code examples
+  - Added testing procedures and common troubleshooting scenarios
+  - Included future enhancement roadmap and extension points
+
 ## [0.11.2] - 2025-06-19
 
 ### Added
