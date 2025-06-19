@@ -2,8 +2,10 @@ import {
     Clear,
     Download,
     History,
+    OpenInNew,
     Person,
     Psychology,
+    Refresh,
     Send
 } from '@mui/icons-material';
 import {
@@ -43,48 +45,57 @@ interface ChatMessage {
 }
 
 interface ThreadContext {
-    thread_id: string;
+    id: string;
+    openai_thread: string;
+    openai_assistant: string;
     name: string;
-    analysis_id: string;
-    status: string;
-    message_count: number;
+    status: 'active' | 'completed' | 'error' | 'pending';
+    created_at: string;
+    last_activity: string;
+    analysis_count: number;
+    analysis_ids: string[];
+    process_definition?: {
+        name: string;
+        version: number;
+        key: string;
+    };
 }
 
 const AIChat: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [threadsLoading, setThreadsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedThread, setSelectedThread] = useState<string>('');
     const [availableThreads, setAvailableThreads] = useState<ThreadContext[]>([]);
     const [chatMode, setChatMode] = useState<'standalone' | 'thread-context'>('standalone');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const mockThreads: ThreadContext[] = [
-        {
-            thread_id: 'thread_001',
-            name: 'Market Analysis Q4 2024',
-            analysis_id: 'analysis_001',
-            status: 'completed',
-            message_count: 24
-        },
-        {
-            thread_id: 'thread_002',
-            name: 'Customer Segmentation Analysis',
-            analysis_id: 'analysis_002',
-            status: 'active',
-            message_count: 15
-        },
-        {
-            thread_id: 'thread_003',
-            name: 'Risk Assessment Pipeline',
-            analysis_id: 'analysis_003',
-            status: 'pending',
-            message_count: 3
-        }
-    ];
+    // Fetch real thread data from API
+    const fetchThreads = async () => {
+        try {
+            setThreadsLoading(true);
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/threads`);
+            const result = await response.json();
 
-    const welcomeMessage: ChatMessage = {
+            if (result.success) {
+                setAvailableThreads(result.data);
+                console.log(`Loaded ${result.data.length} thread combinations for AI Chat`);
+            } else {
+                console.error('Failed to fetch threads:', result.error);
+                setError(`Failed to load threads: ${result.error}`);
+            }
+        } catch (err) {
+            console.error('Error fetching threads for AI Chat:', err);
+            setError('Failed to connect to thread API');
+        } finally {
+            setThreadsLoading(false);
+        }
+    };
+
+    // Create a dynamic welcome message that updates with thread count
+    const getWelcomeMessage = (): ChatMessage => ({
         id: 'welcome',
         role: 'assistant',
         content: `# Welcome to DADM AI Assistant! 🤖
@@ -97,9 +108,9 @@ I'm here to help you with:
 - Help understand complex data patterns
 
 ## 🧵 **Thread Context Integration**
-- Discuss specific analysis threads
-- Review conversation history
-- Analyze thread outcomes
+- Discuss specific analysis threads from your system
+- Review conversation history and outcomes
+- Analyze thread performance and results
 
 ## 💡 **System Guidance**
 - CLI command assistance
@@ -113,16 +124,23 @@ I'm here to help you with:
 
 **Choose a mode:**
 - **Standalone**: General AI assistance
-- **Thread Context**: Focus on specific analysis threads
+- **Thread Context**: Focus on specific analysis threads${availableThreads.length > 0 ? ` (${availableThreads.length} threads available)` : ' (loading threads...)'}
 
 What would you like to explore today?`,
         timestamp: new Date().toISOString()
-    };
+    });
 
     useEffect(() => {
-        setAvailableThreads(mockThreads);
-        setMessages([welcomeMessage]);
+        fetchThreads();
+        setMessages([getWelcomeMessage()]);
     }, []); // Empty dependency array is intentional for initialization
+
+    // Update welcome message when threads are loaded
+    useEffect(() => {
+        if (messages.length === 1 && messages[0].id === 'welcome') {
+            setMessages([getWelcomeMessage()]);
+        }
+    }, [availableThreads.length]);
 
     useEffect(() => {
         scrollToBottom();
@@ -173,20 +191,34 @@ What would you like to explore today?`,
     const generateAIResponse = (input: string, mode: string, threadId: string): string => {
         const lowerInput = input.toLowerCase();
 
-        if (mode === 'thread-context' && threadId) {
-            const thread = availableThreads.find(t => t.thread_id === threadId);
+        if (mode === 'thread-context') {
+            if (!threadId) {
+                return `# Thread Context Mode 🧵
+
+Please select a thread from the dropdown above to get context-specific assistance. I can help you with:
+
+- **Thread Analysis**: Detailed insights about specific analysis threads
+- **Performance Review**: Understanding thread outcomes and effectiveness
+- **Troubleshooting**: Identifying and resolving thread-specific issues
+- **Best Practices**: Recommendations for optimizing thread usage
+
+Choose a thread from the **${availableThreads.length} available threads** to get started!`;
+            }
+
+            const thread = availableThreads.find(t => t.openai_thread === threadId);
             if (thread) {
                 if (lowerInput.includes('summary') || lowerInput.includes('overview')) {
                     return `# Thread Summary: ${thread.name}
 
 ## 📊 **Analysis Overview**
-- **Thread ID**: ${thread.thread_id}
-- **Analysis ID**: ${thread.analysis_id}
+- **Thread ID**: ${thread.openai_thread}
+- **Assistant**: ${thread.openai_assistant}
+- **Analysis Count**: ${thread.analysis_count}
 - **Status**: ${thread.status}
-- **Messages**: ${thread.message_count}
+- **Created**: ${new Date(thread.created_at).toLocaleDateString()}
 
 ## 🔍 **Key Insights**
-Based on the thread context, this analysis focused on ${thread.name.toLowerCase()}. The current status is **${thread.status}** with ${thread.message_count} messages exchanged.
+Based on the thread context, this analysis focused on ${thread.name.toLowerCase()}. The current status is **${thread.status}** with ${thread.analysis_count} related analyses.
 
 ## 💡 **Recommendations**
 1. Review the final analysis outputs
@@ -223,10 +255,10 @@ I'll help you identify and resolve issues with this analysis thread.
 
 \`\`\`bash
 # Check analysis logs
-dadm analysis logs --thread-id ${thread.thread_id}
+dadm analysis logs --thread-id ${thread.openai_thread}
 
 # Verify data sources
-dadm analysis validate --analysis-id ${thread.analysis_id}
+dadm analysis validate --analysis-ids ${thread.analysis_ids.join(',')}
 
 # Check service status
 dadm monitor services
@@ -234,6 +266,25 @@ dadm monitor services
 
 What specific error or issue are you encountering?`;
                 }
+
+                // Default response for thread context
+                return `# Thread Context: ${thread.name}
+
+I'm analyzing the context for this specific thread. Here's what I can help you with:
+
+## 📋 **Thread Details**
+- **Thread ID**: ${thread.openai_thread}
+- **Assistant**: ${thread.openai_assistant}
+- **Status**: ${thread.status}
+- **Analyses**: ${thread.analysis_count}
+
+## 🤔 **How can I assist you?**
+- Ask about specific analysis results
+- Request troubleshooting help
+- Get recommendations for next steps
+- Understand the thread's performance
+
+What would you like to know about this analysis thread?`;
             }
         }
 
@@ -349,7 +400,7 @@ What would you like to explore?`;
     };
 
     const clearChat = () => {
-        setMessages([welcomeMessage]);
+        setMessages([getWelcomeMessage()]);
         setError(null);
     };
 
@@ -417,28 +468,90 @@ What would you like to explore?`;
                         </FormControl>
 
                         {chatMode === 'thread-context' && (
-                            <FormControl size="small" sx={{ minWidth: 200 }}>
-                                <InputLabel>Select Thread</InputLabel>
-                                <Select
-                                    value={selectedThread}
-                                    label="Select Thread"
-                                    onChange={(e) => setSelectedThread(e.target.value)}
-                                >
-                                    {availableThreads.map((thread) => (
-                                        <MenuItem key={thread.thread_id} value={thread.thread_id}>
-                                            {thread.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <>
+                                <FormControl size="small" sx={{ minWidth: 400 }}>
+                                    <InputLabel>Select Thread</InputLabel>
+                                    <Select
+                                        value={selectedThread}
+                                        label="Select Thread"
+                                        onChange={(e) => setSelectedThread(e.target.value)}
+                                        disabled={threadsLoading}
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        {threadsLoading ? (
+                                            <MenuItem value="" disabled>
+                                                Loading threads...
+                                            </MenuItem>
+                                        ) : availableThreads.length === 0 ? (
+                                            <MenuItem value="" disabled>
+                                                No threads available
+                                            </MenuItem>
+                                        ) : (
+                                            availableThreads.map((thread) => (
+                                                <MenuItem key={thread.openai_thread} value={thread.openai_thread}>
+                                                    <Typography variant="body2">
+                                                        {thread.name} - {thread.openai_thread}
+                                                    </Typography>
+                                                </MenuItem>
+                                            ))
+                                        )}
+                                    </Select>
+                                </FormControl>
+
+                                {selectedThread && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Assistant:
+                                        </Typography>
+                                        <Typography variant="caption" sx={{
+                                            fontFamily: 'monospace',
+                                            bgcolor: 'primary.light',
+                                            color: 'primary.contrastText',
+                                            px: 1,
+                                            py: 0.5,
+                                            borderRadius: 1
+                                        }}>
+                                            {availableThreads.find(t => t.openai_thread === selectedThread)?.openai_assistant}
+                                        </Typography>
+
+                                        <Tooltip title="Open in OpenAI Playground">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => {
+                                                    const selectedThreadData = availableThreads.find(t => t.openai_thread === selectedThread);
+                                                    if (selectedThreadData) {
+                                                        const playgroundUrl = `https://platform.openai.com/playground/assistants?assistant=${selectedThreadData.openai_assistant}&thread=${selectedThread}`;
+                                                        window.open(playgroundUrl, '_blank');
+                                                    }
+                                                }}
+                                                sx={{ ml: 0.5 }}
+                                            >
+                                                <OpenInNew fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+                                )}
+                            </>
                         )}
 
                         <Chip
                             icon={chatMode === 'standalone' ? <Psychology /> : <History />}
-                            label={chatMode === 'standalone' ? 'General AI' : 'Thread Context'}
+                            label={chatMode === 'standalone' ? 'General AI' : `Thread Context (${availableThreads.length} available)`}
                             color="primary"
                             variant="outlined"
                         />
+
+                        {chatMode === 'thread-context' && (
+                            <Tooltip title="Refresh threads">
+                                <IconButton
+                                    onClick={fetchThreads}
+                                    disabled={threadsLoading}
+                                    size="small"
+                                >
+                                    <Refresh />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </Box>
                 </CardContent>
             </Card>
