@@ -1121,18 +1121,128 @@ What would you like to explore?`;
                                         </ReactMarkdown>
                                     </Box>
                                 ) : (
-                                    <Typography variant="body1" sx={{
-                                        whiteSpace: 'pre-line',
+                                    <Box sx={{
                                         color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                                        lineHeight: 1.5,
+                                        maxWidth: '100%',
+                                        minWidth: 0,
+                                        overflow: 'hidden',
                                         wordWrap: 'break-word',
                                         overflowWrap: 'break-word',
                                         wordBreak: 'break-word',
-                                        maxWidth: '100%',
-                                        minWidth: 0
+                                        '& *': {
+                                            maxWidth: '100% !important',
+                                            wordWrap: 'break-word !important',
+                                            overflowWrap: 'break-word !important'
+                                        }
                                     }}>
-                                        {message.content}
-                                    </Typography>
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                code({ node, inline, className, children, ...props }: any) {
+                                                    const match = /language-(\w+)/.exec(className || '');
+                                                    const language = match ? match[1] : '';
+
+                                                    // Handle mermaid diagrams
+                                                    if (language === 'mermaid' && !inline) {
+                                                        return (
+                                                            <MermaidDiagram
+                                                                chart={String(children).replace(/\n$/, '')}
+                                                                id={`mermaid-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`}
+                                                            />
+                                                        );
+                                                    }
+
+                                                    return !inline && match ? (
+                                                        <SyntaxHighlighter
+                                                            style={tomorrow as any}
+                                                            language={match[1]}
+                                                            PreTag="div"
+                                                            wrapLongLines={true}
+                                                            customStyle={{
+                                                                maxWidth: '100%',
+                                                                overflow: 'auto',
+                                                                fontSize: '0.875rem',
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word'
+                                                            }}
+                                                            {...props}
+                                                        >
+                                                            {String(children).replace(/\n$/, '')}
+                                                        </SyntaxHighlighter>
+                                                    ) : (
+                                                        <code
+                                                            className={className}
+                                                            style={{
+                                                                backgroundColor: message.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                                                                padding: '2px 4px',
+                                                                borderRadius: '3px',
+                                                                fontSize: '0.875em',
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word',
+                                                                maxWidth: '100%'
+                                                            }}
+                                                            {...props}
+                                                        >
+                                                            {children}
+                                                        </code>
+                                                    );
+                                                },
+                                                h1: ({ children }) => (
+                                                    <Typography variant="h4" component="h1" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        mb: 2, mt: 2
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                ),
+                                                h2: ({ children }) => (
+                                                    <Typography variant="h5" component="h2" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        mb: 1.5, mt: 1.5
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                ),
+                                                h3: ({ children }) => (
+                                                    <Typography variant="h6" component="h3" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        mb: 1, mt: 1
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                ),
+                                                p: ({ children }) => (
+                                                    <Typography variant="body1" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        mb: 0.5,
+                                                        lineHeight: 1.5,
+                                                        '&:last-child': { mb: 0 }
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                ),
+                                                strong: ({ children }) => (
+                                                    <Typography component="strong" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                ),
+                                                li: ({ children }) => (
+                                                    <Typography component="li" sx={{
+                                                        color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                                                        mb: 0.25,
+                                                        lineHeight: 1.4
+                                                    }}>
+                                                        {children}
+                                                    </Typography>
+                                                )
+                                            }}
+                                        >
+                                            {message.content}
+                                        </ReactMarkdown>
+                                    </Box>
                                 )}
                             </Box>
                         </ListItem>
