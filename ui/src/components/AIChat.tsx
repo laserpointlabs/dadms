@@ -72,6 +72,47 @@ const AIChat: React.FC = () => {
     const [chatMode, setChatMode] = useState<'standalone' | 'thread-context'>('standalone');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Load thread messages when a thread is selected
+    const loadThreadMessages = async (threadId: string) => {
+        try {
+            setLoading(true);
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/threads/${threadId}/context`);
+            const result = await response.json();
+
+            if (result.success && result.data.messages) {
+                // Convert OpenAI messages to our ChatMessage format
+                const chatMessages: ChatMessage[] = result.data.messages
+                    .reverse() // OpenAI returns newest first, we want oldest first
+                    .map((msg: any) => ({
+                        id: msg.id,
+                        role: msg.role as 'user' | 'assistant',
+                        content: msg.content.map((c: any) => c.text?.value || '').join(''),
+                        timestamp: new Date(msg.created_at * 1000).toISOString(),
+                        thread_id: threadId
+                    }));
+
+                // Add welcome message first, then thread messages
+                setMessages([getWelcomeMessage(), ...chatMessages]);
+                console.log(`Loaded ${chatMessages.length} messages from thread ${threadId}`);
+            }
+        } catch (err) {
+            console.error('Error loading thread messages:', err);
+            setError('Failed to load thread conversation history');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle thread selection change
+    const handleThreadChange = (newThreadId: string) => {
+        setSelectedThread(newThreadId);
+        if (newThreadId) {
+            loadThreadMessages(newThreadId);
+        } else {
+            setMessages([getWelcomeMessage()]);
+        }
+    };
+
     // Fetch real thread data from API
     const fetchThreads = async () => {
         try {
@@ -166,23 +207,61 @@ What would you like to explore today?`,
         setLoading(true);
 
         try {
-            // Simulate AI response
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            if (chatMode === 'thread-context' && selectedThread) {
+                // Real OpenAI API call for thread context mode
+                const selectedThreadData = availableThreads.find(t => t.openai_thread === selectedThread);
 
-            const aiResponse = generateAIResponse(inputMessage, chatMode, selectedThread);
+                if (!selectedThreadData) {
+                    throw new Error('Selected thread not found');
+                }
 
-            const assistantMessage: ChatMessage = {
-                id: `msg_${Date.now() + 1}`,
-                role: 'assistant',
-                content: aiResponse,
-                timestamp: new Date().toISOString(),
-                thread_id: chatMode === 'thread-context' ? selectedThread : undefined,
-                tokens: Math.floor(Math.random() * 500) + 100
-            };
+                const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/openai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: inputMessage,
+                        threadId: selectedThread,
+                        assistantId: selectedThreadData.openai_assistant
+                    })
+                });
 
-            setMessages(prev => [...prev, assistantMessage]);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to get response from OpenAI');
+                }
+
+                const assistantMessage: ChatMessage = {
+                    id: result.data.assistantMessage.id,
+                    role: 'assistant',
+                    content: result.data.assistantMessage.content,
+                    timestamp: result.data.assistantMessage.timestamp,
+                    thread_id: selectedThread
+                };
+
+                setMessages(prev => [...prev, assistantMessage]);
+            } else {
+                // Fallback to mock response for standalone mode
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                const aiResponse = generateAIResponse(inputMessage, chatMode, selectedThread);
+
+                const assistantMessage: ChatMessage = {
+                    id: `msg_${Date.now() + 1}`,
+                    role: 'assistant',
+                    content: aiResponse,
+                    timestamp: new Date().toISOString(),
+                    thread_id: chatMode === 'thread-context' ? selectedThread : undefined,
+                    tokens: Math.floor(Math.random() * 500) + 100
+                };
+
+                setMessages(prev => [...prev, assistantMessage]);
+            }
         } catch (err) {
-            setError('Failed to get AI response');
+            console.error('Error sending message:', err);
+            setError(err instanceof Error ? err.message : 'Failed to get AI response');
         } finally {
             setLoading(false);
         }
@@ -431,9 +510,55 @@ What would you like to explore?`;
     };
 
     return (
-        <Box sx={{ p: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Box className="ai-chat-container" sx={{
+            p: 3,
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            '& .MuiGrid-container': {
+                maxWidth: '100%'
+            },
+            '& *': {
+                boxSizing: 'border-box'
+            }
+        }}>
+            <style>
+                {`
+                .ai-chat-container * {
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    max-width: 100% !important;
+                    hyphens: auto !important;
+                }
+                .ai-chat-container pre {
+                    white-space: pre-wrap !important;
+                    word-wrap: break-word !important;
+                    overflow-x: auto !important;
+                    max-width: 100% !important;
+                }
+                .ai-chat-container code {
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    white-space: pre-wrap !important;
+                }
+                .ai-chat-container .MuiTypography-root {
+                    word-break: break-word !important;
+                    overflow-wrap: break-word !important;
+                }
+                `}
+            </style>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+                flexShrink: 0,
+                minHeight: 48
+            }}>
                 <Typography variant="h4" component="h1">
                     AI Assistant
                 </Typography>
@@ -452,9 +577,28 @@ What would you like to explore?`;
             </Box>
 
             {/* Controls */}
-            <Card sx={{ mb: 2 }}>
-                <CardContent sx={{ py: 2 }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Card sx={{
+                mb: 2,
+                maxWidth: '100%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                minHeight: 'auto'
+            }}>
+                <CardContent sx={{
+                    py: 2,
+                    minHeight: 60,
+                    display: 'flex',
+                    alignItems: 'center'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 2,
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        minHeight: 40
+                    }}>
                         <FormControl size="small" sx={{ minWidth: 150 }}>
                             <InputLabel>Chat Mode</InputLabel>
                             <Select
@@ -474,7 +618,7 @@ What would you like to explore?`;
                                     <Select
                                         value={selectedThread}
                                         label="Select Thread"
-                                        onChange={(e) => setSelectedThread(e.target.value)}
+                                        onChange={(e) => handleThreadChange(e.target.value)}
                                         disabled={threadsLoading}
                                         sx={{ fontSize: '0.875rem' }}
                                     >
@@ -557,14 +701,46 @@ What would you like to explore?`;
             </Card>
 
             {error && (
-                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                <Alert severity="error" sx={{ mb: 2, flexShrink: 0 }} onClose={() => setError(null)}>
                     {error}
                 </Alert>
             )}
 
             {/* Chat Messages */}
-            <Paper sx={{ flexGrow: 1, overflow: 'auto', p: 2, mb: 2 }}>
-                <List>
+            <Paper sx={{
+                flexGrow: 1,
+                overflow: 'auto',
+                p: 2,
+                mb: 2,
+                maxWidth: '100%',
+                minWidth: 0,
+                width: '100%',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
+                hyphens: 'auto',
+                '& *': {
+                    maxWidth: '100% !important',
+                    wordWrap: 'break-word !important',
+                    overflowWrap: 'break-word !important',
+                    wordBreak: 'break-word !important'
+                },
+                '& pre': {
+                    whiteSpace: 'pre-wrap !important',
+                    wordWrap: 'break-word !important',
+                    overflowX: 'auto !important'
+                },
+                '& code': {
+                    whiteSpace: 'pre-wrap !important',
+                    wordWrap: 'break-word !important',
+                    overflowWrap: 'break-word !important'
+                }
+            }}>
+                <List sx={{
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    width: '100%',
+                    minWidth: 0
+                }}>
                     {messages.map((message) => (
                         <ListItem
                             key={message.id}
@@ -572,19 +748,33 @@ What would you like to explore?`;
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: message.role === 'user' ? 'flex-end' : 'flex-start',
-                                mb: 2
+                                mb: 2,
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                wordWrap: 'break-word',
+                                overflowWrap: 'break-word'
                             }}
                         >
                             <Box
                                 sx={{
                                     maxWidth: '85%',
+                                    minWidth: 0,
+                                    width: 'fit-content',
                                     bgcolor: message.role === 'user' ? 'primary.light' : 'background.paper',
                                     borderRadius: 2,
                                     p: 2,
                                     border: message.role === 'assistant' ? '1px solid' : 'none',
                                     borderColor: message.role === 'assistant' ? 'divider' : 'transparent',
                                     color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                                    boxShadow: message.role === 'assistant' ? 1 : 0
+                                    boxShadow: message.role === 'assistant' ? 1 : 0,
+                                    wordWrap: 'break-word',
+                                    overflowWrap: 'break-word',
+                                    '& *': {
+                                        maxWidth: '100% !important',
+                                        wordWrap: 'break-word !important',
+                                        overflowWrap: 'break-word !important',
+                                        wordBreak: 'break-word !important'
+                                    }
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -614,7 +804,20 @@ What would you like to explore?`;
                                 </Box>
 
                                 {message.role === 'assistant' ? (
-                                    <Box sx={{ color: 'text.primary' }}>
+                                    <Box sx={{
+                                        color: 'text.primary',
+                                        maxWidth: '100%',
+                                        minWidth: 0,
+                                        overflow: 'hidden',
+                                        wordWrap: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        wordBreak: 'break-word',
+                                        '& *': {
+                                            maxWidth: '100% !important',
+                                            wordWrap: 'break-word !important',
+                                            overflowWrap: 'break-word !important'
+                                        }
+                                    }}>
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             components={{
@@ -625,6 +828,14 @@ What would you like to explore?`;
                                                             style={tomorrow as any}
                                                             language={match[1]}
                                                             PreTag="div"
+                                                            wrapLongLines={true}
+                                                            customStyle={{
+                                                                maxWidth: '100%',
+                                                                overflow: 'auto',
+                                                                fontSize: '0.875rem',
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word'
+                                                            }}
                                                             {...props}
                                                         >
                                                             {String(children).replace(/\n$/, '')}
@@ -636,7 +847,10 @@ What would you like to explore?`;
                                                                 backgroundColor: 'rgba(0,0,0,0.1)',
                                                                 padding: '2px 4px',
                                                                 borderRadius: '3px',
-                                                                fontSize: '0.875em'
+                                                                fontSize: '0.875em',
+                                                                wordWrap: 'break-word',
+                                                                overflowWrap: 'break-word',
+                                                                maxWidth: '100%'
                                                             }}
                                                             {...props}
                                                         >
@@ -660,7 +874,12 @@ What would you like to explore?`;
                                                     </Typography>
                                                 ),
                                                 p: ({ children }) => (
-                                                    <Typography variant="body1" sx={{ color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+                                                    <Typography variant="body1" sx={{
+                                                        color: 'text.primary',
+                                                        mb: 0.5,
+                                                        lineHeight: 1.5,
+                                                        '&:last-child': { mb: 0 }
+                                                    }}>
                                                         {children}
                                                     </Typography>
                                                 ),
@@ -670,7 +889,11 @@ What would you like to explore?`;
                                                     </Typography>
                                                 ),
                                                 li: ({ children }) => (
-                                                    <Typography component="li" sx={{ color: 'text.primary', mb: 0.5 }}>
+                                                    <Typography component="li" sx={{
+                                                        color: 'text.primary',
+                                                        mb: 0.25,
+                                                        lineHeight: 1.4
+                                                    }}>
                                                         {children}
                                                     </Typography>
                                                 )
@@ -681,9 +904,14 @@ What would you like to explore?`;
                                     </Box>
                                 ) : (
                                     <Typography variant="body1" sx={{
-                                        whiteSpace: 'pre-wrap',
+                                        whiteSpace: 'pre-line',
                                         color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                                        lineHeight: 1.6
+                                        lineHeight: 1.5,
+                                        wordWrap: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        wordBreak: 'break-word',
+                                        maxWidth: '100%',
+                                        minWidth: 0
                                     }}>
                                         {message.content}
                                     </Typography>
@@ -710,22 +938,43 @@ What would you like to explore?`;
             </Paper>
 
             {/* Input Area */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{
+                display: 'flex',
+                gap: 1,
+                maxWidth: '100%',
+                overflow: 'hidden',
+                minWidth: 0,
+                flexShrink: 0,
+                minHeight: 56,
+                alignItems: 'flex-end'
+            }}>
                 <TextField
                     fullWidth
                     multiline
                     maxRows={4}
+                    minRows={1}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Ask me anything about DADM analysis, CLI commands, or system operations..."
                     disabled={loading}
+                    sx={{
+                        minHeight: 56,
+                        '& .MuiOutlinedInput-root': {
+                            minHeight: 56
+                        }
+                    }}
                 />
                 <Button
                     variant="contained"
                     onClick={handleSendMessage}
                     disabled={loading || !inputMessage.trim()}
-                    sx={{ minWidth: 'auto', px: 2 }}
+                    sx={{
+                        minWidth: 'auto',
+                        px: 2,
+                        minHeight: 56,
+                        height: 56
+                    }}
                 >
                     <Send />
                 </Button>
