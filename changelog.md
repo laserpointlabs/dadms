@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2025-06-19
+
+### Added
+- **BPMN Process Model Viewer**: Interactive BPMN diagram viewing capability
+  - "View Model" (Schema) button added to all process definition cards in Process Management
+  - React-based dialog component with integrated bpmn-js viewer for diagram rendering
+  - Backend API endpoint `/api/process/definitions/:id/xml` for serving BPMN XML content
+  - Dynamic CDN-based loading of bpmn-js library for Docker environment compatibility
+  - Comprehensive solution documentation for BPMN viewer implementation
+
+### Enhanced
+- **Docker Environment Reliability**: Improved container and dependency management
+  - Fixed Docker node_modules volume configuration to preserve installed packages
+  - Enhanced proxy configuration with targeted API-only routing via custom setupProxy.js
+  - Updated proxy to use `host.docker.internal` for proper Docker-to-host communication
+  - Implemented robust error handling and fallback mechanisms for module loading
+
+### Fixed
+- **UI Development Environment**: Resolved multiple development and build issues
+  - Fixed TypeScript compilation errors for global window interface declarations
+  - Removed problematic global proxy configuration that interfered with static assets
+  - Resolved module loading strategy issues in Docker containerized environments
+  - Fixed CSS and asset loading for proper BPMN diagram styling and visualization
+  - Implemented proper React component state management with cleanup and error handling
+
 ## [0.11.1] - 2025-06-18
 
 ### Added
