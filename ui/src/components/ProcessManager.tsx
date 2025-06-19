@@ -40,6 +40,7 @@ import {
     Typography
 } from '@mui/material';
 import React, { useCallback, useEffect, useState } from 'react';
+import BpmnViewerDialog from './BpmnViewerDialog';
 
 interface ProcessInstance {
     id: string;
@@ -97,6 +98,8 @@ const ProcessManager: React.FC = () => {
     const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
     const [troubleshootData, setTroubleshootData] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [bpmnViewerDialogOpen, setBpmnViewerDialogOpen] = useState(false);
+    const [selectedProcessForModel, setSelectedProcessForModel] = useState<ProcessDefinition | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
     const [detailsRefreshInterval, setDetailsRefreshInterval] = useState<NodeJS.Timeout | null>(null);
@@ -404,62 +407,11 @@ const ProcessManager: React.FC = () => {
         }
     };
 
-    const handleViewModel = async (processDefinition: ProcessDefinition) => {
-        try {
-            // Fetch the BPMN model/diagram for the process definition
-            const response = await fetch(`http://localhost:8000/api/process/definitions/${processDefinition.id}/xml`);
-
-            if (response.ok) {
-                const bpmnXml = await response.text();
-
-                // Create a new window/tab to display the BPMN model
-                const modelWindow = window.open('', '_blank', 'width=1200,height=800');
-                if (modelWindow) {
-                    modelWindow.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>Process Model: ${processDefinition.name}</title>
-                            <style>
-                                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-                                h1 { color: #1976d2; margin-bottom: 20px; }
-                                #canvas { border: 1px solid #ccc; width: 100%; height: 700px; }
-                            </style>
-                            <script src="https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-navigated-viewer.production.min.js"></script>
-                            <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css">
-                            <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css">
-                        </head>
-                        <body>
-                            <h1>Process Model: ${processDefinition.name}</h1>
-                            <div id="canvas"></div>
-                            <script>
-                                const viewer = new BpmnJS.NavigatedViewer({
-                                    container: '#canvas'
-                                });
-                                
-                                const bpmnXml = \`${bpmnXml.replace(/`/g, '\\`')}\`;
-                                
-                                viewer.importXML(bpmnXml).then(() => {
-                                    viewer.get('canvas').zoom('fit-viewport');
-                                }).catch(err => {
-                                    console.error('Error displaying BPMN diagram:', err);
-                                    document.getElementById('canvas').innerHTML = '<p style="color: red; padding: 20px;">Error loading BPMN diagram: ' + err.message + '</p>';
-                                });
-                            </script>
-                        </body>
-                        </html>
-                    `);
-                    modelWindow.document.close();
-                } else {
-                    setError('Failed to open model viewer window');
-                }
-            } else {
-                setError('Failed to fetch process model');
-            }
-        } catch (err) {
-            setError('Failed to fetch process model');
-            console.error('Error fetching process model:', err);
-        }
+    const handleViewModel = (processDefinition: ProcessDefinition) => {
+        console.log('handleViewModel called with process definition:', processDefinition);
+        setSelectedProcessForModel(processDefinition);
+        setBpmnViewerDialogOpen(true);
+        console.log('Dialog should be opening...');
     };
 
     return (
@@ -988,6 +940,13 @@ const ProcessManager: React.FC = () => {
                     <Button onClick={handleCloseDetailsDialog}>Close</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* BPMN Viewer Dialog */}
+            <BpmnViewerDialog
+                open={bpmnViewerDialogOpen}
+                onClose={() => setBpmnViewerDialogOpen(false)}
+                processDefinition={selectedProcessForModel}
+            />
         </Box>
     );
 };
