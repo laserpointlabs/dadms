@@ -1183,6 +1183,38 @@ app.get('/api/process/definitions/:id/documentation', async (req, res) => {
     }
 });
 
+// Get process definition XML (BPMN model)
+app.get('/api/process/definitions/:id/xml', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`Getting BPMN XML for process definition: ${id}`);
+
+        // Get the BPMN XML from Camunda
+        const response = await fetch(`http://localhost:8080/engine-rest/process-definition/${id}/xml`);
+
+        if (!response.ok) {
+            return res.status(404).json({
+                success: false,
+                error: 'Process definition not found or no XML available'
+            });
+        }
+
+        const xmlData = await response.json();
+        const bpmnXml = xmlData.bpmn20Xml;
+
+        // Return the raw BPMN XML
+        res.set('Content-Type', 'application/xml');
+        res.send(bpmnXml);
+
+    } catch (error) {
+        console.error('Failed to fetch process XML:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Delete a process definition
 app.delete('/api/process/definitions/:definitionId', async (req, res) => {
     try {
