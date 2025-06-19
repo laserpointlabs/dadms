@@ -243,18 +243,28 @@ What would you like to explore today?`,
 
                 setMessages(prev => [...prev, assistantMessage]);
             } else {
-                // Fallback to mock response for standalone mode
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // Real OpenAI API call for standalone mode
+                const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/openai/chat/standalone`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: inputMessage
+                    })
+                });
 
-                const aiResponse = generateAIResponse(inputMessage, chatMode, selectedThread);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to get response from OpenAI');
+                }
 
                 const assistantMessage: ChatMessage = {
-                    id: `msg_${Date.now() + 1}`,
+                    id: result.data.assistantMessage.id,
                     role: 'assistant',
-                    content: aiResponse,
-                    timestamp: new Date().toISOString(),
-                    thread_id: chatMode === 'thread-context' ? selectedThread : undefined,
-                    tokens: Math.floor(Math.random() * 500) + 100
+                    content: result.data.assistantMessage.content,
+                    timestamp: result.data.assistantMessage.timestamp
                 };
 
                 setMessages(prev => [...prev, assistantMessage]);

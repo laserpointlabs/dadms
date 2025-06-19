@@ -900,6 +900,207 @@ app.post('/api/openai/chat', async (req, res) => {
     }
 });
 
+// OpenAI standalone chat endpoint (creates a new thread with default assistant)
+app.post('/api/openai/chat/standalone', async (req, res) => {
+    try {
+        const { message } = req.body;
+
+        if (!message) {
+            return res.status(400).json({
+                success: false,
+                error: 'Message is required'
+            });
+        }
+
+        console.log(`Sending standalone message to OpenAI`);
+
+        // Check if OpenAI API key is available
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                error: 'OpenAI API key not configured'
+            });
+        }
+
+        // Get the default assistant ID from environment or from existing threads
+        let assistantId = process.env.OPENAI_ASSISTANT_ID;
+
+        if (!assistantId) {
+            console.log('OPENAI_ASSISTANT_ID not set, trying to get assistant ID from existing threads...');
+
+            try {
+                // Get assistant ID from the first available thread
+                const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], CONFIG.DADM_ROOT);
+                const analyses = await parseAnalysisListOutput(result.output);
+                const analysisWithAssistant = analyses.find(a => a.openai_assistant);
+
+                if (analysisWithAssistant) {
+                    assistantId = analysisWithAssistant.openai_assistant;
+                    console.log(`Using assistant ID from existing thread: ${assistantId}`);
+                }
+            } catch (error) {
+                console.error('Failed to get assistant ID from threads:', error);
+            }
+        }
+
+        if (!assistantId) {
+            return res.status(500).json({
+                success: false,
+                error: 'No assistant ID available. Please set OPENAI_ASSISTANT_ID environment variable or create an analysis with an OpenAI assistant first.'
+            });
+        }
+
+        // Create a new thread for this standalone conversation
+        const threadResponse = await fetch('https://api.openai.com/v1/threads', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            },
+            body: JSON.stringify({})
+        });
+
+        if (!threadResponse.ok) {
+            throw new Error(`Failed to create thread: ${threadResponse.status} ${threadResponse.statusText}`);
+        }
+
+        const threadData = await threadResponse.json();
+        const threadId = threadData.id;
+
+        console.log(`Created new thread ${threadId} for standalone chat`);
+
+        // Add message to thread
+        const messageResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            },
+            body: JSON.stringify({
+                role: 'user',
+                content: message
+            })
+        });
+
+        if (!messageResponse.ok) {
+            throw new Error(`Failed to add message: ${messageResponse.status} ${messageResponse.statusText}`);
+        }
+
+        const messageData = await messageResponse.json();
+
+        // Create run with the assistant
+        const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            },
+            body: JSON.stringify({
+                assistant_id: assistantId
+            })
+        });
+
+        if (!runResponse.ok) {
+            throw new Error(`Failed to create run: ${runResponse.status} ${runResponse.statusText}`);
+        }
+
+        const runData = await runResponse.json();
+
+        // Poll for run completion
+        let run = runData;
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max
+
+        while (run.status === 'queued' || run.status === 'in_progress') {
+            if (attempts >= maxAttempts) {
+                throw new Error('Run timeout - assistant took too long to respond');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+
+            const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${run.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'OpenAI-Beta': 'assistants=v2'
+                }
+            });
+
+            if (!statusResponse.ok) {
+                throw new Error(`Failed to check run status: ${statusResponse.status} ${statusResponse.statusText}`);
+            }
+
+            run = await statusResponse.json();
+            attempts++;
+        }
+
+        if (run.status !== 'completed') {
+            throw new Error(`Run failed with status: ${run.status}`);
+        }
+
+        // Get the latest messages to find the assistant's response
+        const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages?limit=10`, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+            }
+        });
+
+        if (!messagesResponse.ok) {
+            throw new Error(`Failed to get messages: ${messagesResponse.status} ${messagesResponse.statusText}`);
+        }
+
+        const messagesData = await messagesResponse.json();
+
+        // Find the most recent assistant message
+        const assistantMessage = messagesData.data.find(msg => msg.role === 'assistant' && msg.run_id === run.id);
+
+        if (!assistantMessage) {
+            throw new Error('No assistant response found');
+        }
+
+        // Extract text content from the assistant message
+        let responseText = '';
+        if (assistantMessage.content && assistantMessage.content.length > 0) {
+            for (const content of assistantMessage.content) {
+                if (content.type === 'text' && content.text) {
+                    responseText += content.text.value;
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                userMessage: {
+                    id: messageData.id,
+                    content: message,
+                    timestamp: new Date(messageData.created_at * 1000).toISOString()
+                },
+                assistantMessage: {
+                    id: assistantMessage.id,
+                    content: responseText,
+                    timestamp: new Date(assistantMessage.created_at * 1000).toISOString()
+                },
+                threadId: threadId,
+                assistantId: assistantId,
+                runId: run.id
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to send standalone message to OpenAI:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Get analysis by ID (moved here to avoid conflicts with thread routes)
 app.get('/api/analysis/:id', async (req, res) => {
     try {
@@ -2017,6 +2218,7 @@ server.listen(PORT, async () => {
     console.log(`  GET    http://localhost:${PORT}/api/analysis/threads`);
     console.log(`  GET    http://localhost:${PORT}/api/analysis/threads/:threadId/context`);
     console.log(`  POST   http://localhost:${PORT}/api/openai/chat`);
+    console.log(`  POST   http://localhost:${PORT}/api/openai/chat/standalone`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
 });
