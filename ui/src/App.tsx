@@ -1,4 +1,4 @@
-import { Analytics, Chat, Dashboard, Monitor, PlayArrow, Settings, Storage, Terminal } from '@mui/icons-material';
+import { AccountTree, Analytics, Chat, Dashboard, Monitor, PlayArrow, Settings, Storage, Terminal } from '@mui/icons-material';
 import { AppBar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
 import { useState } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 // Import components
 import AIChat from './components/AIChat';
 import AnalysisDataViewer from './components/AnalysisDataViewer';
+import BPMNWorkspace from './components/BPMNWorkspace';
 import CLIManager from './components/CLIManager';
 import DashboardOverview from './components/DashboardOverview';
 import ProcessManager from './components/ProcessManager';
@@ -17,6 +18,7 @@ const drawerWidth = 240;
 
 const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+    { text: 'BPMN AI Workspace', icon: <AccountTree />, path: '/bpmn' },
     { text: 'System Management', icon: <Settings />, path: '/system' },
     { text: 'Process Management', icon: <PlayArrow />, path: '/processes' },
     { text: 'CLI Manager', icon: <Terminal />, path: '/cli' },
@@ -100,6 +102,7 @@ function App() {
                 >
                     <Routes>
                         <Route path="/" element={<DashboardOverview />} />
+                        <Route path="/bpmn" element={<BPMNWorkspace />} />
                         <Route path="/system" element={<SystemManager />} />
                         <Route path="/processes" element={<ProcessManager />} />
                         <Route path="/cli" element={<CLIManager />} />

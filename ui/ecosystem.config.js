@@ -45,6 +45,31 @@ module.exports = {
             log_file: '/home/jdehart/dadm/logs/dadm-analysis-daemon-combined.log',
             time: true,
             log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+        },
+        {
+            name: 'dadm-bpmn-ai-service',
+            script: '/home/jdehart/dadm/.venv/bin/python',
+            args: ['scripts/bpmn_ai_server.py'],
+            cwd: '/home/jdehart/dadm',
+            instances: 1,
+            autorestart: true,
+            watch: false,
+            max_memory_restart: '1G',
+            env: {
+                NODE_ENV: 'production',
+                PORT: 5010,
+                PYTHONPATH: '/home/jdehart/dadm/src:/home/jdehart/dadm'
+            },
+            env_development: {
+                NODE_ENV: 'development',
+                PORT: 5010,
+                PYTHONPATH: '/home/jdehart/dadm/src:/home/jdehart/dadm'
+            },
+            error_file: '/home/jdehart/dadm/logs/dadm-bpmn-ai-error.log',
+            out_file: '/home/jdehart/dadm/logs/dadm-bpmn-ai-out.log',
+            log_file: '/home/jdehart/dadm/logs/dadm-bpmn-ai-combined.log',
+            time: true,
+            log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
         }
     ]
 };
