@@ -33,36 +33,51 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
             try {
                 // Check if bpmn-js is already loaded
                 if (window.BpmnJS) {
+                    console.log('bpmn-js already loaded');
                     initializeViewer();
                     return;
                 }
 
-                // Load bpmn-js from CDN
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/bpmn-js@latest/dist/bpmn-viewer.production.min.js';
-                script.onload = () => {
-                    initializeViewer();
-                };
-                script.onerror = () => {
-                    setError('Failed to load BPMN viewer library');
-                    setIsLoading(false);
-                };
-                document.head.appendChild(script);
+                console.log('Loading bpmn-js from CDN...');
 
-                // Load CSS
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = 'https://unpkg.com/bpmn-js@latest/dist/assets/diagram-js.css';
-                document.head.appendChild(link);
+                // Load CSS files first
+                if (!document.querySelector('link[href*="diagram-js.css"]')) {
+                    const diagramCss = document.createElement('link');
+                    diagramCss.rel = 'stylesheet';
+                    diagramCss.href = 'https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css';
+                    document.head.appendChild(diagramCss);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
 
-                const bpmnCss = document.createElement('link');
-                bpmnCss.rel = 'stylesheet';
-                bpmnCss.href = 'https://unpkg.com/bpmn-js@latest/dist/assets/bpmn-font/css/bpmn-embedded.css';
-                document.head.appendChild(bpmnCss);
+                if (!document.querySelector('link[href*="bpmn.css"]')) {
+                    const bpmnCss = document.createElement('link');
+                    bpmnCss.rel = 'stylesheet';
+                    bpmnCss.href = 'https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css';
+                    document.head.appendChild(bpmnCss);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Load bpmn-js from CDN with specific version
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-viewer.production.min.js';
+                    script.onload = () => {
+                        console.log('bpmn-js loaded successfully');
+                        console.log('window.BpmnJS:', window.BpmnJS);
+                        resolve(void 0);
+                    };
+                    script.onerror = (error) => {
+                        console.error('Failed to load bpmn-js:', error);
+                        reject(error);
+                    };
+                    document.head.appendChild(script);
+                });
+
+                initializeViewer();
 
             } catch (err) {
                 console.error('Error loading bpmn-js:', err);
-                setError('Failed to load BPMN viewer');
+                setError('Failed to load BPMN viewer library');
                 setIsLoading(false);
             }
         };
@@ -72,13 +87,28 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
 
     const initializeViewer = () => {
         try {
-            if (!containerRef.current || !window.BpmnJS) return;
+            if (!containerRef.current || !window.BpmnJS) {
+                console.error('Container or BpmnJS not available');
+                return;
+            }
 
-            const bpmnViewer = new window.BpmnJS({
+            console.log('Initializing BPMN viewer...');
+            console.log('Container:', containerRef.current);
+            console.log('window.BpmnJS:', window.BpmnJS);
+
+            // Try different ways to access the viewer class
+            const ViewerClass = window.BpmnJS?.Viewer || window.BpmnJS;
+            if (!ViewerClass) {
+                throw new Error('BPMN viewer class not found');
+            }
+
+            const bpmnViewer = new ViewerClass({
                 container: containerRef.current,
                 width: '100%',
                 height: '100%'
             });
+
+            console.log('BPMN viewer created:', bpmnViewer);
 
             // Add event listeners
             bpmnViewer.on('element.click', (event: any) => {
@@ -101,6 +131,7 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
             setViewer(bpmnViewer);
             setIsLoaded(true);
             setIsLoading(false);
+            console.log('BPMN viewer initialized successfully');
         } catch (err) {
             console.error('Error initializing BPMN viewer:', err);
             setError('Failed to initialize BPMN viewer');
@@ -110,22 +141,46 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
 
     // Load BPMN XML when viewer is ready or XML changes
     useEffect(() => {
-        if (!viewer || !bpmnXml || !isLoaded) return;
+        if (!viewer || !isLoaded) return;
+
+        // If there's no BPMN XML, just clear any existing diagram
+        if (!bpmnXml || bpmnXml.trim() === '') {
+            setIsLoading(false);
+            setError(null);
+            return;
+        }
 
         const loadDiagram = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
 
-                await viewer.importXML(bpmnXml);
+                console.log('Loading BPMN XML:', bpmnXml.substring(0, 200) + '...');
+                console.log('Viewer instance:', viewer);
+                console.log('XML length:', bpmnXml.length);
+
+                const result = await viewer.importXML(bpmnXml);
+                console.log('Import result:', result);
+
+                if (result.warnings && result.warnings.length > 0) {
+                    console.warn('BPMN import warnings:', result.warnings);
+                }
 
                 // Fit viewport to show the entire diagram
                 const canvas = viewer.get('canvas');
+                console.log('Canvas instance:', canvas);
                 canvas.zoom('fit-viewport', 'auto');
 
                 setIsLoading(false);
+                console.log('BPMN diagram loaded successfully');
             } catch (err) {
                 console.error('Error loading BPMN diagram:', err);
+                console.error('Error details:', {
+                    message: err instanceof Error ? err.message : 'Unknown error',
+                    stack: err instanceof Error ? err.stack : undefined,
+                    bpmnXmlLength: bpmnXml.length,
+                    viewerExists: !!viewer
+                });
                 setError(`Failed to load BPMN diagram: ${err instanceof Error ? err.message : 'Unknown error'}`);
                 setIsLoading(false);
             }
