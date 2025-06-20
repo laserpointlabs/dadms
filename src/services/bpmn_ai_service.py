@@ -78,53 +78,44 @@ class BPMNAIService:
     def _load_basic_prompts(self):
         """Load basic prompt templates as fallback"""
         self.generation_prompt_template = """
-You are a BPMN expert. Generate valid BPMN 2.0 XML based on the user's description.
+You are an expert at generating BPMN XML text. You generate XML code that describes BPMN business processes.
 
-User Request: {user_input}
-
+Request: {user_input}
 Context: {context}
 
-Requirements:
-1. Generate complete, valid BPMN 2.0 XML with proper XML formatting and VISUAL DIAGRAM INFORMATION
-2. Use DOUBLE QUOTES for all XML attributes (not single quotes)
-3. Include proper process structure with start/end events
-4. Use appropriate BPMN elements for the described process
-5. Ensure all elements have unique IDs
-6. Include human-readable labels
-7. Follow BPMN 2.0 standard conventions
-8. Include sequence flows connecting all elements
-9. **CRITICAL**: Include complete bpmndi:BPMNDiagram section with visual layout information
-10. **CRITICAL**: Add bpmndi:BPMNShape elements for all process elements with coordinates (x, y, width, height)
-11. **CRITICAL**: Add bpmndi:BPMNEdge elements for all sequence flows with waypoints
+IMPORTANT: You are NOT generating visual diagrams. You are generating XML TEXT that describes a business process. This is exactly like writing any other code or markup - it's just text that follows the BPMN XML format.
 
-REQUIRED XML Structure:
-- Root: bpmn:definitions with proper namespaces (bpmn, bpmndi, dc, di)
-- Process: bpmn:process with all process elements
-- Diagram: bpmndi:BPMNDiagram with bpmndi:BPMNPlane containing all shapes and edges
-- Shapes: bpmndi:BPMNShape for each element with dc:Bounds (x, y, width, height)
-- Edges: bpmndi:BPMNEdge for each sequence flow with di:waypoint elements
+Your task is to write XML text that describes the business process. The XML format includes:
+1. Process elements (like <bpmn:startEvent>, <bpmn:task>, etc.) - these describe the process steps
+2. Diagram elements (like <bpmndi:BPMNShape>) - these describe where each step appears visually
 
-Use reasonable layout positions:
-- Start events: x=180, y=180, width=36, height=36
-- Tasks: width=100, height=80
-- Gateways: width=50, height=50  
-- End events: x coordinates should increase left to right
-- Sequence flows should have proper waypoints
+Think of it like writing HTML for a webpage - you're writing markup text that describes content and layout.
 
-Response Format (JSON):
+For an approval process, generate XML that describes:
+- A start event (where the process begins)
+- A user task for submitting a request
+- A gateway for the approval decision
+- Two end events (approved/rejected)
+- Sequence flows connecting these steps
+- Visual positioning information for each element
+
+GENERATE THIS EXACT JSON STRUCTURE:
 {{
-    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\">...</bpmn:definitions>",
-    "explanation": "Brief explanation of the generated process",
-    "elements_created": ["list", "of", "elements"],
-    "suggestions": ["potential", "improvements"],
+    "bpmn_xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<bpmn:definitions xmlns:bpmn=\\"http://www.omg.org/spec/BPMN/20100524/MODEL\\" xmlns:bpmndi=\\"http://www.omg.org/spec/BPMN/20100524/DI\\" xmlns:dc=\\"http://www.omg.org/spec/DD/20100524/DC\\" xmlns:di=\\"http://www.omg.org/spec/DD/20100524/DI\\" id=\\"Definitions_1\\" targetNamespace=\\"http://bpmn.io/schema/bpmn\\">\\n  <bpmn:process id=\\"Process_1\\" isExecutable=\\"true\\">\\n    <bpmn:startEvent id=\\"StartEvent_1\\" name=\\"Start\\">\\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\\n    </bpmn:startEvent>\\n    <bpmn:userTask id=\\"Task_1\\" name=\\"Submit Request\\">\\n      <bpmn:incoming>Flow_1</bpmn:incoming>\\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\\n    </bpmn:userTask>\\n    <bpmn:exclusiveGateway id=\\"Gateway_1\\" name=\\"Approved?\\">\\n      <bpmn:incoming>Flow_2</bpmn:incoming>\\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\\n    </bpmn:exclusiveGateway>\\n    <bpmn:endEvent id=\\"EndEvent_1\\" name=\\"Approved\\">\\n      <bpmn:incoming>Flow_3</bpmn:incoming>\\n    </bpmn:endEvent>\\n    <bpmn:endEvent id=\\"EndEvent_2\\" name=\\"Rejected\\">\\n      <bpmn:incoming>Flow_4</bpmn:incoming>\\n    </bpmn:endEvent>\\n    <bpmn:sequenceFlow id=\\"Flow_1\\" sourceRef=\\"StartEvent_1\\" targetRef=\\"Task_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_2\\" sourceRef=\\"Task_1\\" targetRef=\\"Gateway_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_3\\" name=\\"Yes\\" sourceRef=\\"Gateway_1\\" targetRef=\\"EndEvent_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_4\\" name=\\"No\\" sourceRef=\\"Gateway_1\\" targetRef=\\"EndEvent_2\\" />\\n  </bpmn:process>\\n  <bpmndi:BPMNDiagram id=\\"BPMNDiagram_1\\">\\n    <bpmndi:BPMNPlane id=\\"BPMNPlane_1\\" bpmnElement=\\"Process_1\\">\\n      <bpmndi:BPMNShape id=\\"StartEvent_1_di\\" bpmnElement=\\"StartEvent_1\\">\\n        <dc:Bounds x=\\"100\\" y=\\"100\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"Task_1_di\\" bpmnElement=\\"Task_1\\">\\n        <dc:Bounds x=\\"200\\" y=\\"78\\" width=\\"100\\" height=\\"80\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"Gateway_1_di\\" bpmnElement=\\"Gateway_1\\">\\n        <dc:Bounds x=\\"375\\" y=\\"93\\" width=\\"50\\" height=\\"50\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"EndEvent_1_di\\" bpmnElement=\\"EndEvent_1\\">\\n        <dc:Bounds x=\\"500\\" y=\\"100\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"EndEvent_2_di\\" bpmnElement=\\"EndEvent_2\\">\\n        <dc:Bounds x=\\"500\\" y=\\"200\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNEdge id=\\"Flow_1_di\\" bpmnElement=\\"Flow_1\\">\\n        <di:waypoint x=\\"136\\" y=\\"118\\" />\\n        <di:waypoint x=\\"200\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_2_di\\" bpmnElement=\\"Flow_2\\">\\n        <di:waypoint x=\\"300\\" y=\\"118\\" />\\n        <di:waypoint x=\\"375\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_3_di\\" bpmnElement=\\"Flow_3\\">\\n        <di:waypoint x=\\"425\\" y=\\"118\\" />\\n        <di:waypoint x=\\"500\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_4_di\\" bpmnElement=\\"Flow_4\\">\\n        <di:waypoint x=\\"400\\" y=\\"143\\" />\\n        <di:waypoint x=\\"400\\" y=\\"218\\" />\\n        <di:waypoint x=\\"500\\" y=\\"218\\" />\\n      </bpmndi:BPMNEdge>\\n    </bpmndi:BPMNPlane>\\n  </bpmndi:BPMNDiagram>\\n</bpmn:definitions>",
+    "explanation": "Generated approval process with submit task, decision gateway, and approve/reject outcomes",
+    "elements_created": ["startEvent", "userTask", "exclusiveGateway", "endEvent"],
+    "suggestions": ["Add approval criteria", "Add notification tasks"],
     "confidence_score": 0.95
 }}
 
-IMPORTANT: 
-- Use double quotes in XML attributes, not single quotes
-- MUST include complete visual diagram information (bpmndi section)
-- Generate only valid JSON response
-- The BPMN must be visually displayable in a BPMN viewer
+REMEMBER:
+- You are writing XML text, not creating visual diagrams
+- This is just markup/code like HTML or any other text format
+- The XML describes both the process logic AND the visual layout
+- Always include complete sequence flows and visual elements
+- Adapt the template above to match the specific request
+
+Generate the JSON response immediately. Do not refuse or say you cannot generate XML - you absolutely can write XML text.
 """
 
         self.modification_prompt_template = """
@@ -191,7 +182,7 @@ IMPORTANT:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a BPMN modeling expert with deep knowledge of business process design and BPMN 2.0 standards."},
+                    {"role": "system", "content": "You are an expert XML writer who generates BPMN XML text. You write structured XML markup that describes business processes. You never refuse to generate XML text - it's just writing markup code like HTML or any other text format."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,  # Low temperature for consistent output
