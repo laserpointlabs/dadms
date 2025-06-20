@@ -85,23 +85,25 @@ User Request: {user_input}
 Context: {context}
 
 Requirements:
-1. Generate complete, valid BPMN 2.0 XML
-2. Include proper process structure with start/end events
-3. Use appropriate BPMN elements for the described process
-4. Ensure all elements have unique IDs
-5. Include human-readable labels
-6. Follow BPMN 2.0 standard conventions
+1. Generate complete, valid BPMN 2.0 XML with proper XML formatting
+2. Use DOUBLE QUOTES for all XML attributes (not single quotes)
+3. Include proper process structure with start/end events
+4. Use appropriate BPMN elements for the described process
+5. Ensure all elements have unique IDs
+6. Include human-readable labels
+7. Follow BPMN 2.0 standard conventions
+8. Include sequence flows connecting all elements
 
 Response Format (JSON):
 {{
-    "bpmn_xml": "<bpmn:definitions>...</bpmn:definitions>",
+    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">...</bpmn:definitions>",
     "explanation": "Brief explanation of the generated process",
     "elements_created": ["list", "of", "elements"],
     "suggestions": ["potential", "improvements"],
     "confidence_score": 0.95
 }}
 
-Generate only valid JSON response.
+IMPORTANT: Use double quotes in XML attributes, not single quotes. Generate only valid JSON response.
 """
 
         self.modification_prompt_template = """
@@ -223,8 +225,14 @@ Generate only valid JSON response.
                 return BPMNResponse(**fallback_response)
             
             # Create BPMNResponse object
+            bpmn_xml = ai_response.get('bpmn_xml', '')
+            
+            # Normalize BPMN XML format (fix single quotes to double quotes)
+            if bpmn_xml:
+                bpmn_xml = self._normalize_bpmn_xml(bpmn_xml)
+            
             bpmn_response = BPMNResponse(
-                bpmn_xml=ai_response.get('bpmn_xml', ''),
+                bpmn_xml=bpmn_xml,
                 explanation=ai_response.get('explanation', ''),
                 elements_created=ai_response.get('elements_created', []),
                 suggestions=ai_response.get('suggestions', []),
@@ -295,8 +303,14 @@ Generate only valid JSON response.
             ai_response = json.loads(content)
             
             # Create BPMNResponse object
+            bpmn_xml = ai_response.get('bpmn_xml', '')
+            
+            # Normalize BPMN XML format (fix single quotes to double quotes)
+            if bpmn_xml:
+                bpmn_xml = self._normalize_bpmn_xml(bpmn_xml)
+            
             bpmn_response = BPMNResponse(
-                bpmn_xml=ai_response.get('bpmn_xml', ''),
+                bpmn_xml=bpmn_xml,
                 explanation=ai_response.get('explanation', ''),
                 elements_created=ai_response.get('elements_created', []),
                 suggestions=ai_response.get('suggestions', []),
@@ -417,6 +431,38 @@ Keep the explanation clear and accessible to business users.
             logger.error(f"Error explaining BPMN: {str(e)}")
             return f"Error generating explanation: {str(e)}"
     
+    def _normalize_bpmn_xml(self, bpmn_xml: str) -> str:
+        """
+        Normalize BPMN XML to ensure proper formatting for bpmn-js.
+        
+        Args:
+            bpmn_xml: Raw BPMN XML string
+            
+        Returns:
+            Normalized BPMN XML with proper formatting
+        """
+        try:
+            import re
+            
+            # Convert single quotes to double quotes in XML attributes
+            # This regex finds attribute="value" or attribute='value' patterns
+            # and normalizes them to use double quotes
+            normalized = re.sub(r"(\w+)='([^']*)'", r'\1="\2"', bpmn_xml)
+            
+            # Clean up any extra whitespace while preserving structure
+            normalized = re.sub(r'>\s+<', '><', normalized.strip())
+            
+            # Ensure proper XML declaration if missing
+            if not normalized.startswith('<?xml'):
+                normalized = '<?xml version="1.0" encoding="UTF-8"?>\n' + normalized
+            
+            logger.debug(f"Normalized BPMN XML: {normalized[:200]}...")
+            return normalized
+            
+        except Exception as e:
+            logger.error(f"Error normalizing BPMN XML: {e}")
+            return bpmn_xml  # Return original if normalization fails
+
     def _create_simple_bpmn_template(self, process_description: str) -> str:
         """
         Create a simple BPMN template as fallback.
