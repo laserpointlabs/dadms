@@ -159,6 +159,17 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                 setMessages(prev => [...prev, suggestionsMessage]);
             }
 
+            // Show validation warnings if available
+            if (result.validation_errors && result.validation_errors.length > 0) {
+                const validationMessage: Message = {
+                    id: (Date.now() + 3).toString(),
+                    type: 'assistant',
+                    content: `⚠️ BPMN Validation Issues: ${result.validation_errors.join(', ')}. The diagram may not display perfectly but is still functional.`,
+                    timestamp: new Date()
+                };
+                setMessages(prev => [...prev, validationMessage]);
+            }
+
         } catch (error) {
             console.error('Error sending message:', error);
             const errorMessage: Message = {
@@ -178,7 +189,7 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
         sendMessage(inputValue);
     };
 
-    const useSuggestedPrompt = (prompt: string) => {
+    const applySuggestedPrompt = (prompt: string) => {
         setInputValue(prompt);
     };
 
@@ -306,7 +317,7 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                         <button
                             key={index}
                             className="prompt-button"
-                            onClick={() => useSuggestedPrompt(prompt)}
+                            onClick={() => applySuggestedPrompt(prompt)}
                             disabled={isLoading}
                         >
                             {prompt}

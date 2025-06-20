@@ -201,7 +201,26 @@ Generate only valid JSON response.
                     }
                     return BPMNResponse(**fallback_response)
                 
-            ai_response = json.loads(content)
+            # Clean the JSON content to remove control characters
+            try:
+                # Remove control characters that break JSON parsing
+                import re
+                # Remove non-printable characters except newlines and tabs in JSON strings
+                content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
+                
+                ai_response = json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing failed after cleaning: {str(e)}")
+                logger.error(f"Cleaned content: {content[:500]}...")
+                # Create fallback response if JSON parsing still fails
+                fallback_response = {
+                    "bpmn_xml": self._create_simple_bpmn_template(request.user_input),
+                    "explanation": f"Error parsing AI response: {str(e)}",
+                    "elements_created": ["startEvent", "task", "endEvent"],
+                    "suggestions": ["Consider regenerating the process"],
+                    "confidence_score": 0.3
+                }
+                return BPMNResponse(**fallback_response)
             
             # Create BPMNResponse object
             bpmn_response = BPMNResponse(
