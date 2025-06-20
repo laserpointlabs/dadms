@@ -27,6 +27,17 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
+    // Debug: Log props received
+    useEffect(() => {
+        console.log('BPMNViewer props changed:', {
+            bpmnXmlLength: bpmnXml?.length || 0,
+            bpmnXmlPreview: bpmnXml?.substring(0, 100) || 'null/empty',
+            editable,
+            hasOnElementClick: !!onElementClick,
+            hasOnModelChange: !!onModelChange
+        });
+    }, [bpmnXml, editable, onElementClick, onModelChange]);
+
     // Load bpmn-js dynamically
     useEffect(() => {
         const loadBpmnJs = async () => {
@@ -109,6 +120,13 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
             });
 
             console.log('BPMN viewer created:', bpmnViewer);
+            console.log('Container element:', containerRef.current);
+            console.log('Container dimensions:', {
+                width: containerRef.current?.offsetWidth,
+                height: containerRef.current?.offsetHeight,
+                clientWidth: containerRef.current?.clientWidth,
+                clientHeight: containerRef.current?.clientHeight
+            });
 
             // Add event listeners
             bpmnViewer.on('element.click', (event: any) => {
@@ -141,10 +159,21 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
 
     // Load BPMN XML when viewer is ready or XML changes
     useEffect(() => {
-        if (!viewer || !isLoaded) return;
+        console.log('BPMN XML useEffect triggered:', {
+            hasViewer: !!viewer,
+            isLoaded,
+            bpmnXmlLength: bpmnXml?.length || 0,
+            bpmnXmlPreview: bpmnXml?.substring(0, 100) || 'empty'
+        });
+
+        if (!viewer || !isLoaded) {
+            console.log('Viewer not ready yet:', { viewer: !!viewer, isLoaded });
+            return;
+        }
 
         // If there's no BPMN XML, just clear any existing diagram
         if (!bpmnXml || bpmnXml.trim() === '') {
+            console.log('No BPMN XML provided, clearing diagram');
             setIsLoading(false);
             setError(null);
             return;
@@ -181,9 +210,23 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
                     console.warn('BPMN import warnings:', result.warnings);
                 }
 
+                // Check if SVG was actually created
+                const svgElement = containerRef.current?.querySelector('svg');
+                console.log('SVG element after import:', svgElement);
+                console.log('Container HTML after import:', containerRef.current?.innerHTML?.substring(0, 200));
+
                 // Fit viewport to show the entire diagram
                 const canvas = viewer.get('canvas');
                 console.log('Canvas instance:', canvas);
+
+                // Try to get viewport info
+                try {
+                    const viewbox = canvas.viewbox();
+                    console.log('Canvas viewbox:', viewbox);
+                } catch (viewboxError) {
+                    console.warn('Could not get viewbox:', viewboxError);
+                }
+
                 canvas.zoom('fit-viewport', 'auto');
 
                 setIsLoading(false);

@@ -118,7 +118,10 @@
     display: flex;
     gap: 16px;
     padding: 16px;
-    min-height: 0;
+    min-height: 500px;
+    /* Ensure minimum height for content */
+    height: calc(100vh - 200px);
+    /* Account for header and footer */
 }
 
 .bpmn-workspace.side-by-side .workspace-content {
@@ -138,7 +141,10 @@
 .viewer-panel {
     flex: 2;
     min-width: 0;
-    min-height: 0;
+    min-height: 400px;
+    /* Ensure minimum height for BPMN viewer */
+    height: 100%;
+    /* Ensure full height */
 }
 
 .bpmn-workspace.stacked .chat-panel,
