@@ -216,6 +216,31 @@ const BPMNWorkspace: React.FC = () => {
                 </div>
 
                 <div className="viewer-panel">
+                    {/* Debug info */}
+                    <div style={{
+                        padding: '8px',
+                        backgroundColor: '#f8f9fa',
+                        borderBottom: '1px solid #dee2e6',
+                        fontSize: '12px',
+                        fontFamily: 'monospace'
+                    }}>
+                        <strong>Debug:</strong> BPMN XML Length: {currentBPMN?.length || 0} characters
+                        {currentBPMN && (
+                            <details style={{ marginTop: '4px' }}>
+                                <summary>Show XML Preview (first 500 chars)</summary>
+                                <pre style={{
+                                    maxHeight: '100px',
+                                    overflow: 'auto',
+                                    margin: '4px 0',
+                                    padding: '4px',
+                                    backgroundColor: '#fff',
+                                    border: '1px solid #ddd'
+                                }}>
+                                    {currentBPMN.substring(0, 500)}...
+                                </pre>
+                            </details>
+                        )}
+                    </div>
                     <BPMNViewer
                         bpmnXml={currentBPMN}
                         onElementClick={(element) => {
