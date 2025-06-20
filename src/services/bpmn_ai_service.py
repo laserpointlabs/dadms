@@ -85,7 +85,7 @@ User Request: {user_input}
 Context: {context}
 
 Requirements:
-1. Generate complete, valid BPMN 2.0 XML with proper XML formatting
+1. Generate complete, valid BPMN 2.0 XML with proper XML formatting and VISUAL DIAGRAM INFORMATION
 2. Use DOUBLE QUOTES for all XML attributes (not single quotes)
 3. Include proper process structure with start/end events
 4. Use appropriate BPMN elements for the described process
@@ -93,17 +93,38 @@ Requirements:
 6. Include human-readable labels
 7. Follow BPMN 2.0 standard conventions
 8. Include sequence flows connecting all elements
+9. **CRITICAL**: Include complete bpmndi:BPMNDiagram section with visual layout information
+10. **CRITICAL**: Add bpmndi:BPMNShape elements for all process elements with coordinates (x, y, width, height)
+11. **CRITICAL**: Add bpmndi:BPMNEdge elements for all sequence flows with waypoints
+
+REQUIRED XML Structure:
+- Root: bpmn:definitions with proper namespaces (bpmn, bpmndi, dc, di)
+- Process: bpmn:process with all process elements
+- Diagram: bpmndi:BPMNDiagram with bpmndi:BPMNPlane containing all shapes and edges
+- Shapes: bpmndi:BPMNShape for each element with dc:Bounds (x, y, width, height)
+- Edges: bpmndi:BPMNEdge for each sequence flow with di:waypoint elements
+
+Use reasonable layout positions:
+- Start events: x=180, y=180, width=36, height=36
+- Tasks: width=100, height=80
+- Gateways: width=50, height=50  
+- End events: x coordinates should increase left to right
+- Sequence flows should have proper waypoints
 
 Response Format (JSON):
 {{
-    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">...</bpmn:definitions>",
+    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\">...</bpmn:definitions>",
     "explanation": "Brief explanation of the generated process",
     "elements_created": ["list", "of", "elements"],
     "suggestions": ["potential", "improvements"],
     "confidence_score": 0.95
 }}
 
-IMPORTANT: Use double quotes in XML attributes, not single quotes. Generate only valid JSON response.
+IMPORTANT: 
+- Use double quotes in XML attributes, not single quotes
+- MUST include complete visual diagram information (bpmndi section)
+- Generate only valid JSON response
+- The BPMN must be visually displayable in a BPMN viewer
 """
 
         self.modification_prompt_template = """
@@ -121,17 +142,24 @@ Requirements:
 3. Maintain valid BPMN 2.0 XML structure
 4. Ensure all element IDs remain unique
 5. Update labels appropriately
+6. **CRITICAL**: Preserve or update visual diagram information (bpmndi section)
+7. **CRITICAL**: Add bpmndi:BPMNShape elements for any new process elements
+8. **CRITICAL**: Add bpmndi:BPMNEdge elements for any new sequence flows
+9. Maintain proper layout positions and ensure new elements don't overlap
 
 Response Format (JSON):
 {{
-    "bpmn_xml": "<bpmn:definitions>...</bpmn:definitions>",
+    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\">...</bpmn:definitions>",
     "explanation": "Brief explanation of the modifications made",
     "elements_created": ["new", "elements"],
     "suggestions": ["potential", "improvements"],
     "confidence_score": 0.95
 }}
 
-Generate only valid JSON response.
+IMPORTANT: 
+- Generate only valid JSON response
+- MUST include complete visual diagram information (bpmndi section)
+- The modified BPMN must remain visually displayable
 """
 
     async def generate_bpmn(self, request: BPMNGenerationRequest) -> BPMNResponse:
@@ -230,6 +258,11 @@ Generate only valid JSON response.
             # Normalize BPMN XML format (fix single quotes to double quotes)
             if bpmn_xml:
                 bpmn_xml = self._normalize_bpmn_xml(bpmn_xml)
+                
+                # Add auto-layout if BPMN doesn't have diagram information
+                if not self._has_diagram_information(bpmn_xml):
+                    logger.info("Adding auto-layout to BPMN XML...")
+                    bpmn_xml = self._add_auto_layout(bpmn_xml)
             
             bpmn_response = BPMNResponse(
                 bpmn_xml=bpmn_xml,
@@ -462,6 +495,38 @@ Keep the explanation clear and accessible to business users.
         except Exception as e:
             logger.error(f"Error normalizing BPMN XML: {e}")
             return bpmn_xml  # Return original if normalization fails
+
+    def _has_diagram_information(self, bpmn_xml: str) -> bool:
+        """
+        Check if BPMN XML contains diagram information (BPMNDiagram).
+        
+        Args:
+            bpmn_xml: BPMN XML string
+            
+        Returns:
+            True if diagram information is present, False otherwise
+        """
+        return 'BPMNDiagram' in bpmn_xml or 'bpmndi:' in bpmn_xml
+
+    def _add_auto_layout(self, bpmn_xml: str) -> str:
+        """
+        Add auto-layout to BPMN XML that lacks diagram information.
+        
+        Args:
+            bpmn_xml: BPMN XML with process structure only
+            
+        Returns:
+            BPMN XML with diagram layout information
+        """
+        try:
+            from src.utils.bpmn_auto_layout import add_auto_layout_to_bpmn
+            return add_auto_layout_to_bpmn(bpmn_xml)
+        except ImportError as e:
+            logger.warning(f"Auto-layout not available: {e}")
+            return bpmn_xml
+        except Exception as e:
+            logger.error(f"Error adding auto-layout: {e}")
+            return bpmn_xml
 
     def _create_simple_bpmn_template(self, process_description: str) -> str:
         """
