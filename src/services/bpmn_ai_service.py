@@ -226,8 +226,30 @@ IMPORTANT:
             try:
                 # Remove control characters that break JSON parsing
                 import re
-                # Remove non-printable characters except newlines and tabs in JSON strings
+                
+                # First, remove problematic control characters except newlines in XML
                 content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
+                
+                # Fix any malformed newlines in the JSON string values
+                # Replace actual newlines in XML with escaped newlines
+                if '"bpmn_xml"' in content:
+                    # Extract and fix the bpmn_xml value
+                    def fix_xml_newlines(match):
+                        xml_content = match.group(1)
+                        # Replace unescaped newlines with escaped ones
+                        xml_content = xml_content.replace('\n', '\\n')
+                        xml_content = xml_content.replace('\r', '\\r')
+                        xml_content = xml_content.replace('\t', '\\t')
+                        return f'"bpmn_xml": "{xml_content}"'
+                    
+                    # Fix the bpmn_xml field specifically
+                    content = re.sub(r'"bpmn_xml":\s*"([^"]*(?:\\.[^"]*)*)"', fix_xml_newlines, content, flags=re.DOTALL)
+                
+                # Additional cleanup for any remaining issues
+                content = content.replace('\n    ', '\\n    ')  # Fix indented newlines
+                content = content.replace('\n        ', '\\n        ')  # Fix deeper indented newlines
+                
+                logger.debug(f"Cleaned JSON: {content[:300]}...")
                 
                 ai_response = json.loads(content)
             except json.JSONDecodeError as e:
