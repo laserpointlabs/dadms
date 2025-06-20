@@ -158,6 +158,21 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
                 console.log('Loading BPMN XML:', bpmnXml.substring(0, 200) + '...');
                 console.log('Viewer instance:', viewer);
                 console.log('XML length:', bpmnXml.length);
+                console.log('XML starts with:', bpmnXml.substring(0, 100));
+
+                // Basic XML validation
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(bpmnXml, 'text/xml');
+                    const parseError = xmlDoc.querySelector('parsererror');
+                    if (parseError) {
+                        throw new Error(`XML parsing error: ${parseError.textContent}`);
+                    }
+                    console.log('XML validation passed');
+                } catch (validationError) {
+                    console.error('XML validation failed:', validationError);
+                    throw validationError;
+                }
 
                 const result = await viewer.importXML(bpmnXml);
                 console.log('Import result:', result);

@@ -15,6 +15,7 @@ const BPMNWorkspace: React.FC = () => {
     const [selectedModel, setSelectedModel] = useState<string>('');
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [workspaceLayout, setWorkspaceLayout] = useState<'side-by-side' | 'stacked'>('side-by-side');
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Load available BPMN models on component mount
     useEffect(() => {
@@ -99,6 +100,50 @@ const BPMNWorkspace: React.FC = () => {
         }
     };
 
+    const loadFileFromDisk = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileLoad = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.bpmn') && !file.name.toLowerCase().endsWith('.xml')) {
+            alert('Please select a BPMN (.bpmn) or XML (.xml) file');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+
+                // Basic validation to check if it looks like BPMN XML
+                if (!content.includes('bpmn:definitions') && !content.includes('<definitions')) {
+                    alert('This file does not appear to be a valid BPMN model');
+                    return;
+                }
+
+                setCurrentBPMN(content);
+                setSelectedModel(''); // Clear selected model since this is a loaded file
+                console.log(`Loaded BPMN file: ${file.name} (${(content.length / 1024).toFixed(1)}KB)`);
+            } catch (error) {
+                console.error('Error reading file:', error);
+                alert('Failed to read the file');
+            }
+        };
+
+        reader.onerror = () => {
+            alert('Error reading the file');
+        };
+
+        reader.readAsText(file);
+
+        // Clear the input so the same file can be loaded again if needed
+        event.target.value = '';
+    };
+
     return (
         <div className={`bpmn-workspace ${workspaceLayout}`}>
             <div className="workspace-header">
@@ -151,6 +196,13 @@ const BPMNWorkspace: React.FC = () => {
                         >
                             {workspaceLayout === 'side-by-side' ? '📱' : '💻'}
                         </button>
+                        <button
+                            onClick={loadFileFromDisk}
+                            className="primary-button"
+                            title="Load BPMN File"
+                        >
+                            📂 Load File
+                        </button>
                     </div>
                 </div>
             </div>
@@ -194,6 +246,15 @@ const BPMNWorkspace: React.FC = () => {
                     <span className="info-item">📋 BPMN 2.0 Compatible</span>
                 </div>
             </div>
+
+            {/* Hidden file input for loading BPMN files */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".bpmn,.xml"
+                onChange={handleFileLoad}
+                style={{ display: 'none' }}
+            />
         </div>
     );
 };
