@@ -34,12 +34,20 @@ const BPMNWorkspace: React.FC = () => {
         return () => window.removeEventListener('resize', updateLayout);
     }, []);
 
-    // Load BPMN XML from sessionStorage on mount
+    // Load BPMN XML from localStorage on mount
     useEffect(() => {
-        const saved = sessionStorage.getItem('currentBpmnModel');
+        console.log('=== localStorage Debug ===');
+        console.log('All localStorage keys:', Object.keys(localStorage));
+        const saved = localStorage.getItem('currentBpmnModel');
+        console.log('Loading from localStorage:', saved ? 'Found model' : 'No model found');
         if (saved) {
+            console.log('Setting currentBPMN from localStorage, length:', saved.length);
+            console.log('First 200 chars of saved XML:', saved.substring(0, 200));
             setCurrentBPMN(saved);
+        } else {
+            console.log('No saved model found in localStorage');
         }
+        console.log('=== End localStorage Debug ===');
     }, []);
 
     const loadAvailableModels = async () => {
@@ -76,50 +84,32 @@ const BPMNWorkspace: React.FC = () => {
     };
 
     const handleBPMNUpdate = (bpmnXml: string) => {
-        // Only update if the content actually changed
-        if (bpmnXml === currentBPMN) {
-            console.log('BPMN model unchanged - ignoring update');
-            return;
-        }
-
-        console.log('BPMN model updated:', {
-            previousLength: currentBPMN.length,
-            newLength: bpmnXml.length,
-            hasChanges: currentBPMN !== bpmnXml
-        });
-
+        console.log('handleBPMNUpdate called with XML length:', bpmnXml.length);
         setCurrentBPMN(bpmnXml);
         setSelectedModel(''); // Clear selected model since this is a new/modified model
-
-        // Persist BPMN XML to sessionStorage
-        sessionStorage.setItem('currentBpmnModel', bpmnXml);
-
-        // Only update manual edit tracking if this is a real change
-        if (bpmnXml !== currentBPMN) {
-            // Also save a timestamp of when the model was last modified
-            sessionStorage.setItem('currentBpmnModelLastModified', new Date().toISOString());
-
-            // Save a hash of the model to track changes
-            const modelHash = btoa(bpmnXml).slice(0, 20); // Simple hash for change detection
-            sessionStorage.setItem('currentBpmnModelHash', modelHash);
-
-            console.log('BPMN model persisted to sessionStorage with hash:', modelHash);
-        }
+        localStorage.setItem('currentBpmnModel', bpmnXml);
+        // Also save a timestamp of when the model was last modified
+        localStorage.setItem('currentBpmnModelLastModified', new Date().toISOString());
+        // Save a hash of the model to track changes
+        const modelHash = btoa(bpmnXml).slice(0, 20); // Simple hash for change detection
+        localStorage.setItem('currentBpmnModelHash', modelHash);
+        console.log('BPMN model persisted to localStorage with hash:', modelHash);
+        console.log('localStorage now contains:', localStorage.getItem('currentBpmnModel') ? 'XML saved' : 'XML NOT saved');
     };
 
     const clearCurrentModel = () => {
         setCurrentBPMN('');
         setSelectedModel('');
-        // Remove from sessionStorage
-        sessionStorage.removeItem('currentBpmnModel');
-        sessionStorage.removeItem('currentBpmnModelLastModified');
-        sessionStorage.removeItem('currentBpmnModelHash');
+        // Remove from localStorage
+        localStorage.removeItem('currentBpmnModel');
+        localStorage.removeItem('currentBpmnModelLastModified');
+        localStorage.removeItem('currentBpmnModelHash');
     };
 
     const clearManualEditTracking = () => {
         // Clear manual edit tracking when loading a new model from AI or file
-        sessionStorage.removeItem('currentBpmnModelLastModified');
-        sessionStorage.removeItem('currentBpmnModelHash');
+        localStorage.removeItem('currentBpmnModelLastModified');
+        localStorage.removeItem('currentBpmnModelHash');
     };
 
     const saveCurrentModel = async () => {
@@ -369,7 +359,7 @@ const BPMNWorkspace: React.FC = () => {
                             {selectedModel && (
                                 <span className="status-item">📄 {selectedModel}</span>
                             )}
-                            {sessionStorage.getItem('currentBpmnModelLastModified') && (
+                            {localStorage.getItem('currentBpmnModelLastModified') && (
                                 <span className="status-item" style={{ color: '#28a745' }}>
                                     ✏️ Manually edited
                                 </span>
