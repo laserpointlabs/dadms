@@ -1,4 +1,8 @@
 # Python 3.10.6
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1+cpu
+torchvision==0.22.1+cpu
+torchaudio==2.7.1+cpu
 camunda-external-task-client-python3==4.5.0
 openai==1.83.0
 neo4j==5.16.0
