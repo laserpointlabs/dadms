@@ -67,7 +67,6 @@ const BPMNWorkspace: React.FC = () => {
                 const data = await response.json();
                 setCurrentBPMN(data.bpmn_xml);
                 setSelectedModel(modelName);
-                clearManualEditTracking(); // Clear manual edit tracking for loaded model
             } else {
                 console.error('Failed to load selected model');
             }
@@ -77,35 +76,10 @@ const BPMNWorkspace: React.FC = () => {
     };
 
     const handleBPMNUpdate = (bpmnXml: string) => {
-        // Only update if the content actually changed
-        if (bpmnXml === currentBPMN) {
-            console.log('BPMN model unchanged - ignoring update');
-            return;
-        }
-
-        console.log('BPMN model updated:', {
-            previousLength: currentBPMN.length,
-            newLength: bpmnXml.length,
-            hasChanges: currentBPMN !== bpmnXml
-        });
-
         setCurrentBPMN(bpmnXml);
         setSelectedModel(''); // Clear selected model since this is a new/modified model
-
         // Persist BPMN XML to sessionStorage
         sessionStorage.setItem('currentBpmnModel', bpmnXml);
-
-        // Only update manual edit tracking if this is a real change
-        if (bpmnXml !== currentBPMN) {
-            // Also save a timestamp of when the model was last modified
-            sessionStorage.setItem('currentBpmnModelLastModified', new Date().toISOString());
-
-            // Save a hash of the model to track changes
-            const modelHash = btoa(bpmnXml).slice(0, 20); // Simple hash for change detection
-            sessionStorage.setItem('currentBpmnModelHash', modelHash);
-
-            console.log('BPMN model persisted to sessionStorage with hash:', modelHash);
-        }
     };
 
     const clearCurrentModel = () => {
@@ -113,14 +87,6 @@ const BPMNWorkspace: React.FC = () => {
         setSelectedModel('');
         // Remove from sessionStorage
         sessionStorage.removeItem('currentBpmnModel');
-        sessionStorage.removeItem('currentBpmnModelLastModified');
-        sessionStorage.removeItem('currentBpmnModelHash');
-    };
-
-    const clearManualEditTracking = () => {
-        // Clear manual edit tracking when loading a new model from AI or file
-        sessionStorage.removeItem('currentBpmnModelLastModified');
-        sessionStorage.removeItem('currentBpmnModelHash');
     };
 
     const saveCurrentModel = async () => {
@@ -176,7 +142,6 @@ const BPMNWorkspace: React.FC = () => {
 
                 setCurrentBPMN(content);
                 setSelectedModel(''); // Clear selected model since this is a loaded file
-                clearManualEditTracking(); // Clear manual edit tracking for loaded file
                 console.log(`Loaded BPMN file: ${file.name} (${(content.length / 1024).toFixed(1)}KB)`);
             } catch (error) {
                 console.error('Error reading file:', error);
@@ -231,6 +196,29 @@ const BPMNWorkspace: React.FC = () => {
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
     };
+
+    // Add global mouse event listeners
+    useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (isDraggingRef.current) {
+                handleMouseMove(e);
+            }
+        };
+
+        const handleGlobalMouseUp = () => {
+            if (isDraggingRef.current) {
+                handleMouseUp();
+            }
+        };
+
+        document.addEventListener('mousemove', handleGlobalMouseMove);
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleGlobalMouseMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, []);
 
     return (
         <div className={`bpmn-workspace ${workspaceLayout}`}>
@@ -316,7 +304,6 @@ const BPMNWorkspace: React.FC = () => {
                     <BPMNChat
                         onBPMNUpdate={handleBPMNUpdate}
                         currentBPMN={currentBPMN}
-                        onAIModelGenerated={clearManualEditTracking}
                     />
                 </div>
 
@@ -329,7 +316,7 @@ const BPMNWorkspace: React.FC = () => {
                     style={{
                         width: '8px',
                         height: '100%',
-                        background: '#e9ecef',
+                        background: 'transparent',
                         cursor: 'col-resize',
                         position: 'relative',
                         zIndex: 10,
@@ -343,7 +330,7 @@ const BPMNWorkspace: React.FC = () => {
                     <div style={{
                         width: '2px',
                         height: '40px',
-                        background: '#adb5bd',
+                        background: 'transparent',
                         borderRadius: '1px'
                     }} />
                 </div>
@@ -359,11 +346,15 @@ const BPMNWorkspace: React.FC = () => {
                 >
                     <BPMNViewer
                         bpmnXml={currentBPMN}
+                        onElementClick={(element) => {
+                            console.log('BPMN element clicked:', element);
+                        }}
                         onModelChange={(xml) => {
                             console.log('BPMN model changed:', xml.length, 'characters');
                             handleBPMNUpdate(xml);
                         }}
-                        isEditable={isEditMode}
+                        editable={isEditMode}
+                        showToolbar={true}
                     />
                 </div>
             </div>
@@ -376,11 +367,6 @@ const BPMNWorkspace: React.FC = () => {
                             <span className="status-item">📊 {(currentBPMN.length / 1024).toFixed(1)}KB</span>
                             {selectedModel && (
                                 <span className="status-item">📄 {selectedModel}</span>
-                            )}
-                            {sessionStorage.getItem('currentBpmnModelLastModified') && (
-                                <span className="status-item" style={{ color: '#28a745' }}>
-                                    ✏️ Manually edited
-                                </span>
                             )}
                         </>
                     ) : (
