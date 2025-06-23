@@ -12,7 +12,14 @@ interface Message {
 }
 
 interface BPMNResponse {
-    bpmn_xml: string;
+    bpmn_xml?: string;
+    bpmn?: string;
+    name?: string;
+    description?: string;
+    version?: string;
+    author?: string;
+    created?: string;
+    tags?: string[];
     explanation: string;
     elements_created: string[];
     suggestions: string[];
@@ -241,7 +248,9 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                     current_bpmn: currentBPMN,
                     modification_request: message,
                     context: {
-                        conversation_history: messages.slice(-5) // Last 5 messages for context
+                        conversation_history: messages.slice(-10), // Last 10 messages for context
+                        current_model_summary: `Current model has ${currentBPMN.length} characters and contains BPMN process elements`,
+                        user_intent: "modify_existing_model"
                     }
                 };
             } else {
@@ -249,8 +258,10 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                 payload = {
                     user_input: message,
                     context: {
-                        conversation_history: messages.slice(-5),
-                        current_model: currentBPMN || null
+                        conversation_history: messages.slice(-10), // Last 10 messages for context
+                        current_model: currentBPMN || null,
+                        current_model_summary: currentBPMN ? `Existing model has ${currentBPMN.length} characters` : "No existing model",
+                        user_intent: currentBPMN ? "enhance_existing_model" : "create_new_model"
                     }
                 };
             }
@@ -269,13 +280,19 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
 
             const result: BPMNResponse = await response.json();
 
+            // Extract BPMN XML from either 'bpmn' or 'bpmn_xml' key
+            const bpmnXml = result.bpmn || result.bpmn_xml || '';
+
+            // Extract explanation from either 'explanation' or 'description' field
+            const explanation = result.explanation || result.description || 'BPMN model generated successfully.';
+
             // Create assistant message with BPMN result
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'assistant',
-                content: result.explanation,
+                content: explanation,
                 timestamp: new Date(),
-                bpmn_xml: result.bpmn_xml,
+                bpmn_xml: bpmnXml,
                 confidence_score: result.confidence_score,
                 validation_errors: result.validation_errors
             };
@@ -283,8 +300,8 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
             setMessages(prev => [...prev, assistantMessage]);
 
             // Notify parent component of BPMN update
-            if (onBPMNUpdate && result.bpmn_xml) {
-                onBPMNUpdate(result.bpmn_xml);
+            if (onBPMNUpdate && bpmnXml) {
+                onBPMNUpdate(bpmnXml);
             }
 
             // Show suggestions if available
