@@ -34,127 +34,52 @@ const BPMNViewer = forwardRef<{
     const [currentXml, setCurrentXml] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const lastImportedXmlRef = useRef<string | null>(null);
 
-    // Initialize and display BPMN diagram when XML is available
+    // Create the modeler instance only once
     useEffect(() => {
-        if (!bpmnXml || !containerRef.current) {
-            setIsLoading(false);
-            return;
-        }
+        let modeler: any;
+        let isMounted = true;
+        const setupModeler = async () => {
+            // Load CSS files if not already loaded
+            if (!document.querySelector('link[href*="bpmn-js"]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css?t=${Date.now()}`;
+                document.head.appendChild(link);
 
-        // Prevent re-initialization if the XML content hasn't changed
-        if (currentXml === bpmnXml) {
-            console.log('BPMN XML unchanged - skipping re-initialization');
-            return;
-        }
+                const link2 = document.createElement('link');
+                link2.rel = 'stylesheet';
+                link2.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css?t=${Date.now()}`;
+                document.head.appendChild(link2);
+            }
 
-        setCurrentXml(bpmnXml);
-
-        const initializeViewer = async () => {
-            try {
-                setIsLoading(true);
-
-                // Load CSS files if not already loaded
-                if (!document.querySelector('link[href*="bpmn-js"]')) {
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css?t=${Date.now()}`;
-                    document.head.appendChild(link);
-
-                    const link2 = document.createElement('link');
-                    link2.rel = 'stylesheet';
-                    link2.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css?t=${Date.now()}`;
-                    document.head.appendChild(link2);
-                }
-
-                // Load BPMN.js library if not already loaded
-                let BpmnModeler;
-
-                console.log('Checking if window.BpmnJS exists:', !!window.BpmnJS);
-
-                if (!window.BpmnJS) {
-                    console.log('Loading bpmn-js from CDN...');
-                    // Load the main bpmn-js bundle which includes BpmnModeler
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js?t=${Date.now()}`;
-                        script.onload = () => {
-                            console.log('bpmn-js loaded from CDN successfully');
-                            console.log('window.BpmnJS:', window.BpmnJS);
-                            resolve(void 0);
-                        };
-                        script.onerror = (error) => {
-                            console.error('Failed to load bpmn-js from CDN:', error);
-                            reject(error);
-                        };
-                        document.head.appendChild(script);
-                    });
-                }
-
-                // Try different ways to access the BPMN modeler class
-                BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
-                console.log('BpmnModeler class:', BpmnModeler);
-
-                if (!BpmnModeler) {
-                    throw new Error('Failed to load BPMN Modeler from CDN');
-                }
-
-                // Create BPMN modeler instance with standard configuration
-                console.log('Creating BpmnModeler instance...');
-                const modeler = new BpmnModeler({
+            // Load BPMN.js library if not already loaded
+            let BpmnModeler;
+            if (!window.BpmnJS) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js?t=${Date.now()}`;
+                    script.onload = () => resolve(void 0);
+                    script.onerror = (error) => reject(error);
+                    document.head.appendChild(script);
+                });
+            }
+            BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
+            if (!BpmnModeler) throw new Error('Failed to load BPMN Modeler from CDN');
+            // Only create if not already created
+            if (!bpmnViewerRef.current) {
+                modeler = new BpmnModeler({
                     container: containerRef.current,
                     width: '100%',
                     height: '100%'
                 });
-
                 bpmnViewerRef.current = modeler;
                 setIsInitialized(true);
-
-                // Set up event handlers following official pattern
-                modeler.on('import.done', (event: any) => {
-                    const { error: importError, warnings } = event;
-
-                    if (importError) {
-                        console.error('Failed to import BPMN diagram:', importError);
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    // Zoom to fit following official pattern
-                    try {
-                        const canvas = modeler.get('canvas');
-                        console.log('Canvas object:', canvas);
-                        console.log('Canvas viewbox before zoom:', canvas.viewbox());
-
-                        canvas.zoom('fit-viewport');
-
-                        console.log('Canvas viewbox after zoom:', canvas.viewbox());
-                        console.log('Canvas zoom level:', canvas.zoom());
-                    } catch (zoomError) {
-                        console.warn('Could not zoom to fit viewport:', zoomError);
-                    }
-
-                    if (warnings && warnings.length > 0) {
-                        console.warn('BPMN import warnings:', warnings);
-                    }
-
-                    setIsLoading(false);
-                    console.log('BPMN diagram loaded successfully');
-
-                    // Check if SVG elements were created
-                    const svgElements = containerRef.current?.querySelectorAll('svg');
-                    console.log('SVG elements in container:', svgElements?.length);
-                    if (svgElements && svgElements.length > 0) {
-                        console.log('First SVG element:', svgElements[0]);
-                        console.log('SVG dimensions:', svgElements[0].getBBox?.());
-                    }
-                });
-
                 // Add change listener for editable mode
                 if (isEditable && onModelChange) {
                     let debounceTimer: NodeJS.Timeout;
                     modeler.on('commandStack.changed', async () => {
-                        // Debounce the change callback to prevent too many rapid updates
                         clearTimeout(debounceTimer);
                         debounceTimer = setTimeout(async () => {
                             try {
@@ -163,61 +88,72 @@ const BPMNViewer = forwardRef<{
                             } catch (err) {
                                 console.error('Error saving XML:', err);
                             }
-                        }, 300); // 300ms debounce
+                        }, 300);
                     });
                 }
-
-                // Import the XML following official pattern
-                console.log('Importing BPMN XML into viewer...');
-                console.log('Container element:', containerRef.current);
-                console.log('Viewer instance:', modeler);
-                modeler.importXML(bpmnXml);
-
-            } catch (err: any) {
-                console.error('Error initializing BPMN viewer:', err);
-                setIsLoading(false);
             }
         };
-
-        initializeViewer();
-
-        // Cleanup function following official pattern
+        setupModeler();
         return () => {
+            isMounted = false;
             if (bpmnViewerRef.current) {
                 bpmnViewerRef.current.destroy();
                 bpmnViewerRef.current = null;
                 setIsInitialized(false);
             }
         };
-    }, [bpmnXml]);
+    }, []); // Only run on mount/unmount
 
-    // Handle isEditable prop changes separately without re-initializing
+    // Only import XML when bpmnXml changes
     useEffect(() => {
-        if (!bpmnViewerRef.current || !isInitialized) return;
+        console.log('BPMNViewer: bpmnXml changed, length:', bpmnXml?.length || 0);
+        console.log('BPMNViewer: containerRef.current:', !!containerRef.current);
+        console.log('BPMNViewer: bpmnViewerRef.current:', !!bpmnViewerRef.current);
+        console.log('BPMNViewer: isInitialized:', isInitialized);
 
-        console.log('isEditable changed to:', isEditable);
-
-        // Add or remove change listener based on isEditable
-        if (isEditable && onModelChange) {
-            // Add change listener if not already present
-            const modeler = bpmnViewerRef.current;
-            if (!modeler._hasChangeListener) {
-                let debounceTimer: NodeJS.Timeout;
-                modeler.on('commandStack.changed', async () => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(async () => {
-                        try {
-                            const result = await modeler.saveXML({ format: true });
-                            onModelChange(result.xml);
-                        } catch (err) {
-                            console.error('Error saving XML:', err);
-                        }
-                    }, 300);
-                });
-                modeler._hasChangeListener = true;
-            }
+        if (!bpmnXml || !containerRef.current) {
+            console.log('BPMNViewer: Skipping import - missing XML or container');
+            setIsLoading(false);
+            return;
         }
-    }, [isEditable, onModelChange, isInitialized]);
+
+        if (lastImportedXmlRef.current === bpmnXml) {
+            console.log('BPMNViewer: Skipping import - XML unchanged');
+            return;
+        }
+
+        // Wait for modeler to be fully initialized with retry limit
+        let retryCount = 0;
+        const maxRetries = 50; // 5 seconds max wait
+
+        const importXml = async () => {
+            if (!bpmnViewerRef.current || !isInitialized) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    console.error('BPMNViewer: Modeler failed to initialize after', maxRetries, 'retries');
+                    setIsLoading(false);
+                    return;
+                }
+                console.log('BPMNViewer: Modeler not ready, retry', retryCount, 'of', maxRetries);
+                setTimeout(importXml, 100);
+                return;
+            }
+
+            console.log('BPMNViewer: Modeler ready, importing XML...');
+            setIsLoading(true);
+            try {
+                await bpmnViewerRef.current.importXML(bpmnXml);
+                console.log('BPMNViewer: XML imported successfully');
+                lastImportedXmlRef.current = bpmnXml;
+                setIsLoading(false);
+            } catch (err: any) {
+                console.error('BPMNViewer: Error importing BPMN XML:', err);
+                setIsLoading(false);
+            }
+        };
+
+        importXml();
+    }, [bpmnXml, isInitialized]);
 
     const zoomIn = () => {
         if (bpmnViewerRef.current) {
