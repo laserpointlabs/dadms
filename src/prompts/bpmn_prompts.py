@@ -394,7 +394,13 @@ Requirements:
 
 Response Format (JSON only):
 {{
-    "bpmn_xml": "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL' xmlns:bpmndi='http://www.omg.org/spec/BPMN/20100524/DI' xmlns:dc='http://www.omg.org/spec/DD/20100524/DC' xmlns:di='http://www.omg.org/spec/DD/20100524/DI' id='Definitions_1' targetNamespace='http://bpmn.io/schema/bpmn'>...</bpmn:definitions>",
+    "name": "Process Name",
+    "description": "Brief description of what this process does",
+    "version": "1.0",
+    "author": "System Generated",
+    "created": "2025-06-23",
+    "tags": ["BPMN", "business process", "workflow"],
+    "bpmn": "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL' xmlns:bpmndi='http://www.omg.org/spec/BPMN/20100524/DI' xmlns:dc='http://www.omg.org/spec/DD/20100524/DC' xmlns:di='http://www.omg.org/spec/DD/20100524/DI' id='Definitions_1' targetNamespace='http://bpmn.io/schema/bpmn'>...</bpmn:definitions>",
     "explanation": "Brief explanation of the generated process and key design decisions",
     "elements_created": ["startEvent", "userTask", "exclusiveGateway", "endEvent"],
     "suggestions": ["Consider adding error handling", "Add timer events for deadlines"],
@@ -451,7 +457,13 @@ Requirements:
 
 Response Format (JSON only):
 {{
-    "bpmn_xml": "<bpmn:definitions>...</bpmn:definitions>",
+    "name": "Modified Process Name",
+    "description": "Brief description of the modifications made",
+    "version": "1.1",
+    "author": "System Modified",
+    "created": "2025-06-23",
+    "tags": ["BPMN", "business process", "workflow", "modified"],
+    "bpmn": "<bpmn:definitions>...</bpmn:definitions>",
     "explanation": "Brief explanation of the modifications made and rationale",
     "elements_created": ["new", "elements", "added"],
     "elements_modified": ["existing", "elements", "changed"],

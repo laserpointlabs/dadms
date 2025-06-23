@@ -46,13 +46,13 @@ class BPMNAIService:
     Handles generation, modification, and validation of BPMN models using OpenAI.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o"):
         """
         Initialize the BPMN AI service.
         
         Args:
             api_key: OpenAI API key (if None, will use environment variable)
-            model: OpenAI model to use (default: gpt-4)
+            model: OpenAI model to use (default: gpt-4o for larger context window)
         """
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         if not self.api_key:
@@ -78,80 +78,103 @@ class BPMNAIService:
     def _load_basic_prompts(self):
         """Load basic prompt templates as fallback"""
         self.generation_prompt_template = """
-You are an expert at generating BPMN XML text. You generate XML code that describes BPMN business processes.
+You are an expert BPMN process designer. Create detailed, meaningful BPMN process models with proper element names and realistic business logic.
 
 Request: {user_input}
 Context: {context}
 
-IMPORTANT: You are NOT generating visual diagrams. You are generating XML TEXT that describes a business process. This is exactly like writing any other code or markup - it's just text that follows the BPMN XML format.
+CRITICAL REQUIREMENTS:
+1. Generate REALISTIC business process elements with meaningful names
+2. Use proper BPMN element types (userTask, serviceTask, exclusiveGateway, etc.)
+3. Include complete visual diagram information (bpmndi section)
+4. Create logical process flows with appropriate decision points
+5. Use descriptive element names that reflect actual business activities
+6. Include proper sequence flows with meaningful labels where appropriate
+7. Ensure all elements have unique IDs and proper positioning
 
-Your task is to write XML text that describes the business process. The XML format includes:
-1. Process elements (like <bpmn:startEvent>, <bpmn:task>, etc.) - these describe the process steps
-2. Diagram elements (like <bpmndi:BPMNShape>) - these describe where each step appears visually
+EXAMPLE OF GOOD ELEMENT NAMES:
+- "Submit Purchase Request" (not "Process: Create a simple approval process")
+- "Review Request Details" 
+- "Approve or Reject Request"
+- "Send Approval Notification"
+- "Update Purchase Order"
 
-Think of it like writing HTML for a webpage - you're writing markup text that describes content and layout.
+RESPONSE FORMAT:
+You must respond with a valid JSON object containing these exact keys:
 
-For an approval process, generate XML that describes:
-- A start event (where the process begins)
-- A user task for submitting a request
-- A gateway for the approval decision
-- Two end events (approved/rejected)
-- Sequence flows connecting these steps
-- Visual positioning information for each element
-
-GENERATE THIS EXACT JSON STRUCTURE:
 {{
-    "bpmn_xml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<bpmn:definitions xmlns:bpmn=\\"http://www.omg.org/spec/BPMN/20100524/MODEL\\" xmlns:bpmndi=\\"http://www.omg.org/spec/BPMN/20100524/DI\\" xmlns:dc=\\"http://www.omg.org/spec/DD/20100524/DC\\" xmlns:di=\\"http://www.omg.org/spec/DD/20100524/DI\\" id=\\"Definitions_1\\" targetNamespace=\\"http://bpmn.io/schema/bpmn\\">\\n  <bpmn:process id=\\"Process_1\\" isExecutable=\\"true\\">\\n    <bpmn:startEvent id=\\"StartEvent_1\\" name=\\"Start\\">\\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\\n    </bpmn:startEvent>\\n    <bpmn:userTask id=\\"Task_1\\" name=\\"Submit Request\\">\\n      <bpmn:incoming>Flow_1</bpmn:incoming>\\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\\n    </bpmn:userTask>\\n    <bpmn:exclusiveGateway id=\\"Gateway_1\\" name=\\"Approved?\\">\\n      <bpmn:incoming>Flow_2</bpmn:incoming>\\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\\n    </bpmn:exclusiveGateway>\\n    <bpmn:endEvent id=\\"EndEvent_1\\" name=\\"Approved\\">\\n      <bpmn:incoming>Flow_3</bpmn:incoming>\\n    </bpmn:endEvent>\\n    <bpmn:endEvent id=\\"EndEvent_2\\" name=\\"Rejected\\">\\n      <bpmn:incoming>Flow_4</bpmn:incoming>\\n    </bpmn:endEvent>\\n    <bpmn:sequenceFlow id=\\"Flow_1\\" sourceRef=\\"StartEvent_1\\" targetRef=\\"Task_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_2\\" sourceRef=\\"Task_1\\" targetRef=\\"Gateway_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_3\\" name=\\"Yes\\" sourceRef=\\"Gateway_1\\" targetRef=\\"EndEvent_1\\" />\\n    <bpmn:sequenceFlow id=\\"Flow_4\\" name=\\"No\\" sourceRef=\\"Gateway_1\\" targetRef=\\"EndEvent_2\\" />\\n  </bpmn:process>\\n  <bpmndi:BPMNDiagram id=\\"BPMNDiagram_1\\">\\n    <bpmndi:BPMNPlane id=\\"BPMNPlane_1\\" bpmnElement=\\"Process_1\\">\\n      <bpmndi:BPMNShape id=\\"StartEvent_1_di\\" bpmnElement=\\"StartEvent_1\\">\\n        <dc:Bounds x=\\"100\\" y=\\"100\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"Task_1_di\\" bpmnElement=\\"Task_1\\">\\n        <dc:Bounds x=\\"200\\" y=\\"78\\" width=\\"100\\" height=\\"80\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"Gateway_1_di\\" bpmnElement=\\"Gateway_1\\">\\n        <dc:Bounds x=\\"375\\" y=\\"93\\" width=\\"50\\" height=\\"50\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"EndEvent_1_di\\" bpmnElement=\\"EndEvent_1\\">\\n        <dc:Bounds x=\\"500\\" y=\\"100\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNShape id=\\"EndEvent_2_di\\" bpmnElement=\\"EndEvent_2\\">\\n        <dc:Bounds x=\\"500\\" y=\\"200\\" width=\\"36\\" height=\\"36\\" />\\n      </bpmndi:BPMNShape>\\n      <bpmndi:BPMNEdge id=\\"Flow_1_di\\" bpmnElement=\\"Flow_1\\">\\n        <di:waypoint x=\\"136\\" y=\\"118\\" />\\n        <di:waypoint x=\\"200\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_2_di\\" bpmnElement=\\"Flow_2\\">\\n        <di:waypoint x=\\"300\\" y=\\"118\\" />\\n        <di:waypoint x=\\"375\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_3_di\\" bpmnElement=\\"Flow_3\\">\\n        <di:waypoint x=\\"425\\" y=\\"118\\" />\\n        <di:waypoint x=\\"500\\" y=\\"118\\" />\\n      </bpmndi:BPMNEdge>\\n      <bpmndi:BPMNEdge id=\\"Flow_4_di\\" bpmnElement=\\"Flow_4\\">\\n        <di:waypoint x=\\"400\\" y=\\"143\\" />\\n        <di:waypoint x=\\"400\\" y=\\"218\\" />\\n        <di:waypoint x=\\"500\\" y=\\"218\\" />\\n      </bpmndi:BPMNEdge>\\n    </bpmndi:BPMNPlane>\\n  </bpmndi:BPMNDiagram>\\n</bpmn:definitions>",
-    "explanation": "Generated approval process with submit task, decision gateway, and approve/reject outcomes",
-    "elements_created": ["startEvent", "userTask", "exclusiveGateway", "endEvent"],
-    "suggestions": ["Add approval criteria", "Add notification tasks"],
-    "confidence_score": 0.95
+  "name": "Process Name",
+  "description": "Brief description of what this process does",
+  "version": "1.0",
+  "author": "System Generated",
+  "created": "2025-06-23",
+  "tags": ["BPMN", "business process", "workflow"],
+  "bpmn": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<bpmn:definitions xmlns:bpmn=\\"http://www.omg.org/spec/BPMN/20100524/MODEL\\" xmlns:bpmndi=\\"http://www.omg.org/spec/BPMN/20100524/DI\\" xmlns:dc=\\"http://www.omg.org/spec/DD/20100524/DC\\" xmlns:di=\\"http://www.omg.org/spec/DD/20100524/DI\\" id=\\"Definitions_1\\" targetNamespace=\\"http://bpmn.io/schema/bpmn\\">\\n  <bpmn:process id=\\"ProcessId\\" name=\\"Process Name\\" isExecutable=\\"true\\">\\n    <!-- Process elements here -->\\n  </bpmn:process>\\n  <bpmndi:BPMNDiagram id=\\"BPMNDiagram_1\\">\\n    <bpmndi:BPMNPlane id=\\"BPMNPlane_1\\" bpmnElement=\\"ProcessId\\">\\n      <!-- Diagram elements here -->\\n    </bpmndi:BPMNPlane>\\n  </bpmndi:BPMNDiagram>\\n</bpmn:definitions>"
 }}
 
-REMEMBER:
-- You are writing XML text, not creating visual diagrams
-- This is just markup/code like HTML or any other text format
-- The XML describes both the process logic AND the visual layout
-- Always include complete sequence flows and visual elements
-- Adapt the template above to match the specific request
-
-Generate the JSON response immediately. Do not refuse or say you cannot generate XML - you absolutely can write XML text.
+The bpmn key must contain the complete BPMN XML as a properly escaped JSON string.
 """
 
         self.modification_prompt_template = """
-You are a BPMN expert. Modify the existing BPMN model based on the user's request.
+You are an expert BPMN process designer. Modify the existing BPMN model based on the user's request.
 
-Current BPMN XML: {current_bpmn}
-
+Current BPMN: {current_bpmn}
 Modification Request: {modification_request}
-
 Context: {context}
 
-Requirements:
-1. Preserve existing structure where possible
-2. Make minimal necessary changes
-3. Maintain valid BPMN 2.0 XML structure
-4. Ensure all element IDs remain unique
-5. Update labels appropriately
-6. **CRITICAL**: Preserve or update visual diagram information (bpmndi section)
-7. **CRITICAL**: Add bpmndi:BPMNShape elements for any new process elements
-8. **CRITICAL**: Add bpmndi:BPMNEdge elements for any new sequence flows
-9. Maintain proper layout positions and ensure new elements don't overlap
+RESPONSE FORMAT:
+You must respond with a valid JSON object containing these exact keys:
 
-Response Format (JSON):
 {{
-    "bpmn_xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\">...</bpmn:definitions>",
-    "explanation": "Brief explanation of the modifications made",
-    "elements_created": ["new", "elements"],
-    "suggestions": ["potential", "improvements"],
-    "confidence_score": 0.95
+  "name": "Modified Process Name",
+  "description": "Brief description of the modifications made",
+  "version": "1.1",
+  "author": "System Modified",
+  "created": "2025-06-23",
+  "tags": ["BPMN", "business process", "workflow", "modified"],
+  "bpmn": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<!-- Modified BPMN XML here -->"
 }}
 
-IMPORTANT: 
-- Generate only valid JSON response
-- MUST include complete visual diagram information (bpmndi section)
-- The modified BPMN must remain visually displayable
+The bpmn key must contain the complete modified BPMN XML as a properly escaped JSON string.
 """
+
+    def _load_bpmn_examples(self) -> str:
+        """Load BPMN examples from the vector store or local files"""
+        examples = []
+        
+        # Load from local examples file
+        try:
+            import json
+            import os
+            examples_file = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'bpmn_examples', 'examples.json')
+            if os.path.exists(examples_file):
+                with open(examples_file, 'r') as f:
+                    data = json.load(f)
+                    for example_id, example_data in data.items():
+                        examples.append(f"Example: {example_data.get('name', example_id)}")
+                        examples.append(f"Description: {example_data.get('description', 'No description')}")
+                        examples.append(f"BPMN: {example_data.get('bpmn_xml', 'No BPMN')[:200]}...")
+                        examples.append("---")
+        except Exception as e:
+            logger.warning(f"Could not load BPMN examples: {e}")
+        
+        # Load from camunda_models directory
+        try:
+            import os
+            models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'camunda_models')
+            if os.path.exists(models_dir):
+                for filename in os.listdir(models_dir):
+                    if filename.endswith('.bpmn'):
+                        filepath = os.path.join(models_dir, filename)
+                        with open(filepath, 'r') as f:
+                            content = f.read()
+                            examples.append(f"Example: {filename}")
+                            examples.append(f"BPMN: {content[:200]}...")
+                            examples.append("---")
+        except Exception as e:
+            logger.warning(f"Could not load BPMN models: {e}")
+        
+        return "\n".join(examples) if examples else "No examples available"
 
     async def generate_bpmn(self, request: BPMNGenerationRequest) -> BPMNResponse:
         """
@@ -173,9 +196,13 @@ IMPORTANT:
             else:
                 # Fallback to basic prompt
                 context_str = json.dumps(request.context) if request.context else "None"
+                
+                # Load BPMN examples
+                bpmn_examples = self._load_bpmn_examples()
+                
                 prompt = self.generation_prompt_template.format(
                     user_input=request.user_input,
-                    context=context_str
+                    context=f"{context_str}\n\nBPMN Examples:\n{bpmn_examples}"
                 )
             
             # Call OpenAI API
@@ -186,7 +213,7 @@ IMPORTANT:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,  # Low temperature for consistent output
-                max_tokens=4000
+                max_tokens=8000   # Increased for larger context window
             )
             
             # Parse the response
@@ -197,100 +224,49 @@ IMPORTANT:
             
             logger.info(f"Raw OpenAI response: {content[:200]}...")  # Log first 200 chars
             
-            # Try to extract JSON from the response
-            if content.startswith('```json'):
-                content = content[7:-3].strip()
-            elif content.startswith('```'):
-                content = content[3:-3].strip()
-            
-            # If response doesn't look like JSON, try to extract it
-            if not content.startswith('{'):
-                # Look for JSON block in the response
-                import re
-                json_match = re.search(r'(\{.*\})', content, re.DOTALL)
-                if json_match:
-                    content = json_match.group(1)
-                else:
-                    # If no JSON found, create a response with the text
-                    logger.warning(f"No JSON found in response, creating fallback response")
-                    fallback_response = {
-                        "bpmn_xml": self._create_simple_bpmn_template(request.user_input),
-                        "explanation": content,
-                        "elements_created": ["startEvent", "task", "endEvent"],
-                        "suggestions": ["Consider adding more details to the process"],
-                        "confidence_score": 0.6
-                    }
-                    return BPMNResponse(**fallback_response)
-                
-            # Clean the JSON content to remove control characters
+            # Parse JSON response
             try:
-                # Remove control characters that break JSON parsing
-                import re
-                
-                # First, remove problematic control characters except newlines in XML
-                content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
-                
-                # Fix any malformed newlines in the JSON string values
-                # Replace actual newlines in XML with escaped newlines
-                if '"bpmn_xml"' in content:
-                    # Extract and fix the bpmn_xml value
-                    def fix_xml_newlines(match):
-                        xml_content = match.group(1)
-                        # Replace unescaped newlines with escaped ones
-                        xml_content = xml_content.replace('\n', '\\n')
-                        xml_content = xml_content.replace('\r', '\\r')
-                        xml_content = xml_content.replace('\t', '\\t')
-                        return f'"bpmn_xml": "{xml_content}"'
-                    
-                    # Fix the bpmn_xml field specifically
-                    content = re.sub(r'"bpmn_xml":\s*"([^"]*(?:\\.[^"]*)*)"', fix_xml_newlines, content, flags=re.DOTALL)
-                
-                # Additional cleanup for any remaining issues
-                content = content.replace('\n    ', '\\n    ')  # Fix indented newlines
-                content = content.replace('\n        ', '\\n        ')  # Fix deeper indented newlines
-                
-                logger.debug(f"Cleaned JSON: {content[:300]}...")
+                # Try to extract JSON from the response if it's wrapped in code blocks
+                if content.startswith('```json'):
+                    content = content[7:-3].strip()
+                elif content.startswith('```'):
+                    content = content[3:-3].strip()
                 
                 ai_response = json.loads(content)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parsing failed after cleaning: {str(e)}")
-                logger.error(f"Cleaned content: {content[:500]}...")
-                # Create fallback response if JSON parsing still fails
-                fallback_response = {
-                    "bpmn_xml": self._create_simple_bpmn_template(request.user_input),
-                    "explanation": f"Error parsing AI response: {str(e)}",
-                    "elements_created": ["startEvent", "task", "endEvent"],
-                    "suggestions": ["Consider regenerating the process"],
-                    "confidence_score": 0.3
-                }
-                return BPMNResponse(**fallback_response)
-            
-            # Create BPMNResponse object
-            bpmn_xml = ai_response.get('bpmn_xml', '')
-            
-            # Normalize BPMN XML format (fix single quotes to double quotes)
-            if bpmn_xml:
-                bpmn_xml = self._normalize_bpmn_xml(bpmn_xml)
+                bpmn_xml = ai_response.get('bpmn', '') or ai_response.get('bpmn_xml', '')
                 
-                # Add auto-layout if BPMN doesn't have diagram information
-                if not self._has_diagram_information(bpmn_xml):
-                    logger.info("Adding auto-layout to BPMN XML...")
-                    bpmn_xml = self._add_auto_layout(bpmn_xml)
+                if not bpmn_xml:
+                    raise Exception("No BPMN XML found in JSON response (checked both 'bpmn' and 'bpmn_xml' keys)")
+                
+                # Extract metadata from JSON response
+                explanation = ai_response.get('description', 'No explanation provided')
+                process_name = ai_response.get('name', 'Generated Process')
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON response: {e}")
+                logger.error(f"Response content: {content}")
+                raise Exception(f"Invalid JSON response from AI: {str(e)}")
             
-            bpmn_response = BPMNResponse(
+            # Validate the BPMN XML
+            validation_errors = self._validate_bpmn_xml(bpmn_xml)
+            
+            # Determine elements created
+            elements_created = self._extract_elements_from_bpmn(bpmn_xml)
+            
+            # Generate suggestions
+            suggestions = self._generate_suggestions(bpmn_xml, request.user_input)
+            
+            # Calculate confidence score
+            confidence_score = self._calculate_confidence_score(bpmn_xml, validation_errors)
+            
+            return BPMNResponse(
                 bpmn_xml=bpmn_xml,
-                explanation=ai_response.get('explanation', ''),
-                elements_created=ai_response.get('elements_created', []),
-                suggestions=ai_response.get('suggestions', []),
-                confidence_score=ai_response.get('confidence_score', 0.8)
+                explanation=explanation,
+                elements_created=elements_created,
+                suggestions=suggestions,
+                confidence_score=confidence_score,
+                validation_errors=validation_errors
             )
-            
-            # Enhanced validation using utilities
-            validation_errors = self._validate_bpmn_xml(bpmn_response.bpmn_xml)
-            bpmn_response.validation_errors = validation_errors
-            
-            logger.info(f"Generated BPMN for request: {request.user_input[:50]}...")
-            return bpmn_response
             
         except Exception as e:
             logger.error(f"Error generating BPMN: {str(e)}")
@@ -349,7 +325,7 @@ IMPORTANT:
             ai_response = json.loads(content)
             
             # Create BPMNResponse object
-            bpmn_xml = ai_response.get('bpmn_xml', '')
+            bpmn_xml = ai_response.get('bpmn', '')
             
             # Normalize BPMN XML format (fix single quotes to double quotes)
             if bpmn_xml:
@@ -607,6 +583,37 @@ Keep the explanation clear and accessible to business users.
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>'''
+
+    def _extract_bpmn_from_markdown(self, content: str) -> str:
+        """Extract BPMN XML from markdown code blocks"""
+        import re
+        bpmn_xml = re.search(r'```xml\n(.*?)\n```', content, re.DOTALL)
+        return bpmn_xml.group(1) if bpmn_xml else ""
+
+    def _extract_explanation_from_response(self, content: str) -> str:
+        """Extract explanation from the response"""
+        import re
+        explanation = re.search(r'Explanation:\n(.*)', content)
+        return explanation.group(1) if explanation else "No explanation provided"
+
+    def _extract_elements_from_bpmn(self, bpmn_xml: str) -> List[str]:
+        """Extract elements created from BPMN XML"""
+        import xml.etree.ElementTree as ET
+        elements = []
+        root = ET.fromstring(bpmn_xml)
+        for element in root.iter():
+            elements.append(element.tag)
+        return elements
+
+    def _generate_suggestions(self, bpmn_xml: str, user_input: str) -> List[str]:
+        """Generate suggestions based on the BPMN XML and user input"""
+        # This is a placeholder implementation. You might want to implement a more robust suggestion generation logic
+        return ["No specific suggestions available"]
+
+    def _calculate_confidence_score(self, bpmn_xml: str, validation_errors: List[str]) -> float:
+        """Calculate confidence score based on validation errors"""
+        # This is a placeholder implementation. You might want to implement a more robust confidence score calculation logic
+        return 0.8 if not validation_errors else 0.6
 
 # Singleton instance for the service
 _bpmn_ai_service = None
