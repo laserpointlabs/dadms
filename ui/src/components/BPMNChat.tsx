@@ -30,6 +30,7 @@ interface BPMNResponse {
 interface BPMNChatProps {
     onBPMNUpdate?: (bpmnXml: string) => void;
     currentBPMN?: string;
+    onAIModelGenerated?: () => void;
 }
 
 // Storage keys for persistence
@@ -77,7 +78,7 @@ const clearConversationHistory = () => {
     }
 };
 
-const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
+const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN, onAIModelGenerated }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -241,30 +242,52 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
             let endpoint: string;
             let payload: any;
 
+            // Get additional context about the current model
+            const lastModified = sessionStorage.getItem('currentBpmnModelLastModified');
+            const modelHash = sessionStorage.getItem('currentBpmnModelHash');
+            const hasManualChanges = lastModified && modelHash;
+
+            // Create enhanced context
+            const enhancedContext = {
+                conversation_history: messages.slice(-10), // Last 10 messages for context
+                current_model: currentBPMN || null,
+                current_model_summary: currentBPMN ?
+                    `Existing model has ${currentBPMN.length} characters` :
+                    "No existing model",
+                manual_changes_info: hasManualChanges ? {
+                    last_modified: lastModified,
+                    model_hash: modelHash,
+                    has_manual_edits: true,
+                    edit_timestamp: new Date(lastModified).toLocaleString()
+                } : {
+                    has_manual_edits: false
+                },
+                user_intent: currentBPMN ? "enhance_existing_model" : "create_new_model"
+            };
+
             // Determine if this is a generation or modification request
             if (currentBPMN && message.toLowerCase().includes('modify')) {
                 endpoint = '/api/bpmn-ai/modify';
                 payload = {
                     current_bpmn: currentBPMN,
                     modification_request: message,
-                    context: {
-                        conversation_history: messages.slice(-10), // Last 10 messages for context
-                        current_model_summary: `Current model has ${currentBPMN.length} characters and contains BPMN process elements`,
-                        user_intent: "modify_existing_model"
-                    }
+                    context: enhancedContext
                 };
             } else {
                 endpoint = '/api/bpmn-ai/generate';
                 payload = {
                     user_input: message,
-                    context: {
-                        conversation_history: messages.slice(-10), // Last 10 messages for context
-                        current_model: currentBPMN || null,
-                        current_model_summary: currentBPMN ? `Existing model has ${currentBPMN.length} characters` : "No existing model",
-                        user_intent: currentBPMN ? "enhance_existing_model" : "create_new_model"
-                    }
+                    context: enhancedContext
                 };
             }
+
+            console.log('Sending request to AI with context:', {
+                endpoint,
+                hasCurrentModel: !!currentBPMN,
+                modelLength: currentBPMN?.length || 0,
+                hasManualChanges: hasManualChanges,
+                lastModified: lastModified
+            });
 
             response = await fetch(endpoint, {
                 method: 'POST',
@@ -324,6 +347,11 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                     timestamp: new Date()
                 };
                 setMessages(prev => [...prev, validationMessage]);
+            }
+
+            // Clear manual edit tracking if a new model is generated
+            if (onAIModelGenerated) {
+                onAIModelGenerated();
             }
 
         } catch (error) {

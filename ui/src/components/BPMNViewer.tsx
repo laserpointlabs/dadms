@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import './BPMNViewer.css';
 
 interface BPMNViewerProps {
-    bpmnXml: string;
-    onElementClick?: (element: any) => void;
+    bpmnXml: string | null;
     onModelChange?: (xml: string) => void;
-    editable?: boolean;
+    isEditable?: boolean;
+    className?: string;
 }
 
 // Declare bpmn-js types
@@ -15,56 +15,69 @@ declare global {
     }
 }
 
-const BPMNViewer: React.FC<BPMNViewerProps> = ({
+const BPMNViewer = forwardRef<{
+    zoomIn: () => void;
+    zoomOut: () => void;
+    resetZoom: () => void;
+    fitViewport: () => void;
+    getElementCount: () => number;
+    getModeler: () => any;
+}, BPMNViewerProps>(({
     bpmnXml,
-    onElementClick,
     onModelChange,
-    editable = false
-}) => {
+    isEditable = false,
+    className = ''
+}, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const bpmnViewerRef = useRef<any>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [currentXml, setCurrentXml] = useState<string | null>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Initialize and display BPMN diagram when XML is available - EXACTLY like the working implementation
+    // Initialize and display BPMN diagram when XML is available
     useEffect(() => {
         if (!bpmnXml || !containerRef.current) {
+            setIsLoading(false);
             return;
         }
+
+        // Prevent re-initialization if the XML content hasn't changed
+        if (currentXml === bpmnXml) {
+            console.log('BPMN XML unchanged - skipping re-initialization');
+            return;
+        }
+
+        setCurrentXml(bpmnXml);
 
         const initializeViewer = async () => {
             try {
                 setIsLoading(true);
-                setError(null);
 
-                // Load CSS files if not already loaded - EXACT SAME AS WORKING VERSION
-                if (!document.querySelector('link[href*="diagram-js.css"]')) {
-                    const diagramCss = document.createElement('link');
-                    diagramCss.rel = 'stylesheet';
-                    diagramCss.href = 'https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css';
-                    document.head.appendChild(diagramCss);
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                // Load CSS files if not already loaded
+                if (!document.querySelector('link[href*="bpmn-js"]')) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css?t=${Date.now()}`;
+                    document.head.appendChild(link);
+
+                    const link2 = document.createElement('link');
+                    link2.rel = 'stylesheet';
+                    link2.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css?t=${Date.now()}`;
+                    document.head.appendChild(link2);
                 }
 
-                if (!document.querySelector('link[href*="bpmn.css"]')) {
-                    const bpmnCss = document.createElement('link');
-                    bpmnCss.rel = 'stylesheet';
-                    bpmnCss.href = 'https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css';
-                    document.head.appendChild(bpmnCss);
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-
-                // Load bpmn-js library - EXACT SAME AS WORKING VERSION
-                let NavigatedViewer;
+                // Load BPMN.js library if not already loaded
+                let BpmnModeler;
 
                 console.log('Checking if window.BpmnJS exists:', !!window.BpmnJS);
 
                 if (!window.BpmnJS) {
                     console.log('Loading bpmn-js from CDN...');
-                    // Load the main bpmn-js bundle which includes NavigatedViewer
+                    // Load the main bpmn-js bundle which includes BpmnModeler
                     await new Promise((resolve, reject) => {
                         const script = document.createElement('script');
-                        script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-viewer.production.min.js?t=${Date.now()}`;
+                        script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js?t=${Date.now()}`;
                         script.onload = () => {
                             console.log('bpmn-js loaded from CDN successfully');
                             console.log('window.BpmnJS:', window.BpmnJS);
@@ -78,38 +91,38 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
                     });
                 }
 
-                // Try different ways to access the BPMN viewer class - EXACT SAME AS WORKING VERSION
-                NavigatedViewer = window.BpmnJS?.NavigatedViewer || window.BpmnJS;
-                console.log('NavigatedViewer class:', NavigatedViewer);
+                // Try different ways to access the BPMN modeler class
+                BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
+                console.log('BpmnModeler class:', BpmnModeler);
 
-                if (!NavigatedViewer) {
-                    throw new Error('Failed to load BPMN NavigatedViewer from CDN');
+                if (!BpmnModeler) {
+                    throw new Error('Failed to load BPMN Modeler from CDN');
                 }
 
-                // Create BPMN viewer instance - EXACT SAME AS WORKING VERSION
-                console.log('Creating NavigatedViewer instance...');
-                const viewer = new NavigatedViewer({
+                // Create BPMN modeler instance with standard configuration
+                console.log('Creating BpmnModeler instance...');
+                const modeler = new BpmnModeler({
                     container: containerRef.current,
                     width: '100%',
-                    height: '600px'
+                    height: '100%'
                 });
 
-                bpmnViewerRef.current = viewer;
+                bpmnViewerRef.current = modeler;
+                setIsInitialized(true);
 
-                // Set up event handlers following official pattern - EXACT SAME AS WORKING VERSION
-                viewer.on('import.done', (event: any) => {
+                // Set up event handlers following official pattern
+                modeler.on('import.done', (event: any) => {
                     const { error: importError, warnings } = event;
 
                     if (importError) {
                         console.error('Failed to import BPMN diagram:', importError);
-                        setError(`Failed to import BPMN diagram: ${importError.message}`);
                         setIsLoading(false);
                         return;
                     }
 
-                    // Zoom to fit following official pattern - EXACT SAME AS WORKING VERSION
+                    // Zoom to fit following official pattern
                     try {
-                        const canvas = viewer.get('canvas');
+                        const canvas = modeler.get('canvas');
                         console.log('Canvas object:', canvas);
                         console.log('Canvas viewbox before zoom:', canvas.viewbox());
 
@@ -137,229 +150,143 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
                     }
                 });
 
-                // Add element click listener if provided
-                if (onElementClick) {
-                    viewer.on('element.click', (event: any) => {
-                        onElementClick(event.element);
-                    });
-                }
-
                 // Add change listener for editable mode
-                if (editable && onModelChange) {
-                    viewer.on('commandStack.changed', async () => {
-                        try {
-                            const result = await viewer.saveXML({ format: true });
-                            onModelChange(result.xml);
-                        } catch (err) {
-                            console.error('Error saving XML:', err);
-                        }
+                if (isEditable && onModelChange) {
+                    let debounceTimer: NodeJS.Timeout;
+                    modeler.on('commandStack.changed', async () => {
+                        // Debounce the change callback to prevent too many rapid updates
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(async () => {
+                            try {
+                                const result = await modeler.saveXML({ format: true });
+                                onModelChange(result.xml);
+                            } catch (err) {
+                                console.error('Error saving XML:', err);
+                            }
+                        }, 300); // 300ms debounce
                     });
                 }
 
-                // Import the XML following official pattern - EXACT SAME AS WORKING VERSION
+                // Import the XML following official pattern
                 console.log('Importing BPMN XML into viewer...');
                 console.log('Container element:', containerRef.current);
-                console.log('Viewer instance:', viewer);
-                viewer.importXML(bpmnXml);
+                console.log('Viewer instance:', modeler);
+                modeler.importXML(bpmnXml);
 
             } catch (err: any) {
                 console.error('Error initializing BPMN viewer:', err);
-                setError(err.message || 'Failed to initialize BPMN viewer');
                 setIsLoading(false);
             }
         };
 
         initializeViewer();
 
-        // Cleanup function following official pattern - EXACT SAME AS WORKING VERSION
+        // Cleanup function following official pattern
         return () => {
             if (bpmnViewerRef.current) {
                 bpmnViewerRef.current.destroy();
                 bpmnViewerRef.current = null;
+                setIsInitialized(false);
             }
         };
-    }, [bpmnXml, onElementClick, onModelChange, editable]);
+    }, [bpmnXml]);
 
-    const downloadBpmn = async () => {
-        if (!bpmnViewerRef.current) return;
+    // Handle isEditable prop changes separately without re-initializing
+    useEffect(() => {
+        if (!bpmnViewerRef.current || !isInitialized) return;
 
-        try {
-            const result = await bpmnViewerRef.current.saveXML({ format: true });
-            const blob = new Blob([result.xml], { type: 'application/xml' });
-            const url = URL.createObjectURL(blob);
+        console.log('isEditable changed to:', isEditable);
 
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `process_${Date.now()}.bpmn`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error('Error downloading BPMN:', err);
+        // Add or remove change listener based on isEditable
+        if (isEditable && onModelChange) {
+            // Add change listener if not already present
+            const modeler = bpmnViewerRef.current;
+            if (!modeler._hasChangeListener) {
+                let debounceTimer: NodeJS.Timeout;
+                modeler.on('commandStack.changed', async () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(async () => {
+                        try {
+                            const result = await modeler.saveXML({ format: true });
+                            onModelChange(result.xml);
+                        } catch (err) {
+                            console.error('Error saving XML:', err);
+                        }
+                    }, 300);
+                });
+                modeler._hasChangeListener = true;
+            }
         }
-    };
+    }, [isEditable, onModelChange, isInitialized]);
 
     const zoomIn = () => {
-        if (!bpmnViewerRef.current) return;
-        const canvas = bpmnViewerRef.current.get('canvas');
-        canvas.zoom(canvas.zoom() * 1.2);
+        if (bpmnViewerRef.current) {
+            const canvas = bpmnViewerRef.current.get('canvas');
+            canvas.zoom(canvas.zoom() + 0.1);
+        }
     };
 
     const zoomOut = () => {
-        if (!bpmnViewerRef.current) return;
-        const canvas = bpmnViewerRef.current.get('canvas');
-        canvas.zoom(canvas.zoom() * 0.8);
+        if (bpmnViewerRef.current) {
+            const canvas = bpmnViewerRef.current.get('canvas');
+            canvas.zoom(canvas.zoom() - 0.1);
+        }
     };
 
     const resetZoom = () => {
-        if (!bpmnViewerRef.current) return;
-        const canvas = bpmnViewerRef.current.get('canvas');
-        canvas.zoom('fit-viewport', 'auto');
-    };
-
-    const fitAndCenter = () => {
-        if (!bpmnViewerRef.current) return;
-
-        try {
-            console.log('Fit & Center clicked - applying comprehensive fixes...');
-
-            const canvas = bpmnViewerRef.current.get('canvas');
-            const elementRegistry = bpmnViewerRef.current.get('elementRegistry');
-
-            // Get all elements to find diagram bounds
-            const elements = elementRegistry.getAll();
-            console.log('Found elements:', elements.length);
-
-            if (elements.length === 0) {
-                console.log('No elements found to center');
-                return;
-            }
-
-            // Calculate diagram bounds
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-            elements.forEach((element: any) => {
-                if (element.x !== undefined && element.y !== undefined) {
-                    minX = Math.min(minX, element.x);
-                    minY = Math.min(minY, element.y);
-                    maxX = Math.max(maxX, element.x + (element.width || 0));
-                    maxY = Math.max(maxY, element.y + (element.height || 0));
-                }
-            });
-
-            console.log('Diagram bounds:', { minX, minY, maxX, maxY });
-
-            // Reset viewbox and zoom
-            canvas.zoom('fit-viewport');
-
-            // Force center the viewport
-            const diagramCenter = {
-                x: (minX + maxX) / 2,
-                y: (minY + maxY) / 2
-            };
-
-            console.log('Centering on:', diagramCenter);
-
-            // Get canvas dimensions
-            const container = canvas._container;
-            const containerRect = container.getBoundingClientRect();
-            const containerCenter = {
-                x: containerRect.width / 2,
-                y: containerRect.height / 2
-            };
-
-            console.log('Container center:', containerCenter);
-
-            // Calculate offset needed to center diagram
-            const offset = {
-                x: containerCenter.x - diagramCenter.x,
-                y: containerCenter.y - diagramCenter.y
-            };
-
-            console.log('Applying offset:', offset);
-
-            // Apply the centering
-            canvas.scroll(offset);
-
-        } catch (error) {
-            console.error('Error in fitAndCenter:', error);
-            // Fallback to simple zoom fit
+        if (bpmnViewerRef.current) {
             const canvas = bpmnViewerRef.current.get('canvas');
             canvas.zoom('fit-viewport');
         }
     };
 
-    if (error) {
-        return (
-            <div className="bpmn-viewer-error">
-                <div className="error-content">
-                    <h3>⚠️ Error Loading BPMN Viewer</h3>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()}>
-                        Reload Page
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    const fitViewport = () => {
+        if (bpmnViewerRef.current) {
+            const canvas = bpmnViewerRef.current.get('canvas');
+            canvas.zoom('fit-viewport');
+        }
+    };
+
+    const getElementCount = () => {
+        if (!bpmnViewerRef.current) return 0;
+        const elementRegistry = bpmnViewerRef.current.get('elementRegistry');
+        return elementRegistry.getAll().length;
+    };
+
+    // Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+        zoomIn,
+        zoomOut,
+        resetZoom,
+        fitViewport,
+        getElementCount,
+        getModeler: () => bpmnViewerRef.current
+    }));
 
     return (
         <div className="bpmn-viewer-container">
-            <div className="bpmn-viewer-toolbar">
-                <div className="toolbar-group">
-                    <button
-                        className="toolbar-button"
-                        onClick={zoomIn}
-                        disabled={!bpmnViewerRef.current}
-                        title="Zoom In"
-                    >
-                        🔍+
-                    </button>
-                    <button
-                        className="toolbar-button"
-                        onClick={zoomOut}
-                        disabled={!bpmnViewerRef.current}
-                        title="Zoom Out"
-                    >
-                        🔍-
-                    </button>
-                    <button
-                        className="toolbar-button"
-                        onClick={resetZoom}
-                        disabled={!bpmnViewerRef.current}
-                        title="Fit to Viewport"
-                    >
-                        📐
-                    </button>
-                    <button
-                        className="toolbar-button"
-                        onClick={fitAndCenter}
-                        disabled={!bpmnViewerRef.current}
-                        title="Fit & Center Diagram"
-                    >
-                        🎯 Center
-                    </button>
-                </div>
-
-                <div className="toolbar-group">
-                    <button
-                        className="toolbar-button"
-                        onClick={downloadBpmn}
-                        disabled={!bpmnViewerRef.current || !bpmnXml}
-                        title="Download BPMN"
-                    >
-                        💾 Download
-                    </button>
-                </div>
-            </div>
-
             <div className="bpmn-viewer-content">
                 {isLoading && (
                     <div className="loading-overlay">
                         <div className="loading-spinner"></div>
                         <p>Loading BPMN diagram...</p>
+                    </div>
+                )}
+
+                {/* Debug info for edit mode */}
+                {isEditable && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#28a745',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        zIndex: 1001
+                    }}>
+                        ✏️ Edit Mode
                     </div>
                 )}
 
@@ -384,6 +311,6 @@ const BPMNViewer: React.FC<BPMNViewerProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default BPMNViewer;
