@@ -25,11 +25,57 @@ interface BPMNChatProps {
     currentBPMN?: string;
 }
 
+// Storage keys for persistence
+const STORAGE_KEYS = {
+    CONVERSATION_HISTORY: 'bpmnChatHistory',
+    LAST_CONVERSATION_TIME: 'bpmnChatLastTime'
+};
+
+// Helper functions for conversation persistence
+const saveConversationHistory = (messages: Message[]) => {
+    try {
+        const serializedMessages = messages.map(msg => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString()
+        }));
+        sessionStorage.setItem(STORAGE_KEYS.CONVERSATION_HISTORY, JSON.stringify(serializedMessages));
+        sessionStorage.setItem(STORAGE_KEYS.LAST_CONVERSATION_TIME, new Date().toISOString());
+    } catch (error) {
+        console.error('Error saving conversation history:', error);
+    }
+};
+
+const loadConversationHistory = (): Message[] => {
+    try {
+        const saved = sessionStorage.getItem(STORAGE_KEYS.CONVERSATION_HISTORY);
+        if (saved) {
+            const parsedMessages = JSON.parse(saved);
+            return parsedMessages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+            }));
+        }
+    } catch (error) {
+        console.error('Error loading conversation history:', error);
+    }
+    return [];
+};
+
+const clearConversationHistory = () => {
+    try {
+        sessionStorage.removeItem(STORAGE_KEYS.CONVERSATION_HISTORY);
+        sessionStorage.removeItem(STORAGE_KEYS.LAST_CONVERSATION_TIME);
+    } catch (error) {
+        console.error('Error clearing conversation history:', error);
+    }
+};
+
 const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [lastActiveTime, setLastActiveTime] = useState<Date | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Suggested prompts for users
@@ -46,19 +92,41 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
         // Check service health on component mount
         checkServiceHealth();
 
-        // Add welcome message
-        const welcomeMessage: Message = {
-            id: Date.now().toString(),
-            type: 'assistant',
-            content: 'Hello! I\'m your BPMN AI assistant. I can help you create, modify, and understand BPMN process models. What would you like to work on today?',
-            timestamp: new Date()
-        };
-        setMessages([welcomeMessage]);
+        // Load conversation history from sessionStorage
+        const savedMessages = loadConversationHistory();
+
+        if (savedMessages.length > 0) {
+            // Restore conversation history
+            setMessages(savedMessages);
+            console.log(`Restored ${savedMessages.length} messages from conversation history`);
+
+            // Load last active time
+            const lastTimeSaved = sessionStorage.getItem(STORAGE_KEYS.LAST_CONVERSATION_TIME);
+            if (lastTimeSaved) {
+                setLastActiveTime(new Date(lastTimeSaved));
+            }
+        } else {
+            // Add welcome message for new conversation
+            const welcomeMessage: Message = {
+                id: Date.now().toString(),
+                type: 'assistant',
+                content: 'Hello! I\'m your BPMN AI assistant. I can help you create, modify, and understand BPMN process models. What would you like to work on today?',
+                timestamp: new Date()
+            };
+            setMessages([welcomeMessage]);
+        }
     }, []);
 
     useEffect(() => {
         // Scroll to bottom when new messages are added
         scrollToBottom();
+    }, [messages]);
+
+    // Save conversation history whenever messages change
+    useEffect(() => {
+        if (messages.length > 0) {
+            saveConversationHistory(messages);
+        }
     }, [messages]);
 
     const scrollToBottom = () => {
@@ -73,6 +141,77 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
             console.error('Service health check failed:', error);
             setIsConnected(false);
         }
+    };
+
+    const clearConversation = () => {
+        setMessages([]);
+        clearConversationHistory();
+
+        // Add new welcome message
+        const welcomeMessage: Message = {
+            id: Date.now().toString(),
+            type: 'assistant',
+            content: 'Hello! I\'m your BPMN AI assistant. I can help you create, modify, and understand BPMN process models. What would you like to work on today?',
+            timestamp: new Date()
+        };
+        setMessages([welcomeMessage]);
+    };
+
+    const exportConversation = () => {
+        try {
+            const conversationData = {
+                messages: messages,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const blob = new Blob([JSON.stringify(conversationData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `bpmn-conversation-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error exporting conversation:', error);
+            alert('Failed to export conversation');
+        }
+    };
+
+    const importConversation = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const conversationData = JSON.parse(content);
+
+                if (conversationData.messages && Array.isArray(conversationData.messages)) {
+                    const importedMessages = conversationData.messages.map((msg: any) => ({
+                        ...msg,
+                        timestamp: new Date(msg.timestamp)
+                    }));
+
+                    setMessages(importedMessages);
+                    saveConversationHistory(importedMessages);
+                    console.log(`Imported ${importedMessages.length} messages from file`);
+                } else {
+                    throw new Error('Invalid conversation format');
+                }
+            } catch (error) {
+                console.error('Error importing conversation:', error);
+                alert('Failed to import conversation. Please check the file format.');
+            }
+        };
+
+        reader.readAsText(file);
+        event.target.value = ''; // Clear the input
     };
 
     const sendMessage = async (message: string) => {
@@ -246,7 +385,26 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
     return (
         <div className="bpmn-chat">
             <div className="bpmn-chat-header">
-                <h3>BPMN AI Assistant</h3>
+                <div className="header-left">
+                    <h3>BPMN AI Assistant</h3>
+                    <div className="conversation-info">
+                        <span className="message-count">{messages.length - 1} messages</span>
+                        {lastActiveTime && messages.length > 1 && (
+                            <span className="last-active">
+                                Last active: {lastActiveTime.toLocaleDateString()} {lastActiveTime.toLocaleTimeString()}
+                            </span>
+                        )}
+                        {messages.length > 1 && (
+                            <button
+                                onClick={clearConversation}
+                                className="clear-conversation-btn"
+                                title="Clear conversation history"
+                            >
+                                🗑️ Clear
+                            </button>
+                        )}
+                    </div>
+                </div>
                 <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
                     <span className="status-indicator"></span>
                     {isConnected ? 'Connected' : 'Disconnected'}
@@ -307,6 +465,26 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN }) => {
                     >
                         📋 Explain Current Model
                     </button>
+                )}
+                {messages.length > 1 && (
+                    <>
+                        <button
+                            className="action-button export-button"
+                            onClick={exportConversation}
+                            disabled={isLoading}
+                        >
+                            📤 Export Chat
+                        </button>
+                        <label className="action-button import-button">
+                            📥 Import Chat
+                            <input
+                                type="file"
+                                accept=".json"
+                                onChange={importConversation}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
+                    </>
                 )}
             </div>
 

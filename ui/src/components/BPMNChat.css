@@ -19,11 +19,53 @@
     border-radius: 8px 8px 0 0;
 }
 
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .bpmn-chat-header h3 {
     margin: 0;
     color: #333;
     font-size: 18px;
     font-weight: 600;
+}
+
+.conversation-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.message-count {
+    font-weight: 500;
+}
+
+.last-active {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.clear-conversation-btn {
+    padding: 2px 8px;
+    border: 1px solid #dc3545;
+    background-color: transparent;
+    color: #dc3545;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.clear-conversation-btn:hover {
+    background-color: #dc3545;
+    color: white;
 }
 
 .connection-status {
@@ -196,6 +238,27 @@
 .action-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.export-button {
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.export-button:hover:not(:disabled) {
+    background-color: #28a745;
+    color: white;
+}
+
+.import-button {
+    border-color: #17a2b8;
+    color: #17a2b8;
+    cursor: pointer;
+}
+
+.import-button:hover:not(:disabled) {
+    background-color: #17a2b8;
+    color: white;
 }
 
 .suggested-prompts {
