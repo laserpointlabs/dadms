@@ -18,7 +18,6 @@ const BPMNWorkspace: React.FC = () => {
     const [chatPanelWidth, setChatPanelWidth] = useState(25); // Percentage
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const splitterRef = useRef<HTMLDivElement>(null);
-    const [isEditMode, setIsEditMode] = useState(false);
 
     // Load available BPMN models on component mount
     useEffect(() => {
@@ -291,13 +290,6 @@ const BPMNWorkspace: React.FC = () => {
                         >
                             📂 Load File
                         </button>
-                        <button
-                            onClick={() => setIsEditMode((prev) => !prev)}
-                            className={isEditMode ? 'primary-button active' : 'primary-button'}
-                            title={isEditMode ? 'Switch to View Mode' : 'Switch to Edit Mode'}
-                        >
-                            {isEditMode ? '🔒 View Mode' : '✏️ Edit Mode'}
-                        </button>
                     </div>
                 </div>
             </div>
@@ -363,7 +355,7 @@ const BPMNWorkspace: React.FC = () => {
                             console.log('BPMN model changed:', xml.length, 'characters');
                             handleBPMNUpdate(xml);
                         }}
-                        isEditable={isEditMode}
+                        isEditable={true}
                     />
                 </div>
             </div>

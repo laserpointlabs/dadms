@@ -273,23 +273,6 @@ const BPMNViewer = forwardRef<{
                     </div>
                 )}
 
-                {/* Debug info for edit mode */}
-                {isEditable && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        background: '#28a745',
-                        color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        zIndex: 1001
-                    }}>
-                        ✏️ Edit Mode
-                    </div>
-                )}
-
                 <div
                     ref={containerRef}
                     className="bpmn-container"
