@@ -18,6 +18,7 @@ EXPOSE 3000
 
 # Set environment variables
 ENV BROWSER=none
+ENV DOCKER=true
 ENV REACT_APP_API_BASE_URL=http://localhost:8000
 ENV REACT_APP_WS_URL=ws://localhost:8001
 

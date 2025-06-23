@@ -2,6 +2,7 @@
 BPMN AI API Routes
 
 Flask routes for BPMN AI functionality including generation, modification, and explanation.
+Now uses the enhanced BPMN AI service with Qdrant examples and better prompt management.
 """
 import logging
 import asyncio
@@ -9,17 +10,17 @@ from flask import Blueprint, request, jsonify
 from typing import Dict, Any
 import json
 
-# Import the BPMN AI service
+# Import the enhanced BPMN AI service
 try:
-    from src.services.bpmn_ai_service import (
-        BPMNAIService, 
+    from src.services.enhanced_bpmn_ai_service import (
+        EnhancedBPMNAIService, 
         BPMNGenerationRequest, 
-        BPMNModificationRequest,
-        get_bpmn_ai_service
+        BPMNComplexity,
+        get_enhanced_bpmn_ai_service
     )
 except ImportError as e:
-    logging.error(f"Failed to import BPMN AI service: {e}")
-    BPMNAIService = None
+    logging.error(f"Failed to import enhanced BPMN AI service: {e}")
+    EnhancedBPMNAIService = None
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -38,13 +39,14 @@ def handle_async(coro):
 
 @bpmn_ai_bp.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for BPMN AI service"""
+    """Health check endpoint for enhanced BPMN AI service"""
     try:
-        service = get_bpmn_ai_service()
+        service = get_enhanced_bpmn_ai_service()
         return jsonify({
             'status': 'healthy',
-            'service': 'bpmn-ai',
-            'model': service.model if service else 'unknown'
+            'service': 'enhanced-bpmn-ai',
+            'model': service.model if service else 'unknown',
+            'qdrant_available': service.qdrant_client is not None
         }), 200
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -56,13 +58,16 @@ def health_check():
 @bpmn_ai_bp.route('/generate', methods=['POST'])
 def generate_bpmn():
     """
-    Generate BPMN from natural language description.
+    Generate BPMN from natural language description using enhanced service with Qdrant examples.
     
     Expected JSON payload:
     {
         "user_input": "Create a purchase order process",
         "context": {...},  // Optional
-        "model_history": [...]  // Optional
+        "template_name": "approval_workflow",  // Optional
+        "complexity_preference": "moderate",  // Optional: simple, moderate, complex
+        "include_examples": true,  // Optional
+        "max_examples": 3  // Optional
     }
     """
     try:
@@ -76,27 +81,42 @@ def generate_bpmn():
         if not user_input:
             return jsonify({'error': 'user_input is required'}), 400
             
+        # Parse complexity preference
+        complexity_preference = None
+        if data.get('complexity_preference'):
+            try:
+                complexity_preference = BPMNComplexity(data.get('complexity_preference'))
+            except ValueError:
+                complexity_preference = BPMNComplexity.MODERATE
+            
         # Create request object
         bpmn_request = BPMNGenerationRequest(
             user_input=user_input,
             context=data.get('context'),
-            model_history=data.get('model_history')
+            complexity_preference=complexity_preference,
+            template_name=data.get('template_name'),
+            include_examples=data.get('include_examples', True),
+            max_examples=data.get('max_examples', 3)
         )
         
-        # Get service and generate BPMN
-        service = get_bpmn_ai_service()
+        # Get enhanced service and generate BPMN
+        service = get_enhanced_bpmn_ai_service()
         
         # Handle async call
         response = handle_async(service.generate_bpmn(bpmn_request))
         
         # Convert response to dict
         result = {
+            'success': True,
             'bpmn_xml': response.bpmn_xml,
             'explanation': response.explanation,
             'elements_created': response.elements_created,
             'suggestions': response.suggestions,
             'confidence_score': response.confidence_score,
-            'validation_errors': response.validation_errors or []
+            'validation_errors': response.validation_errors or [],
+            'examples_used': response.examples_used or [],
+            'complexity_level': response.complexity_level.value,
+            'generation_time': response.generation_time
         }
         
         logger.info(f"Successfully generated BPMN for: {user_input[:50]}...")
@@ -105,6 +125,7 @@ def generate_bpmn():
     except Exception as e:
         logger.error(f"Error generating BPMN: {str(e)}")
         return jsonify({
+            'success': False,
             'error': 'Failed to generate BPMN',
             'details': str(e)
         }), 500
@@ -112,7 +133,7 @@ def generate_bpmn():
 @bpmn_ai_bp.route('/modify', methods=['POST'])
 def modify_bpmn():
     """
-    Modify existing BPMN based on natural language request.
+    Modify existing BPMN based on natural language request using enhanced service.
     
     Expected JSON payload:
     {
@@ -135,27 +156,39 @@ def modify_bpmn():
         if not modification_request:
             return jsonify({'error': 'modification_request is required'}), 400
             
-        # Create request object
-        bpmn_request = BPMNModificationRequest(
-            current_bpmn=current_bpmn,
-            modification_request=modification_request,
-            context=data.get('context')
+        # Create a combined request that includes the current BPMN
+        combined_input = f"Current BPMN model:\n{current_bpmn}\n\nModification request: {modification_request}"
+        
+        # Create request object for generation with context
+        bpmn_request = BPMNGenerationRequest(
+            user_input=combined_input,
+            context={
+                'operation': 'modify',
+                'original_request': modification_request,
+                **data.get('context', {})
+            },
+            include_examples=True,
+            max_examples=2
         )
         
-        # Get service and modify BPMN
-        service = get_bpmn_ai_service()
+        # Get enhanced service and generate modified BPMN
+        service = get_enhanced_bpmn_ai_service()
         
         # Handle async call
-        response = handle_async(service.modify_bpmn(bpmn_request))
+        response = handle_async(service.generate_bpmn(bpmn_request))
         
         # Convert response to dict
         result = {
+            'success': True,
             'bpmn_xml': response.bpmn_xml,
             'explanation': response.explanation,
             'elements_created': response.elements_created,
             'suggestions': response.suggestions,
             'confidence_score': response.confidence_score,
-            'validation_errors': response.validation_errors or []
+            'validation_errors': response.validation_errors or [],
+            'examples_used': response.examples_used or [],
+            'complexity_level': response.complexity_level.value,
+            'generation_time': response.generation_time
         }
         
         logger.info(f"Successfully modified BPMN: {modification_request[:50]}...")
@@ -164,6 +197,7 @@ def modify_bpmn():
     except Exception as e:
         logger.error(f"Error modifying BPMN: {str(e)}")
         return jsonify({
+            'success': False,
             'error': 'Failed to modify BPMN',
             'details': str(e)
         }), 500
@@ -189,17 +223,25 @@ def explain_bpmn():
         if not bpmn_xml:
             return jsonify({'error': 'bpmn_xml is required'}), 400
             
-        # Get service and explain BPMN
-        service = get_bpmn_ai_service()
+        # Get enhanced service and explain BPMN
+        service = get_enhanced_bpmn_ai_service()
         
-        # Handle async call
-        explanation = handle_async(service.explain_bpmn(bpmn_xml))
+        # For now, create a simple explanation using the validator
+        validation_errors = service.validator.validate_bpmn_xml(bpmn_xml)
+        
+        # Create a basic explanation
+        explanation = f"This BPMN model contains a business process. "
+        if validation_errors:
+            explanation += f"Note: There are {len(validation_errors)} validation issues that should be addressed."
+        else:
+            explanation += "The model appears to be valid and ready for use."
         
         result = {
-            'explanation': explanation
+            'explanation': explanation,
+            'validation_errors': validation_errors
         }
         
-        logger.info("Successfully generated BPMN explanation")
+        logger.info("Successfully explained BPMN model")
         return jsonify(result), 200
         
     except Exception as e:
@@ -212,7 +254,7 @@ def explain_bpmn():
 @bpmn_ai_bp.route('/validate', methods=['POST'])
 def validate_bpmn():
     """
-    Validate BPMN XML structure and semantics.
+    Validate BPMN XML structure and content.
     
     Expected JSON payload:
     {
@@ -230,16 +272,17 @@ def validate_bpmn():
         if not bpmn_xml:
             return jsonify({'error': 'bpmn_xml is required'}), 400
             
-        # Get service and validate BPMN
-        service = get_bpmn_ai_service()
-        validation_errors = service._validate_bpmn_xml(bpmn_xml)
+        # Get enhanced service and validate BPMN
+        service = get_enhanced_bpmn_ai_service()
+        validation_errors = service.validator.validate_bpmn_xml(bpmn_xml)
         
         result = {
             'is_valid': len(validation_errors) == 0,
-            'validation_errors': validation_errors
+            'validation_errors': validation_errors,
+            'error_count': len(validation_errors)
         }
         
-        logger.info("Successfully validated BPMN")
+        logger.info(f"BPMN validation completed with {len(validation_errors)} errors")
         return jsonify(result), 200
         
     except Exception as e:

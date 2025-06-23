@@ -32,6 +32,14 @@ const BPMNWorkspace: React.FC = () => {
         return () => window.removeEventListener('resize', updateLayout);
     }, []);
 
+    // Load BPMN XML from sessionStorage on mount
+    useEffect(() => {
+        const saved = sessionStorage.getItem('currentBpmnModel');
+        if (saved) {
+            setCurrentBPMN(saved);
+        }
+    }, []);
+
     const loadAvailableModels = async () => {
         setIsLoadingModels(true);
         try {
@@ -67,11 +75,15 @@ const BPMNWorkspace: React.FC = () => {
     const handleBPMNUpdate = (bpmnXml: string) => {
         setCurrentBPMN(bpmnXml);
         setSelectedModel(''); // Clear selected model since this is a new/modified model
+        // Persist BPMN XML to sessionStorage
+        sessionStorage.setItem('currentBpmnModel', bpmnXml);
     };
 
     const clearCurrentModel = () => {
         setCurrentBPMN('');
         setSelectedModel('');
+        // Remove from sessionStorage
+        sessionStorage.removeItem('currentBpmnModel');
     };
 
     const saveCurrentModel = async () => {

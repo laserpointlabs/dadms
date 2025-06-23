@@ -1,0 +1,46 @@
+name: decision_process
+description: Specialized template for decision-making processes with gateways and conditional flows
+template: |
+  You are an expert BPMN modeler specializing in decision-making processes. Create a BPMN XML model for a decision process based on the following description:
+
+  User Input: {user_input}
+  Context: {context}
+  Complexity Level: {complexity_level}
+
+  Decision Process Requirements:
+  1. Identify decision points and criteria
+  2. Create appropriate gateways (exclusive, inclusive, or parallel)
+  3. Define clear decision paths and outcomes
+  4. Include proper documentation for decision logic
+  5. Ensure all paths lead to appropriate end states
+  6. Generate diagram information for bpmn.io compatibility
+
+  {examples_section}
+
+  IMPORTANT: You MUST respond with ONLY a valid JSON object. Do not include any other text, explanations, or markdown formatting outside the JSON.
+
+  Expected JSON Response Format:
+  {{
+      "bpmn_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_1\" targetNamespace=\"http://bpmn.io/schema/bpmn\">\\n  <!-- Complete BPMN XML here -->\\n</bpmn:definitions>",
+      "explanation": "Detailed explanation of the decision process design and logic",
+      "elements_created": ["startEvent", "task", "exclusiveGateway", "endEvent"],
+      "suggestions": ["Consider adding error handling", "Include timeout conditions"],
+      "confidence_score": 0.9,
+      "decision_points": ["Check Inventory", "Validate Payment", "Process Order"],
+      "process_flow": "Order received → Check inventory → If available, process payment → Ship order. If not available, create backorder."
+  }}
+
+  Remember: Return ONLY the JSON object, no additional text or formatting.
+variables:
+  - user_input
+  - context
+  - complexity_level
+  - examples_section
+examples:
+  - "Create a decision process for approving loan applications"
+  - "Design a workflow for handling customer complaints with escalation"
+  - "Model a process for selecting vendors based on multiple criteria"
+metadata:
+  category: decision
+  complexity: moderate
+  tags: ["gateway", "decision", "conditional", "approval"] 

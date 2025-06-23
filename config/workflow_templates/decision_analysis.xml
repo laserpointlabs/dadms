@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    id="Definitions_decision_analysis"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="DecisionAnalysisProcess" name="Decision Analysis Process" isExecutable="true"
+        camunda:historyTimeToLive="30">
+        <bpmn:startEvent id="StartEvent_1" name="Start Analysis">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+
+        <bpmn:serviceTask id="FrameDecisionTask" name="Frame Decision" camunda:type="external"
+            camunda:topic="FrameDecision">
+            <bpmn:documentation>Frame the decision problem and identify key objectives and
+                constraints</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:parallelGateway id="ParallelGateway_Split" name="Split Analysis">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+            <bpmn:outgoing>Flow_4</bpmn:outgoing>
+        </bpmn:parallelGateway>
+
+        <bpmn:serviceTask id="AlternativeAnalysisTask" name="Analyze Alternatives"
+            camunda:type="external" camunda:topic="AnalyzeAlternatives">
+            <bpmn:documentation>Identify and analyze potential decision alternatives</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+            <bpmn:outgoing>Flow_5</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:serviceTask id="RiskAnalysisTask" name="Analyze Risks" camunda:type="external"
+            camunda:topic="AnalyzeRisks">
+            <bpmn:documentation>Assess risks and uncertainties associated with each alternative</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_4</bpmn:incoming>
+            <bpmn:outgoing>Flow_6</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:parallelGateway id="ParallelGateway_Join" name="Join Analysis">
+            <bpmn:incoming>Flow_5</bpmn:incoming>
+            <bpmn:incoming>Flow_6</bpmn:incoming>
+            <bpmn:outgoing>Flow_7</bpmn:outgoing>
+        </bpmn:parallelGateway>
+
+        <bpmn:serviceTask id="RecommendationTask" name="Generate Recommendation"
+            camunda:type="external" camunda:topic="GenerateRecommendation">
+            <bpmn:documentation>Synthesize analysis results and generate final recommendation</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_7</bpmn:incoming>
+            <bpmn:outgoing>Flow_8</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:endEvent id="EndEvent_1" name="End Analysis">
+            <bpmn:incoming>Flow_8</bpmn:incoming>
+        </bpmn:endEvent>
+
+        <!-- Sequence Flows -->
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="FrameDecisionTask" />
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="FrameDecisionTask"
+            targetRef="ParallelGateway_Split" />
+        <bpmn:sequenceFlow id="Flow_3" sourceRef="ParallelGateway_Split"
+            targetRef="AlternativeAnalysisTask" />
+        <bpmn:sequenceFlow id="Flow_4" sourceRef="ParallelGateway_Split"
+            targetRef="RiskAnalysisTask" />
+        <bpmn:sequenceFlow id="Flow_5" sourceRef="AlternativeAnalysisTask"
+            targetRef="ParallelGateway_Join" />
+        <bpmn:sequenceFlow id="Flow_6" sourceRef="RiskAnalysisTask" targetRef="ParallelGateway_Join" />
+        <bpmn:sequenceFlow id="Flow_7" sourceRef="ParallelGateway_Join"
+            targetRef="RecommendationTask" />
+        <bpmn:sequenceFlow id="Flow_8" sourceRef="RecommendationTask" targetRef="EndEvent_1" />
+    </bpmn:process>
+</bpmn:definitions> 
