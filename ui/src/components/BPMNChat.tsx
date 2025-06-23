@@ -262,7 +262,10 @@ const BPMNChat: React.FC<BPMNChatProps> = ({ onBPMNUpdate, currentBPMN, onAIMode
                 } : {
                     has_manual_edits: false
                 },
-                user_intent: currentBPMN ? "enhance_existing_model" : "create_new_model"
+                user_intent: currentBPMN ? "enhance_existing_model" : "create_new_model",
+                layout_preservation_instruction: currentBPMN ?
+                    "IMPORTANT: When modifying this BPMN model, preserve the existing positions and layout of all current elements. Only add new elements in appropriate locations without moving existing ones. Maintain the visual structure and flow of the current diagram." :
+                    "Create a new BPMN model with proper layout and positioning."
             };
 
             // Determine if this is a generation or modification request
