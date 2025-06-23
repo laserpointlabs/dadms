@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    id="Definitions_simple_approval"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="SimpleApprovalProcess" name="Simple Approval Process" isExecutable="true"
+        camunda:historyTimeToLive="30">
+        <bpmn:startEvent id="StartEvent_1" name="Start Approval">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+
+        <bpmn:serviceTask id="ReviewTask" name="Review Request" camunda:type="external"
+            camunda:topic="ReviewRequest">
+            <bpmn:documentation>Review the submitted request and determine if it meets approval
+                criteria</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:exclusiveGateway id="ApprovalGateway" name="Approved?">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+            <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+        </bpmn:exclusiveGateway>
+
+        <bpmn:serviceTask id="ApprovedTask" name="Process Approval" camunda:type="external"
+            camunda:topic="ProcessApproval">
+            <bpmn:documentation>Process the approved request and take necessary actions</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_Approved</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:serviceTask id="RejectedTask" name="Process Rejection" camunda:type="external"
+            camunda:topic="ProcessRejection">
+            <bpmn:documentation>Process the rejected request and notify stakeholders</bpmn:documentation>
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="service.type" value="assistant" />
+                    <camunda:property name="service.name" value="dadm-openai-assistant" />
+                    <camunda:property name="service.version" value="1.0" />
+                </camunda:properties>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+            <bpmn:outgoing>Flow_4</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:endEvent id="EndEvent_1" name="End">
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+            <bpmn:incoming>Flow_4</bpmn:incoming>
+        </bpmn:endEvent>
+
+        <!-- Sequence Flows -->
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ReviewTask" />
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ReviewTask" targetRef="ApprovalGateway" />
+        <bpmn:sequenceFlow id="Flow_Approved" name="Yes" sourceRef="ApprovalGateway"
+            targetRef="ApprovedTask">
+            <bpmn:conditionExpression>#{approved == true}</bpmn:conditionExpression>
+        </bpmn:sequenceFlow>
+        <bpmn:sequenceFlow id="Flow_Rejected" name="No" sourceRef="ApprovalGateway"
+            targetRef="RejectedTask">
+            <bpmn:conditionExpression>#{approved == false}</bpmn:conditionExpression>
+        </bpmn:sequenceFlow>
+        <bpmn:sequenceFlow id="Flow_3" sourceRef="ApprovedTask" targetRef="EndEvent_1" />
+        <bpmn:sequenceFlow id="Flow_4" sourceRef="RejectedTask" targetRef="EndEvent_1" />
+    </bpmn:process>
+</bpmn:definitions> 

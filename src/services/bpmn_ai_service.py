@@ -543,21 +543,27 @@ Keep the explanation clear and accessible to business users.
 
     def _create_simple_bpmn_template(self, process_description: str) -> str:
         """
-        Create a simple BPMN template as fallback.
+        Create a simple BPMN template as fallback with diagram information.
         
         Args:
             process_description: Description of the process
             
         Returns:
-            Basic BPMN XML template
+            Basic BPMN XML template with diagram layout
         """
         try:
             from src.utils.bpmn_utils import BPMNTemplate
             activities = [f"Process: {process_description}"]
-            return BPMNTemplate.generate_simple_process("Generated Process", activities)
+            bpmn_xml = BPMNTemplate.generate_simple_process("Generated Process", activities)
+            
+            # Add auto-layout to ensure diagram information is present
+            if not self._has_diagram_information(bpmn_xml):
+                bpmn_xml = self._add_auto_layout(bpmn_xml)
+            
+            return bpmn_xml
         except Exception as e:
             logger.error(f"Error creating BPMN template: {e}")
-            # Return minimal valid BPMN
+            # Return minimal valid BPMN with diagram information
             return '''<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
@@ -579,6 +585,27 @@ Keep the explanation clear and accessible to business users.
     <bpmn:sequenceFlow id="start_to_task" sourceRef="start" targetRef="task" />
     <bpmn:sequenceFlow id="task_to_end" sourceRef="task" targetRef="end" />
   </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="simple_process">
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <dc:Bounds x="100" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_di" bpmnElement="task">
+        <dc:Bounds x="250" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
+        <dc:Bounds x="400" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="start_to_task_di" bpmnElement="start_to_task">
+        <di:waypoint x="136" y="118" />
+        <di:waypoint x="250" y="118" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="task_to_end_di" bpmnElement="task_to_end">
+        <di:waypoint x="350" y="118" />
+        <di:waypoint x="400" y="118" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 </bpmn:definitions>'''
 
 # Singleton instance for the service

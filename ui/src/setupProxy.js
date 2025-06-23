@@ -5,15 +5,15 @@ module.exports = function (app) {
     const isDocker = process.env.DOCKER === 'true' ||
         process.env.NODE_ENV === 'development' && process.env.PWD?.includes('/app');
 
-    // Use host.docker.internal for Docker containers, localhost for local development
+    // Use proper Docker networking - services can communicate by container name
     const target = isDocker
-        ? 'http://host.docker.internal:8000'  // Docker host access
+        ? 'http://host.docker.internal:8000'  // Docker host access for main API
         : 'http://localhost:8000';            // Local development
 
-    // BPMN AI service target (dedicated BPMN AI service on port 5010)
+    // BPMN AI service target - use container name for Docker networking
     const bpmnAiTarget = isDocker
-        ? 'http://host.docker.internal:5010'  // Docker host access
-        : 'http://localhost:5010';            // Local development
+        ? 'http://dadm-bpmn-ai-service:5010'  // Docker container name
+        : 'http://localhost:5011';            // Local development (mapped port)
 
     console.log('Setting up proxy with target:', target, '(Docker mode:', isDocker, ')');
     console.log('Setting up BPMN AI proxy with target:', bpmnAiTarget);
@@ -24,8 +24,8 @@ module.exports = function (app) {
         createProxyMiddleware({
             target: bpmnAiTarget,
             changeOrigin: true,
-            timeout: 30000,
-            proxyTimeout: 30000,
+            timeout: 120000,        // 2 minutes timeout
+            proxyTimeout: 120000,   // 2 minutes proxy timeout
             logLevel: 'debug',
             onError: (err, req, res) => {
                 console.error('BPMN AI Proxy error:', err);
