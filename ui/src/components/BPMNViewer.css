@@ -1,3 +1,19 @@
+body,
+.bpmn-viewer,
+.bpmn-container,
+input,
+textarea,
+select,
+button {
+    color: #222 !important;
+    background-color: #fff !important;
+}
+
+::placeholder {
+    color: #888 !important;
+    opacity: 1 !important;
+}
+
 .bpmn-viewer-container {
     display: flex;
     flex-direction: column;
@@ -365,11 +381,36 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.bpmn-viewer .djs-context-pad {
-    background: #ffffff;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+/* Context pad visibility - multiple selectors to ensure it works */
+.bpmn-viewer .djs-context-pad,
+.bpmn-container .djs-context-pad,
+.djs-context-pad {
+    background: #f8f9fa !important;
+    border: 2px solid #007bff !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1001 !important;
+}
+
+/* Make context pad entries more visible */
+.bpmn-viewer .djs-context-pad .entry,
+.bpmn-container .djs-context-pad .entry,
+.djs-context-pad .entry {
+    background: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 3px !important;
+    margin: 2px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.bpmn-viewer .djs-context-pad .entry:hover,
+.bpmn-container .djs-context-pad .entry:hover,
+.djs-context-pad .entry:hover {
+    background: #e3f2fd !important;
+    border-color: #007bff !important;
 }
 
 .bpmn-viewer .djs-popup {
