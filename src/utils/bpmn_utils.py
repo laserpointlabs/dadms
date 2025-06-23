@@ -138,50 +138,32 @@ class BPMNValidator:
             # Also check for non-namespaced elements (AI sometimes generates these)
             flow_nodes.extend(process.findall('.//startEvent | .//endEvent | .//task | .//userTask | .//serviceTask | .//exclusiveGateway | .//parallelGateway'))
             
-            # Create sets of valid source and target references
-            flow_node_ids = {node.get('id') for node in flow_nodes if node.get('id')}
-            
-            # Also check for elements with namespace prefixes in their IDs
+            # Create set of valid element IDs
+            flow_node_ids = set()
             for node in flow_nodes:
                 node_id = node.get('id')
                 if node_id:
-                    # Add both the original ID and any namespace-prefixed version
                     flow_node_ids.add(node_id)
-                    if ':' in node_id:
-                        # If ID has namespace prefix, also add without prefix
-                        flow_node_ids.add(node_id.split(':', 1)[1])
-                    else:
-                        # If ID has no prefix, also add with common prefixes
-                        flow_node_ids.add(f"bpmn:{node_id}")
+            
+            # Debug logging
+            logger.debug(f"Found flow node IDs: {flow_node_ids}")
+            logger.debug(f"Found {len(sequence_flows)} sequence flows")
             
             for flow in sequence_flows:
                 source_ref = flow.get('sourceRef')
                 target_ref = flow.get('targetRef')
                 
+                logger.debug(f"Checking flow: {flow.get('id')} -> source: {source_ref}, target: {target_ref}")
+                
                 if source_ref and source_ref not in flow_node_ids:
-                    # Try to find the element with different namespace handling
-                    source_found = False
-                    for node_id in flow_node_ids:
-                        if source_ref == node_id or source_ref.endswith(f":{node_id}") or node_id.endswith(f":{source_ref}"):
-                            source_found = True
-                            break
-                    
-                    if not source_found:
-                        errors.append(f"Sequence flow references invalid source: {source_ref}")
+                    errors.append(f"Sequence flow references invalid source: {source_ref}")
                     
                 if target_ref and target_ref not in flow_node_ids:
-                    # Try to find the element with different namespace handling
-                    target_found = False
-                    for node_id in flow_node_ids:
-                        if target_ref == node_id or target_ref.endswith(f":{node_id}") or node_id.endswith(f":{target_ref}"):
-                            target_found = True
-                            break
-                    
-                    if not target_found:
-                        errors.append(f"Sequence flow references invalid target: {target_ref}")
+                    errors.append(f"Sequence flow references invalid target: {target_ref}")
                     
         except Exception as e:
             errors.append(f"Sequence flow validation error: {str(e)}")
+            logger.error(f"Sequence flow validation exception: {e}")
     
     def validate_complete(self, bpmn_xml: str) -> Dict[str, Any]:
         """
