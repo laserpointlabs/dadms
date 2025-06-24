@@ -464,7 +464,7 @@
 
                 log('Creating BPMN modeler...', 'info');
 
-                // Simple modeler configuration - BPMN.js includes Camunda support by default
+                // Simple modeler configuration
                 modeler = new BpmnModeler({
                     container: '#canvas',
                     width: '100%',
@@ -475,6 +475,10 @@
 
                 // Import test XML
                 await modeler.importXML(testXML);
+
+                // Store the initial XML for property reading
+                modeler._lastXML = testXML;
+
                 log('BPMN modeler initialized successfully', 'success');
 
                 // Add event listeners
@@ -494,7 +498,7 @@
                     }
                 });
 
-                // Add change listener to update XML view
+                // Add change listener to update XML view only (don't refresh properties during editing)
                 modeler.on('commandStack.changed', async () => {
                     try {
                         if (currentView === 'xml') {
@@ -507,6 +511,19 @@
                 });
 
                 log('Modeler ready - click on elements to test properties panel', 'success');
+
+                // Auto-select the process to show process properties by default
+                setTimeout(() => {
+                    const elementRegistry = modeler.get('elementRegistry');
+                    const processElement = elementRegistry.find(element =>
+                        element.businessObject && element.businessObject.$type === 'bpmn:Process'
+                    );
+
+                    if (processElement) {
+                        selectElement(processElement);
+                        log('Process properties loaded by default', 'info');
+                    }
+                }, 100);
 
             } catch (error) {
                 log('Error initializing modeler: ' + error.message, 'error');
@@ -537,6 +554,13 @@
 
         function updatePropertiesPanel() {
             if (!selectedElement) return;
+
+            // Store current scroll position if we're updating extension properties
+            let scrollTop = 0;
+            if (isUpdatingExtensionProperty) {
+                const propertiesContent = document.getElementById('properties-content');
+                scrollTop = propertiesContent.scrollTop;
+            }
 
             const businessObject = selectedElement.businessObject;
             const isProcess = businessObject.$type === 'bpmn:Process';
@@ -620,20 +644,79 @@
             }
 
             document.getElementById('properties-content').innerHTML = html;
+
+            // Restore scroll position if we were updating extension properties
+            if (isUpdatingExtensionProperty && scrollTop > 0) {
+                setTimeout(() => {
+                    const propertiesContent = document.getElementById('properties-content');
+                    propertiesContent.scrollTop = scrollTop;
+                }, 10);
+            }
         }
 
         function getExtensionProperty(businessObject, propertyName) {
             try {
-                const extensionElements = businessObject.get('extensionElements');
-                if (extensionElements) {
-                    const properties = extensionElements.get('camunda:properties');
-                    if (properties) {
-                        const property = properties.find(prop => prop.get('name') === propertyName);
-                        return property ? property.get('value') : '';
+                // Try to get the latest value from current XML
+                const latestValue = getExtensionPropertyFromXML(businessObject.id, propertyName);
+                if (latestValue !== null) {
+                    return latestValue;
+                }
+
+                // Fallback to business object
+                return getExtensionPropertyFromBusinessObject(businessObject, propertyName);
+            } catch (error) {
+                log('Error getting extension property: ' + error.message, 'error');
+                return '';
+            }
+        }
+
+        function getExtensionPropertyFromXML(taskId, propertyName) {
+            try {
+                if (!modeler || !modeler._lastXML) {
+                    return null;
+                }
+
+                const xml = modeler._lastXML;
+
+                // Find the service task in XML
+                const taskStartTag = `<bpmn:serviceTask id="${taskId}"`;
+                const taskEndTag = `</bpmn:serviceTask>`;
+                const taskStartIndex = xml.indexOf(taskStartTag);
+                const taskEndIndex = xml.indexOf(taskEndTag, taskStartIndex);
+
+                if (taskStartIndex !== -1 && taskEndIndex !== -1) {
+                    const taskXml = xml.substring(taskStartIndex, taskEndIndex);
+
+                    // Look for the specific property
+                    const propertyPattern = new RegExp(`<camunda:property name="${propertyName}" value="([^"]*)"`, 'g');
+                    const match = propertyPattern.exec(taskXml);
+
+                    if (match) {
+                        return match[1];
+                    }
+                }
+                return '';
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function getExtensionPropertyFromBusinessObject(businessObject, propertyName) {
+            try {
+                const extensionElements = businessObject.extensionElements;
+                if (extensionElements && extensionElements.values) {
+                    const propertiesContainer = extensionElements.values.find(ext =>
+                        ext.$type === 'camunda:Properties'
+                    );
+                    if (propertiesContainer && propertiesContainer.values) {
+                        const property = propertiesContainer.values.find(prop =>
+                            prop.name === propertyName
+                        );
+                        return property ? property.value : '';
                     }
                 }
             } catch (error) {
-                log('Error getting extension property: ' + error.message, 'error');
+                log('Error getting extension property from business object: ' + error.message, 'error');
             }
             return '';
         }
@@ -696,6 +779,8 @@
             }
         }
 
+        let isUpdatingExtensionProperty = false;
+
         function updateExtensionProperty(propertyName, value) {
             if (!selectedElement || !modeler) {
                 log('No selected element or modeler for extension property update', 'error');
@@ -706,143 +791,89 @@
                 const businessObject = selectedElement.businessObject;
                 log(`Updating extension property: ${propertyName} = ${value}`, 'info');
 
-                // Get the current XML
+                // Set flag to prevent panel refresh during update
+                isUpdatingExtensionProperty = true;
+
+                // Get the current XML and inject the property directly
                 modeler.saveXML({ format: true }).then(result => {
                     let xml = result.xml;
-
-                    // Find the service task element
                     const taskId = businessObject.id;
+
+                    // Find the service task
                     const taskStartTag = `<bpmn:serviceTask id="${taskId}"`;
                     const taskEndTag = `</bpmn:serviceTask>`;
 
                     const taskStartIndex = xml.indexOf(taskStartTag);
-                    if (taskStartIndex === -1) {
+                    const taskEndIndex = xml.indexOf(taskEndTag, taskStartIndex);
+
+                    if (taskStartIndex === -1 || taskEndIndex === -1) {
                         log('Service task not found in XML', 'error');
                         return;
                     }
 
-                    const taskEndIndex = xml.indexOf(taskEndTag, taskStartIndex);
-                    if (taskEndIndex === -1) {
-                        log('Service task end tag not found in XML', 'error');
-                        return;
-                    }
-
-                    // Check if extension elements already exist
+                    // Check if extension elements exist
                     const extensionStartTag = '<bpmn:extensionElements>';
                     const extensionEndTag = '</bpmn:extensionElements>';
-
                     const extensionStartIndex = xml.indexOf(extensionStartTag, taskStartIndex);
                     const extensionEndIndex = xml.indexOf(extensionEndTag, taskStartIndex);
 
                     let newXml;
 
-                    if (extensionStartIndex !== -1 && extensionEndIndex !== -1) {
-                        // Extension elements exist, update them
-                        log('Extension elements found, updating...', 'info');
+                    if (extensionStartIndex !== -1 && extensionEndIndex !== -1 && extensionStartIndex < taskEndIndex) {
+                        // Extension elements exist
+                        const propertiesStartTag = '<camunda:properties>';
+                        const propertiesEndTag = '</camunda:properties>';
+                        const propertiesStartIndex = xml.indexOf(propertiesStartTag, extensionStartIndex);
+                        const propertiesEndIndex = xml.indexOf(propertiesEndTag, extensionStartIndex);
 
-                        const beforeExtension = xml.substring(0, extensionStartIndex);
-                        const afterExtension = xml.substring(extensionEndIndex + extensionEndTag.length);
+                        if (propertiesStartIndex !== -1 && propertiesEndIndex !== -1 && propertiesStartIndex < extensionEndIndex) {
+                            // Properties exist, update or add property
+                            const propertiesContent = xml.substring(propertiesStartIndex + propertiesStartTag.length, propertiesEndIndex);
+                            const propertyPattern = new RegExp(`<camunda:property name="${propertyName}"[^>]*\\s*/>`, 'g');
 
-                        if (value.trim()) {
-                            // Add or update property
-                            const propertiesStartTag = '<camunda:properties>';
-                            const propertiesEndTag = '</camunda:properties>';
-
-                            const propertiesStartIndex = xml.indexOf(propertiesStartTag, extensionStartIndex);
-                            const propertiesEndIndex = xml.indexOf(propertiesEndTag, extensionStartIndex);
-
-                            if (propertiesStartIndex !== -1 && propertiesEndIndex !== -1) {
-                                // Properties exist, check if this property exists
-                                const propertiesContent = xml.substring(propertiesStartIndex + propertiesStartTag.length, propertiesEndIndex);
-                                const propertyPattern = new RegExp(`<camunda:property name="${propertyName}"[^>]*>`, 'g');
-
+                            let newPropertiesContent;
+                            if (value.trim()) {
+                                const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
                                 if (propertyPattern.test(propertiesContent)) {
-                                    // Property exists, update it
-                                    const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
-                                    const updatedPropertiesContent = propertiesContent.replace(
-                                        new RegExp(`<camunda:property name="${propertyName}"[^>]*>.*?</camunda:property>`, 'g'),
-                                        newProperty
-                                    );
-
-                                    newXml = beforeExtension +
-                                        extensionStartTag +
-                                        propertiesStartTag +
-                                        updatedPropertiesContent +
-                                        propertiesEndTag +
-                                        extensionEndTag +
-                                        afterExtension;
+                                    // Update existing property
+                                    newPropertiesContent = propertiesContent.replace(propertyPattern, newProperty);
                                 } else {
-                                    // Property doesn't exist, add it
-                                    const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
-                                    newXml = beforeExtension +
-                                        extensionStartTag +
-                                        propertiesStartTag +
-                                        propertiesContent +
-                                        newProperty +
-                                        propertiesEndTag +
-                                        extensionEndTag +
-                                        afterExtension;
+                                    // Add new property
+                                    newPropertiesContent = propertiesContent + newProperty;
                                 }
                             } else {
-                                // Properties don't exist, create them
-                                const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
-                                newXml = beforeExtension +
-                                    extensionStartTag +
-                                    propertiesStartTag +
-                                    newProperty +
-                                    propertiesEndTag +
-                                    extensionEndTag +
-                                    afterExtension;
+                                // Remove property
+                                newPropertiesContent = propertiesContent.replace(propertyPattern, '');
                             }
+
+                            newXml = xml.substring(0, propertiesStartIndex + propertiesStartTag.length) +
+                                newPropertiesContent +
+                                xml.substring(propertiesEndIndex);
                         } else {
-                            // Remove property if value is empty
-                            const propertiesStartTag = '<camunda:properties>';
-                            const propertiesEndTag = '</camunda:properties>';
-
-                            const propertiesStartIndex = xml.indexOf(propertiesStartTag, extensionStartIndex);
-                            const propertiesEndIndex = xml.indexOf(propertiesEndTag, extensionStartIndex);
-
-                            if (propertiesStartIndex !== -1 && propertiesEndIndex !== -1) {
-                                const propertiesContent = xml.substring(propertiesStartIndex + propertiesStartTag.length, propertiesEndIndex);
-                                const updatedPropertiesContent = propertiesContent.replace(
-                                    new RegExp(`<camunda:property name="${propertyName}"[^>]*>.*?</camunda:property>\\s*`, 'g'),
-                                    ''
-                                );
-
-                                if (updatedPropertiesContent.trim() === '') {
-                                    // No properties left, remove extension elements entirely
-                                    newXml = beforeExtension + afterExtension;
-                                } else {
-                                    newXml = beforeExtension +
-                                        extensionStartTag +
-                                        propertiesStartTag +
-                                        updatedPropertiesContent +
-                                        propertiesEndTag +
-                                        extensionEndTag +
-                                        afterExtension;
-                                }
+                            // Properties don't exist, create them
+                            if (value.trim()) {
+                                const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
+                                const propertiesBlock = `<camunda:properties>${newProperty}</camunda:properties>`;
+                                newXml = xml.substring(0, extensionEndIndex) +
+                                    propertiesBlock +
+                                    xml.substring(extensionEndIndex);
+                            } else {
+                                newXml = xml; // No value, no need to create
                             }
                         }
                     } else {
                         // Extension elements don't exist, create them
-                        log('Extension elements not found, creating...', 'info');
-
                         if (value.trim()) {
-                            const beforeTask = xml.substring(0, taskEndIndex);
-                            const afterTask = xml.substring(taskEndIndex);
-
                             const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
-                            const newExtensionElements = `
+                            const extensionBlock = `
       <bpmn:extensionElements>
         <camunda:properties>
           ${newProperty}
         </camunda:properties>
       </bpmn:extensionElements>`;
-
-                            newXml = beforeTask + newExtensionElements + afterTask;
+                            newXml = xml.substring(0, taskEndIndex) + extensionBlock + xml.substring(taskEndIndex);
                         } else {
-                            // No value, no need to create extension elements
-                            newXml = xml;
+                            newXml = xml; // No value, no need to create
                         }
                     }
 
@@ -850,10 +881,31 @@
                     modeler.importXML(newXml).then(() => {
                         log(`Extension property updated successfully: ${propertyName} = ${value}`, 'success');
 
-                        // Update XML view if it's currently visible
-                        if (currentView === 'xml') {
-                            updateXMLView();
+                        // Store the latest XML for property reading
+                        modeler._lastXML = newXml;
+
+                        // Get services for re-selecting the element
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const selection = modeler.get('selection');
+
+                        // Get the updated element and re-select it
+                        const updatedElement = elementRegistry.get(taskId);
+                        if (updatedElement) {
+                            selectedElement = updatedElement;
+                            selection.select(updatedElement);
                         }
+
+                        // Clear the flag after update is complete
+                        setTimeout(() => {
+                            isUpdatingExtensionProperty = false;
+                        }, 100);
+
+                        // Update XML view if visible
+                        if (currentView === 'xml') {
+                            setTimeout(() => updateXMLView(), 100);
+                        }
+
+                        // No need to refresh properties panel - let it behave like basic properties
                     }).catch(error => {
                         log('Error importing updated XML: ' + error.message, 'error');
                     });
@@ -931,18 +983,20 @@
                 updateXMLView();
                 log('XML updated for testing', 'info');
 
-                // Verify the properties were added
-                const currentExtensionElements = businessObject.get('extensionElements');
+                // Verify the properties were added by checking the business object directly
+                const currentExtensionElements = businessObject.extensionElements;
                 log(`Extension elements found: ${!!currentExtensionElements}`, 'info');
 
-                if (currentExtensionElements) {
-                    const currentProperties = currentExtensionElements.get('camunda:properties');
+                if (currentExtensionElements && currentExtensionElements.values) {
+                    const currentProperties = currentExtensionElements.values.find(ext =>
+                        ext.$type === 'camunda:Properties'
+                    );
                     log(`Camunda properties found: ${!!currentProperties}`, 'info');
 
-                    if (currentProperties) {
-                        log(`Verification: Found ${currentProperties.length} properties`, 'success');
-                        currentProperties.forEach(prop => {
-                            log(`  ✓ ${prop.get('name')}: ${prop.get('value')}`, 'success');
+                    if (currentProperties && currentProperties.values) {
+                        log(`Verification: Found ${currentProperties.values.length} properties`, 'success');
+                        currentProperties.values.forEach(prop => {
+                            log(`  ✓ ${prop.name}: ${prop.value}`, 'success');
                         });
                     } else {
                         log('❌ No camunda:properties found', 'error');
