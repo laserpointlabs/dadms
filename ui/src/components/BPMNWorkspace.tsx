@@ -458,6 +458,7 @@ const BPMNWorkspace: React.FC = () => {
                             selectedElement={selectedElement}
                             onPropertyChange={handlePropertyChange}
                             modeler={bpmnViewerRef.current?.getModeler() || null}
+                            onModelChange={handleBPMNUpdate}
                         />
                     </div>
                 </div>

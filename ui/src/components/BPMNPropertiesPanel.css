@@ -40,6 +40,27 @@
     word-break: break-all;
 }
 
+.editing-indicator {
+    font-size: 11px;
+    color: #007bff;
+    font-weight: 500;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
 .properties-content {
     flex: 1;
     overflow-y: auto;
@@ -88,7 +109,8 @@
 }
 
 .property-field input,
-.property-field select {
+.property-field select,
+.property-field textarea {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ddd;
@@ -101,13 +123,33 @@
 }
 
 .property-field input:focus,
-.property-field select:focus {
+.property-field select:focus,
+.property-field textarea:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-.property-field input::placeholder {
+/* Visual feedback for editing state */
+.property-field input:focus,
+.property-field select:focus,
+.property-field textarea:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+    background-color: #f8fff9;
+}
+
+.property-field input:disabled,
+.property-field select:disabled,
+.property-field textarea:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.property-field input::placeholder,
+.property-field textarea::placeholder {
     color: #bbb;
     font-style: italic;
 }
@@ -118,6 +160,13 @@
 
 .property-field select option {
     padding: 4px;
+}
+
+.property-field textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    line-height: 1.4;
 }
 
 /* Responsive adjustments */

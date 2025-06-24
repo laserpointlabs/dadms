@@ -10,6 +10,8 @@
     <bpmn:process id="TestProcess" name="Test Process for Properties Panel" isExecutable="true"
         camunda:historyTimeToLive="30">
         <bpmn:startEvent id="StartEvent_1" name="Start Process">
+            <bpmn:documentation>This is the starting point of the test process. It represents the
+                beginning of the workflow.</bpmn:documentation>
             <bpmn:outgoing>Flow_1</bpmn:outgoing>
         </bpmn:startEvent>
 
@@ -17,7 +19,10 @@
 
         <bpmn:serviceTask id="ServiceTask_1" name="Test Service Task" camunda:type="external"
             camunda:topic="TestTopic">
-            <bpmn:documentation>This is a test service task for the properties panel</bpmn:documentation>
+            <bpmn:documentation>This is a test service task for the properties panel. It
+                demonstrates how the documentation field works in the properties panel. You can edit
+                this description to provide more details about what this task does, its
+                requirements, or any other relevant information.</bpmn:documentation>
             <bpmn:extensionElements>
                 <camunda:properties>
                     <camunda:property name="service.type" value="assistant" />
@@ -32,6 +37,7 @@
         <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_1" targetRef="EndEvent_1" />
 
         <bpmn:endEvent id="EndEvent_1" name="End Process">
+            <bpmn:documentation>This marks the completion of the test process workflow.</bpmn:documentation>
             <bpmn:incoming>Flow_2</bpmn:incoming>
         </bpmn:endEvent>
     </bpmn:process>

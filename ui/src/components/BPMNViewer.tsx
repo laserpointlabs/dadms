@@ -43,79 +43,85 @@ const BPMNViewer = forwardRef<{
         let modeler: any;
         let isMounted = true;
         const setupModeler = async () => {
-            // Load CSS files if not already loaded
-            if (!document.querySelector('link[href*="bpmn-js"]')) {
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css?t=${Date.now()}`;
-                document.head.appendChild(link);
+            try {
+                console.log('BPMNViewer: Starting modeler setup...');
 
-                const link2 = document.createElement('link');
-                link2.rel = 'stylesheet';
-                link2.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css?t=${Date.now()}`;
-                document.head.appendChild(link2);
-            }
+                // Load CSS files if not already loaded
+                if (!document.querySelector('link[href*="bpmn-js"]')) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/diagram-js.css?t=${Date.now()}`;
+                    document.head.appendChild(link);
 
-            // Load BPMN.js library if not already loaded
-            let BpmnModeler;
-            if (!window.BpmnJS) {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js?t=${Date.now()}`;
-                    script.onload = () => resolve(void 0);
-                    script.onerror = (error) => reject(error);
-                    document.head.appendChild(script);
-                });
-            }
-            BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
-            if (!BpmnModeler) throw new Error('Failed to load BPMN Modeler from CDN');
-            // Only create if not already created
-            if (!bpmnViewerRef.current) {
-                modeler = new BpmnModeler({
-                    container: containerRef.current,
-                    width: '100%',
-                    height: '100%'
-                });
-                bpmnViewerRef.current = modeler;
-                setIsInitialized(true);
+                    const link2 = document.createElement('link');
+                    link2.rel = 'stylesheet';
+                    link2.href = `https://unpkg.com/bpmn-js@18.6.2/dist/assets/bpmn-font/css/bpmn.css?t=${Date.now()}`;
+                    document.head.appendChild(link2);
+                }
 
-                // Add change listener for editable mode
-                if (isEditable && onModelChange) {
-                    let debounceTimer: NodeJS.Timeout;
-                    modeler.on('commandStack.changed', async () => {
-                        clearTimeout(debounceTimer);
-                        debounceTimer = setTimeout(async () => {
-                            try {
-                                const result = await modeler.saveXML({ format: true });
-                                onModelChange(result.xml);
-                            } catch (err) {
-                                console.error('Error saving XML:', err);
-                            }
-                        }, 300);
+                // Load BPMN.js library if not already loaded
+                let BpmnModeler;
+                if (!window.BpmnJS) {
+                    console.log('BPMNViewer: Loading BPMN.js library...');
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = `https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js?t=${Date.now()}`;
+                        script.onload = () => {
+                            console.log('BPMNViewer: BPMN.js library loaded successfully');
+                            resolve(void 0);
+                        };
+                        script.onerror = (error) => {
+                            console.error('BPMNViewer: Failed to load BPMN.js library:', error);
+                            reject(error);
+                        };
+                        document.head.appendChild(script);
                     });
                 }
 
-                // Add element selection listener
-                if (onElementSelect) {
-                    modeler.on('element.click', (event: any) => {
-                        const element = event.element;
-                        if (element && element.type !== 'bpmn:Process' && element.type !== 'bpmn:SubProcess') {
-                            const elementInfo = {
-                                id: element.id,
-                                type: element.type,
-                                name: element.businessObject?.name,
-                                businessObject: element.businessObject
-                            };
-                            onElementSelect(elementInfo);
-                        }
+                BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
+                if (!BpmnModeler) {
+                    throw new Error('Failed to load BPMN Modeler from CDN');
+                }
+
+                console.log('BPMNViewer: BpmnModeler constructor available:', !!BpmnModeler);
+
+                // Only create if not already created
+                if (!bpmnViewerRef.current && containerRef.current) {
+                    console.log('BPMNViewer: Creating new modeler instance...');
+
+                    // Simple modeler configuration - keep it working
+                    modeler = new BpmnModeler({
+                        container: containerRef.current,
+                        width: '100%',
+                        height: '100%'
                     });
 
-                    // Also listen for selection changes
-                    modeler.on('selection.changed', (event: any) => {
-                        const selection = event.newSelection;
-                        if (selection && selection.length > 0) {
-                            const element = selection[0];
-                            if (element.type !== 'bpmn:Process' && element.type !== 'bpmn:SubProcess') {
+                    console.log('BPMNViewer: Modeler instance created:', !!modeler);
+                    bpmnViewerRef.current = modeler;
+                    setIsInitialized(true);
+                    console.log('BPMNViewer: Modeler initialization complete');
+
+                    // Add change listener for editable mode
+                    if (isEditable && onModelChange) {
+                        let debounceTimer: NodeJS.Timeout;
+                        modeler.on('commandStack.changed', async () => {
+                            clearTimeout(debounceTimer);
+                            debounceTimer = setTimeout(async () => {
+                                try {
+                                    const result = await modeler.saveXML({ format: true });
+                                    onModelChange(result.xml);
+                                } catch (err) {
+                                    console.error('Error saving XML:', err);
+                                }
+                            }, 300);
+                        });
+                    }
+
+                    // Add element selection listener
+                    if (onElementSelect) {
+                        modeler.on('element.click', (event: any) => {
+                            const element = event.element;
+                            if (element) {
                                 const elementInfo = {
                                     id: element.id,
                                     type: element.type,
@@ -124,17 +130,58 @@ const BPMNViewer = forwardRef<{
                                 };
                                 onElementSelect(elementInfo);
                             }
-                        } else {
-                            onElementSelect(null);
-                        }
-                    });
+                        });
+
+                        // Also listen for selection changes
+                        modeler.on('selection.changed', (event: any) => {
+                            const selection = event.newSelection;
+                            if (selection && selection.length > 0) {
+                                const element = selection[0];
+                                const elementInfo = {
+                                    id: element.id,
+                                    type: element.type,
+                                    name: element.businessObject?.name,
+                                    businessObject: element.businessObject
+                                };
+                                onElementSelect(elementInfo);
+                            } else {
+                                onElementSelect(null);
+                            }
+                        });
+
+                        // Listen for canvas clicks to select the process
+                        modeler.on('canvas.click', (event: any) => {
+                            // Only select process if no element was clicked
+                            if (!event.element) {
+                                const elementRegistry = modeler.get('elementRegistry');
+                                const process = elementRegistry.get('Process_1') || elementRegistry.get('TestProcess');
+                                if (process) {
+                                    const elementInfo = {
+                                        id: process.id,
+                                        type: process.type,
+                                        name: process.businessObject?.name,
+                                        businessObject: process.businessObject
+                                    };
+                                    onElementSelect(elementInfo);
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    console.log('BPMNViewer: Modeler already exists or container not ready');
                 }
+            } catch (error) {
+                console.error('BPMNViewer: Error in setupModeler:', error);
+                setIsInitialized(false);
             }
         };
+
         setupModeler();
+
         return () => {
             isMounted = false;
             if (bpmnViewerRef.current) {
+                console.log('BPMNViewer: Cleaning up modeler...');
                 bpmnViewerRef.current.destroy();
                 bpmnViewerRef.current = null;
                 setIsInitialized(false);
