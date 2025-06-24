@@ -343,6 +343,7 @@
                     <li><strong>Ctrl+Y</strong> - Redo</li>
                     <li><strong>Ctrl+S</strong> - Export diagram</li>
                     <li><strong>Ctrl+Shift+S</strong> - Manual save to cache</li>
+                    <li><strong>Ctrl+R</strong> - Refresh canvas</li>
                 </ul>
             </div>
             <div id="properties-content">
@@ -414,10 +415,28 @@
             const xmlBtn = document.querySelector('[onclick="switchView(\'xml\')"]');
 
             if (view === 'diagram') {
+                // Clean up XML highlighting overlay
+                const overlay = document.querySelector('.xml-highlight-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+
+                // Reset XML editor styling
+                xmlEditor.style.background = '#f8f9fa';
+                xmlEditor.style.color = '#333';
+                xmlEditor.style.zIndex = 'auto';
+                xmlEditor.style.position = 'static';
+
                 canvas.classList.remove('hidden');
                 xmlEditor.classList.add('hidden');
                 diagramBtn.classList.add('active');
                 xmlBtn.classList.remove('active');
+
+                // Refresh the canvas
+                if (modeler) {
+                    refreshCanvas();
+                }
+
                 updateStatus('Switched to Diagram View', 'success');
             } else {
                 canvas.classList.add('hidden');
@@ -429,11 +448,40 @@
                 if (modeler) {
                     modeler.saveXML({ format: true }).then(result => {
                         xmlEditor.value = result.xml;
+                        // Trigger syntax highlighting
+                        highlightXML(xmlEditor);
                         updateStatus('Switched to XML View - Edit XML directly', 'success');
                     }).catch(error => {
                         updateStatus('Error loading XML: ' + error.message, 'error');
                     });
                 }
+            }
+        }
+
+        // Function to refresh canvas
+        function refreshCanvas() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                const elementRegistry = modeler.get('elementRegistry');
+
+                // Force a complete redraw
+                canvas.zoom('fit-viewport');
+
+                // Trigger a resize event to force redraw
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                    canvas.zoom('fit-viewport');
+
+                    // Force redraw of all elements
+                    elementRegistry.forEach(element => {
+                        if (element.graphics) {
+                            element.graphics.style.display = 'block';
+                        }
+                    });
+
+                    // Additional redraw trigger
+                    canvas.zoom('fit-viewport');
+                }, 100);
             }
         }
 
@@ -943,7 +991,7 @@
             }
         }
 
-        // Setup XML editor when page loads
+        // Enhanced XML editor with real-time sync
         function setupXMLEditor() {
             const xmlEditor = document.getElementById('xml-editor');
 
@@ -968,6 +1016,111 @@
                     this.selectionStart = this.selectionEnd = start + 2;
                 }
             });
+
+            // Add syntax highlighting
+            xmlEditor.addEventListener('input', function () {
+                highlightXML(this);
+            });
+        }
+
+        // XML Syntax Highlighter
+        function highlightXML(editor) {
+            const text = editor.value;
+            const highlighted = text
+                // XML Declaration
+                .replace(/(<\?xml[^?]*\?>)/g, '<span style="color: #0066cc;">$1</span>')
+                // Opening tags
+                .replace(/(<\/?)([a-zA-Z0-9_:]+)([^>]*?)(>)/g, function (match, open, tagName, attributes, close) {
+                    const tagColor = getTagColor(tagName);
+                    const attrHighlighted = attributes.replace(/([a-zA-Z0-9_:]+)=["']([^"']*)["']/g,
+                        '<span style="color: #cc6600;">$1</span>=<span style="color: #009900;">"$2"</span>');
+                    return '<span style="color: #cc0000;">' + open + '</span>' +
+                        '<span style="color: ' + tagColor + ';">' + tagName + '</span>' +
+                        attrHighlighted +
+                        '<span style="color: #cc0000;">' + close + '</span>';
+                })
+                // Self-closing tags
+                .replace(/(<)([a-zA-Z0-9_:]+)([^>]*?)(\/>)/g, function (match, open, tagName, attributes, close) {
+                    const tagColor = getTagColor(tagName);
+                    const attrHighlighted = attributes.replace(/([a-zA-Z0-9_:]+)=["']([^"']*)["']/g,
+                        '<span style="color: #cc6600;">$1</span>=<span style="color: #009900;">"$2"</span>');
+                    return '<span style="color: #cc0000;">' + open + '</span>' +
+                        '<span style="color: ' + tagColor + ';">' + tagName + '</span>' +
+                        attrHighlighted +
+                        '<span style="color: #cc0000;">' + close + '</span>';
+                });
+
+            // Create a temporary div to hold the highlighted content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = highlighted;
+            tempDiv.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 15px;
+                font-family: Monaco, Menlo, "Ubuntu Mono", monospace;
+                font-size: 12px;
+                line-height: 1.4;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                background: transparent;
+                color: transparent;
+                pointer-events: none;
+                overflow: hidden;
+                z-index: 1;
+            `;
+
+            // Position the editor container
+            const editorContainer = editor.parentElement;
+            editorContainer.style.position = 'relative';
+
+            // Remove existing highlight overlay
+            const existingOverlay = editorContainer.querySelector('.xml-highlight-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            // Add new highlight overlay
+            tempDiv.className = 'xml-highlight-overlay';
+            editorContainer.appendChild(tempDiv);
+
+            // Make sure the textarea is on top
+            editor.style.position = 'relative';
+            editor.style.zIndex = '2';
+            editor.style.background = 'transparent';
+            editor.style.color = 'transparent';
+            editor.style.caretColor = '#333';
+        }
+
+        // Get color for different tag types
+        function getTagColor(tagName) {
+            const colors = {
+                'bpmn:definitions': '#0066cc',
+                'bpmn:process': '#0066cc',
+                'bpmn:startEvent': '#009900',
+                'bpmn:endEvent': '#cc0000',
+                'bpmn:serviceTask': '#cc6600',
+                'bpmn:scriptTask': '#cc6600',
+                'bpmn:userTask': '#cc6600',
+                'bpmn:callActivity': '#cc6600',
+                'bpmn:task': '#cc6600',
+                'bpmn:sequenceFlow': '#666666',
+                'bpmn:exclusiveGateway': '#9933cc',
+                'bpmn:parallelGateway': '#9933cc',
+                'bpmn:inclusiveGateway': '#9933cc',
+                'bpmn:dataStoreReference': '#0099cc',
+                'bpmn:dataObjectReference': '#0099cc',
+                'bpmndi:BPMNDiagram': '#0066cc',
+                'bpmndi:BPMNPlane': '#0066cc',
+                'bpmndi:BPMNShape': '#666666',
+                'bpmndi:BPMNEdge': '#666666',
+                'dc:Bounds': '#666666',
+                'di:waypoint': '#666666'
+            };
+
+            return colors[tagName] || '#333333';
         }
 
         // Handle XML editor changes with real-time sync
@@ -1029,6 +1182,12 @@
         window.clearCache = function () {
             clearModelCache();
             updateStatus('Cache cleared', 'success');
+        };
+
+        // Add global refresh canvas function
+        window.refreshCanvas = function () {
+            refreshCanvas();
+            updateStatus('Canvas refreshed', 'success');
         };
 
         // Add function to export diagram
@@ -1137,6 +1296,14 @@
                             // Ctrl+S or Cmd+S = Export diagram
                             exportDiagram();
                         }
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        refreshCanvas();
+                        updateStatus('Canvas refreshed', 'success');
                     }
                     break;
             }
