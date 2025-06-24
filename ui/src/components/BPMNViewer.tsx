@@ -6,6 +6,7 @@ interface BPMNViewerProps {
     onModelChange?: (xml: string) => void;
     isEditable?: boolean;
     className?: string;
+    onElementSelect?: (element: any) => void;
 }
 
 // Declare bpmn-js types
@@ -26,7 +27,8 @@ const BPMNViewer = forwardRef<{
     bpmnXml,
     onModelChange,
     isEditable = false,
-    className = ''
+    className = '',
+    onElementSelect
 }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const bpmnViewerRef = useRef<any>(null);
@@ -76,6 +78,7 @@ const BPMNViewer = forwardRef<{
                 });
                 bpmnViewerRef.current = modeler;
                 setIsInitialized(true);
+
                 // Add change listener for editable mode
                 if (isEditable && onModelChange) {
                     let debounceTimer: NodeJS.Timeout;
@@ -89,6 +92,41 @@ const BPMNViewer = forwardRef<{
                                 console.error('Error saving XML:', err);
                             }
                         }, 300);
+                    });
+                }
+
+                // Add element selection listener
+                if (onElementSelect) {
+                    modeler.on('element.click', (event: any) => {
+                        const element = event.element;
+                        if (element && element.type !== 'bpmn:Process' && element.type !== 'bpmn:SubProcess') {
+                            const elementInfo = {
+                                id: element.id,
+                                type: element.type,
+                                name: element.businessObject?.name,
+                                businessObject: element.businessObject
+                            };
+                            onElementSelect(elementInfo);
+                        }
+                    });
+
+                    // Also listen for selection changes
+                    modeler.on('selection.changed', (event: any) => {
+                        const selection = event.newSelection;
+                        if (selection && selection.length > 0) {
+                            const element = selection[0];
+                            if (element.type !== 'bpmn:Process' && element.type !== 'bpmn:SubProcess') {
+                                const elementInfo = {
+                                    id: element.id,
+                                    type: element.type,
+                                    name: element.businessObject?.name,
+                                    businessObject: element.businessObject
+                                };
+                                onElementSelect(elementInfo);
+                            }
+                        } else {
+                            onElementSelect(null);
+                        }
                     });
                 }
             }
