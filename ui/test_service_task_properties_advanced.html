@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Task Properties Test - Advanced Version</title>
+
+    <!-- BPMN.js CSS - must be loaded first -->
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css" />
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .toggle-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 20px;
+            height: 90vh;
+        }
+
+        .canvas-container {
+            flex: 2;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Ensure bpmn.io palette is styled properly */
+        .djs-palette {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            left: 20px !important;
+            top: 20px !important;
+        }
+
+        .djs-palette .entry {
+            border-radius: 3px;
+        }
+
+        .djs-palette .entry:hover {
+            background: #e9ecef;
+        }
+
+        /* Ensure palette icons are visible */
+        .djs-palette .entry div {
+            color: #333;
+        }
+
+        /* Override any conflicting styles */
+        .canvas-container .djs-palette {
+            position: absolute;
+            z-index: 100;
+        }
+
+        .properties {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+
+        .property-group h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .property-field {
+            margin-bottom: 15px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .property-field input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .xml-editor {
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            box-sizing: border-box;
+            resize: none;
+        }
+
+        .properties {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+
+        .property-group h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .property-field {
+            margin-bottom: 15px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .property-field input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .xml-view {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>BPMN Modeler - Advanced Version</h1>
+        <div class="view-toggle">
+            <button class="toggle-btn active" onclick="switchView('diagram')">Diagram View</button>
+            <button class="toggle-btn" onclick="switchView('xml')">XML View</button>
+        </div>
+    </div>
+
+    <div id="status" class="status">Loading BPMN modeler...</div>
+
+    <div class="main-container">
+        <!-- Canvas Container -->
+        <div class="canvas-container">
+            <div id="canvas" class="canvas"></div>
+            <textarea id="xml-editor" class="xml-editor hidden"></textarea>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="properties">
+            <div id="properties-content">
+                <p>Select a BPMN element to edit its properties</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="xml-view">
+        <strong>Current XML:</strong>
+        <pre id="xml-output">Loading...</pre>
+    </div>
+
+    <!-- BPMN.js -->
+    <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js"></script>
+
+    <script>
+        let modeler;
+        let selectedElement = null;
+        let currentView = 'diagram';
+
+        // View switching functionality
+        function switchView(view) {
+            currentView = view;
+            const canvas = document.getElementById('canvas');
+            const xmlEditor = document.getElementById('xml-editor');
+            const diagramBtn = document.querySelector('.toggle-btn[onclick="switchView(\'diagram\')"]');
+            const xmlBtn = document.querySelector('.toggle-btn[onclick="switchView(\'xml\')"]');
+
+            if (view === 'diagram') {
+                canvas.classList.remove('hidden');
+                xmlEditor.classList.add('hidden');
+                diagramBtn.classList.add('active');
+                xmlBtn.classList.remove('active');
+                updateStatus('Switched to Diagram View', 'success');
+            } else if (view === 'xml') {
+                canvas.classList.add('hidden');
+                xmlEditor.classList.remove('hidden');
+                diagramBtn.classList.remove('active');
+                xmlBtn.classList.add('active');
+
+                // Sync current XML to editor
+                if (modeler) {
+                    modeler.saveXML({ format: true }).then(result => {
+                        document.getElementById('xml-editor').value = result.xml;
+                        updateStatus('Switched to XML View', 'success');
+                    }).catch(error => {
+                        updateStatus('Error loading XML: ' + error.message, 'error');
+                    });
+                }
+            }
+        }
+
+        // Test BPMN XML with Service Task
+        const testXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:service="http://example.com/service"
+    id="Definitions_test"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="TestProcess" name="Test Process" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1" name="Start">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+
+        <bpmn:serviceTask id="ServiceTask_1" name="Sample Service Task" service:type="REST" service:name="UserService" service:version="1.0">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_1" targetRef="EndEvent_1" />
+
+        <bpmn:endEvent id="EndEvent_1" name="End">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+        </bpmn:endEvent>
+    </bpmn:process>
+
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="TestProcess">
+            <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+                <dc:Bounds x="152" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+                <di:waypoint x="188" y="250" />
+                <di:waypoint x="240" y="250" />
+            </bpmndi:BPMNEdge>
+
+            <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="ServiceTask_1">
+                <dc:Bounds x="240" y="210" width="100" height="80" />
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+                <di:waypoint x="340" y="250" />
+                <di:waypoint x="392" y="250" />
+            </bpmndi:BPMNEdge>
+
+            <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+                <dc:Bounds x="392" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+        function updateStatus(message, type = 'success') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function updateXMLView() {
+            if (!modeler) return;
+
+            modeler.saveXML({ format: true }).then(result => {
+                document.getElementById('xml-output').textContent = result.xml;
+                if (currentView === 'xml') {
+                    document.getElementById('xml-editor').value = result.xml;
+                }
+            }).catch(error => {
+                document.getElementById('xml-output').textContent = 'Error: ' + error.message;
+            });
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const canvas = document.getElementById('canvas');
+            const xmlEditor = document.getElementById('xml-editor');
+            const diagramBtn = document.querySelector('[onclick="switchView(\'diagram\')"]');
+            const xmlBtn = document.querySelector('[onclick="switchView(\'xml\')"]');
+
+            if (view === 'diagram') {
+                canvas.classList.remove('hidden');
+                xmlEditor.classList.add('hidden');
+                diagramBtn.classList.add('active');
+                xmlBtn.classList.remove('active');
+            } else {
+                canvas.classList.add('hidden');
+                xmlEditor.classList.remove('hidden');
+                diagramBtn.classList.remove('active');
+                xmlBtn.classList.add('active');
+                updateXMLView();
+            }
+        }
+
+        function getExtensionProperty(element, propertyName) {
+            if (!element || !element.businessObject) return '';
+            const attrs = element.businessObject.$attrs || {};
+            return attrs[propertyName] || '';
+        }
+
+        function updateExtensionProperty(element, propertyName, value) {
+            if (!element || !element.businessObject) return;
+
+            const modeling = modeler.get('modeling');
+            const attrs = Object.assign({}, element.businessObject.$attrs || {});
+
+            if (value && value.trim() !== '') {
+                attrs[propertyName] = value;
+            } else {
+                delete attrs[propertyName];
+            }
+
+            modeling.updateProperties(element, {
+                $attrs: attrs
+            });
+
+            updateXMLView();
+        }
+
+        function updatePropertiesPanel() {
+            if (!selectedElement) {
+                document.getElementById('properties-content').innerHTML =
+                    '<p>Select a BPMN element to edit its properties</p>';
+                return;
+            }
+
+            const businessObject = selectedElement.businessObject;
+            const elementType = businessObject.$type;
+            const isServiceTask = elementType === 'bpmn:ServiceTask';
+            const isUserTask = elementType === 'bpmn:UserTask';
+            const isGateway = elementType && elementType.includes('Gateway');
+
+            let html = `
+                <div class="property-group">
+                    <h4>Basic Properties</h4>
+                    <div class="property-field">
+                        <label>Name</label>
+                        <input type="text" id="element-name" value="${businessObject.name || ''}" 
+                               onchange="updateBasicProperty('name', this.value)">
+                    </div>
+                    <div class="property-field">
+                        <label>ID</label>
+                        <input type="text" id="element-id" value="${businessObject.id || ''}" 
+                               onchange="updateBasicProperty('id', this.value)">
+                    </div>
+                    <div class="property-field">
+                        <label>Element Type</label>
+                        <input type="text" value="${elementType}" readonly style="background:#f5f5f5;">
+                    </div>
+                </div>
+            `;
+
+            // Service Task specific properties
+            if (isServiceTask) {
+                html += `
+                    <div class="property-group">
+                        <h4>Service Properties</h4>
+                        <div class="property-field">
+                            <label>Service Type</label>
+                            <input type="text" id="service-type" 
+                                   value="${getExtensionProperty(selectedElement, 'service:type')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service:type', this.value)">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Name</label>
+                            <input type="text" id="service-name" 
+                                   value="${getExtensionProperty(selectedElement, 'service:name')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service:name', this.value)">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Version</label>
+                            <input type="text" id="service-version" 
+                                   value="${getExtensionProperty(selectedElement, 'service:version')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service:version', this.value)">
+                        </div>
+                    </div>
+                `;
+            }
+
+            // User Task specific properties
+            if (isUserTask) {
+                html += `
+                    <div class="property-group">
+                        <h4>User Task Properties</h4>
+                        <div class="property-field">
+                            <label>Assignee</label>
+                            <input type="text" id="user-assignee" 
+                                   value="${getExtensionProperty(selectedElement, 'assignee')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'assignee', this.value)">
+                        </div>
+                        <div class="property-field">
+                            <label>Candidate Groups</label>
+                            <input type="text" id="user-groups" 
+                                   value="${getExtensionProperty(selectedElement, 'candidateGroups')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'candidateGroups', this.value)">
+                        </div>
+                        <div class="property-field">
+                            <label>Due Date</label>
+                            <input type="text" id="user-duedate" 
+                                   value="${getExtensionProperty(selectedElement, 'dueDate')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'dueDate', this.value)">
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Gateway specific properties
+            if (isGateway) {
+                html += `
+                    <div class="property-group">
+                        <h4>Gateway Properties</h4>
+                        <div class="property-field">
+                            <label>Gateway Type</label>
+                            <input type="text" value="${elementType.replace('bpmn:', '')}" readonly style="background:#f5f5f5;">
+                        </div>
+                        <div class="property-field">
+                            <label>Default Flow</label>
+                            <input type="text" id="gateway-default" 
+                                   value="${businessObject.default || ''}" 
+                                   onchange="updateBasicProperty('default', this.value)">
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Task properties (for regular tasks)
+            if (elementType === 'bpmn:Task') {
+                html += `
+                    <div class="property-group">
+                        <h4>Task Properties</h4>
+                        <div class="property-field">
+                            <label>Documentation</label>
+                            <textarea id="task-documentation" 
+                                      onchange="updateBasicProperty('documentation', this.value)"
+                                      style="width:100%; height:60px; padding:8px; border:1px solid #ddd; border-radius:3px;">${businessObject.documentation || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('properties-content').innerHTML = html;
+        }
+
+        function updateBasicProperty(propertyName, value) {
+            if (!selectedElement) return;
+
+            const modeling = modeler.get('modeling');
+            const properties = {};
+            properties[propertyName] = value;
+
+            modeling.updateProperties(selectedElement, properties);
+            updateXMLView();
+        }
+
+        function selectElement(element) {
+            selectedElement = element;
+            const businessObject = element.businessObject;
+            updateStatus(`Selected: ${businessObject.$type} (${businessObject.id})`);
+            updatePropertiesPanel();
+        }
+
+        async function initModeler() {
+            try {
+                updateStatus('Initializing BPMN modeler...', 'success');
+
+                // Check if BPMN.js loaded
+                if (typeof BpmnJS === 'undefined') {
+                    throw new Error('BPMN.js library not loaded');
+                }
+
+                modeler = new BpmnJS({
+                    container: '#canvas'
+                });
+
+                updateStatus('Importing BPMN diagram...', 'success');
+
+                await modeler.importXML(testXML);
+
+                updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
+
+                // Add event listeners
+                modeler.on('element.click', (event) => {
+                    selectElement(event.element);
+                });
+
+                modeler.on('selection.changed', (event) => {
+                    if (event.newSelection && event.newSelection.length > 0) {
+                        selectElement(event.newSelection[0]);
+                    }
+                });
+
+                // Auto-select the service task
+                setTimeout(() => {
+                    const elementRegistry = modeler.get('elementRegistry');
+                    const serviceTask = elementRegistry.get('ServiceTask_1');
+                    if (serviceTask) {
+                        const selection = modeler.get('selection');
+                        selection.select(serviceTask);
+                        selectElement(serviceTask);
+                    }
+                }, 100);
+
+                updateXMLView();
+
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                console.error('Modeler initialization error:', error);
+                console.error('Error details:', error.stack);
+            }
+        }
+
+        // Handle XML editor changes
+        function syncXMLFromEditor() {
+            if (currentView === 'xml' && modeler) {
+                const xmlContent = document.getElementById('xml-editor').value;
+                modeler.importXML(xmlContent).then(() => {
+                    updateStatus('XML updated successfully', 'success');
+                    if (currentView === 'diagram') {
+                        updateXMLView();
+                    }
+                }).catch(error => {
+                    updateStatus('XML import error: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initModeler);
+
+        // Add XML editor sync
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('xml-editor').addEventListener('input',
+                debounce(syncXMLFromEditor, 1000)
+            );
+        });
+
+        // Debounce function for XML sync
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Add global debug function
+        window.debugModeler = function () {
+            console.log('Modeler:', modeler);
+            console.log('Selected element:', selectedElement);
+            if (selectedElement) {
+                console.log('Business object:', selectedElement.businessObject);
+                console.log('Attributes:', selectedElement.businessObject.$attrs);
+            }
+        };
+    </script>
+</body>
+
+</html>
