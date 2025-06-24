@@ -309,6 +309,8 @@
         <div class="view-toggle">
             <button class="toggle-btn active" onclick="switchView('diagram')">Diagram View</button>
             <button class="toggle-btn" onclick="switchView('xml')">XML View</button>
+            <button class="toggle-btn" onclick="clearModel()"
+                style="background: #dc3545; color: white; border-color: #dc3545;">Clear All</button>
         </div>
     </div>
 
@@ -330,6 +332,7 @@
                     <li><strong>Ctrl+Z</strong> - Undo</li>
                     <li><strong>Ctrl+Y</strong> - Redo</li>
                     <li><strong>Ctrl+S</strong> - Export diagram</li>
+                    <li><strong>Ctrl+Shift+S</strong> - Manual save to cache</li>
                 </ul>
             </div>
             <div id="properties-content">
@@ -870,11 +873,25 @@
                     container: '#canvas'
                 });
 
-                updateStatus('Importing empty BPMN diagram...', 'info');
+                // Try to load from cache first
+                const cachedXML = loadModelFromCache();
+                let xmlToLoad = emptyXML;
+                let loadMessage = 'Importing empty BPMN diagram...';
 
-                await modeler.importXML(emptyXML);
+                if (cachedXML) {
+                    xmlToLoad = cachedXML;
+                    loadMessage = 'Loading cached BPMN diagram...';
+                }
 
-                updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
+                updateStatus(loadMessage, 'info');
+
+                await modeler.importXML(xmlToLoad);
+
+                if (cachedXML) {
+                    updateStatus('BPMN modeler ready! Cached model loaded. Use the palette on the left to add elements.', 'success');
+                } else {
+                    updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
+                }
 
                 // Add event listeners
                 modeler.on('element.click', (event) => {
@@ -892,6 +909,8 @@
 
                 modeler.on('element.changed', () => {
                     updateXMLView();
+                    // Auto-save to cache
+                    saveModelToCache();
                 });
 
                 updateXMLView();
@@ -952,6 +971,18 @@
         // Add global delete function
         window.deleteElement = function () {
             deleteSelectedElement();
+        };
+
+        // Add global save function
+        window.saveModel = function () {
+            saveModelToCache();
+            updateStatus('Model manually saved to cache', 'success');
+        };
+
+        // Add global clear cache function
+        window.clearCache = function () {
+            clearModelCache();
+            updateStatus('Cache cleared', 'success');
         };
 
         // Add function to export diagram
@@ -1052,7 +1083,14 @@
                 case 'S':
                     if (event.ctrlKey || event.metaKey) {
                         event.preventDefault();
-                        exportDiagram();
+                        if (event.shiftKey) {
+                            // Ctrl+Shift+S or Cmd+Shift+S = Manual save to cache
+                            saveModelToCache();
+                            updateStatus('Model manually saved to cache', 'success');
+                        } else {
+                            // Ctrl+S or Cmd+S = Export diagram
+                            exportDiagram();
+                        }
                     }
                     break;
             }
@@ -1060,6 +1098,67 @@
 
         // Add keyboard event listener
         document.addEventListener('keydown', handleKeyboardEvents);
+
+        // Add clear model function
+        function clearModel() {
+            if (confirm('Are you sure you want to clear the entire model? This cannot be undone.')) {
+                if (modeler) {
+                    modeler.destroy();
+                }
+
+                // Clear cache
+                clearModelCache();
+
+                // Reset variables
+                modeler = null;
+                selectedElement = null;
+                currentView = 'diagram';
+
+                // Reinitialize with empty model
+                initModeler();
+
+                updateStatus('Model cleared and cache removed', 'success');
+            }
+        }
+
+        // Browser caching functions
+        function saveModelToCache() {
+            if (!modeler) return;
+
+            modeler.saveXML({ format: true }).then(result => {
+                localStorage.setItem('bpmn_model_cache', result.xml);
+                localStorage.setItem('bpmn_model_timestamp', Date.now());
+                console.log('Model saved to cache');
+            }).catch(error => {
+                console.error('Error saving model to cache:', error);
+            });
+        }
+
+        function loadModelFromCache() {
+            const cachedXML = localStorage.getItem('bpmn_model_cache');
+            const timestamp = localStorage.getItem('bpmn_model_timestamp');
+
+            if (cachedXML && timestamp) {
+                const age = Date.now() - parseInt(timestamp);
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+                if (age < maxAge) {
+                    return cachedXML;
+                } else {
+                    // Clear expired cache
+                    localStorage.removeItem('bpmn_model_cache');
+                    localStorage.removeItem('bpmn_model_timestamp');
+                }
+            }
+
+            return null;
+        }
+
+        function clearModelCache() {
+            localStorage.removeItem('bpmn_model_cache');
+            localStorage.removeItem('bpmn_model_timestamp');
+            console.log('Model cache cleared');
+        }
     </script>
 </body>
 
