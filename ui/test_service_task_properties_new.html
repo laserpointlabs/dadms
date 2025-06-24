@@ -60,12 +60,12 @@
     </style>
 
     <!-- BPMN.js CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css">
-    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-js.css">
-    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn-embedded.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@11.5.0/dist/assets/diagram-js.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@11.5.0/dist/assets/bpmn-js.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@11.5.0/dist/assets/bpmn-font/css/bpmn-embedded.css">
 
     <!-- Properties Panel CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/bpmn-js-properties-panel@3.19.0/dist/assets/properties-panel.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js-properties-panel@1.23.0/dist/assets/properties-panel.css">
 </head>
 
 <body>
@@ -83,8 +83,8 @@
     </div>
 
     <!-- BPMN.js and Properties Panel -->
-    <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js"></script>
-    <script src="https://unpkg.com/bpmn-js-properties-panel@3.19.0/dist/index.js"></script>
+    <script src="https://unpkg.com/bpmn-js@11.5.0/dist/bpmn-modeler.development.js"></script>
+    <script src="https://unpkg.com/bpmn-js-properties-panel@1.23.0/dist/index.js"></script>
 
     <script>
         // Initial BPMN XML with Service Task
@@ -335,26 +335,14 @@
         }
 
         // Create the BPMN modeler with properties panel
-        if (typeof BpmnJS === 'undefined') {
-            console.error('BPMN.js not loaded');
-            document.getElementById('xml-output').textContent = 'Error: BPMN.js library not loaded';
-            return;
-        }
-
-        if (typeof BpmnPropertiesPanelModule === 'undefined') {
-            console.error('Properties Panel module not loaded');
-            document.getElementById('xml-output').textContent = 'Error: Properties Panel module not loaded';
-            return;
-        }
-
         const modeler = new BpmnJS({
             container: '#canvas',
             propertiesPanel: {
                 parent: '#properties-panel'
             },
             additionalModules: [
-                BpmnPropertiesPanelModule,
-                BpmnPropertiesProviderModule,
+                BpmnPropertiesPanelModule.BpmnPropertiesPanelModule,
+                BpmnPropertiesPanelModule.BpmnPropertiesProviderModule,
                 {
                     __init__: ['servicePropertiesProvider'],
                     servicePropertiesProvider: ['type', ServicePropertiesProvider]
@@ -393,7 +381,6 @@
             }, 100);
         }).catch(function (err) {
             console.error('Error importing BPMN diagram:', err);
-            document.getElementById('xml-output').textContent = 'Error loading diagram: ' + err.message;
         });
 
         // Listen for changes to update XML display and refresh input fields
