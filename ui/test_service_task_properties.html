@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPMN Service Task Properties Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .info {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info strong {
+            color: #0066cc;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 600px;
+        }
+
+        .canvas {
+            flex: 2;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .properties {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .properties h3 {
+            margin: 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        #properties-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .xml-viewer {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .xml-viewer h3 {
+            margin: 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        #xml-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: #f8f9fa;
+            border: none;
+            resize: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .test-controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .test-controls button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .test-controls button:hover {
+            background-color: #0056b3;
+        }
+
+        .test-controls button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .log {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-entry.info {
+            color: #0066cc;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+
+        .log-entry.warning {
+            color: #ffc107;
+        }
+
+        .view-toggle {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .view-toggle button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .view-toggle button.active {
+            background-color: #007bff;
+        }
+
+        .view-toggle button:hover {
+            background-color: #0056b3;
+        }
+
+        .save-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .save-status.editing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .save-status.saving {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .save-status.saved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .save-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+
+        .property-group h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .property-field {
+            margin-bottom: 15px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .property-field input:focus,
+        .property-field select:focus,
+        .property-field textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .property-field textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>BPMN Properties Panel</h1>
+
+    <div class="info">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Click on different BPMN elements to see how the properties panel changes</li>
+            <li>Notice that implementation properties only appear for Service Tasks</li>
+            <li>Edit properties and observe the save status indicators</li>
+            <li>Switch to XML view to see the generated BPMN XML</li>
+        </ol>
+    </div>
+
+    <div class="view-toggle">
+        <button id="properties-view-btn" class="active" onclick="showPropertiesView()">Properties View</button>
+        <button id="xml-view-btn" onclick="showXMLView()">XML View</button>
+    </div>
+
+    <div class="container">
+        <div id="canvas" class="canvas"></div>
+        <div id="properties-panel" class="properties">
+            <h3>Properties Panel</h3>
+            <div id="properties-content">
+                <p>Select an element to edit its properties</p>
+            </div>
+        </div>
+        <div id="xml-panel" class="xml-viewer" style="display: none;">
+            <h3>Generated XML</h3>
+            <textarea id="xml-content" readonly placeholder="XML will appear here after making changes..."></textarea>
+        </div>
+    </div>
+
+    <div class="test-controls">
+        <button onclick="saveXML()">Save XML</button>
+        <button onclick="testExtensionProperties()">Test Extensions</button>
+        <button onclick="autoTestExtensionProperties()">Auto Test</button>
+        <span id="save-status" class="save-status"></span>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="log" id="log">
+        <div class="log-entry info">Initializing BPMN modeler...</div>
+    </div>
+
+    <script src="https://unpkg.com/bpmn-js@18.6.2/dist/bpmn-modeler.production.min.js"></script>
+    <script>
+        let modeler;
+        let selectedElement = null;
+        let currentView = 'properties';
+        let saveTimeout;
+
+        // Test BPMN XML with various element types
+        const testXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_test"
+    targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.34.0"
+    modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+    <bpmn:process id="TestProcess" name="Test Process for Service Task Properties" isExecutable="true"
+        camunda:historyTimeToLive="30">
+        <bpmn:startEvent id="StartEvent_1" name="Start Process">
+            <bpmn:documentation>This is the starting point of the test process.</bpmn:documentation>
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+
+        <bpmn:serviceTask id="ServiceTask_1" name="Test Service Task">
+            <bpmn:documentation>This is a test service task with implementation properties.</bpmn:documentation>
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_1" targetRef="UserTask_1" />
+
+        <bpmn:userTask id="UserTask_1" name="User Task">
+            <bpmn:documentation>This is a user task without implementation properties.</bpmn:documentation>
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+        </bpmn:userTask>
+
+        <bpmn:sequenceFlow id="Flow_3" sourceRef="UserTask_1" targetRef="EndEvent_1" />
+
+        <bpmn:endEvent id="EndEvent_1" name="End Process">
+            <bpmn:documentation>This marks the completion of the test process workflow.</bpmn:documentation>
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+        </bpmn:endEvent>
+    </bpmn:process>
+
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="TestProcess">
+            <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+                <dc:Bounds x="152" y="232" width="36" height="36" />
+                <bpmndi:BPMNLabel>
+                    <dc:Bounds x="158" y="275" width="24" height="14" />
+                </bpmndi:BPMNLabel>
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+                <di:waypoint x="188" y="250" />
+                <di:waypoint x="240" y="250" />
+            </bpmndi:BPMNEdge>
+
+            <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="ServiceTask_1">
+                <dc:Bounds x="240" y="210" width="100" height="80" />
+                <bpmndi:BPMNLabel>
+                    <dc:Bounds x="250" y="295" width="80" height="14" />
+                </bpmndi:BPMNLabel>
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+                <di:waypoint x="340" y="250" />
+                <di:waypoint x="392" y="250" />
+            </bpmndi:BPMNEdge>
+
+            <bpmndi:BPMNShape id="UserTask_1_di" bpmnElement="UserTask_1">
+                <dc:Bounds x="392" y="210" width="100" height="80" />
+                <bpmndi:BPMNLabel>
+                    <dc:Bounds x="402" y="295" width="80" height="14" />
+                </bpmndi:BPMNLabel>
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+                <di:waypoint x="492" y="250" />
+                <di:waypoint x="544" y="250" />
+            </bpmndi:BPMNEdge>
+
+            <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+                <dc:Bounds x="544" y="232" width="36" height="36" />
+                <bpmndi:BPMNLabel>
+                    <dc:Bounds x="550" y="275" width="24" height="14" />
+                </bpmndi:BPMNLabel>
+            </bpmndi:BPMNShape>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function showPropertiesView() {
+            document.getElementById('properties-panel').style.display = 'flex';
+            document.getElementById('xml-panel').style.display = 'none';
+            document.getElementById('properties-view-btn').classList.add('active');
+            document.getElementById('xml-view-btn').classList.remove('active');
+            currentView = 'properties';
+        }
+
+        function showXMLView() {
+            document.getElementById('properties-panel').style.display = 'none';
+            document.getElementById('xml-panel').style.display = 'flex';
+            document.getElementById('properties-view-btn').classList.remove('active');
+            document.getElementById('xml-view-btn').classList.add('active');
+            currentView = 'xml';
+            updateXMLView();
+        }
+
+        async function updateXMLView() {
+            if (!modeler) return;
+
+            try {
+                const result = await modeler.saveXML({ format: true });
+                document.getElementById('xml-content').value = result.xml;
+                log('XML view updated', 'success');
+
+                // Check if extension properties are in the XML
+                if (result.xml.includes('camunda:properties')) {
+                    log('Extension properties found in XML', 'success');
+                } else {
+                    log('No extension properties found in XML', 'warning');
+                }
+            } catch (error) {
+                log('Error updating XML view: ' + error.message, 'error');
+                document.getElementById('xml-content').value = 'Error generating XML: ' + error.message;
+            }
+        }
+
+        async function initModeler() {
+            try {
+                const BpmnModeler = window.BpmnJS?.BpmnModeler || window.BpmnJS;
+
+                if (!BpmnModeler) {
+                    throw new Error('BPMN Modeler not loaded');
+                }
+
+                log('Creating BPMN modeler...', 'info');
+
+                // Simple modeler configuration - BPMN.js includes Camunda support by default
+                modeler = new BpmnModeler({
+                    container: '#canvas',
+                    width: '100%',
+                    height: '100%'
+                });
+
+                log('Importing XML...', 'info');
+
+                // Import test XML
+                await modeler.importXML(testXML);
+                log('BPMN modeler initialized successfully', 'success');
+
+                // Add event listeners
+                modeler.on('element.click', (event) => {
+                    const element = event.element;
+                    if (element) {
+                        selectElement(element);
+                    }
+                });
+
+                modeler.on('selection.changed', (event) => {
+                    const selection = event.newSelection;
+                    if (selection && selection.length > 0) {
+                        selectElement(selection[0]);
+                    } else {
+                        clearSelection();
+                    }
+                });
+
+                // Add change listener to update XML view
+                modeler.on('commandStack.changed', async () => {
+                    try {
+                        if (currentView === 'xml') {
+                            await updateXMLView();
+                        }
+                        log('Model updated', 'success');
+                    } catch (error) {
+                        log('Error updating model: ' + error.message, 'error');
+                    }
+                });
+
+                log('Modeler ready - click on elements to test properties panel', 'success');
+
+            } catch (error) {
+                log('Error initializing modeler: ' + error.message, 'error');
+                document.getElementById('properties-content').innerHTML =
+                    '<p style="color: red;">Error initializing BPMN modeler: ' + error.message + '</p>';
+            }
+        }
+
+        function selectElement(element) {
+            selectedElement = element;
+            const businessObject = element.businessObject;
+
+            log(`Selected: ${businessObject.$type} (${businessObject.id})`, 'info');
+
+            // Update the properties panel
+            updatePropertiesPanel();
+
+            // Update save status
+            updateSaveStatus('saved');
+        }
+
+        function clearSelection() {
+            selectedElement = null;
+            log('Selection cleared', 'info');
+            document.getElementById('properties-content').innerHTML =
+                '<p>Select an element to edit its properties</p>';
+        }
+
+        function updatePropertiesPanel() {
+            if (!selectedElement) return;
+
+            const businessObject = selectedElement.businessObject;
+            const isProcess = businessObject.$type === 'bpmn:Process';
+            const isServiceTask = businessObject.$type === 'bpmn:ServiceTask';
+
+            log(`Updating properties panel for ${businessObject.$type}`, 'info');
+
+            let html = `
+                <div class="property-group">
+                    <h4>${isProcess ? 'Process Properties' : 'Basic Properties'}</h4>
+                    <div class="property-field">
+                        <label>Name</label>
+                        <input type="text" id="element-name" value="${businessObject.name || ''}" 
+                               onchange="updateProperty('name', this.value)"
+                               placeholder="${isProcess ? 'Enter process name' : 'Enter element name'}">
+                    </div>
+                    <div class="property-field">
+                        <label>ID</label>
+                        <input type="text" id="element-id" value="${businessObject.id || ''}" 
+                               onchange="updateProperty('id', this.value)"
+                               placeholder="${isProcess ? 'Enter process ID' : 'Enter element ID'}">
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <h4>Documentation</h4>
+                    <div class="property-field">
+                        <label>Description</label>
+                        <textarea id="element-documentation" rows="4"
+                                  onchange="updateProperty('documentation', this.value)"
+                                  placeholder="Enter description or documentation">${businessObject.documentation?.[0]?.text || ''}</textarea>
+                    </div>
+                </div>
+            `;
+
+            // Only show implementation properties for service tasks
+            if (isServiceTask) {
+                html += `
+                    <div class="property-group">
+                        <h4>Implementation</h4>
+                        <div class="property-field">
+                            <label>Type</label>
+                            <select id="implementation-type" onchange="updateProperty('implementation.type', this.value)">
+                                <option value="">Select type</option>
+                                <option value="external" ${businessObject.get('camunda:type') === 'external' ? 'selected' : ''}>External</option>
+                                <option value="java" ${businessObject.get('camunda:type') === 'java' ? 'selected' : ''}>Java</option>
+                                <option value="expression" ${businessObject.get('camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
+                                <option value="delegateExpression" ${businessObject.get('camunda:type') === 'delegateExpression' ? 'selected' : ''}>Delegate Expression</option>
+                            </select>
+                        </div>
+                        <div class="property-field">
+                            <label>Topic</label>
+                            <input type="text" id="implementation-topic" value="${businessObject.get('camunda:topic') || ''}" 
+                                   onchange="updateProperty('implementation.topic', this.value)"
+                                   placeholder="Enter topic name">
+                        </div>
+                    </div>
+
+                    <div class="property-group">
+                        <h4>Extension Properties</h4>
+                        <div class="property-field">
+                            <label>Service Type</label>
+                            <input type="text" id="service-type" value="${getExtensionProperty(businessObject, 'service.type')}" 
+                                   onchange="updateExtensionProperty('service.type', this.value)"
+                                   placeholder="e.g., assistant">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Name</label>
+                            <input type="text" id="service-name" value="${getExtensionProperty(businessObject, 'service.name')}" 
+                                   onchange="updateExtensionProperty('service.name', this.value)"
+                                   placeholder="e.g., dadm-openai-assistant">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Version</label>
+                            <input type="text" id="service-version" value="${getExtensionProperty(businessObject, 'service.version')}" 
+                                   onchange="updateExtensionProperty('service.version', this.value)"
+                                   placeholder="e.g., 1.0">
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('properties-content').innerHTML = html;
+        }
+
+        function getExtensionProperty(businessObject, propertyName) {
+            try {
+                const extensionElements = businessObject.get('extensionElements');
+                if (extensionElements) {
+                    const properties = extensionElements.get('camunda:properties');
+                    if (properties) {
+                        const property = properties.find(prop => prop.get('name') === propertyName);
+                        return property ? property.get('value') : '';
+                    }
+                }
+            } catch (error) {
+                log('Error getting extension property: ' + error.message, 'error');
+            }
+            return '';
+        }
+
+        function updateProperty(propertyPath, value) {
+            if (!selectedElement || !modeler) return;
+
+            try {
+                const businessObject = selectedElement.businessObject;
+
+                if (propertyPath === 'name') {
+                    businessObject.set('name', value);
+                } else if (propertyPath === 'id') {
+                    businessObject.set('id', value);
+                } else if (propertyPath === 'documentation') {
+                    updateDocumentation(businessObject, value);
+                } else if (propertyPath === 'implementation.type') {
+                    if (value.trim()) {
+                        businessObject.set('camunda:type', value);
+                    } else {
+                        businessObject.set('camunda:type', undefined);
+                    }
+                } else if (propertyPath === 'implementation.topic') {
+                    if (value.trim()) {
+                        businessObject.set('camunda:topic', value);
+                    } else {
+                        businessObject.set('camunda:topic', undefined);
+                    }
+                }
+
+                log(`Property updated: ${propertyPath} = ${value}`, 'success');
+            } catch (error) {
+                log('Error updating property: ' + error.message, 'error');
+            }
+        }
+
+        function updateDocumentation(businessObject, value) {
+            try {
+                const moddle = modeler.get('moddle');
+                if (!moddle) {
+                    log('Moddle not available for documentation update', 'error');
+                    return;
+                }
+
+                let documentation = businessObject.get('documentation');
+
+                if (value.trim()) {
+                    if (!documentation || documentation.length === 0) {
+                        const docElement = moddle.create('bpmn:Documentation');
+                        docElement.set('text', value);
+                        businessObject.set('documentation', [docElement]);
+                    } else {
+                        documentation[0].set('text', value);
+                    }
+                } else {
+                    businessObject.set('documentation', []);
+                }
+            } catch (error) {
+                log('Error updating documentation: ' + error.message, 'error');
+            }
+        }
+
+        function updateExtensionProperty(propertyName, value) {
+            if (!selectedElement || !modeler) {
+                log('No selected element or modeler for extension property update', 'error');
+                return;
+            }
+
+            try {
+                const businessObject = selectedElement.businessObject;
+                log(`Updating extension property: ${propertyName} = ${value}`, 'info');
+
+                // Get the current XML
+                modeler.saveXML({ format: true }).then(result => {
+                    let xml = result.xml;
+
+                    // Find the service task element
+                    const taskId = businessObject.id;
+                    const taskStartTag = `<bpmn:serviceTask id="${taskId}"`;
+                    const taskEndTag = `</bpmn:serviceTask>`;
+
+                    const taskStartIndex = xml.indexOf(taskStartTag);
+                    if (taskStartIndex === -1) {
+                        log('Service task not found in XML', 'error');
+                        return;
+                    }
+
+                    const taskEndIndex = xml.indexOf(taskEndTag, taskStartIndex);
+                    if (taskEndIndex === -1) {
+                        log('Service task end tag not found in XML', 'error');
+                        return;
+                    }
+
+                    // Check if extension elements already exist
+                    const extensionStartTag = '<bpmn:extensionElements>';
+                    const extensionEndTag = '</bpmn:extensionElements>';
+
+                    const extensionStartIndex = xml.indexOf(extensionStartTag, taskStartIndex);
+                    const extensionEndIndex = xml.indexOf(extensionEndTag, taskStartIndex);
+
+                    let newXml;
+
+                    if (extensionStartIndex !== -1 && extensionEndIndex !== -1) {
+                        // Extension elements exist, update them
+                        log('Extension elements found, updating...', 'info');
+
+                        const beforeExtension = xml.substring(0, extensionStartIndex);
+                        const afterExtension = xml.substring(extensionEndIndex + extensionEndTag.length);
+
+                        if (value.trim()) {
+                            // Add or update property
+                            const propertiesStartTag = '<camunda:properties>';
+                            const propertiesEndTag = '</camunda:properties>';
+
+                            const propertiesStartIndex = xml.indexOf(propertiesStartTag, extensionStartIndex);
+                            const propertiesEndIndex = xml.indexOf(propertiesEndTag, extensionStartIndex);
+
+                            if (propertiesStartIndex !== -1 && propertiesEndIndex !== -1) {
+                                // Properties exist, check if this property exists
+                                const propertiesContent = xml.substring(propertiesStartIndex + propertiesStartTag.length, propertiesEndIndex);
+                                const propertyPattern = new RegExp(`<camunda:property name="${propertyName}"[^>]*>`, 'g');
+
+                                if (propertyPattern.test(propertiesContent)) {
+                                    // Property exists, update it
+                                    const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
+                                    const updatedPropertiesContent = propertiesContent.replace(
+                                        new RegExp(`<camunda:property name="${propertyName}"[^>]*>.*?</camunda:property>`, 'g'),
+                                        newProperty
+                                    );
+
+                                    newXml = beforeExtension +
+                                        extensionStartTag +
+                                        propertiesStartTag +
+                                        updatedPropertiesContent +
+                                        propertiesEndTag +
+                                        extensionEndTag +
+                                        afterExtension;
+                                } else {
+                                    // Property doesn't exist, add it
+                                    const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
+                                    newXml = beforeExtension +
+                                        extensionStartTag +
+                                        propertiesStartTag +
+                                        propertiesContent +
+                                        newProperty +
+                                        propertiesEndTag +
+                                        extensionEndTag +
+                                        afterExtension;
+                                }
+                            } else {
+                                // Properties don't exist, create them
+                                const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
+                                newXml = beforeExtension +
+                                    extensionStartTag +
+                                    propertiesStartTag +
+                                    newProperty +
+                                    propertiesEndTag +
+                                    extensionEndTag +
+                                    afterExtension;
+                            }
+                        } else {
+                            // Remove property if value is empty
+                            const propertiesStartTag = '<camunda:properties>';
+                            const propertiesEndTag = '</camunda:properties>';
+
+                            const propertiesStartIndex = xml.indexOf(propertiesStartTag, extensionStartIndex);
+                            const propertiesEndIndex = xml.indexOf(propertiesEndTag, extensionStartIndex);
+
+                            if (propertiesStartIndex !== -1 && propertiesEndIndex !== -1) {
+                                const propertiesContent = xml.substring(propertiesStartIndex + propertiesStartTag.length, propertiesEndIndex);
+                                const updatedPropertiesContent = propertiesContent.replace(
+                                    new RegExp(`<camunda:property name="${propertyName}"[^>]*>.*?</camunda:property>\\s*`, 'g'),
+                                    ''
+                                );
+
+                                if (updatedPropertiesContent.trim() === '') {
+                                    // No properties left, remove extension elements entirely
+                                    newXml = beforeExtension + afterExtension;
+                                } else {
+                                    newXml = beforeExtension +
+                                        extensionStartTag +
+                                        propertiesStartTag +
+                                        updatedPropertiesContent +
+                                        propertiesEndTag +
+                                        extensionEndTag +
+                                        afterExtension;
+                                }
+                            }
+                        }
+                    } else {
+                        // Extension elements don't exist, create them
+                        log('Extension elements not found, creating...', 'info');
+
+                        if (value.trim()) {
+                            const beforeTask = xml.substring(0, taskEndIndex);
+                            const afterTask = xml.substring(taskEndIndex);
+
+                            const newProperty = `<camunda:property name="${propertyName}" value="${value}" />`;
+                            const newExtensionElements = `
+      <bpmn:extensionElements>
+        <camunda:properties>
+          ${newProperty}
+        </camunda:properties>
+      </bpmn:extensionElements>`;
+
+                            newXml = beforeTask + newExtensionElements + afterTask;
+                        } else {
+                            // No value, no need to create extension elements
+                            newXml = xml;
+                        }
+                    }
+
+                    // Import the updated XML
+                    modeler.importXML(newXml).then(() => {
+                        log(`Extension property updated successfully: ${propertyName} = ${value}`, 'success');
+
+                        // Update XML view if it's currently visible
+                        if (currentView === 'xml') {
+                            updateXMLView();
+                        }
+                    }).catch(error => {
+                        log('Error importing updated XML: ' + error.message, 'error');
+                    });
+
+                }).catch(error => {
+                    log('Error saving XML: ' + error.message, 'error');
+                });
+
+            } catch (error) {
+                log('Error updating extension property: ' + error.message, 'error');
+                console.error('Extension property update error:', error);
+            }
+        }
+
+        async function saveXML() {
+            if (!modeler) {
+                log('Modeler not initialized', 'error');
+                return;
+            }
+
+            try {
+                const result = await modeler.saveXML({ format: true });
+                log('XML saved successfully', 'success');
+                console.log('Generated XML:', result.xml);
+
+                // Update XML view if it's currently visible
+                if (currentView === 'xml') {
+                    document.getElementById('xml-content').value = result.xml;
+                }
+            } catch (error) {
+                log('Error saving XML: ' + error.message, 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function testExtensionProperties() {
+            if (!selectedElement) {
+                log('No element selected', 'error');
+                return;
+            }
+
+            const businessObject = selectedElement.businessObject;
+            if (businessObject.$type !== 'bpmn:ServiceTask') {
+                log('Selected element is not a Service Task', 'error');
+                return;
+            }
+
+            log('Testing extension properties...', 'info');
+            log(`Business object type: ${businessObject.$type}`, 'info');
+            log(`Business object ID: ${businessObject.id}`, 'info');
+
+            // Test adding multiple properties
+            try {
+                log('Testing service.type...', 'info');
+                updateExtensionProperty('service.type', 'assistant');
+
+                log('Testing service.name...', 'info');
+                updateExtensionProperty('service.name', 'dadm-openai-assistant');
+
+                log('Testing service.version...', 'info');
+                updateExtensionProperty('service.version', '1.0');
+
+                // Also test a custom property
+                log('Testing test.property...', 'info');
+                updateExtensionProperty('test.property', 'test-value-' + Date.now());
+            } catch (error) {
+                log('Error during property updates: ' + error.message, 'error');
+            }
+
+            // Check the XML after a short delay
+            setTimeout(() => {
+                updateXMLView();
+                log('XML updated for testing', 'info');
+
+                // Verify the properties were added
+                const currentExtensionElements = businessObject.get('extensionElements');
+                log(`Extension elements found: ${!!currentExtensionElements}`, 'info');
+
+                if (currentExtensionElements) {
+                    const currentProperties = currentExtensionElements.get('camunda:properties');
+                    log(`Camunda properties found: ${!!currentProperties}`, 'info');
+
+                    if (currentProperties) {
+                        log(`Verification: Found ${currentProperties.length} properties`, 'success');
+                        currentProperties.forEach(prop => {
+                            log(`  ✓ ${prop.get('name')}: ${prop.get('value')}`, 'success');
+                        });
+                    } else {
+                        log('❌ No camunda:properties found', 'error');
+                    }
+                } else {
+                    log('❌ No extension elements found', 'error');
+                }
+            }, 1000);
+        }
+
+        function setupPropertyInputs() {
+            const inputs = document.querySelectorAll('.property-input');
+            inputs.forEach(input => {
+                input.addEventListener('input', function () {
+                    const propertyName = this.getAttribute('data-property');
+                    const value = this.value;
+
+                    // Update save status
+                    updateSaveStatus('editing');
+
+                    // Update the property
+                    updateExtensionProperty(propertyName, value);
+
+                    // Debounce the save status update
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        updateSaveStatus('saved');
+                    }, 1000);
+                });
+            });
+        }
+
+        function updatePropertyDisplay() {
+            if (!selectedElement) return;
+
+            const businessObject = selectedElement.businessObject;
+
+            // Update basic properties
+            document.getElementById('element-id').value = businessObject.id || '';
+            document.getElementById('element-name').value = businessObject.name || '';
+
+            // Update documentation
+            const documentation = businessObject.get('documentation');
+            if (documentation && documentation.length > 0) {
+                document.getElementById('element-documentation').value = documentation[0].text || '';
+            } else {
+                document.getElementById('element-documentation').value = '';
+            }
+
+            // Update extension properties
+            const extensionElements = businessObject.get('extensionElements');
+            if (extensionElements) {
+                const properties = extensionElements.get('camunda:properties');
+                if (properties) {
+                    properties.forEach(prop => {
+                        const name = prop.get('name');
+                        const value = prop.get('value');
+                        const input = document.querySelector(`[data-property="${name}"]`);
+                        if (input) {
+                            input.value = value || '';
+                        }
+                    });
+                }
+            }
+
+            // Update save status
+            updateSaveStatus('saved');
+        }
+
+        function updateSaveStatus(status) {
+            const statusElement = document.getElementById('save-status');
+            if (!statusElement) return;
+
+            statusElement.className = `save-status ${status}`;
+
+            switch (status) {
+                case 'editing':
+                    statusElement.textContent = 'Editing...';
+                    break;
+                case 'saving':
+                    statusElement.textContent = 'Saving...';
+                    break;
+                case 'saved':
+                    statusElement.textContent = 'Saved';
+                    break;
+                case 'error':
+                    statusElement.textContent = 'Error';
+                    break;
+                default:
+                    statusElement.textContent = '';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            initModeler();
+            setupPropertyInputs();
+
+            // Auto-test after modeler is ready
+            setTimeout(() => {
+                autoTestExtensionProperties();
+            }, 2000);
+        });
+
+        function autoTestExtensionProperties() {
+            if (!modeler) {
+                log('Modeler not ready for auto-test', 'warning');
+                return;
+            }
+
+            log('Starting auto-test of extension properties...', 'info');
+
+            // Select the service task
+            const elementRegistry = modeler.get('elementRegistry');
+            const serviceTask = elementRegistry.get('ServiceTask_1');
+            if (serviceTask) {
+                selectElement(serviceTask);
+
+                // Wait a bit then test
+                setTimeout(() => {
+                    testExtensionProperties();
+                }, 500);
+            } else {
+                log('Service task not found for auto-test', 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>
