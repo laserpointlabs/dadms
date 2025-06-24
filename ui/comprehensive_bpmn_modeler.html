@@ -157,10 +157,20 @@
             height: 100%;
             padding: 15px;
             border: none;
-            font-family: 'Courier New', monospace;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 12px;
+            line-height: 1.4;
             box-sizing: border-box;
             resize: none;
+            background: #f8f9fa;
+            color: #333;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .xml-editor:focus {
+            background: #ffffff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
         .xml-view {
@@ -343,6 +353,9 @@
 
     <div class="xml-view">
         <strong>Current XML:</strong>
+        <div style="font-size: 11px; color: #666; margin-bottom: 5px;">
+            💡 Switch to XML View to edit directly - changes auto-save every 500ms
+        </div>
         <pre id="xml-output">Loading...</pre>
     </div>
 
@@ -411,8 +424,16 @@
                 xmlEditor.classList.remove('hidden');
                 diagramBtn.classList.remove('active');
                 xmlBtn.classList.add('active');
-                updateXMLView();
-                updateStatus('Switched to XML View', 'success');
+
+                // Sync current XML to editor when switching to XML view
+                if (modeler) {
+                    modeler.saveXML({ format: true }).then(result => {
+                        xmlEditor.value = result.xml;
+                        updateStatus('Switched to XML View - Edit XML directly', 'success');
+                    }).catch(error => {
+                        updateStatus('Error loading XML: ' + error.message, 'error');
+                    });
+                }
             }
         }
 
@@ -922,28 +943,47 @@
             }
         }
 
-        // Handle XML editor changes
+        // Setup XML editor when page loads
+        function setupXMLEditor() {
+            const xmlEditor = document.getElementById('xml-editor');
+
+            // Add event listeners for real-time editing
+            xmlEditor.addEventListener('input', debounce(syncXMLFromEditor, 500));
+
+            // Add syntax highlighting and better editing experience
+            xmlEditor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
+            xmlEditor.style.fontSize = '12px';
+            xmlEditor.style.lineHeight = '1.4';
+            xmlEditor.style.tabSize = '2';
+
+            // Enable tab key for indentation
+            xmlEditor.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+
+                    // Insert tab at cursor position
+                    this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 2;
+                }
+            });
+        }
+
+        // Handle XML editor changes with real-time sync
         function syncXMLFromEditor() {
             if (currentView === 'xml' && modeler) {
                 const xmlContent = document.getElementById('xml-editor').value;
                 modeler.importXML(xmlContent).then(() => {
                     updateStatus('XML updated successfully', 'success');
                     updateXMLView();
+                    // Auto-save to cache when XML is edited
+                    saveModelToCache();
                 }).catch(error => {
                     updateStatus('XML import error: ' + error.message, 'error');
                 });
             }
         }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', initModeler);
-
-        // Add XML editor sync
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('xml-editor').addEventListener('input',
-                debounce(syncXMLFromEditor, 1000)
-            );
-        });
 
         // Debounce function for XML sync
         function debounce(func, wait) {
@@ -957,6 +997,12 @@
                 timeout = setTimeout(later, wait);
             };
         }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initModeler);
+
+        // Setup XML editor when page loads
+        document.addEventListener('DOMContentLoaded', setupXMLEditor);
 
         // Add global debug function
         window.debugModeler = function () {
