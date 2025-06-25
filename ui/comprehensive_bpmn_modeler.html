@@ -514,10 +514,30 @@
             if (!selectedElement) return;
 
             const modeling = modeler.get('modeling');
-            const properties = {};
-            properties[propertyName] = value;
 
-            modeling.updateProperties(selectedElement, properties);
+            // Handle documentation as a special case
+            if (propertyName === 'documentation') {
+                const documentation = selectedElement.businessObject.documentation;
+                if (!documentation) {
+                    // Create new documentation element
+                    const bpmnFactory = modeler.get('bpmnFactory');
+                    const newDoc = bpmnFactory.create('bpmn:Documentation', {
+                        text: value
+                    });
+                    modeling.updateProperties(selectedElement, {
+                        documentation: [newDoc]
+                    });
+                } else {
+                    // Update existing documentation
+                    documentation[0].text = value;
+                }
+            } else {
+                // Handle other basic properties
+                const properties = {};
+                properties[propertyName] = value;
+                modeling.updateProperties(selectedElement, properties);
+            }
+
             updateXMLView();
         }
 
@@ -572,9 +592,21 @@
 
             // Service Task specific properties
             if (isServiceTask) {
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 html += `
                     <div class="property-group">
                         <h4>Service Task Properties</h4>
+                        <div class="property-field">
+                            <label>Documentation</label>
+                            <textarea id="service-documentation" 
+                                      onchange="updateBasicProperty('documentation', this.value)"
+                                      placeholder="Enter service task documentation...">${documentationText}</textarea>
+                        </div>
                         <div class="property-field">
                             <label>Service Type</label>
                             <select id="service-type" onchange="updateExtensionProperty(selectedElement, 'service:type', this.value)">
@@ -619,9 +651,21 @@
 
             // Script Task specific properties
             if (isScriptTask) {
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 html += `
                     <div class="property-group">
                         <h4>Script Task Properties</h4>
+                        <div class="property-field">
+                            <label>Documentation</label>
+                            <textarea id="script-documentation" 
+                                      onchange="updateBasicProperty('documentation', this.value)"
+                                      placeholder="Enter script task documentation...">${documentationText}</textarea>
+                        </div>
                         <div class="property-field">
                             <label>Script Format</label>
                             <select id="script-format" onchange="updateExtensionProperty(selectedElement, 'script:format', this.value)">
@@ -661,9 +705,21 @@
 
             // Call Activity specific properties
             if (isCallActivity) {
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 html += `
                     <div class="property-group">
                         <h4>Call Activity Properties</h4>
+                        <div class="property-field">
+                            <label>Documentation</label>
+                            <textarea id="call-documentation" 
+                                      onchange="updateBasicProperty('documentation', this.value)"
+                                      placeholder="Enter call activity documentation...">${documentationText}</textarea>
+                        </div>
                         <div class="property-field">
                             <label>Called Element</label>
                             <input type="text" id="call-element" 
@@ -827,9 +883,21 @@
 
             // User Task specific properties
             if (isUserTask) {
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 html += `
                     <div class="property-group">
                         <h4>User Task Properties</h4>
+                        <div class="property-field">
+                            <label>Documentation</label>
+                            <textarea id="user-documentation" 
+                                      onchange="updateBasicProperty('documentation', this.value)"
+                                      placeholder="Enter user task documentation...">${documentationText}</textarea>
+                        </div>
                         <div class="property-field">
                             <label>Assignee</label>
                             <input type="text" id="user-assignee" 
@@ -873,6 +941,12 @@
 
             // Task properties (for regular tasks)
             if (isTask) {
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 html += `
                     <div class="property-group">
                         <h4>Task Properties</h4>
@@ -880,7 +954,7 @@
                             <label>Documentation</label>
                             <textarea id="task-documentation" 
                                       onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter task documentation...">${businessObject.documentation || ''}</textarea>
+                                      placeholder="Enter task documentation...">${documentationText}</textarea>
                         </div>
                         <div class="property-field">
                             <label>Implementation</label>
@@ -1164,6 +1238,7 @@
             if (selectedElement) {
                 console.log('Business object:', selectedElement.businessObject);
                 console.log('Attributes:', selectedElement.businessObject.$attrs);
+                console.log('Documentation:', selectedElement.businessObject.documentation);
             }
         };
 
@@ -1375,6 +1450,39 @@
             localStorage.removeItem('bpmn_model_timestamp');
             console.log('Model cache cleared');
         }
+
+        // Test function to create a service task for testing
+        window.createTestTask = function () {
+            if (!modeler) return;
+
+            const modeling = modeler.get('modeling');
+            const elementFactory = modeler.get('elementFactory');
+            const elementRegistry = modeler.get('elementRegistry');
+
+            // Get the process
+            const process = elementRegistry.get('Process_1');
+            if (!process) {
+                console.log('Process not found');
+                return;
+            }
+
+            // Create a service task
+            const serviceTask = elementFactory.createShape({
+                type: 'bpmn:ServiceTask',
+                id: 'TestServiceTask_1',
+                name: 'Test Service Task'
+            });
+
+            // Add it to the process
+            modeling.createShape(serviceTask, { x: 200, y: 200 }, process);
+
+            // Select it
+            const selection = modeler.get('selection');
+            selection.select(serviceTask);
+            selectElement(serviceTask);
+
+            console.log('Test service task created and selected');
+        };
     </script>
 </body>
 
