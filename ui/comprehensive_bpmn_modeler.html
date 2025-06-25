@@ -497,14 +497,14 @@
             if (attrs.$attrs) {
                 // Extract service properties from $attrs
                 Object.keys(attrs.$attrs).forEach(key => {
-                    if (key.startsWith('service:')) {
+                    if (key.startsWith('service.')) {
                         actualAttrs[key] = attrs.$attrs[key];
                     }
                 });
             } else {
                 // Properties might be stored directly
                 Object.keys(attrs).forEach(key => {
-                    if (key.startsWith('service:')) {
+                    if (key.startsWith('service.')) {
                         actualAttrs[key] = attrs[key];
                     }
                 });
@@ -513,9 +513,9 @@
             console.log('Extracted actual attributes:', actualAttrs);
 
             // Check for service extension properties
-            const serviceType = actualAttrs['service:type'];
-            const serviceName = actualAttrs['service:name'];
-            const serviceVersion = actualAttrs['service:version'];
+            const serviceType = actualAttrs['service.type'];
+            const serviceName = actualAttrs['service.name'];
+            const serviceVersion = actualAttrs['service.version'];
 
             console.log('Service properties:', { serviceType, serviceName, serviceVersion });
 
@@ -528,13 +528,13 @@
             let extensionElements = '';
             extensionElements += '\n  <bpmn:extensionElements>';
             if (serviceType) {
-                extensionElements += `\n    <camunda:property name="serviceType" value="${serviceType}" />`;
+                extensionElements += `\n    <camunda:property name="service.type" value="${serviceType}" />`;
             }
             if (serviceName) {
-                extensionElements += `\n    <camunda:property name="serviceName" value="${serviceName}" />`;
+                extensionElements += `\n    <camunda:property name="service.name" value="${serviceName}" />`;
             }
             if (serviceVersion) {
-                extensionElements += `\n    <camunda:property name="serviceVersion" value="${serviceVersion}" />`;
+                extensionElements += `\n    <camunda:property name="service.version" value="${serviceVersion}" />`;
             }
             extensionElements += '\n  </bpmn:extensionElements>';
 
@@ -552,9 +552,9 @@
 
                 // Remove service attributes from start tag
                 let cleanStartTag = startTag;
-                cleanStartTag = cleanStartTag.replace(/\s+service:type="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service:name="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service:version="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
                 cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
 
                 console.log('Clean start tag:', cleanStartTag);
@@ -579,9 +579,9 @@
 
                 // Remove service attributes from start tag
                 let cleanStartTag = startTag;
-                cleanStartTag = cleanStartTag.replace(/\s+service:type="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service:name="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service:version="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
                 cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
 
                 console.log('Clean start tag:', cleanStartTag);
@@ -733,7 +733,7 @@
             if (element.businessObject.$attrs) {
                 // Extract only the actual extension properties, not the $attrs wrapper
                 Object.keys(element.businessObject.$attrs).forEach(key => {
-                    if (key !== '$attrs' && key.startsWith('service:')) {
+                    if (key !== '$attrs' && key.startsWith('service.')) {
                         existingAttrs[key] = element.businessObject.$attrs[key];
                     }
                 });
@@ -821,24 +821,6 @@
                     <h3>${elementType.replace('bpmn:', '')}</h3>
                     <p>ID: ${elementId}</p>
                 </div>
-                
-                <div class="property-group">
-                    <h4>Basic Properties</h4>
-                    <div class="property-field">
-                        <label>Name</label>
-                        <input type="text" id="element-name" value="${elementName}" 
-                               onchange="updateBasicProperty('name', this.value)">
-                    </div>
-                    <div class="property-field">
-                        <label>ID</label>
-                        <input type="text" id="element-id" value="${elementId}" 
-                               onchange="updateBasicProperty('id', this.value)">
-                    </div>
-                    <div class="property-field">
-                        <label>Element Type</label>
-                        <input type="text" value="${elementType}" readonly style="background:#f5f5f5;">
-                    </div>
-                </div>
             `;
 
             // Service Task specific properties
@@ -851,394 +833,96 @@
 
                 html += `
                     <div class="property-group">
-                        <h4>Service Task Properties</h4>
+                        <h4>General</h4>
                         <div class="property-field">
-                            <label>Documentation</label>
+                            <label>Name</label>
+                            <input type="text" id="service-name" 
+                                   value="${businessObject.name || ''}" 
+                                   onchange="updateBasicProperty('name', this.value)"
+                                   placeholder="Service Task Name">
+                        </div>
+                        <div class="property-field">
+                            <label>ID</label>
+                            <input type="text" id="service-id" 
+                                   value="${businessObject.id || ''}" 
+                                   onchange="updateBasicProperty('id', this.value)"
+                                   placeholder="ServiceTask_1">
+                        </div>
+                    </div>
+                    
+                    <div class="property-group">
+                        <h4>Documentation</h4>
+                        <div class="property-field">
+                            <label>Description</label>
                             <textarea id="service-documentation" 
                                       onchange="updateBasicProperty('documentation', this.value)"
                                       placeholder="Enter service task documentation...">${documentationText}</textarea>
                         </div>
+                    </div>
+                    
+                    <div class="property-group">
+                        <h4>Implementation</h4>
+                        <div class="property-field">
+                            <label>Type</label>
+                            <select id="service-type" onchange="updateExtensionProperty(selectedElement, 'camunda:type', this.value)">
+                                <option value="">Select Type</option>
+                                <option value="external" ${getExtensionProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
+                                <option value="expression" ${getExtensionProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
+                                <option value="connector" ${getExtensionProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
+                            </select>
+                        </div>
+                        <div class="property-field">
+                            <label>Topic</label>
+                            <input type="text" id="service-topic" 
+                                   value="${getExtensionProperty(selectedElement, 'camunda:topic')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'camunda:topic', this.value)"
+                                   placeholder="service-topic">
+                        </div>
+                    </div>
+                    
+                    <div class="property-group">
+                        <h4>Extension Properties</h4>
                         <div class="property-field">
                             <label>Service Type</label>
-                            <select id="service-type" onchange="updateExtensionProperty(selectedElement, 'service:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="REST" ${getExtensionProperty(selectedElement, 'service:type') === 'REST' ? 'selected' : ''}>REST</option>
-                                <option value="SOAP" ${getExtensionProperty(selectedElement, 'service:type') === 'SOAP' ? 'selected' : ''}>SOAP</option>
-                                <option value="JAVA" ${getExtensionProperty(selectedElement, 'service:type') === 'JAVA' ? 'selected' : ''}>JAVA</option>
-                                <option value="EXPRESSION" ${getExtensionProperty(selectedElement, 'service:type') === 'EXPRESSION' ? 'selected' : ''}>EXPRESSION</option>
-                            </select>
+                            <input type="text" id="service-ext-type" 
+                                   value="${getExtensionProperty(selectedElement, 'service.type')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service.type', this.value)"
+                                   placeholder="assistant">
                         </div>
                         <div class="property-field">
                             <label>Service Name</label>
-                            <input type="text" id="service-name" 
-                                   value="${getExtensionProperty(selectedElement, 'service:name')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service:name', this.value)"
-                                   placeholder="e.g., UserService_TEST_WORD">
+                            <input type="text" id="service-ext-name" 
+                                   value="${getExtensionProperty(selectedElement, 'service.name')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service.name', this.value)"
+                                   placeholder="dadm-openai-assistant">
                         </div>
                         <div class="property-field">
                             <label>Service Version</label>
-                            <input type="text" id="service-version" 
-                                   value="${getExtensionProperty(selectedElement, 'service:version')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service:version', this.value)"
-                                   placeholder="e.g., 1.0">
-                        </div>
-                        <div class="property-field">
-                            <label>Endpoint URL</label>
-                            <input type="text" id="service-endpoint" 
-                                   value="${getExtensionProperty(selectedElement, 'service:endpoint')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service:endpoint', this.value)"
-                                   placeholder="https://api.example.com/service">
-                        </div>
-                        <div class="property-field">
-                            <label>Timeout (ms)</label>
-                            <input type="number" id="service-timeout" 
-                                   value="${getExtensionProperty(selectedElement, 'service:timeout')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service:timeout', this.value)"
-                                   placeholder="5000">
+                            <input type="text" id="service-ext-version" 
+                                   value="${getExtensionProperty(selectedElement, 'service.version')}" 
+                                   onchange="updateExtensionProperty(selectedElement, 'service.version', this.value)"
+                                   placeholder="1.0">
                         </div>
                     </div>
                 `;
-            }
-
-            // Script Task specific properties
-            if (isScriptTask) {
-                // Get documentation text properly
-                let documentationText = '';
-                if (businessObject.documentation && businessObject.documentation.length > 0) {
-                    documentationText = businessObject.documentation[0].text || '';
-                }
-
+            } else {
+                // For non-service tasks, show basic properties
                 html += `
                     <div class="property-group">
-                        <h4>Script Task Properties</h4>
+                        <h4>Basic Properties</h4>
                         <div class="property-field">
-                            <label>Documentation</label>
-                            <textarea id="script-documentation" 
-                                      onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter script task documentation...">${documentationText}</textarea>
+                            <label>Name</label>
+                            <input type="text" value="${elementName}" 
+                                   onchange="updateBasicProperty('name', this.value)">
                         </div>
                         <div class="property-field">
-                            <label>Script Format</label>
-                            <select id="script-format" onchange="updateExtensionProperty(selectedElement, 'script:format', this.value)">
-                                <option value="">Select Format</option>
-                                <option value="groovy" ${getExtensionProperty(selectedElement, 'script:format') === 'groovy' ? 'selected' : ''}>Groovy</option>
-                                <option value="javascript" ${getExtensionProperty(selectedElement, 'script:format') === 'javascript' ? 'selected' : ''}>JavaScript</option>
-                                <option value="python" ${getExtensionProperty(selectedElement, 'script:format') === 'python' ? 'selected' : ''}>Python</option>
-                                <option value="ruby" ${getExtensionProperty(selectedElement, 'script:format') === 'ruby' ? 'selected' : ''}>Ruby</option>
-                                <option value="shell" ${getExtensionProperty(selectedElement, 'script:format') === 'shell' ? 'selected' : ''}>Shell</option>
-                            </select>
+                            <label>ID</label>
+                            <input type="text" value="${elementId}" 
+                                   onchange="updateBasicProperty('id', this.value)">
                         </div>
                         <div class="property-field">
-                            <label>Script Content</label>
-                            <textarea id="script-content" 
-                                      onchange="updateExtensionProperty(selectedElement, 'script:content', this.value)"
-                                      placeholder="Enter your script code here...">${getExtensionProperty(selectedElement, 'script:content')}</textarea>
-                        </div>
-                        <div class="property-field">
-                            <label>Script File Path</label>
-                            <input type="text" id="script-file" 
-                                   value="${getExtensionProperty(selectedElement, 'script:file')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'script:file', this.value)"
-                                   placeholder="/path/to/script.groovy">
-                        </div>
-                        <div class="property-field">
-                            <label>Auto Store Variables</label>
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="script-auto-store" 
-                                       ${getExtensionProperty(selectedElement, 'script:autoStoreVariables') === 'true' ? 'checked' : ''}
-                                       onchange="updateExtensionProperty(selectedElement, 'script:autoStoreVariables', this.checked)">
-                                <label for="script-auto-store">Automatically store script variables</label>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Call Activity specific properties
-            if (isCallActivity) {
-                // Get documentation text properly
-                let documentationText = '';
-                if (businessObject.documentation && businessObject.documentation.length > 0) {
-                    documentationText = businessObject.documentation[0].text || '';
-                }
-
-                html += `
-                    <div class="property-group">
-                        <h4>Call Activity Properties</h4>
-                        <div class="property-field">
-                            <label>Documentation</label>
-                            <textarea id="call-documentation" 
-                                      onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter call activity documentation...">${documentationText}</textarea>
-                        </div>
-                        <div class="property-field">
-                            <label>Called Element</label>
-                            <input type="text" id="call-element" 
-                                   value="${businessObject.calledElement || ''}" 
-                                   onchange="updateBasicProperty('calledElement', this.value)"
-                                   placeholder="Process_1">
-                        </div>
-                        <div class="property-field">
-                            <label>Called Element Type</label>
-                            <select id="call-type" onchange="updateExtensionProperty(selectedElement, 'call:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="process" ${getExtensionProperty(selectedElement, 'call:type') === 'process' ? 'selected' : ''}>Process</option>
-                                <option value="case" ${getExtensionProperty(selectedElement, 'call:type') === 'case' ? 'selected' : ''}>Case</option>
-                                <option value="globalTask" ${getExtensionProperty(selectedElement, 'call:type') === 'globalTask' ? 'selected' : ''}>Global Task</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Inherit Variables</label>
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="call-inherit" 
-                                       ${getExtensionProperty(selectedElement, 'call:inheritVariables') === 'true' ? 'checked' : ''}
-                                       onchange="updateExtensionProperty(selectedElement, 'call:inheritVariables', this.checked)">
-                                <label for="call-inherit">Inherit variables from parent process</label>
-                            </div>
-                        </div>
-                        <div class="property-field">
-                            <label>Variable Mapping</label>
-                            <textarea id="call-mapping" 
-                                      onchange="updateExtensionProperty(selectedElement, 'call:variableMapping', this.value)"
-                                      placeholder="Define variable mappings (JSON format)...">${getExtensionProperty(selectedElement, 'call:variableMapping')}</textarea>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Data Store specific properties
-            if (isDataStore) {
-                html += `
-                    <div class="property-group">
-                        <h4>Data Store Properties</h4>
-                        <div class="property-field">
-                            <label>Data Store Name</label>
-                            <input type="text" id="datastore-name" 
-                                   value="${businessObject.name || ''}" 
-                                   onchange="updateBasicProperty('name', this.value)"
-                                   placeholder="Customer Database">
-                        </div>
-                        <div class="property-field">
-                            <label>Data Store Type</label>
-                            <select id="datastore-type" onchange="updateExtensionProperty(selectedElement, 'data:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="database" ${getExtensionProperty(selectedElement, 'data:type') === 'database' ? 'selected' : ''}>Database</option>
-                                <option value="file" ${getExtensionProperty(selectedElement, 'data:type') === 'file' ? 'selected' : ''}>File System</option>
-                                <option value="cache" ${getExtensionProperty(selectedElement, 'data:type') === 'cache' ? 'selected' : ''}>Cache</option>
-                                <option value="queue" ${getExtensionProperty(selectedElement, 'data:type') === 'queue' ? 'selected' : ''}>Message Queue</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Connection String</label>
-                            <input type="text" id="datastore-connection" 
-                                   value="${getExtensionProperty(selectedElement, 'data:connection')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'data:connection', this.value)"
-                                   placeholder="jdbc:mysql://localhost:3306/database">
-                        </div>
-                        <div class="property-field">
-                            <label>Capacity</label>
-                            <input type="text" id="datastore-capacity" 
-                                   value="${getExtensionProperty(selectedElement, 'data:capacity')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'data:capacity', this.value)"
-                                   placeholder="1GB">
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Data Object specific properties
-            if (isDataObject) {
-                html += `
-                    <div class="property-group">
-                        <h4>Data Object Properties</h4>
-                        <div class="property-field">
-                            <label>Data Object Name</label>
-                            <input type="text" id="dataobject-name" 
-                                   value="${businessObject.name || ''}" 
-                                   onchange="updateBasicProperty('name', this.value)"
-                                   placeholder="Customer Data">
-                        </div>
-                        <div class="property-field">
-                            <label>Data Type</label>
-                            <select id="dataobject-type" onchange="updateExtensionProperty(selectedElement, 'data:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="string" ${getExtensionProperty(selectedElement, 'data:type') === 'string' ? 'selected' : ''}>String</option>
-                                <option value="integer" ${getExtensionProperty(selectedElement, 'data:type') === 'integer' ? 'selected' : ''}>Integer</option>
-                                <option value="boolean" ${getExtensionProperty(selectedElement, 'data:type') === 'boolean' ? 'selected' : ''}>Boolean</option>
-                                <option value="date" ${getExtensionProperty(selectedElement, 'data:type') === 'date' ? 'selected' : ''}>Date</option>
-                                <option value="object" ${getExtensionProperty(selectedElement, 'data:type') === 'object' ? 'selected' : ''}>Object</option>
-                                <option value="array" ${getExtensionProperty(selectedElement, 'data:type') === 'array' ? 'selected' : ''}>Array</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Default Value</label>
-                            <input type="text" id="dataobject-default" 
-                                   value="${getExtensionProperty(selectedElement, 'data:defaultValue')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'data:defaultValue', this.value)"
-                                   placeholder="Default value">
-                        </div>
-                        <div class="property-field">
-                            <label>Required</label>
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="dataobject-required" 
-                                       ${getExtensionProperty(selectedElement, 'data:required') === 'true' ? 'checked' : ''}
-                                       onchange="updateExtensionProperty(selectedElement, 'data:required', this.checked)">
-                                <label for="dataobject-required">This data object is required</label>
-                            </div>
-                        </div>
-                        <div class="property-field">
-                            <label>Description</label>
-                            <textarea id="dataobject-description" 
-                                      onchange="updateExtensionProperty(selectedElement, 'data:description', this.value)"
-                                      placeholder="Describe the purpose of this data object...">${getExtensionProperty(selectedElement, 'data:description')}</textarea>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Gateway specific properties
-            if (isGateway) {
-                html += `
-                    <div class="property-group">
-                        <h4>Gateway Properties</h4>
-                        <div class="property-field">
-                            <label>Gateway Type</label>
-                            <input type="text" value="${elementType.replace('bpmn:', '')}" readonly style="background:#f5f5f5;">
-                        </div>
-                        <div class="property-field">
-                            <label>Default Flow</label>
-                            <input type="text" id="gateway-default" 
-                                   value="${businessObject.default || ''}" 
-                                   onchange="updateBasicProperty('default', this.value)"
-                                   placeholder="Flow ID">
-                        </div>
-                        <div class="property-field">
-                            <label>Gateway Direction</label>
-                            <select id="gateway-direction" onchange="updateExtensionProperty(selectedElement, 'gateway:direction', this.value)">
-                                <option value="">Select Direction</option>
-                                <option value="Unspecified" ${getExtensionProperty(selectedElement, 'gateway:direction') === 'Unspecified' ? 'selected' : ''}>Unspecified</option>
-                                <option value="Converging" ${getExtensionProperty(selectedElement, 'gateway:direction') === 'Converging' ? 'selected' : ''}>Converging</option>
-                                <option value="Diverging" ${getExtensionProperty(selectedElement, 'gateway:direction') === 'Diverging' ? 'selected' : ''}>Diverging</option>
-                                <option value="Mixed" ${getExtensionProperty(selectedElement, 'gateway:direction') === 'Mixed' ? 'selected' : ''}>Mixed</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Condition Expression</label>
-                            <textarea id="gateway-condition" 
-                                      onchange="updateExtensionProperty(selectedElement, 'gateway:condition', this.value)"
-                                      placeholder="Enter condition expression...">${getExtensionProperty(selectedElement, 'gateway:condition')}</textarea>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // User Task specific properties
-            if (isUserTask) {
-                // Get documentation text properly
-                let documentationText = '';
-                if (businessObject.documentation && businessObject.documentation.length > 0) {
-                    documentationText = businessObject.documentation[0].text || '';
-                }
-
-                html += `
-                    <div class="property-group">
-                        <h4>User Task Properties</h4>
-                        <div class="property-field">
-                            <label>Documentation</label>
-                            <textarea id="user-documentation" 
-                                      onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter user task documentation...">${documentationText}</textarea>
-                        </div>
-                        <div class="property-field">
-                            <label>Assignee</label>
-                            <input type="text" id="user-assignee" 
-                                   value="${getExtensionProperty(selectedElement, 'assignee')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'assignee', this.value)"
-                                   placeholder="user@example.com">
-                        </div>
-                        <div class="property-field">
-                            <label>Candidate Users</label>
-                            <input type="text" id="user-candidates" 
-                                   value="${getExtensionProperty(selectedElement, 'candidateUsers')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'candidateUsers', this.value)"
-                                   placeholder="user1,user2,user3">
-                        </div>
-                        <div class="property-field">
-                            <label>Candidate Groups</label>
-                            <input type="text" id="user-groups" 
-                                   value="${getExtensionProperty(selectedElement, 'candidateGroups')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'candidateGroups', this.value)"
-                                   placeholder="managers,developers">
-                        </div>
-                        <div class="property-field">
-                            <label>Due Date</label>
-                            <input type="text" id="user-duedate" 
-                                   value="${getExtensionProperty(selectedElement, 'dueDate')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'dueDate', this.value)"
-                                   placeholder="2024-12-31T23:59:59">
-                        </div>
-                        <div class="property-field">
-                            <label>Priority</label>
-                            <select id="user-priority" onchange="updateExtensionProperty(selectedElement, 'priority', this.value)">
-                                <option value="">Select Priority</option>
-                                <option value="low" ${getExtensionProperty(selectedElement, 'priority') === 'low' ? 'selected' : ''}>Low</option>
-                                <option value="normal" ${getExtensionProperty(selectedElement, 'priority') === 'normal' ? 'selected' : ''}>Normal</option>
-                                <option value="high" ${getExtensionProperty(selectedElement, 'priority') === 'high' ? 'selected' : ''}>High</option>
-                            </select>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Task properties (for regular tasks)
-            if (isTask) {
-                // Get documentation text properly
-                let documentationText = '';
-                if (businessObject.documentation && businessObject.documentation.length > 0) {
-                    documentationText = businessObject.documentation[0].text || '';
-                }
-
-                html += `
-                    <div class="property-group">
-                        <h4>Task Properties</h4>
-                        <div class="property-field">
-                            <label>Documentation</label>
-                            <textarea id="task-documentation" 
-                                      onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter task documentation...">${documentationText}</textarea>
-                        </div>
-                        <div class="property-field">
-                            <label>Implementation</label>
-                            <input type="text" id="task-implementation" 
-                                   value="${businessObject.implementation || ''}" 
-                                   onchange="updateBasicProperty('implementation', this.value)"
-                                   placeholder="Implementation class or expression">
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Event specific properties
-            if (isStartEvent || isEndEvent) {
-                html += `
-                    <div class="property-group">
-                        <h4>Event Properties</h4>
-                        <div class="property-field">
-                            <label>Event Type</label>
-                            <select id="event-type" onchange="updateExtensionProperty(selectedElement, 'event:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="message" ${getExtensionProperty(selectedElement, 'event:type') === 'message' ? 'selected' : ''}>Message</option>
-                                <option value="timer" ${getExtensionProperty(selectedElement, 'event:type') === 'timer' ? 'selected' : ''}>Timer</option>
-                                <option value="signal" ${getExtensionProperty(selectedElement, 'event:type') === 'signal' ? 'selected' : ''}>Signal</option>
-                                <option value="error" ${getExtensionProperty(selectedElement, 'event:type') === 'error' ? 'selected' : ''}>Error</option>
-                                <option value="escalation" ${getExtensionProperty(selectedElement, 'event:type') === 'escalation' ? 'selected' : ''}>Escalation</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Event Definition</label>
-                            <textarea id="event-definition" 
-                                      onchange="updateExtensionProperty(selectedElement, 'event:definition', this.value)"
-                                      placeholder="Define event properties...">${getExtensionProperty(selectedElement, 'event:definition')}</textarea>
+                            <label>Element Type</label>
+                            <input type="text" value="${elementType}" readonly style="background:#f5f5f5;">
                         </div>
                     </div>
                 `;
