@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>BPMN XML Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            height: 80vh;
+            gap: 20px;
+        }
+
+        .editor-panel {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .preview-panel {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .xml-editor {
+            width: 100%;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            resize: none;
+            background: #f8f9fa;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: 1px solid #007bff;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .preview-content {
+            height: 100%;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .error-highlight {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .line-numbers {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #666;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="status info" id="status">BPMN XML Editor - Edit your XML directly</div>
+
+    <div class="controls">
+        <button class="btn" onclick="loadSampleXML()">Load Sample</button>
+        <button class="btn" onclick="validateXML()">Validate XML</button>
+        <button class="btn" onclick="formatXML()">Format XML</button>
+        <button class="btn secondary" onclick="downloadXML()">Download XML</button>
+        <button class="btn secondary" onclick="clearEditor()">Clear</button>
+    </div>
+
+    <div class="container">
+        <div class="editor-panel">
+            <h3>XML Editor</h3>
+            <textarea id="xml-editor" class="xml-editor" placeholder="Paste your BPMN XML here..."></textarea>
+        </div>
+
+        <div class="preview-panel">
+            <h3>Preview & Validation</h3>
+            <div id="preview-content" class="preview-content">XML preview will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const sampleXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:service="http://example.com/service"
+    id="Definitions_1"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="Process_1" name="Test Process" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1" name="Start">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+        
+        <bpmn:serviceTask id="ServiceTask_1" name="Sample Service Task" service:type="REST" service:name="UserService" service:version="1.0">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_1" targetRef="EndEvent_1" />
+        
+        <bpmn:endEvent id="EndEvent_1" name="End">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+        </bpmn:endEvent>
+    </bpmn:process>
+    
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+            <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+                <dc:Bounds x="152" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+            
+            <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+                <di:waypoint x="188" y="250" />
+                <di:waypoint x="240" y="250" />
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="ServiceTask_1">
+                <dc:Bounds x="240" y="210" width="100" height="80" />
+            </bpmndi:BPMNShape>
+            
+            <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+                <di:waypoint x="340" y="250" />
+                <di:waypoint x="392" y="250" />
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+                <dc:Bounds x="392" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+        const xmlEditor = document.getElementById('xml-editor');
+        const previewContent = document.getElementById('preview-content');
+        const status = document.getElementById('status');
+
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function loadSampleXML() {
+            xmlEditor.value = sampleXML;
+            updatePreview();
+            updateStatus('Sample XML loaded', 'success');
+        }
+
+        function validateXML() {
+            const xml = xmlEditor.value.trim();
+            if (!xml) {
+                updateStatus('No XML to validate', 'error');
+                return;
+            }
+
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xml, 'text/xml');
+
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    updateStatus('XML is invalid - check syntax', 'error');
+                    highlightErrors(xml);
+                } else {
+                    updateStatus('XML is valid!', 'success');
+                    updatePreview();
+                }
+            } catch (error) {
+                updateStatus('XML validation error: ' + error.message, 'error');
+            }
+        }
+
+        function formatXML() {
+            const xml = xmlEditor.value.trim();
+            if (!xml) {
+                updateStatus('No XML to format', 'error');
+                return;
+            }
+
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xml, 'text/xml');
+
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    updateStatus('Cannot format invalid XML', 'error');
+                    return;
+                }
+
+                const serializer = new XMLSerializer();
+                const formatted = serializer.serializeToString(xmlDoc);
+
+                // Basic formatting with indentation
+                const formattedXML = formatXMLString(formatted);
+                xmlEditor.value = formattedXML;
+                updatePreview();
+                updateStatus('XML formatted successfully', 'success');
+            } catch (error) {
+                updateStatus('Format error: ' + error.message, 'error');
+            }
+        }
+
+        function formatXMLString(xml) {
+            let formatted = '';
+            let indent = '';
+            const tab = '    ';
+            xml.split(/>\s*</).forEach(function (node) {
+                if (node.match(/^\/\w/)) {
+                    indent = indent.substring(tab.length);
+                }
+                formatted += indent + '<' + node + '>\r\n';
+                if (node.match(/^<?\w[^>]*[^\/]$/)) {
+                    indent += tab;
+                }
+            });
+            return formatted.substring(1, formatted.length - 3);
+        }
+
+        function updatePreview() {
+            const xml = xmlEditor.value.trim();
+            if (!xml) {
+                previewContent.textContent = 'No XML to preview';
+                return;
+            }
+
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xml, 'text/xml');
+
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    previewContent.innerHTML = '<span class="error-highlight">Invalid XML - check syntax</span>';
+                    return;
+                }
+
+                const serializer = new XMLSerializer();
+                const formatted = serializer.serializeToString(xmlDoc);
+                previewContent.textContent = formatXMLString(formatted);
+            } catch (error) {
+                previewContent.innerHTML = `<span class="error-highlight">Error: ${error.message}</span>`;
+            }
+        }
+
+        function downloadXML() {
+            const xml = xmlEditor.value.trim();
+            if (!xml) {
+                updateStatus('No XML to download', 'error');
+                return;
+            }
+
+            const blob = new Blob([xml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bpmn-diagram.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            updateStatus('XML downloaded as bpmn-diagram.xml', 'success');
+        }
+
+        function clearEditor() {
+            xmlEditor.value = '';
+            previewContent.textContent = 'XML preview will appear here...';
+            updateStatus('Editor cleared', 'info');
+        }
+
+        function highlightErrors(xml) {
+            // Simple error highlighting
+            previewContent.innerHTML = '<span class="error-highlight">XML contains syntax errors. Please check:</span><br><br>' +
+                '<ul>' +
+                '<li>All tags are properly closed</li>' +
+                '<li>XML declaration is correct</li>' +
+                '<li>Namespace declarations are valid</li>' +
+                '<li>No invalid characters</li>' +
+                '</ul>';
+        }
+
+        // Auto-update preview when typing
+        xmlEditor.addEventListener('input', debounce(updatePreview, 500));
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Load sample XML on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSampleXML();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 's':
+                        e.preventDefault();
+                        downloadXML();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        formatXML();
+                        break;
+                    case 'v':
+                        e.preventDefault();
+                        validateXML();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
