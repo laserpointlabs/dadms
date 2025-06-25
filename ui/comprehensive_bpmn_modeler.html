@@ -394,6 +394,9 @@
         let selectedElement = null;
         let currentView = 'diagram';
 
+        // Property cache to store extension properties extracted from XML
+        let propertyCache = {};
+
         // Empty BPMN XML to start from scratch
         const emptyXML = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -662,6 +665,12 @@
                     overlay.remove();
                 }
 
+                // Just update the properties panel if an element is selected
+                // Don't re-extract properties as they should already be in the cache
+                if (selectedElement) {
+                    updatePropertiesPanel();
+                }
+
                 updateStatus('Switched to Diagram View', 'success');
             } else if (view === 'xml') {
                 canvas.classList.add('hidden');
@@ -675,6 +684,9 @@
                         // Inject extension properties into XML
                         let xml = injectExtensionProperties(result.xml);
                         document.getElementById('xml-editor').value = xml;
+
+                        // Extract and cache extension properties from the current XML
+                        extractAndCacheExtensionProperties();
 
                         // Apply styling to the XML editor
                         highlightXML(xmlEditor);
@@ -716,8 +728,20 @@
 
         function getExtensionProperty(element, propertyName) {
             if (!element || !element.businessObject) return '';
+
+            // First try to get from modeler attributes
             const attrs = element.businessObject.$attrs || {};
-            return attrs[propertyName] || '';
+            let value = attrs[propertyName] || '';
+
+            // If not found in modeler attributes, try to get from cache
+            if (!value) {
+                const elementId = element.businessObject.id;
+                if (propertyCache[elementId] && propertyCache[elementId][propertyName]) {
+                    value = propertyCache[elementId][propertyName];
+                }
+            }
+
+            return value;
         }
 
         function updateExtensionProperty(element, propertyName, value) {
@@ -757,6 +781,17 @@
             });
 
             modeling.updateProperties(element, properties);
+
+            // Update the property cache as well
+            const elementId = element.businessObject.id;
+            if (!propertyCache[elementId]) {
+                propertyCache[elementId] = {};
+            }
+            if (value && value.trim() !== '') {
+                propertyCache[elementId][propertyName] = value;
+            } else {
+                delete propertyCache[elementId][propertyName];
+            }
 
             updateXMLView();
         }
@@ -971,6 +1006,9 @@
                     updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
                 }
 
+                // Initialize property cache
+                extractAndCacheExtensionProperties();
+
                 // Add event listeners
                 modeler.on('element.click', (event) => {
                     selectElement(event.element);
@@ -1139,8 +1177,47 @@
                 const selectionStart = xmlEditor.selectionStart;
                 const selectionEnd = xmlEditor.selectionEnd;
 
+                // Store the ID of the currently selected element
+                const selectedElementId = selectedElement ? selectedElement.businessObject.id : null;
+
                 modeler.importXML(xmlContent).then(() => {
                     updateStatus('XML updated successfully', 'success');
+
+                    // Extract and cache extension properties from XML without clearing existing cache
+                    extractAndCacheExtensionProperties(false);
+
+                    // Update modeler elements with the new properties from cache
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const modeling = modeler.get('modeling');
+
+                        Object.keys(propertyCache).forEach(elementId => {
+                            const element = elementRegistry.get(elementId);
+                            if (element && Object.keys(propertyCache[elementId]).length > 0) {
+                                console.log('Updating modeler element with cached properties:', elementId, propertyCache[elementId]);
+                                modeling.updateProperties(element, propertyCache[elementId]);
+                            }
+                        });
+                    }
+
+                    // Reselect the previously selected element if it still exists
+                    if (selectedElementId) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(selectedElementId);
+                        if (element) {
+                            selectedElement = element;
+                            // Update the selection in the modeler
+                            const selection = modeler.get('selection');
+                            selection.select(element);
+                            // Update the properties panel
+                            updatePropertiesPanel();
+                        } else {
+                            // Element no longer exists, clear selection
+                            selectedElement = null;
+                            updatePropertiesPanel();
+                        }
+                    }
+
                     updateXMLView();
                     // Auto-save to cache when XML is edited
                     saveModelToCache();
@@ -1214,6 +1291,37 @@
         window.refreshXMLHighlighting = function () {
             forceRefreshXMLHighlighting();
             updateStatus('XML highlighting refreshed', 'success');
+        };
+
+        // Add global function to extract extension properties from current XML
+        window.extractPropertiesFromXML = function () {
+            if (currentView === 'xml') {
+                const xmlEditor = document.getElementById('xml-editor');
+                const xmlContent = xmlEditor.value;
+                extractExtensionPropertiesFromXML(xmlContent);
+                updateStatus('Extension properties extracted from XML', 'success');
+            } else {
+                updateStatus('Switch to XML view first', 'error');
+            }
+        };
+
+        // Add global function to refresh property cache
+        window.refreshPropertyCache = function () {
+            extractAndCacheExtensionProperties();
+            if (selectedElement) {
+                updatePropertiesPanel();
+            }
+            updateStatus('Property cache refreshed', 'success');
+        };
+
+        // Add global function to force refresh properties panel
+        window.refreshPropertiesPanel = function () {
+            if (selectedElement) {
+                updatePropertiesPanel();
+                updateStatus('Properties panel refreshed', 'success');
+            } else {
+                updateStatus('No element selected', 'info');
+            }
         };
 
         // Add function to export diagram
@@ -1490,6 +1598,116 @@
 
             console.log('Final XML length:', xml.length);
             return formatXML(xml);
+        }
+
+        // Function to extract and cache extension properties from XML
+        function extractAndCacheExtensionProperties(clearCache = true) {
+            if (!modeler) return;
+
+            modeler.saveXML({ format: true }).then(result => {
+                const xmlContent = result.xml;
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Only clear cache if explicitly requested
+                if (clearCache) {
+                    propertyCache = {};
+                }
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    // Initialize cache for this element if it doesn't exist
+                    if (!propertyCache[taskId]) {
+                        propertyCache[taskId] = {};
+                    }
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) {
+                        // If no extension elements found, clear the cache for this element
+                        propertyCache[taskId] = {};
+                        return;
+                    }
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+
+                    // Clear existing properties for this element to ensure we get fresh values
+                    propertyCache[taskId] = {};
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            propertyCache[taskId][name] = value;
+                            console.log('Cached property:', taskId, name, '=', value);
+                        }
+                    });
+                });
+
+                console.log('Property cache updated:', propertyCache);
+            }).catch(error => {
+                console.error('Error extracting properties for cache:', error);
+            });
+        }
+
+        // Function to extract extension properties from XML and update modeler elements
+        function extractExtensionPropertiesFromXML(xmlContent) {
+            console.log('Extracting extension properties from XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task:', taskId);
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) return;
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                    const extractedProps = {};
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            extractedProps[name] = value;
+                            console.log('Extracted property:', name, '=', value);
+                        }
+                    });
+
+                    // Update the modeler element if it exists
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(taskId);
+
+                        if (element && Object.keys(extractedProps).length > 0) {
+                            console.log('Updating element with extracted properties:', extractedProps);
+
+                            // Update the element's attributes
+                            const modeling = modeler.get('modeling');
+                            modeling.updateProperties(element, extractedProps);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error extracting extension properties:', error);
+            }
         }
     </script>
 </body>
