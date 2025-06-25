@@ -437,11 +437,11 @@
             formatted = formatted.replace(/(<\/bpmn:documentation>)\n\s*(<bpmn:extensionElements>)/g, '$1\n    $2');
 
             // Fix indentation for extension elements
-            formatted = formatted.replace(/(<bpmn:extensionElements>)\n\s*/g, '$1\n  ');
-            formatted = formatted.replace(/\n\s*(<\/bpmn:extensionElements>)/g, '\n  $1');
+            formatted = formatted.replace(/(<bpmn:extensionElements>)\n\s*/g, '$1\n    ');
+            formatted = formatted.replace(/\n\s*(<\/bpmn:extensionElements>)/g, '\n    $1');
 
             // Fix indentation for camunda properties
-            formatted = formatted.replace(/(<camunda:property[^>]*\/>)/g, '  $1');
+            formatted = formatted.replace(/(<camunda:property[^>]*\/>)/g, '      $1');
 
             // Clean up any remaining extra spaces
             formatted = formatted.replace(/\n\s+\n/g, '\n');
@@ -449,6 +449,10 @@
             // Ensure consistent indentation for service task children
             formatted = formatted.replace(/(<bpmn:serviceTask[^>]*>)\n\s*(<bpmn:documentation>)/g, '$1\n    $2');
             formatted = formatted.replace(/(<\/bpmn:documentation>)\n\s*(<bpmn:extensionElements>)/g, '$1\n    $2');
+
+            // Fix the specific issue with extension elements having extra spaces
+            formatted = formatted.replace(/\n\s{6,}(<bpmn:extensionElements>)/g, '\n    $1');
+            formatted = formatted.replace(/\n\s{6,}(<\/bpmn:extensionElements>)/g, '\n    $1');
 
             // Comprehensive XML formatting with proper indentation
             const lines = formatted.split('\n');
@@ -458,6 +462,12 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
+
+                // XML declaration should not be indented
+                if (line.startsWith('<?xml')) {
+                    formattedLines.push(line);
+                    continue;
+                }
 
                 // Check if this is a closing tag
                 if (line.startsWith('</')) {
