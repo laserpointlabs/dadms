@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>BPMN XML Property Injector - Camunda Extensions</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            height: 80vh;
+            gap: 20px;
+        }
+
+        .form-panel {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .xml-panel {
+            flex: 2;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+
+        .property-group h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .property-field {
+            margin-bottom: 15px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .property-field textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        .xml-output {
+            width: 100%;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: #f8f9fa;
+            resize: none;
+            white-space: pre-wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: 1px solid #007bff;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="status" id="status">BPMN XML Property Injector - Camunda Extensions</div>
+
+    <div class="container">
+        <div class="form-panel">
+            <h3>Service Task Properties</h3>
+
+            <div class="property-group">
+                <h4>Basic Properties</h4>
+                <div class="property-field">
+                    <label>Task Name</label>
+                    <input type="text" id="task-name" value="Sample Service Task" onchange="updateXML()">
+                </div>
+                <div class="property-field">
+                    <label>Task ID</label>
+                    <input type="text" id="task-id" value="ServiceTask_1" onchange="updateXML()">
+                </div>
+            </div>
+
+            <div class="property-group">
+                <h4>Camunda Implementation</h4>
+                <div class="property-field">
+                    <label>Implementation Type</label>
+                    <select id="implementation-type" onchange="updateXML()">
+                        <option value="class">Java Class</option>
+                        <option value="expression">Expression</option>
+                        <option value="delegateExpression">Delegate Expression</option>
+                        <option value="topic">External Task Topic</option>
+                    </select>
+                </div>
+                <div class="property-field">
+                    <label>Implementation Value</label>
+                    <input type="text" id="implementation-value" value="com.example.ServiceTask" onchange="updateXML()"
+                        placeholder="com.example.ServiceTask">
+                </div>
+            </div>
+
+            <div class="property-group">
+                <h4>Camunda Extension Properties</h4>
+                <div class="property-field">
+                    <label>Extension Properties (JSON)</label>
+                    <textarea id="extension-properties" onchange="updateXML()"
+                        placeholder='{"serviceType": "REST", "serviceName": "UserService", "serviceVersion": "1.0"}'></textarea>
+                </div>
+            </div>
+
+            <div class="property-group">
+                <h4>Camunda Input/Output</h4>
+                <div class="property-field">
+                    <label>Input Parameters (JSON)</label>
+                    <textarea id="input-parameters" onchange="updateXML()"
+                        placeholder='{"userId": "${execution.getVariable(\"userId\")}", "requestId": "${execution.getVariable(\"requestId\")}"}'></textarea>
+                </div>
+                <div class="property-field">
+                    <label>Output Parameters (JSON)</label>
+                    <textarea id="output-parameters" onchange="updateXML()"
+                        placeholder='{"result": "${result}", "status": "${status}"}'></textarea>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="downloadXML()">Download XML</button>
+                <button class="btn" onclick="copyXML()">Copy XML</button>
+                <button class="btn" onclick="loadSample()">Load Sample</button>
+            </div>
+        </div>
+
+        <div class="xml-panel">
+            <h3>Generated BPMN XML</h3>
+            <textarea id="xml-output" class="xml-output" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Base BPMN XML template
+        const baseXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_1"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="Process_1" name="Test Process" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1" name="Start">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+        
+        <bpmn:serviceTask id="ServiceTask_1" name="Sample Service Task">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_1" targetRef="EndEvent_1" />
+        
+        <bpmn:endEvent id="EndEvent_1" name="End">
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+        </bpmn:endEvent>
+    </bpmn:process>
+    
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+            <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+                <dc:Bounds x="152" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+            
+            <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+                <di:waypoint x="188" y="250" />
+                <di:waypoint x="240" y="250" />
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="ServiceTask_1">
+                <dc:Bounds x="240" y="210" width="100" height="80" />
+            </bpmndi:BPMNShape>
+            
+            <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+                <di:waypoint x="340" y="250" />
+                <di:waypoint x="392" y="250" />
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+                <dc:Bounds x="392" y="232" width="36" height="36" />
+            </bpmndi:BPMNShape>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+        function updateXML() {
+            const taskName = document.getElementById('task-name').value;
+            const taskId = document.getElementById('task-id').value;
+            const implementationType = document.getElementById('implementation-type').value;
+            const implementationValue = document.getElementById('implementation-value').value;
+            const extensionProperties = document.getElementById('extension-properties').value;
+            const inputParameters = document.getElementById('input-parameters').value;
+            const outputParameters = document.getElementById('output-parameters').value;
+
+            // Build the service task attributes
+            let serviceTaskAttrs = `id="${taskId}" name="${taskName}"`;
+
+            // Add implementation attribute based on type
+            if (implementationValue) {
+                switch (implementationType) {
+                    case 'class':
+                        serviceTaskAttrs += ` camunda:class="${implementationValue}"`;
+                        break;
+                    case 'expression':
+                        serviceTaskAttrs += ` camunda:expression="${implementationValue}"`;
+                        break;
+                    case 'delegateExpression':
+                        serviceTaskAttrs += ` camunda:delegateExpression="${implementationValue}"`;
+                        break;
+                    case 'topic':
+                        serviceTaskAttrs += ` camunda:topic="${implementationValue}"`;
+                        break;
+                }
+            }
+
+            // Create the service task element with extensions
+            let serviceTaskElement = `<bpmn:serviceTask ${serviceTaskAttrs}>
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>`;
+
+            // Add extension elements if provided
+            if (extensionProperties || inputParameters || outputParameters) {
+                serviceTaskElement += `
+            <bpmn:extensionElements>`;
+
+                // Add extension properties
+                if (extensionProperties) {
+                    try {
+                        const props = JSON.parse(extensionProperties);
+                        Object.keys(props).forEach(key => {
+                            serviceTaskElement += `
+                <camunda:property name="${key}" value="${props[key]}" />`;
+                        });
+                    } catch (e) {
+                        console.error('Invalid extension properties JSON:', e);
+                    }
+                }
+
+                // Add input parameters
+                if (inputParameters) {
+                    try {
+                        const inputs = JSON.parse(inputParameters);
+                        Object.keys(inputs).forEach(key => {
+                            serviceTaskElement += `
+                <camunda:inputParameter name="${key}">${inputs[key]}</camunda:inputParameter>`;
+                        });
+                    } catch (e) {
+                        console.error('Invalid input parameters JSON:', e);
+                    }
+                }
+
+                // Add output parameters
+                if (outputParameters) {
+                    try {
+                        const outputs = JSON.parse(outputParameters);
+                        Object.keys(outputs).forEach(key => {
+                            serviceTaskElement += `
+                <camunda:outputParameter name="${key}">${outputs[key]}</camunda:outputParameter>`;
+                        });
+                    } catch (e) {
+                        console.error('Invalid output parameters JSON:', e);
+                    }
+                }
+
+                serviceTaskElement += `
+            </bpmn:extensionElements>`;
+            }
+
+            serviceTaskElement += `
+        </bpmn:serviceTask>`;
+
+            // Replace the service task in the XML
+            const updatedXML = baseXML.replace(
+                /<bpmn:serviceTask id="ServiceTask_1" name="Sample Service Task">\s*<bpmn:incoming>Flow_1<\/bpmn:incoming>\s*<bpmn:outgoing>Flow_2<\/bpmn:outgoing>\s*<\/bpmn:serviceTask>/s,
+                serviceTaskElement
+            );
+
+            // Update the XML output
+            document.getElementById('xml-output').value = updatedXML;
+
+            // Update status
+            document.getElementById('status').textContent = `XML updated - ${taskName} (${taskId})`;
+        }
+
+        function loadSample() {
+            document.getElementById('task-name').value = 'User Service Task';
+            document.getElementById('task-id').value = 'ServiceTask_1';
+            document.getElementById('implementation-type').value = 'class';
+            document.getElementById('implementation-value').value = 'com.example.UserServiceTask';
+            document.getElementById('extension-properties').value = '{"serviceType": "REST", "serviceName": "UserService", "serviceVersion": "1.0"}';
+            document.getElementById('input-parameters').value = '{"userId": "${execution.getVariable(\\"userId\\")}", "requestId": "${execution.getVariable(\\"requestId\\")}"}';
+            document.getElementById('output-parameters').value = '{"result": "${result}", "status": "${status}"}';
+            updateXML();
+        }
+
+        function downloadXML() {
+            const xml = document.getElementById('xml-output').value;
+            const blob = new Blob([xml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bpmn-service-task.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyXML() {
+            const xml = document.getElementById('xml-output').value;
+            navigator.clipboard.writeText(xml).then(() => {
+                document.getElementById('status').textContent = 'XML copied to clipboard!';
+            }).catch(() => {
+                document.getElementById('status').textContent = 'Failed to copy XML';
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSample();
+        });
+    </script>
+</body>
+
+</html>
