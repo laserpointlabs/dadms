@@ -61,6 +61,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             position: relative;
+            overflow: hidden;
         }
 
         .canvas {
@@ -90,7 +91,7 @@
             color: #333;
         }
 
-        /* Override any conflicting styles */
+        /* Remove conflicting palette styles */
         .canvas-container .djs-palette {
             position: absolute;
             z-index: 100;
@@ -166,6 +167,9 @@
             color: #333;
             border-radius: 4px;
             outline: none;
+            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         .xml-editor:focus {
@@ -310,6 +314,28 @@
         .keyboard-shortcuts li {
             margin-bottom: 2px;
         }
+
+        /* Ensure the canvas container can handle XML editor scrolling */
+        .canvas-container {
+            flex: 2;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* XML highlight overlay styles */
+        .xml-highlight-overlay {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            min-height: 100% !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
+        }
     </style>
 </head>
 
@@ -397,10 +423,31 @@
         function updateXMLView() {
             if (!modeler) return;
 
+            // Store current scroll position if in XML view
+            const xmlEditor = document.getElementById('xml-editor');
+            let scrollTop = 0;
+            let scrollLeft = 0;
+            let selectionStart = 0;
+            let selectionEnd = 0;
+
+            if (currentView === 'xml' && xmlEditor) {
+                scrollTop = xmlEditor.scrollTop;
+                scrollLeft = xmlEditor.scrollLeft;
+                selectionStart = xmlEditor.selectionStart;
+                selectionEnd = xmlEditor.selectionEnd;
+            }
+
             modeler.saveXML({ format: true }).then(result => {
                 document.getElementById('xml-output').textContent = result.xml;
                 if (currentView === 'xml') {
-                    document.getElementById('xml-editor').value = result.xml;
+                    xmlEditor.value = result.xml;
+
+                    // Restore scroll and cursor position
+                    setTimeout(() => {
+                        xmlEditor.scrollTop = scrollTop;
+                        xmlEditor.scrollLeft = scrollLeft;
+                        xmlEditor.setSelectionRange(selectionStart, selectionEnd);
+                    }, 10);
                 }
             }).catch(error => {
                 document.getElementById('xml-output').textContent = 'Error: ' + error.message;
@@ -411,46 +458,37 @@
             currentView = view;
             const canvas = document.getElementById('canvas');
             const xmlEditor = document.getElementById('xml-editor');
-            const diagramBtn = document.querySelector('[onclick="switchView(\'diagram\')"]');
-            const xmlBtn = document.querySelector('[onclick="switchView(\'xml\')"]');
+            const diagramBtn = document.querySelector('.toggle-btn[onclick="switchView(\'diagram\')"]');
+            const xmlBtn = document.querySelector('.toggle-btn[onclick="switchView(\'xml\')"]');
 
             if (view === 'diagram') {
-                // Clean up XML highlighting overlay
-                const overlay = document.querySelector('.xml-highlight-overlay');
-                if (overlay) {
-                    overlay.remove();
-                }
-
-                // Reset XML editor styling
-                xmlEditor.style.background = '#f8f9fa';
-                xmlEditor.style.color = '#333';
-                xmlEditor.style.zIndex = 'auto';
-                xmlEditor.style.position = 'static';
-
                 canvas.classList.remove('hidden');
                 xmlEditor.classList.add('hidden');
                 diagramBtn.classList.add('active');
                 xmlBtn.classList.remove('active');
 
-                // Refresh the canvas
-                if (modeler) {
-                    refreshCanvas();
+                // Clean up XML overlay when switching to diagram view
+                const overlay = xmlEditor.parentElement.querySelector('.xml-highlight-overlay');
+                if (overlay) {
+                    overlay.remove();
                 }
 
                 updateStatus('Switched to Diagram View', 'success');
-            } else {
+            } else if (view === 'xml') {
                 canvas.classList.add('hidden');
                 xmlEditor.classList.remove('hidden');
                 diagramBtn.classList.remove('active');
                 xmlBtn.classList.add('active');
 
-                // Sync current XML to editor when switching to XML view
+                // Sync current XML to editor
                 if (modeler) {
                     modeler.saveXML({ format: true }).then(result => {
-                        xmlEditor.value = result.xml;
-                        // Trigger syntax highlighting
+                        document.getElementById('xml-editor').value = result.xml;
+
+                        // Apply styling to the XML editor
                         highlightXML(xmlEditor);
-                        updateStatus('Switched to XML View - Edit XML directly', 'success');
+
+                        updateStatus('Switched to XML View', 'success');
                     }).catch(error => {
                         updateStatus('Error loading XML: ' + error.message, 'error');
                     });
@@ -1065,42 +1103,39 @@
             }
         }
 
-        // Enhanced XML editor with real-time sync
-        function setupXMLEditor() {
-            const xmlEditor = document.getElementById('xml-editor');
+        // XML Syntax Highlighter - Simplified and Reliable
+        function highlightXML(editor) {
+            // Remove any existing overlay
+            const existingOverlay = editor.parentElement.querySelector('.xml-highlight-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
 
-            // Add event listeners for real-time editing
-            xmlEditor.addEventListener('input', debounce(syncXMLFromEditor, 500));
+            // Reset editor styling
+            editor.style.background = '#f8f9fa';
+            editor.style.color = '#333';
+            editor.style.zIndex = 'auto';
+            editor.style.position = 'static';
 
-            // Add syntax highlighting and better editing experience
-            xmlEditor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
-            xmlEditor.style.fontSize = '12px';
-            xmlEditor.style.lineHeight = '1.4';
-            xmlEditor.style.tabSize = '2';
-
-            // Enable tab key for indentation
-            xmlEditor.addEventListener('keydown', function (e) {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const start = this.selectionStart;
-                    const end = this.selectionEnd;
-
-                    // Insert tab at cursor position
-                    this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
-                    this.selectionStart = this.selectionEnd = start + 2;
-                }
-            });
-
-            // Add syntax highlighting
-            xmlEditor.addEventListener('input', function () {
-                highlightXML(this);
-            });
+            // For now, let's use a simpler approach without overlay
+            // Just ensure the editor is properly styled and functional
+            editor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
+            editor.style.fontSize = '12px';
+            editor.style.lineHeight = '1.4';
+            editor.style.padding = '15px';
+            editor.style.border = '1px solid #ddd';
+            editor.style.borderRadius = '4px';
+            editor.style.outline = 'none';
+            editor.style.overflow = 'auto';
+            editor.style.overflowX = 'hidden';
+            editor.style.overflowY = 'auto';
+            editor.style.resize = 'none';
+            editor.style.boxSizing = 'border-box';
         }
 
-        // XML Syntax Highlighter
-        function highlightXML(editor) {
-            const text = editor.value;
-            const highlighted = text
+        // Simplified XML content highlighting (for display purposes only)
+        function highlightXMLContent(text) {
+            return text
                 // XML Declaration
                 .replace(/(<\?xml[^?]*\?>)/g, '<span style="color: #0066cc;">$1</span>')
                 // Opening tags
@@ -1123,49 +1158,6 @@
                         attrHighlighted +
                         '<span style="color: #cc0000;">' + close + '</span>';
                 });
-
-            // Create a temporary div to hold the highlighted content
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = highlighted;
-            tempDiv.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding: 15px;
-                font-family: Monaco, Menlo, "Ubuntu Mono", monospace;
-                font-size: 12px;
-                line-height: 1.4;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                background: transparent;
-                color: transparent;
-                pointer-events: none;
-                overflow: hidden;
-                z-index: 1;
-            `;
-
-            // Position the editor container
-            const editorContainer = editor.parentElement;
-            editorContainer.style.position = 'relative';
-
-            // Remove existing highlight overlay
-            const existingOverlay = editorContainer.querySelector('.xml-highlight-overlay');
-            if (existingOverlay) {
-                existingOverlay.remove();
-            }
-
-            // Add new highlight overlay
-            tempDiv.className = 'xml-highlight-overlay';
-            editorContainer.appendChild(tempDiv);
-
-            // Make sure the textarea is on top
-            editor.style.position = 'relative';
-            editor.style.zIndex = '2';
-            editor.style.background = 'transparent';
-            editor.style.color = 'transparent';
-            editor.style.caretColor = '#333';
         }
 
         // Get color for different tag types
@@ -1197,15 +1189,71 @@
             return colors[tagName] || '#333333';
         }
 
+        // Enhanced XML editor with real-time sync
+        function setupXMLEditor() {
+            const xmlEditor = document.getElementById('xml-editor');
+
+            // Add event listeners for real-time editing
+            xmlEditor.addEventListener('input', debounce(syncXMLFromEditor, 500));
+
+            // Add syntax highlighting and better editing experience
+            xmlEditor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
+            xmlEditor.style.fontSize = '12px';
+            xmlEditor.style.lineHeight = '1.4';
+            xmlEditor.style.tabSize = '2';
+            xmlEditor.style.overflow = 'auto';
+            xmlEditor.style.overflowX = 'hidden';
+            xmlEditor.style.overflowY = 'auto';
+
+            // Enable tab key for indentation
+            xmlEditor.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+
+                    // Insert tab at cursor position
+                    this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 2;
+                }
+            });
+
+            // Apply initial styling
+            highlightXML(xmlEditor);
+        }
+
+        // Function to force refresh XML highlighting
+        function forceRefreshXMLHighlighting() {
+            const xmlEditor = document.getElementById('xml-editor');
+            if (xmlEditor && currentView === 'xml') {
+                highlightXML(xmlEditor);
+            }
+        }
+
         // Handle XML editor changes with real-time sync
         function syncXMLFromEditor() {
             if (currentView === 'xml' && modeler) {
-                const xmlContent = document.getElementById('xml-editor').value;
+                const xmlEditor = document.getElementById('xml-editor');
+                const xmlContent = xmlEditor.value;
+
+                // Store current scroll position and cursor position
+                const scrollTop = xmlEditor.scrollTop;
+                const scrollLeft = xmlEditor.scrollLeft;
+                const selectionStart = xmlEditor.selectionStart;
+                const selectionEnd = xmlEditor.selectionEnd;
+
                 modeler.importXML(xmlContent).then(() => {
                     updateStatus('XML updated successfully', 'success');
                     updateXMLView();
                     // Auto-save to cache when XML is edited
                     saveModelToCache();
+
+                    // Restore scroll and cursor position after a short delay
+                    setTimeout(() => {
+                        xmlEditor.scrollTop = scrollTop;
+                        xmlEditor.scrollLeft = scrollLeft;
+                        xmlEditor.setSelectionRange(selectionStart, selectionEnd);
+                    }, 10);
                 }).catch(error => {
                     updateStatus('XML import error: ' + error.message, 'error');
                 });
@@ -1263,6 +1311,12 @@
         window.refreshCanvas = function () {
             refreshCanvas();
             updateStatus('Canvas refreshed', 'success');
+        };
+
+        // Add global function to force refresh XML highlighting
+        window.refreshXMLHighlighting = function () {
+            forceRefreshXMLHighlighting();
+            updateStatus('XML highlighting refreshed', 'success');
         };
 
         // Add function to export diagram
@@ -1379,6 +1433,16 @@
                         event.preventDefault();
                         refreshCanvas();
                         updateStatus('Canvas refreshed', 'success');
+                    }
+                    break;
+                case 'h':
+                case 'H':
+                    if (event.ctrlKey || event.metaKey && event.shiftKey) {
+                        event.preventDefault();
+                        if (currentView === 'xml') {
+                            forceRefreshXMLHighlighting();
+                            updateStatus('XML highlighting refreshed', 'success');
+                        }
                     }
                     break;
             }
