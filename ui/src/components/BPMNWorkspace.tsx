@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import BPMNChat from './BPMNChat';
+import BPMNPropertiesPanel from './BPMNPropertiesPanel';
 import BPMNViewer from './BPMNViewer';
 import './BPMNWorkspace.css';
 
@@ -9,6 +10,13 @@ interface BPMNModel {
     size: number;
 }
 
+interface BPMNElement {
+    id: string;
+    type: string;
+    name?: string;
+    businessObject?: any;
+}
+
 const BPMNWorkspace: React.FC = () => {
     const [currentBPMN, setCurrentBPMN] = useState<string>('');
     const [availableModels, setAvailableModels] = useState<BPMNModel[]>([]);
@@ -16,8 +24,12 @@ const BPMNWorkspace: React.FC = () => {
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [workspaceLayout, setWorkspaceLayout] = useState<'side-by-side' | 'stacked'>('side-by-side');
     const [chatPanelWidth, setChatPanelWidth] = useState(25); // Percentage
+    const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(20); // Percentage
+    const [selectedElement, setSelectedElement] = useState<BPMNElement | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const splitterRef = useRef<HTMLDivElement>(null);
+    const propertiesSplitterRef = useRef<HTMLDivElement>(null);
+    const bpmnViewerRef = useRef<any>(null);
 
     // Load available BPMN models on component mount
     useEffect(() => {
@@ -221,6 +233,53 @@ const BPMNWorkspace: React.FC = () => {
         document.body.style.userSelect = 'none';
     };
 
+    // Drag handlers for properties panel splitter
+    const handlePropertiesMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Mouse down on properties splitter - starting drag');
+
+        const startX = e.clientX;
+        const startWidth = propertiesPanelWidth;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const deltaX = startX - e.clientX; // Reverse direction for right-side panel
+            const container = document.querySelector('.workspace-content') as HTMLElement;
+            if (!container) return;
+
+            const containerWidth = container.offsetWidth;
+            const deltaPercent = (deltaX / containerWidth) * 100;
+            const newWidth = startWidth + deltaPercent;
+
+            // Constrain to reasonable limits (15% to 40%)
+            const constrainedWidth = Math.max(15, Math.min(40, newWidth));
+            setPropertiesPanelWidth(constrainedWidth);
+            console.log('Dragging properties - new width:', constrainedWidth);
+        };
+
+        const handleMouseUp = () => {
+            console.log('Mouse up - ending properties drag');
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    const handleElementSelect = (element: BPMNElement | null) => {
+        setSelectedElement(element);
+    };
+
+    const handlePropertyChange = (elementId: string, propertyPath: string, value: string) => {
+        console.log('Property change:', elementId, propertyPath, value);
+        // The BPMNViewer will handle the actual model updates
+    };
+
     return (
         <div className={`bpmn-workspace ${workspaceLayout}`}>
             <div className="workspace-header">
@@ -339,14 +398,69 @@ const BPMNWorkspace: React.FC = () => {
                         overflow: 'auto'
                     }}
                 >
-                    <BPMNViewer
-                        bpmnXml={currentBPMN}
-                        onModelChange={(xml) => {
-                            console.log('BPMN model changed:', xml.length, 'characters');
-                            handleBPMNUpdate(xml);
+                    <div
+                        className="bpmn-canvas-container"
+                        style={{
+                            width: `${100 - propertiesPanelWidth}%`,
+                            height: '100%',
+                            minHeight: 0,
+                            overflow: 'auto'
                         }}
-                        isEditable={true}
-                    />
+                    >
+                        <BPMNViewer
+                            ref={bpmnViewerRef}
+                            bpmnXml={currentBPMN}
+                            onModelChange={(xml) => {
+                                console.log('BPMN model changed:', xml.length, 'characters');
+                                handleBPMNUpdate(xml);
+                            }}
+                            isEditable={true}
+                            onElementSelect={handleElementSelect}
+                        />
+                    </div>
+
+                    <div
+                        ref={propertiesSplitterRef}
+                        className="splitter"
+                        onMouseDown={handlePropertiesMouseDown}
+                        style={{
+                            width: '8px',
+                            height: '100%',
+                            background: '#e9ecef',
+                            cursor: 'col-resize',
+                            position: 'relative',
+                            zIndex: 10,
+                            borderLeft: '1px solid #dee2e6',
+                            borderRight: '1px solid #dee2e6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <div style={{
+                            width: '2px',
+                            height: '40px',
+                            background: '#adb5bd',
+                            borderRadius: '1px'
+                        }} />
+                    </div>
+
+                    <div
+                        className="properties-panel-container"
+                        style={{
+                            width: `${propertiesPanelWidth}%`,
+                            height: '100%',
+                            minHeight: 0,
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <BPMNPropertiesPanel
+                            selectedElement={selectedElement}
+                            onPropertyChange={handlePropertyChange}
+                            modeler={bpmnViewerRef.current?.getModeler() || null}
+                            onModelChange={handleBPMNUpdate}
+                        />
+                    </div>
                 </div>
             </div>
 

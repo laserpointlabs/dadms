@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Task Properties Panel Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: #f7f7f7;
+            position: relative;
+        }
+
+        .properties-container {
+            width: 300px;
+            background: white;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .properties-panel {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .xml-view {
+            height: 300px;
+            border-top: 1px solid #ccc;
+            padding: 10px;
+            overflow: auto;
+            background: #f9f9f9;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .xml-view pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .bjs-container {
+            height: 100%;
+        }
+    </style>
+
+    <!-- BPMN.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-js.css">
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn-embedded.css">
+
+    <!-- Properties Panel CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js-properties-panel@3.19.0/dist/assets/properties-panel.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="canvas-container">
+            <div id="canvas"></div>
+        </div>
+        <div class="properties-container">
+            <div id="properties-panel" class="properties-panel"></div>
+            <div class="xml-view">
+                <h4>Current XML:</h4>
+                <pre id="xml-output"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- BPMN.js and Properties Panel -->
+    <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js"></script>
+    <script src="https://unpkg.com/bpmn-js-properties-panel@3.19.0/dist/index.js"></script>
+
+    <script>
+        // Initial BPMN XML with Service Task
+        const initialXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                   xmlns:bpmn2="http://www.omg.org/BPMN/20100524/BPMN20.xsd" 
+                   xmlns:bpmndi="http://www.omg.org/BPMN/20100524/DI" 
+                   xmlns:dc="http://www.omg.org/DC/20100524/DC" 
+                   xmlns:di="http://www.omg.org/DC/20100524/DI"
+                   xmlns:service="http://example.com/service"
+                   xsi:schemaLocation="http://www.omg.org/BPMN/20100524/BPMN20.xsd BPMN20.xsd" 
+                   id="Definitions_1" 
+                   targetNamespace="http://example.com/bpmn">
+  <bpmn2:process id="Process_1" isExecutable="false">
+    <bpmn2:startEvent id="StartEvent_1">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:serviceTask id="ServiceTask_1" name="Sample Service Task" service:type="REST" service:name="UserService" service:version="1.0">
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:endEvent id="EndEvent_1">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ServiceTask_1" targetRef="EndEvent_1"/>
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds height="36.0" width="36.0" x="173.0" y="102.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="ServiceTask_1">
+        <dc:Bounds x="260" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_2" bpmnElement="EndEvent_1">
+        <dc:Bounds height="36.0" width="36.0" x="412.0" y="102.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1_di" bpmnElement="SequenceFlow_1">
+        <di:waypoint xsi:type="dc:Point" x="209" y="120"/>
+        <di:waypoint xsi:type="dc:Point" x="260" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_2_di" bpmnElement="SequenceFlow_2">
+        <di:waypoint xsi:type="dc:Point" x="360" y="120"/>
+        <di:waypoint xsi:type="dc:Point" x="412" y="120"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>`;
+
+        // Create moddle extension for service properties
+        const serviceModdleDescriptor = {
+            name: 'Service',
+            prefix: 'service',
+            uri: 'http://example.com/service',
+            xml: {
+                tagAlias: 'lowerCase'
+            },
+            associations: [],
+            types: []
+        };
+
+        // Custom properties provider following BPMN.js best practices
+        function ServicePropertiesProvider(propertiesPanel, translate, modeling, commandStack) {
+            this._propertiesPanel = propertiesPanel;
+            this._translate = translate;
+            this._modeling = modeling;
+            this._commandStack = commandStack;
+
+            // Register the provider with lower priority
+            propertiesPanel.registerProvider(500, this);
+
+            // API method to return groups for an element
+            this.getGroups = function (element) {
+                const self = this;
+                return function (groups) {
+                    // Only show service properties for service tasks
+                    if (element.type === 'bpmn:ServiceTask') {
+                        groups.push(self._createServiceGroup(element));
+                    }
+                    return groups;
+                };
+            };
+
+            this._createServiceGroup = function (element) {
+                const self = this;
+                return {
+                    id: 'service',
+                    label: self._translate('Service Properties'),
+                    entries: [
+                        self._createServiceTypeEntry(element),
+                        self._createServiceNameEntry(element),
+                        self._createServiceVersionEntry(element)
+                    ]
+                };
+            };
+
+            this._createServiceTypeEntry = function (element) {
+                const self = this;
+                return {
+                    id: 'service-type',
+                    element: element,
+                    component: function (props) {
+                        return self._createTextEntry(
+                            props.element,
+                            'service-type',
+                            self._translate('Service Type'),
+                            'service:type'
+                        );
+                    },
+                    isEdited: function () { return false; }
+                };
+            };
+
+            this._createServiceNameEntry = function (element) {
+                const self = this;
+                return {
+                    id: 'service-name',
+                    element: element,
+                    component: function (props) {
+                        return self._createTextEntry(
+                            props.element,
+                            'service-name',
+                            self._translate('Service Name'),
+                            'service:name'
+                        );
+                    },
+                    isEdited: function () { return false; }
+                };
+            };
+
+            this._createServiceVersionEntry = function (element) {
+                const self = this;
+                return {
+                    id: 'service-version',
+                    element: element,
+                    component: function (props) {
+                        return self._createTextEntry(
+                            props.element,
+                            'service-version',
+                            self._translate('Service Version'),
+                            'service:version'
+                        );
+                    },
+                    isEdited: function () { return false; }
+                };
+            };
+
+            // Helper function to create a text entry
+            this._createTextEntry = function (element, id, label, propertyName) {
+                const self = this;
+                const container = document.createElement('div');
+                container.className = 'bio-properties-panel-entry';
+
+                const labelEl = document.createElement('label');
+                labelEl.textContent = label;
+                labelEl.setAttribute('for', id);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = id;
+                input.className = 'bio-properties-panel-textfield';
+                input.value = self._getExtensionProperty(element, propertyName) || '';
+
+                // Add debounced input handler
+                let timeout;
+                input.addEventListener('input', function (e) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(function () {
+                        self._updateExtensionProperty(element, propertyName, e.target.value);
+                    }, 300); // 300ms debounce
+                });
+
+                // Update input value when element changes (to handle undo/redo)
+                const updateInput = function () {
+                    const currentValue = self._getExtensionProperty(element, propertyName) || '';
+                    if (input.value !== currentValue) {
+                        input.value = currentValue;
+                    }
+                };
+
+                // Store the update function to call it later
+                container._updateInput = updateInput;
+
+                container.appendChild(labelEl);
+                container.appendChild(input);
+
+                return container;
+            };
+
+            this._getExtensionProperty = function (element, propertyName) {
+                if (!element || !element.businessObject) {
+                    return '';
+                }
+
+                const attrs = element.businessObject.$attrs || {};
+                return attrs[propertyName] || '';
+            };
+
+            this._updateExtensionProperty = function (element, propertyName, value) {
+                if (!element || !element.businessObject) {
+                    return;
+                }
+
+                const attrs = Object.assign({}, element.businessObject.$attrs || {});
+
+                if (value && value.trim() !== '') {
+                    attrs[propertyName] = value;
+                } else {
+                    delete attrs[propertyName];
+                }
+
+                this._modeling.updateProperties(element, {
+                    $attrs: attrs
+                });
+            };
+        }
+
+        ServicePropertiesProvider.$inject = ['propertiesPanel', 'translate', 'modeling', 'commandStack'];
+
+        // Helper function to get extension property value
+        function getExtensionProperty(element, propertyName) {
+            if (!element || !element.businessObject) {
+                return '';
+            }
+
+            const attrs = element.businessObject.$attrs || {};
+            return attrs[propertyName] || '';
+        }
+
+        // Helper function to update extension property using modeling service
+        function updateExtensionProperty(element, propertyName, value, modeling) {
+            if (!element || !element.businessObject) {
+                return;
+            }
+
+            const attrs = Object.assign({}, element.businessObject.$attrs || {});
+
+            if (value && value.trim() !== '') {
+                attrs[propertyName] = value;
+            } else {
+                delete attrs[propertyName];
+            }
+
+            modeling.updateProperties(element, {
+                $attrs: attrs
+            });
+        }
+
+        // Create the BPMN modeler with properties panel
+        if (typeof BpmnJS === 'undefined') {
+            console.error('BPMN.js not loaded');
+            document.getElementById('xml-output').textContent = 'Error: BPMN.js library not loaded';
+            return;
+        }
+
+        if (typeof BpmnPropertiesPanelModule === 'undefined') {
+            console.error('Properties Panel module not loaded');
+            document.getElementById('xml-output').textContent = 'Error: Properties Panel module not loaded';
+            return;
+        }
+
+        const modeler = new BpmnJS({
+            container: '#canvas',
+            propertiesPanel: {
+                parent: '#properties-panel'
+            },
+            additionalModules: [
+                BpmnPropertiesPanelModule,
+                BpmnPropertiesProviderModule,
+                {
+                    __init__: ['servicePropertiesProvider'],
+                    servicePropertiesProvider: ['type', ServicePropertiesProvider]
+                }
+            ],
+            moddleExtensions: {
+                service: serviceModdleDescriptor
+            }
+        });
+
+        // Function to update XML display
+        function updateXMLDisplay() {
+            modeler.saveXML({ format: true }).then(function (result) {
+                document.getElementById('xml-output').textContent = result.xml;
+            }).catch(function (err) {
+                console.error('Error saving XML:', err);
+                document.getElementById('xml-output').textContent = 'Error generating XML';
+            });
+        }
+
+        // Import initial diagram
+        modeler.importXML(initialXML).then(function () {
+            console.log('BPMN diagram imported successfully');
+            updateXMLDisplay();
+
+            // Auto-select the service task after a brief delay
+            setTimeout(function () {
+                const elementRegistry = modeler.get('elementRegistry');
+                const selection = modeler.get('selection');
+                const serviceTask = elementRegistry.get('ServiceTask_1');
+
+                if (serviceTask) {
+                    selection.select(serviceTask);
+                    console.log('Auto-selected service task');
+                }
+            }, 100);
+        }).catch(function (err) {
+            console.error('Error importing BPMN diagram:', err);
+            document.getElementById('xml-output').textContent = 'Error loading diagram: ' + err.message;
+        });
+
+        // Listen for changes to update XML display and refresh input fields
+        modeler.on('commandStack.changed', function () {
+            updateXMLDisplay();
+
+            // Update all input fields in the properties panel to reflect current values
+            const propertiesPanel = document.getElementById('properties-panel');
+            const entries = propertiesPanel.querySelectorAll('.bio-properties-panel-entry');
+
+            entries.forEach(function (entry) {
+                if (entry._updateInput) {
+                    entry._updateInput();
+                }
+            });
+        });
+
+        // Debug function
+        window.debugModeler = function () {
+            const selection = modeler.get('selection');
+            const selected = selection.get();
+            console.log('Selected elements:', selected);
+
+            if (selected.length > 0) {
+                console.log('Selected element details:', selected[0]);
+                console.log('Business object:', selected[0].businessObject);
+                console.log('Attributes:', selected[0].businessObject.$attrs);
+            }
+        };
+    </script>
+</body>
+
+</html>

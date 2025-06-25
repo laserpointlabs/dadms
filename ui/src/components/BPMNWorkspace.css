@@ -146,6 +146,22 @@
     height: 100%;
     /* Ensure full height */
     position: relative;
+    display: flex;
+    flex-direction: row;
+}
+
+.bpmn-canvas-container {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.properties-panel-container {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
 }
 
 .splitter {
