@@ -400,6 +400,7 @@
     xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
     xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
     xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
     xmlns:service="http://example.com/service"
     xmlns:script="http://example.com/script"
     xmlns:call="http://example.com/call"
@@ -420,6 +421,121 @@
             statusEl.className = `status ${type}`;
         }
 
+        // Function to inject service task extensions
+        function injectServiceTaskExtensions(xml, elementId, attrs) {
+            console.log('Injecting extensions for element:', elementId);
+            console.log('Attributes to inject:', attrs);
+
+            // Extract the actual attributes - now they should be stored directly
+            let actualAttrs = {};
+            if (attrs.$attrs) {
+                // Extract service properties from $attrs
+                Object.keys(attrs.$attrs).forEach(key => {
+                    if (key.startsWith('service:')) {
+                        actualAttrs[key] = attrs.$attrs[key];
+                    }
+                });
+            } else {
+                // Properties might be stored directly
+                Object.keys(attrs).forEach(key => {
+                    if (key.startsWith('service:')) {
+                        actualAttrs[key] = attrs[key];
+                    }
+                });
+            }
+
+            console.log('Extracted actual attributes:', actualAttrs);
+
+            // Check for service extension properties
+            const serviceType = actualAttrs['service:type'];
+            const serviceName = actualAttrs['service:name'];
+            const serviceVersion = actualAttrs['service:version'];
+
+            console.log('Service properties:', { serviceType, serviceName, serviceVersion });
+
+            if (!serviceType && !serviceName && !serviceVersion) {
+                console.log('No service properties to inject');
+                return xml;
+            }
+
+            // Build extension elements
+            let extensionElements = '';
+            extensionElements += '\n            <bpmn:extensionElements>';
+            if (serviceType) {
+                extensionElements += `\n                <camunda:property name="serviceType" value="${serviceType}" />`;
+            }
+            if (serviceName) {
+                extensionElements += `\n                <camunda:property name="serviceName" value="${serviceName}" />`;
+            }
+            if (serviceVersion) {
+                extensionElements += `\n                <camunda:property name="serviceVersion" value="${serviceVersion}" />`;
+            }
+            extensionElements += '\n            </bpmn:extensionElements>';
+
+            console.log('Extension elements to add:', extensionElements);
+
+            // Handle self-closing service tasks: <bpmn:serviceTask id="..." service:type="..." />
+            const selfClosingRegex = new RegExp(
+                `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*)(\\s*/>)`,
+                'g'
+            );
+
+            let result = xml.replace(selfClosingRegex, (match, startTag, selfClosing) => {
+                console.log('Found self-closing service task in XML:', elementId);
+                console.log('Start tag:', startTag);
+
+                // Remove service attributes from start tag
+                let cleanStartTag = startTag;
+                cleanStartTag = cleanStartTag.replace(/\s+service:type="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service:name="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service:version="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
+
+                console.log('Clean start tag:', cleanStartTag);
+
+                // Convert self-closing to opening tag + content + closing tag
+                const newContent = cleanStartTag + '>' + extensionElements + '\n        </bpmn:serviceTask>';
+                console.log('New content:', newContent);
+                return newContent;
+            });
+
+            // Handle regular service tasks with opening/closing tags
+            const regularRegex = new RegExp(
+                `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*>)([\\s\\S]*?)(</bpmn:serviceTask>)`,
+                'g'
+            );
+
+            result = result.replace(regularRegex, (match, startTag, content, endTag) => {
+                console.log('Found regular service task in XML:', elementId);
+                console.log('Start tag:', startTag);
+                console.log('Content:', content);
+                console.log('End tag:', endTag);
+
+                // Remove service attributes from start tag
+                let cleanStartTag = startTag;
+                cleanStartTag = cleanStartTag.replace(/\s+service:type="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service:name="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+service:version="[^"]*"/g, '');
+                cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
+
+                console.log('Clean start tag:', cleanStartTag);
+
+                // Check if extension elements already exist in content
+                if (content.includes('<bpmn:extensionElements>')) {
+                    console.log('Extension elements already exist, removing old ones');
+                    // Remove existing extension elements
+                    content = content.replace(/<bpmn:extensionElements>[\s\S]*?<\/bpmn:extensionElements>/g, '');
+                }
+
+                const newContent = cleanStartTag + content + extensionElements + endTag;
+                console.log('New content:', newContent);
+                return newContent;
+            });
+
+            console.log('XML injection result length:', result.length);
+            return result;
+        }
+
         function updateXMLView() {
             if (!modeler) return;
 
@@ -438,9 +554,16 @@
             }
 
             modeler.saveXML({ format: true }).then(result => {
-                document.getElementById('xml-output').textContent = result.xml;
+                console.log('Original XML from modeler:', result.xml.substring(0, 500) + '...');
+
+                // Inject extension properties into XML
+                let xml = injectExtensionProperties(result.xml);
+
+                console.log('Final XML after injection:', xml.substring(0, 500) + '...');
+
+                document.getElementById('xml-output').textContent = xml;
                 if (currentView === 'xml') {
-                    xmlEditor.value = result.xml;
+                    xmlEditor.value = xml;
 
                     // Restore scroll and cursor position
                     setTimeout(() => {
@@ -480,10 +603,12 @@
                 diagramBtn.classList.remove('active');
                 xmlBtn.classList.add('active');
 
-                // Sync current XML to editor
+                // Sync current XML to editor with extension properties injected
                 if (modeler) {
                     modeler.saveXML({ format: true }).then(result => {
-                        document.getElementById('xml-editor').value = result.xml;
+                        // Inject extension properties into XML
+                        let xml = injectExtensionProperties(result.xml);
+                        document.getElementById('xml-editor').value = xml;
 
                         // Apply styling to the XML editor
                         highlightXML(xmlEditor);
@@ -532,18 +657,40 @@
         function updateExtensionProperty(element, propertyName, value) {
             if (!element || !element.businessObject) return;
 
-            const modeling = modeler.get('modeling');
-            const attrs = Object.assign({}, element.businessObject.$attrs || {});
+            console.log('Updating extension property:', propertyName, '=', value);
+            console.log('Element:', element.businessObject.id);
 
-            if (value && value.trim() !== '') {
-                attrs[propertyName] = value;
-            } else {
-                delete attrs[propertyName];
+            const modeling = modeler.get('modeling');
+
+            // Get existing attributes directly from the element
+            let existingAttrs = {};
+            if (element.businessObject.$attrs) {
+                // Extract only the actual extension properties, not the $attrs wrapper
+                Object.keys(element.businessObject.$attrs).forEach(key => {
+                    if (key !== '$attrs' && key.startsWith('service:')) {
+                        existingAttrs[key] = element.businessObject.$attrs[key];
+                    }
+                });
             }
 
-            modeling.updateProperties(element, {
-                $attrs: attrs
+            console.log('Existing attributes before update:', existingAttrs);
+
+            // Update the specific property
+            if (value && value.trim() !== '') {
+                existingAttrs[propertyName] = value;
+            } else {
+                delete existingAttrs[propertyName];
+            }
+
+            console.log('Updated attributes after merge:', existingAttrs);
+
+            // Store properties directly on the element without the $attrs wrapper
+            const properties = {};
+            Object.keys(existingAttrs).forEach(key => {
+                properties[key] = existingAttrs[key];
             });
+
+            modeling.updateProperties(element, properties);
 
             updateXMLView();
         }
@@ -660,7 +807,7 @@
                             <input type="text" id="service-name" 
                                    value="${getExtensionProperty(selectedElement, 'service:name')}" 
                                    onchange="updateExtensionProperty(selectedElement, 'service:name', this.value)"
-                                   placeholder="e.g., UserService">
+                                   placeholder="e.g., UserService_TEST_WORD">
                         </div>
                         <div class="property-field">
                             <label>Service Version</label>
@@ -1324,7 +1471,10 @@
             if (!modeler) return;
 
             modeler.saveXML({ format: true }).then(result => {
-                const blob = new Blob([result.xml], { type: 'application/xml' });
+                // Inject extension properties into XML before exporting
+                let xml = injectExtensionProperties(result.xml);
+
+                const blob = new Blob([xml], { type: 'application/xml' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -1481,7 +1631,10 @@
             if (!modeler) return;
 
             modeler.saveXML({ format: true }).then(result => {
-                localStorage.setItem('bpmn_model_cache', result.xml);
+                // Inject extension properties into XML before saving to cache
+                let xml = injectExtensionProperties(result.xml);
+
+                localStorage.setItem('bpmn_model_cache', xml);
                 localStorage.setItem('bpmn_model_timestamp', Date.now());
                 console.log('Model saved to cache');
             }).catch(error => {
@@ -1545,8 +1698,49 @@
             selection.select(serviceTask);
             selectElement(serviceTask);
 
-            console.log('Test service task created and selected');
+            // Set default extension properties
+            updateExtensionProperty(serviceTask, 'service:type', 'REST');
+            updateExtensionProperty(serviceTask, 'service:name', 'UserService_TEST');
+            updateExtensionProperty(serviceTask, 'service:version', '1.0');
+
+            console.log('Test service task created and selected with default properties');
+            updateStatus('Test service task created with default extension properties', 'success');
         };
+
+        // Simple test function to check XML injection
+        window.testXMLInjection = function () {
+            if (!modeler) return;
+
+            console.log('Testing XML injection...');
+            modeler.saveXML({ format: true }).then(result => {
+                console.log('=== ORIGINAL XML ===');
+                console.log(result.xml);
+                console.log('=== INJECTED XML ===');
+                const injected = injectExtensionProperties(result.xml);
+                console.log(injected);
+            });
+        };
+
+        // Function to inject extension properties into XML
+        function injectExtensionProperties(xml) {
+            if (!modeler) return xml;
+
+            console.log('Injecting extension properties into XML...');
+            const elementRegistry = modeler.get('elementRegistry');
+
+            // Find all service tasks and inject their extension properties
+            elementRegistry.forEach(element => {
+                const businessObject = element.businessObject;
+                if (businessObject.$type === 'bpmn:ServiceTask') {
+                    console.log('Found service task:', businessObject.id);
+                    console.log('Attributes:', businessObject.$attrs);
+                    xml = injectServiceTaskExtensions(xml, businessObject.id, businessObject.$attrs || {});
+                }
+            });
+
+            console.log('Final XML length:', xml.length);
+            return xml;
+        }
     </script>
 </body>
 
