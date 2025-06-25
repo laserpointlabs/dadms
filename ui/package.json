@@ -4,6 +4,7 @@
     "description": "React UI for DADM - Decision Analysis and Decision Management System",
     "private": true,
     "dependencies": {
+        "@bpmn-io/properties-panel": "^3.23.0",
         "@emotion/react": "^11.11.0",
         "@emotion/styled": "^11.11.0",
         "@mui/icons-material": "^5.14.0",
@@ -16,6 +17,7 @@
         "@types/react-syntax-highlighter": "^15.5.7",
         "axios": "^1.4.0",
         "bpmn-js": "^18.6.2",
+        "bpmn-js-properties-panel": "^5.23.0",
         "cors": "^2.8.5",
         "date-fns": "^2.30.0",
         "express": "^5.1.0",

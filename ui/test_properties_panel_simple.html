@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPMN Properties Panel Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            height: 80vh;
+            border: 1px solid #ccc;
+        }
+
+        .canvas {
+            flex: 1;
+            border-right: 1px solid #ccc;
+        }
+
+        .properties {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .property-field {
+            margin-bottom: 15px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+
+        .property-field input:focus,
+        .property-field select:focus,
+        .property-field textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .editing {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .saving {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>BPMN Properties Panel Test</h1>
+    <p>This test simulates the properties panel behavior with onBlur handling.</p>
+
+    <div class="container">
+        <div class="canvas">
+            <h3>BPMN Canvas (Simulated)</h3>
+            <p>Click on an element to select it:</p>
+            <button onclick="selectElement('task1')">Task 1</button>
+            <button onclick="selectElement('task2')">Task 2</button>
+            <button onclick="selectElement('process')">Process</button>
+            <button onclick="clearSelection()">Clear Selection</button>
+
+            <div id="xml-output"
+                style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px;">
+                <strong>XML Output:</strong><br>
+                <span id="xml-content">No changes yet</span>
+            </div>
+        </div>
+
+        <div class="properties">
+            <h3>Properties Panel</h3>
+            <div id="properties-content">
+                <p>Select an element to edit its properties</p>
+            </div>
+            <div class="status">
+                <div id="status-text">Ready</div>
+                <div id="last-change">No changes</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedElement = null;
+        let isUpdating = false;
+        let editingField = null;
+
+        // Simulated element data
+        const elements = {
+            'task1': {
+                id: 'Task_1',
+                name: 'First Task',
+                type: 'bpmn:Task',
+                documentation: 'This is the first task',
+                implementation: { type: 'external', topic: 'task1-topic' },
+                extensions: { 'service.type': 'assistant', 'service.name': 'task1-service', 'service.version': '1.0' }
+            },
+            'task2': {
+                id: 'Task_2',
+                name: 'Second Task',
+                type: 'bpmn:Task',
+                documentation: 'This is the second task',
+                implementation: { type: 'java', topic: '' },
+                extensions: { 'service.type': '', 'service.name': '', 'service.version': '' }
+            },
+            'process': {
+                id: 'Process_1',
+                name: 'My Process',
+                type: 'bpmn:Process',
+                documentation: 'This is the main process',
+                implementation: { type: '', topic: '' },
+                extensions: { 'service.type': '', 'service.name': '', 'service.version': '' }
+            }
+        };
+
+        function selectElement(elementId) {
+            selectedElement = elementId;
+            updatePropertiesPanel();
+            updateStatus('Element selected: ' + elementId);
+        }
+
+        function clearSelection() {
+            selectedElement = null;
+            document.getElementById('properties-content').innerHTML = '<p>Select an element to edit its properties</p>';
+            updateStatus('Selection cleared');
+        }
+
+        function updatePropertiesPanel() {
+            if (!selectedElement) return;
+
+            const element = elements[selectedElement];
+            const isProcess = element.type === 'bpmn:Process';
+
+            let html = `
+                <div class="property-group">
+                    <h4>${isProcess ? 'Process Properties' : 'Basic Properties'}</h4>
+                    <div class="property-field">
+                        <label>Name</label>
+                        <input type="text" id="element-name" value="${element.name || ''}" 
+                               onchange="handleInputChange('name', this.value)"
+                               onfocus="handleInputFocus('name')"
+                               onblur="handleInputBlur('name')">
+                    </div>
+                    <div class="property-field">
+                        <label>ID</label>
+                        <input type="text" id="element-id" value="${element.id || ''}" 
+                               onchange="handleInputChange('id', this.value)"
+                               onfocus="handleInputFocus('id')"
+                               onblur="handleInputBlur('id')">
+                    </div>
+                    <div class="property-field">
+                        <label>Documentation</label>
+                        <textarea id="element-documentation" rows="3"
+                                  onchange="handleInputChange('documentation', this.value)"
+                                  onfocus="handleInputFocus('documentation')"
+                                  onblur="handleInputBlur('documentation')">${element.documentation || ''}</textarea>
+                    </div>
+                </div>
+            `;
+
+            if (!isProcess) {
+                html += `
+                    <div class="property-group">
+                        <h4>Implementation</h4>
+                        <div class="property-field">
+                            <label>Type</label>
+                            <select id="implementation-type" 
+                                    onchange="handleInputChange('implementation.type', this.value)"
+                                    onfocus="handleInputFocus('implementation.type')"
+                                    onblur="handleInputBlur('implementation.type')">
+                                <option value="">Select type</option>
+                                <option value="external" ${element.implementation.type === 'external' ? 'selected' : ''}>External</option>
+                                <option value="java" ${element.implementation.type === 'java' ? 'selected' : ''}>Java</option>
+                                <option value="expression" ${element.implementation.type === 'expression' ? 'selected' : ''}>Expression</option>
+                            </select>
+                        </div>
+                        <div class="property-field">
+                            <label>Topic</label>
+                            <input type="text" id="implementation-topic" value="${element.implementation.topic || ''}" 
+                                   onchange="handleInputChange('implementation.topic', this.value)"
+                                   onfocus="handleInputFocus('implementation.topic')"
+                                   onblur="handleInputBlur('implementation.topic')">
+                        </div>
+                    </div>
+                    <div class="property-group">
+                        <h4>Extension Properties</h4>
+                        <div class="property-field">
+                            <label>Service Type</label>
+                            <input type="text" id="service-type" value="${element.extensions['service.type'] || ''}" 
+                                   onchange="handleInputChange('extensions.service.type', this.value)"
+                                   onfocus="handleInputFocus('extensions.service.type')"
+                                   onblur="handleInputBlur('extensions.service.type')">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Name</label>
+                            <input type="text" id="service-name" value="${element.extensions['service.name'] || ''}" 
+                                   onchange="handleInputChange('extensions.service.name', this.value)"
+                                   onfocus="handleInputFocus('extensions.service.name')"
+                                   onblur="handleInputBlur('extensions.service.name')">
+                        </div>
+                        <div class="property-field">
+                            <label>Service Version</label>
+                            <input type="text" id="service-version" value="${element.extensions['service.version'] || ''}" 
+                                   onchange="handleInputChange('extensions.service.version', this.value)"
+                                   onfocus="handleInputFocus('extensions.service.version')"
+                                   onblur="handleInputBlur('extensions.service.version')">
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('properties-content').innerHTML = html;
+        }
+
+        function handleInputChange(propertyPath, value) {
+            // Only update local state - no model update yet
+            updateStatus('Editing: ' + propertyPath + ' = ' + value);
+        }
+
+        function handleInputFocus(propertyPath) {
+            editingField = propertyPath;
+            updateStatus('Focus: ' + propertyPath, 'editing');
+        }
+
+        function handleInputBlur(propertyPath) {
+            if (!selectedElement || isUpdating) {
+                editingField = null;
+                updateStatus('Blur cancelled');
+                return;
+            }
+
+            isUpdating = true;
+            editingField = null;
+            updateStatus('Saving: ' + propertyPath, 'saving');
+
+            // Simulate async save
+            setTimeout(() => {
+                // Get the current value from the input
+                const input = document.getElementById(getInputId(propertyPath));
+                const value = input ? input.value : '';
+
+                // Update the element data
+                updateElementProperty(selectedElement, propertyPath, value);
+
+                // Update XML output
+                updateXMLOutput();
+
+                isUpdating = false;
+                updateStatus('Saved: ' + propertyPath + ' = ' + value);
+                updateLastChange(propertyPath, value);
+            }, 500);
+        }
+
+        function getInputId(propertyPath) {
+            const pathParts = propertyPath.split('.');
+            if (pathParts[0] === 'extensions') {
+                return pathParts[1].replace('.', '-');
+            } else if (pathParts[0] === 'implementation') {
+                return 'implementation-' + pathParts[1];
+            } else {
+                return 'element-' + pathParts[0];
+            }
+        }
+
+        function updateElementProperty(elementId, propertyPath, value) {
+            const element = elements[elementId];
+            const pathParts = propertyPath.split('.');
+
+            if (pathParts.length === 1) {
+                element[pathParts[0]] = value;
+            } else if (pathParts.length === 2) {
+                if (!element[pathParts[0]]) {
+                    element[pathParts[0]] = {};
+                }
+                element[pathParts[0]][pathParts[1]] = value;
+            }
+        }
+
+        function updateXMLOutput() {
+            const element = elements[selectedElement];
+            const xml = `
+<bpmn:${element.type.replace('bpmn:', '')} id="${element.id}" name="${element.name || ''}">
+    <bpmn:documentation>${element.documentation || ''}</bpmn:documentation>
+    ${element.implementation.type ? `<camunda:type>${element.implementation.type}</camunda:type>` : ''}
+    ${element.implementation.topic ? `<camunda:topic>${element.implementation.topic}</camunda:topic>` : ''}
+    ${Object.values(element.extensions).some(v => v) ? `
+    <bpmn:extensionElements>
+        <camunda:properties>
+            ${element.extensions['service.type'] ? `<camunda:property name="service.type" value="${element.extensions['service.type']}" />` : ''}
+            ${element.extensions['service.name'] ? `<camunda:property name="service.name" value="${element.extensions['service.name']}" />` : ''}
+            ${element.extensions['service.version'] ? `<camunda:property name="service.version" value="${element.extensions['service.version']}" />` : ''}
+        </camunda:properties>
+    </bpmn:extensionElements>` : ''}
+</bpmn:${element.type.replace('bpmn:', '')}>
+            `.trim();
+
+            document.getElementById('xml-content').textContent = xml;
+        }
+
+        function updateStatus(message, className = '') {
+            const statusEl = document.getElementById('status-text');
+            statusEl.textContent = message;
+            statusEl.className = className;
+        }
+
+        function updateLastChange(propertyPath, value) {
+            document.getElementById('last-change').textContent =
+                `Last change: ${propertyPath} = "${value}"`;
+        }
+    </script>
+</body>
+
+</html>
