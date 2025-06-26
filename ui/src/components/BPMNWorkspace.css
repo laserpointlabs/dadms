@@ -261,65 +261,58 @@ body.dragging {
     display: none;
 }
 
-.property-group {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    background-color: #f8f9fa;
-}
-
-.property-group h4 {
-    margin: 0 0 15px 0;
-    color: #333;
-    font-size: 14px;
-    font-weight: 600;
-}
-
 .property-field {
-    margin-bottom: 15px;
+    margin-bottom: 4px;
 }
 
 .property-field label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: #555;
-    font-size: 12px;
+    margin-bottom: 2px;
+    font-weight: 600;
+    color: #333333;
+    font-size: 11px;
+    letter-spacing: 0.3px;
 }
 
 .property-field input,
 .property-field select,
 .property-field textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    font-size: 12px;
+    width: 98%;
+    padding: 3px 4px;
+    border: 1px solid #000000;
+    border-radius: 0;
+    font-size: 11px;
     box-sizing: border-box;
+    background: #ffffff;
+    color: #111827;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.property-field input:focus,
+.property-field select:focus,
+.property-field textarea:focus {
+    outline: none;
+    border-color: #333333;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.property-field input[readonly],
+.property-field select[readonly],
+.property-field textarea[readonly] {
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
 }
 
 .property-field textarea {
     min-height: 60px;
     resize: vertical;
+    line-height: 1.4;
 }
 
 .property-field select {
-    background: white;
-}
-
-.element-info {
-    background: #e3f2fd;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    border-left: 4px solid #2196f3;
-}
-
-.element-info h3 {
-    margin: 0 0 5px 0;
-    color: #1976d2;
-    font-size: 14px;
+    background: #ffffff;
+    cursor: pointer;
 }
 
 .element-info p {
@@ -413,31 +406,130 @@ input:checked+.slider:before {
 
 .properties-content {
     flex: 1;
+    padding: 8px;
 }
 
 /* Properties Panel Header */
 .properties-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    padding: 16px 20px;
-    margin: -16px -20px 20px -20px;
-    border-radius: 8px 8px 0 0;
+    background: #f5f5f5;
+    border-bottom: 1px solid #000000;
+    padding: 4px 8px;
+    margin: 0;
+    border-radius: 0;
 }
 
-.properties-header h3 {
-    margin: 0 0 4px 0;
-    font-size: 18px;
+.properties-header-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.properties-header-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-icon.gear {
+    color: #333333;
+}
+
+.properties-header-title h3 {
+    margin: 0;
+    font-size: 14px;
     font-weight: 600;
-    color: #212529;
+    color: #000000;
     line-height: 1.2;
+    flex: 1;
 }
 
 .properties-subtitle {
-    font-size: 13px;
-    color: #6c757d;
+    font-size: 10px;
+    color: #666666;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-left: 20px;
+}
+
+/* Property Groups */
+.property-group {
+    margin-bottom: 2px;
+    border: 1px solid #000000;
+    border-radius: 0;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.property-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #000000;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    user-select: none;
+}
+
+.property-group-header:hover {
+    background: #f5f5f5;
+}
+
+.collapse-icon {
+    font-size: 12px;
+    color: #333333;
+    transition: transform 0.2s ease;
+    width: 16px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.collapse-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.property-group-header h4 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #222222;
+}
+
+.property-group-content {
+    padding: 4px 6px;
+    background: #ffffff;
+}
+
+/* Element Info */
+.element-info {
+    margin-bottom: 2px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 0;
+    border-left: 4px solid #007bff;
+}
+
+.element-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222222;
+}
+
+.element-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #555555;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
 /* BPMN.js Default Styling - Minimal Overrides */
