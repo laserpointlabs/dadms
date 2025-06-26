@@ -415,6 +415,31 @@ input:checked+.slider:before {
     flex: 1;
 }
 
+/* Properties Panel Header */
+.properties-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 16px 20px;
+    margin: -16px -20px 20px -20px;
+    border-radius: 8px 8px 0 0;
+}
+
+.properties-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #212529;
+    line-height: 1.2;
+}
+
+.properties-subtitle {
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* BPMN.js Default Styling - Minimal Overrides */
 /* Ensure bpmn.io palette is styled properly */
 .djs-palette {

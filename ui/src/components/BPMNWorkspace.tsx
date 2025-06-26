@@ -8,6 +8,7 @@ const BPMNWorkspace: React.FC = () => {
     const [modeler, setModeler] = useState<any>(null);
     const [propertyCache, setPropertyCache] = useState<Record<string, any>>({});
     const [cacheEnabled] = useState(true);
+    const [diagramProperties, setDiagramProperties] = useState<any>(null);
     const [xmlPanelVisible, setXmlPanelVisible] = useState(false);
     const [xmlPanelHeight, setXmlPanelHeight] = useState(30); // 30% of canvas area
     const [isXmlDragging, setIsXmlDragging] = useState(false);
@@ -213,28 +214,74 @@ const BPMNWorkspace: React.FC = () => {
         console.log('Model cache cleared');
     };
 
-    const clearModel = useCallback(() => {
-        if (window.confirm('Are you sure you want to clear the entire model? This cannot be undone.')) {
-            if (modeler) {
-                // Import empty XML
-                modeler.importXML(emptyXML).then(() => {
-                    setSelectedElement(null);
-                    setPropertyCache({});
-                    clearModelCache();
+    // Get diagram properties
+    const getDiagramProperties = useCallback(() => {
+        if (!modeler) return null;
 
-                    // Zoom to fit after clearing
-                    setTimeout(() => {
-                        const canvas = modeler.get('canvas');
-                        canvas.zoom('fit-viewport');
-                    }, 100);
+        try {
+            const definitions = modeler.getDefinitions();
+            const process = definitions.rootElements?.find((element: any) => element.$type === 'bpmn:Process');
 
-                    console.log('Model cleared and cache removed');
-                }).catch((error: any) => {
-                    console.error('Error clearing model:', error);
-                });
-            }
+            return {
+                id: process?.id || 'Process_1',
+                name: process?.name || 'New Process',
+                documentation: process?.documentation?.[0]?.text || '',
+                isExecutable: process?.isExecutable || true,
+                definitionsId: definitions.id || 'Definitions_1',
+                targetNamespace: definitions.targetNamespace || 'http://bpmn.io/schema/bpmn'
+            };
+        } catch (error) {
+            console.error('Error getting diagram properties:', error);
+            return {
+                id: 'Process_1',
+                name: 'New Process',
+                documentation: '',
+                isExecutable: true,
+                definitionsId: 'Definitions_1',
+                targetNamespace: 'http://bpmn.io/schema/bpmn'
+            };
         }
-    }, [modeler, emptyXML]);
+    }, [modeler]);
+
+    // Update diagram properties
+    const updateDiagramProperty = useCallback((property: string, value: string) => {
+        if (!modeler) return;
+
+        try {
+            const definitions = modeler.getDefinitions();
+            const process = definitions.rootElements?.find((element: any) => element.$type === 'bpmn:Process');
+
+            if (process) {
+                if (property === 'name') {
+                    process.name = value;
+                } else if (property === 'id') {
+                    process.id = value;
+                } else if (property === 'documentation') {
+                    if (!process.documentation) {
+                        process.documentation = [];
+                    }
+                    if (process.documentation.length === 0) {
+                        process.documentation.push({
+                            $type: 'bpmn:Documentation',
+                            text: value
+                        });
+                    } else {
+                        process.documentation[0].text = value;
+                    }
+                } else if (property === 'isExecutable') {
+                    process.isExecutable = value === 'true';
+                }
+
+                // Update the diagram properties state
+                setDiagramProperties(getDiagramProperties());
+
+                // Save to cache
+                saveModelToCache(modeler);
+            }
+        } catch (error) {
+            console.error('Error updating diagram property:', error);
+        }
+    }, [modeler, getDiagramProperties, saveModelToCache]);
 
     // Initialize BPMN modeler
     useEffect(() => {
@@ -312,6 +359,8 @@ const BPMNWorkspace: React.FC = () => {
                         setSelectedElement(null);
                         console.log('Selection cleared');
                     }
+                    // Update diagram properties whenever selection changes
+                    setDiagramProperties(getDiagramProperties());
                 });
 
                 // Auto-save on model changes
@@ -327,6 +376,9 @@ const BPMNWorkspace: React.FC = () => {
                 setTimeout(() => {
                     const canvas = modelerInstance.get('canvas');
                     canvas.zoom('fit-viewport');
+
+                    // Initialize diagram properties
+                    setDiagramProperties(getDiagramProperties());
 
                     // Trigger a window resize to ensure all UI elements are properly sized
                     window.dispatchEvent(new Event('resize'));
@@ -355,6 +407,32 @@ const BPMNWorkspace: React.FC = () => {
             }, 100);
         }
     }, [leftPanelWidth, modeler]);
+
+    const clearModel = useCallback(() => {
+        if (window.confirm('Are you sure you want to clear the entire model? This cannot be undone.')) {
+            if (modeler) {
+                // Import empty XML
+                modeler.importXML(emptyXML).then(() => {
+                    setSelectedElement(null);
+                    setPropertyCache({});
+                    clearModelCache();
+
+                    // Update diagram properties with the new empty model
+                    setDiagramProperties(getDiagramProperties());
+
+                    // Zoom to fit after clearing
+                    setTimeout(() => {
+                        const canvas = modeler.get('canvas');
+                        canvas.zoom('fit-viewport');
+                    }, 100);
+
+                    console.log('Model cleared and cache removed');
+                }).catch((error: any) => {
+                    console.error('Error clearing model:', error);
+                });
+            }
+        }
+    }, [modeler, emptyXML, getDiagramProperties]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -638,41 +716,90 @@ const BPMNWorkspace: React.FC = () => {
 
         if (newVisible && modeler && xmlEditorRef.current) {
             console.log('Toggling XML panel to visible, updating XML content...');
-            modeler.saveXML({ format: true }).then((result: any) => {
-                console.log('XML retrieved from modeler:', result.xml.substring(0, 200) + '...');
+            console.log('Modeler available:', !!modeler);
+            console.log('XML editor ref available:', !!xmlEditorRef.current);
+            console.log('Modeler type:', typeof modeler);
+            console.log('Modeler has saveXML:', typeof modeler.saveXML);
 
-                // Inject extension properties into XML
-                const xmlWithExtensions = injectExtensionProperties(result.xml);
-                console.log('XML after extension injection:', xmlWithExtensions.substring(0, 200) + '...');
+            if (typeof modeler.saveXML !== 'function') {
+                console.error('Modeler saveXML is not a function, modeler may not be properly initialized');
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then((result: any) => {
+                console.log('XML retrieved from modeler, length:', result.xml.length);
+                console.log('XML preview:', result.xml.substring(0, 200) + '...');
+
+                // Try to inject extension properties, but use original XML if it fails
+                let xmlToShow = result.xml;
+                try {
+                    xmlToShow = injectExtensionProperties(result.xml);
+                    console.log('XML after extension injection, length:', xmlToShow.length);
+                } catch (injectionError) {
+                    console.warn('Extension injection failed, using original XML:', injectionError);
+                }
 
                 if (xmlEditorRef.current) {
-                    xmlEditorRef.current.value = xmlWithExtensions;
-                    console.log('XML set to editor, value length:', xmlEditorRef.current.value.length);
+                    xmlEditorRef.current.value = xmlToShow;
+                    console.log('XML set to editor successfully, editor value length:', xmlEditorRef.current.value.length);
                 } else {
                     console.error('XML editor ref is null when trying to set value');
                 }
             }).catch((error: any) => {
                 console.error('Error retrieving XML from modeler:', error);
+                // Fallback: try to show empty XML or cached XML
+                if (xmlEditorRef.current) {
+                    const cachedXML = loadModelFromCache();
+                    xmlEditorRef.current.value = cachedXML || emptyXML;
+                    console.log('Fallback: Set cached or empty XML to editor');
+                }
             });
+        } else if (newVisible) {
+            console.log('XML panel toggle failed - missing dependencies:');
+            console.log('newVisible:', newVisible);
+            console.log('modeler available:', !!modeler);
+            console.log('xmlEditorRef.current available:', !!xmlEditorRef.current);
         }
     }, [xmlPanelVisible, modeler, injectExtensionProperties]);
 
     // Update XML content when panel becomes visible
     useEffect(() => {
         if (xmlPanelVisible && modeler && xmlEditorRef.current) {
-            console.log('XML panel became visible, updating content...');
-            modeler.saveXML({ format: true }).then((result: any) => {
-                console.log('XML content updated via useEffect:', result.xml.substring(0, 200) + '...');
+            console.log('XML panel became visible via useEffect, updating content...');
+            console.log('Modeler state:', !!modeler);
+            console.log('XML editor ref state:', !!xmlEditorRef.current);
 
-                // Inject extension properties into XML
-                const xmlWithExtensions = injectExtensionProperties(result.xml);
+            modeler.saveXML({ format: true }).then((result: any) => {
+                console.log('XML content updated via useEffect, length:', result.xml.length);
+                console.log('XML preview:', result.xml.substring(0, 200) + '...');
+
+                // Try to inject extension properties, but use original XML if it fails
+                let xmlToShow = result.xml;
+                try {
+                    xmlToShow = injectExtensionProperties(result.xml);
+                } catch (injectionError) {
+                    console.warn('Extension injection failed in useEffect, using original XML:', injectionError);
+                }
 
                 if (xmlEditorRef.current) {
-                    xmlEditorRef.current.value = xmlWithExtensions;
+                    xmlEditorRef.current.value = xmlToShow;
+                    console.log('XML set to editor via useEffect successfully');
+                } else {
+                    console.error('XML editor ref became null during useEffect');
                 }
             }).catch((error: any) => {
-                console.error('Error updating XML content:', error);
+                console.error('Error updating XML content via useEffect:', error);
+                // Fallback to cached or empty XML
+                if (xmlEditorRef.current) {
+                    const cachedXML = loadModelFromCache();
+                    xmlEditorRef.current.value = cachedXML || emptyXML;
+                    console.log('Fallback: Set cached or empty XML via useEffect');
+                }
             });
+        } else if (xmlPanelVisible) {
+            console.log('XML panel visible but missing dependencies in useEffect:');
+            console.log('modeler:', !!modeler);
+            console.log('xmlEditorRef.current:', !!xmlEditorRef.current);
         }
     }, [xmlPanelVisible, modeler, injectExtensionProperties]);
 
@@ -799,11 +926,17 @@ const BPMNWorkspace: React.FC = () => {
                                 className="properties"
                                 style={{ width: `${propertiesWidth}%` }}
                             >
+                                {/* Properties Panel Header */}
+                                <div className="properties-header">
+                                    <h3>{diagramProperties?.name || 'New Process'}</h3>
+                                    <span className="properties-subtitle">Properties</span>
+                                </div>
+
                                 <div className="properties-content">
                                     {selectedElement ? (
                                         <div>
                                             <div className="element-info">
-                                                <h3>{selectedElement.businessObject.$type?.replace('bpmn:', '') || 'Element'}</h3>
+                                                <h4>{selectedElement.businessObject.$type?.replace('bpmn:', '') || 'Element'}</h4>
                                                 <p>ID: {selectedElement.businessObject.id}</p>
                                             </div>
 
@@ -905,7 +1038,76 @@ const BPMNWorkspace: React.FC = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <p>Select a BPMN element to edit its properties</p>
+                                        // Show diagram properties when nothing is selected
+                                        <div>
+                                            <div className="element-info">
+                                                <h4>Diagram</h4>
+                                                <p>Process ID: {diagramProperties?.id || 'Process_1'}</p>
+                                            </div>
+
+                                            <div className="property-group">
+                                                <h5>General</h5>
+                                                <div className="property-field">
+                                                    <label>Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={diagramProperties?.name || ''}
+                                                        onChange={(e) => updateDiagramProperty('name', e.target.value)}
+                                                        placeholder="Process Name"
+                                                    />
+                                                </div>
+                                                <div className="property-field">
+                                                    <label>ID</label>
+                                                    <input
+                                                        type="text"
+                                                        value={diagramProperties?.id || ''}
+                                                        onChange={(e) => updateDiagramProperty('id', e.target.value)}
+                                                        placeholder="Process_1"
+                                                    />
+                                                </div>
+                                                <div className="property-field">
+                                                    <label>Documentation</label>
+                                                    <textarea
+                                                        value={diagramProperties?.documentation || ''}
+                                                        onChange={(e) => updateDiagramProperty('documentation', e.target.value)}
+                                                        placeholder="Process documentation..."
+                                                        rows={3}
+                                                    />
+                                                </div>
+                                                <div className="property-field">
+                                                    <label>Executable</label>
+                                                    <select
+                                                        value={diagramProperties?.isExecutable ? 'true' : 'false'}
+                                                        onChange={(e) => updateDiagramProperty('isExecutable', e.target.value)}
+                                                    >
+                                                        <option value="true">Yes</option>
+                                                        <option value="false">No</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="property-group">
+                                                <h5>Advanced</h5>
+                                                <div className="property-field">
+                                                    <label>Target Namespace</label>
+                                                    <input
+                                                        type="text"
+                                                        value={diagramProperties?.targetNamespace || ''}
+                                                        readOnly
+                                                        style={{ background: '#f5f5f5' }}
+                                                    />
+                                                </div>
+                                                <div className="property-field">
+                                                    <label>Definitions ID</label>
+                                                    <input
+                                                        type="text"
+                                                        value={diagramProperties?.definitionsId || ''}
+                                                        readOnly
+                                                        style={{ background: '#f5f5f5' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
