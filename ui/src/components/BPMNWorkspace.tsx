@@ -2,19 +2,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './BPMNWorkspace.css';
 
 const BPMNWorkspace: React.FC = () => {
-    const [leftPanelWidth, setLeftPanelWidth] = useState(25); // 25%
+    const [leftPanelWidth, setLeftPanelWidth] = useState(20); // 20% Manually edited dont change
     const [isDragging, setIsDragging] = useState(false);
-    const [currentView, setCurrentView] = useState<'diagram' | 'xml'>('diagram');
     const [selectedElement, setSelectedElement] = useState<any>(null);
     const [modeler, setModeler] = useState<any>(null);
     const [propertyCache, setPropertyCache] = useState<Record<string, any>>({});
-    const [xmlEditEnabled, setXmlEditEnabled] = useState(false);
-    const [cacheEnabled, setCacheEnabled] = useState(true);
+    const [cacheEnabled] = useState(true);
     const [xmlPanelVisible, setXmlPanelVisible] = useState(false);
     const [xmlPanelHeight, setXmlPanelHeight] = useState(30); // 30% of canvas area
     const [isXmlDragging, setIsXmlDragging] = useState(false);
     const [propertiesWidth, setPropertiesWidth] = useState(20); // 20% of right panel
     const [isPropertiesDragging, setIsPropertiesDragging] = useState(false);
+    const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
     const splitterRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const xmlEditorRef = useRef<HTMLTextAreaElement>(null);
@@ -341,7 +340,8 @@ const BPMNWorkspace: React.FC = () => {
         };
 
         initModeler();
-    }, []); // Remove dependencies to prevent re-initialization
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Dependencies intentionally omitted to prevent re-initialization
 
     // Handle canvas resize when splitter moves
     useEffect(() => {
@@ -507,18 +507,178 @@ const BPMNWorkspace: React.FC = () => {
         saveModelToCache();
     }, [selectedElement, modeler, saveModelToCache]);
 
+    // Function to inject extension properties into XML (similar to comprehensive solution)
+    const injectExtensionProperties = useCallback((xml: string) => {
+        if (!modeler) return xml;
+
+        console.log('Injecting extension properties into XML...');
+        const elementRegistry = modeler.get('elementRegistry');
+        let result = xml;
+
+        // Find all service tasks and inject their extension properties
+        elementRegistry.forEach((element: any) => {
+            const businessObject = element.businessObject;
+            if (businessObject.$type === 'bpmn:ServiceTask') {
+                console.log('Found service task for injection:', businessObject.id);
+                console.log('Attributes:', businessObject.$attrs);
+                result = injectServiceTaskExtensions(result, businessObject.id, businessObject.$attrs || {});
+            }
+        });
+
+        console.log('Final XML length after injection:', result.length);
+        return result;
+    }, [modeler]);
+
+    // Function to inject service task extensions (similar to comprehensive solution)
+    const injectServiceTaskExtensions = useCallback((xml: string, elementId: string, attrs: Record<string, any>) => {
+        console.log('Injecting extensions for service task:', elementId, attrs);
+
+        // Extract service properties from element attributes or property cache
+        const actualAttrs = { ...attrs };
+
+        // Merge with cached properties
+        if (propertyCache[elementId]) {
+            Object.assign(actualAttrs, propertyCache[elementId]);
+        }
+
+        const serviceType = actualAttrs['service.type'];
+        const serviceName = actualAttrs['service.name'];
+        const serviceVersion = actualAttrs['service.version'];
+
+        console.log('Service properties to inject:', { serviceType, serviceName, serviceVersion });
+
+        if (!serviceType && !serviceName && !serviceVersion) {
+            console.log('No service properties to inject for', elementId);
+            return xml;
+        }
+
+        // Build extension elements
+        let extensionElements = '';
+        extensionElements += '\n  <bpmn:extensionElements>';
+        extensionElements += '\n    <camunda:properties>';
+        if (serviceType) {
+            extensionElements += `\n      <camunda:property name="service.type" value="${serviceType}" />`;
+        }
+        if (serviceName) {
+            extensionElements += `\n      <camunda:property name="service.name" value="${serviceName}" />`;
+        }
+        if (serviceVersion) {
+            extensionElements += `\n      <camunda:property name="service.version" value="${serviceVersion}" />`;
+        }
+        extensionElements += '\n    </camunda:properties>';
+        extensionElements += '\n  </bpmn:extensionElements>';
+
+        console.log('Extension elements to add:', extensionElements);
+
+        // Handle self-closing service tasks: <bpmn:serviceTask id="..." service:type="..." />
+        const selfClosingRegex = new RegExp(
+            `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*)(\\s*/>)`,
+            'g'
+        );
+
+        let result = xml.replace(selfClosingRegex, (match, startTag, selfClosing) => {
+            console.log('Found self-closing service task in XML:', elementId);
+            console.log('Start tag:', startTag);
+
+            // Remove service attributes from start tag
+            let cleanStartTag = startTag;
+            cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
+
+            console.log('Clean start tag:', cleanStartTag);
+
+            // Convert self-closing to opening tag + content + closing tag
+            const newContent = cleanStartTag + '>' + extensionElements + '\n    </bpmn:serviceTask>';
+            console.log('New content:', newContent);
+            return newContent;
+        });
+
+        // Handle regular service tasks with opening/closing tags
+        const regularRegex = new RegExp(
+            `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*>)([\\s\\S]*?)(</bpmn:serviceTask>)`,
+            'g'
+        );
+
+        result = result.replace(regularRegex, (match, startTag, content, endTag) => {
+            console.log('Found regular service task in XML:', elementId);
+            console.log('Start tag:', startTag);
+            console.log('Content:', content);
+            console.log('End tag:', endTag);
+
+            // Remove service attributes from start tag
+            let cleanStartTag = startTag;
+            cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
+            cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
+
+            console.log('Clean start tag:', cleanStartTag);
+
+            // Check if extension elements already exist in content
+            if (content.includes('<bpmn:extensionElements>')) {
+                console.log('Extension elements already exist, removing old ones');
+                // Remove existing extension elements
+                content = content.replace(/<bpmn:extensionElements>[\s\S]*?<\/bpmn:extensionElements>/g, '');
+            }
+
+            const newContent = cleanStartTag + content + extensionElements + endTag;
+            console.log('New content:', newContent);
+            return newContent;
+        });
+
+        console.log('XML injection result length:', result.length);
+        return result;
+    }, [propertyCache]);
+
     const toggleXmlPanel = useCallback(() => {
         const newVisible = !xmlPanelVisible;
         setXmlPanelVisible(newVisible);
 
         if (newVisible && modeler && xmlEditorRef.current) {
+            console.log('Toggling XML panel to visible, updating XML content...');
             modeler.saveXML({ format: true }).then((result: any) => {
+                console.log('XML retrieved from modeler:', result.xml.substring(0, 200) + '...');
+
+                // Inject extension properties into XML
+                const xmlWithExtensions = injectExtensionProperties(result.xml);
+                console.log('XML after extension injection:', xmlWithExtensions.substring(0, 200) + '...');
+
                 if (xmlEditorRef.current) {
-                    xmlEditorRef.current.value = result.xml;
+                    xmlEditorRef.current.value = xmlWithExtensions;
+                    console.log('XML set to editor, value length:', xmlEditorRef.current.value.length);
+                } else {
+                    console.error('XML editor ref is null when trying to set value');
                 }
+            }).catch((error: any) => {
+                console.error('Error retrieving XML from modeler:', error);
             });
         }
-    }, [xmlPanelVisible, modeler]);
+    }, [xmlPanelVisible, modeler, injectExtensionProperties]);
+
+    // Update XML content when panel becomes visible
+    useEffect(() => {
+        if (xmlPanelVisible && modeler && xmlEditorRef.current) {
+            console.log('XML panel became visible, updating content...');
+            modeler.saveXML({ format: true }).then((result: any) => {
+                console.log('XML content updated via useEffect:', result.xml.substring(0, 200) + '...');
+
+                // Inject extension properties into XML
+                const xmlWithExtensions = injectExtensionProperties(result.xml);
+
+                if (xmlEditorRef.current) {
+                    xmlEditorRef.current.value = xmlWithExtensions;
+                }
+            }).catch((error: any) => {
+                console.error('Error updating XML content:', error);
+            });
+        }
+    }, [xmlPanelVisible, modeler, injectExtensionProperties]);
+
+    const toggleKeyboardShortcuts = useCallback(() => {
+        setShowKeyboardShortcuts(!showKeyboardShortcuts);
+    }, [showKeyboardShortcuts]);
 
     // Debug logging for layout
     useEffect(() => {
@@ -570,40 +730,6 @@ const BPMNWorkspace: React.FC = () => {
                     className="right-panel"
                     style={{ width: `${100 - leftPanelWidth}%` }}
                 >
-                    {/* BPMN Header Controls */}
-                    <div className="bpmn-header">
-                        <div className="view-toggle">
-                            <button
-                                className={`toggle-btn ${xmlPanelVisible ? 'active' : ''}`}
-                                onClick={toggleXmlPanel}
-                            >
-                                {xmlPanelVisible ? 'Hide XML' : 'Show XML'}
-                            </button>
-                            <button
-                                className="toggle-btn clear-btn"
-                                onClick={clearModel}
-                                style={{
-                                    background: '#dc3545',
-                                    color: 'white',
-                                    borderColor: '#dc3545'
-                                }}
-                            >
-                                Clear All
-                            </button>
-                            <div className="xml-edit-toggle">
-                                <label className="toggle-switch">
-                                    <input
-                                        type="checkbox"
-                                        checked={xmlEditEnabled}
-                                        onChange={(e) => setXmlEditEnabled(e.target.checked)}
-                                    />
-                                    <span className="slider"></span>
-                                </label>
-                                <span className="toggle-label">XML Edit</span>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* BPMN Main Content */}
                     <div className="bpmn-main-container">
                         {/* Canvas and Properties Container */}
@@ -653,7 +779,7 @@ const BPMNWorkspace: React.FC = () => {
                                             <textarea
                                                 ref={xmlEditorRef}
                                                 className="xml-editor"
-                                                disabled={!xmlEditEnabled}
+                                                readOnly
                                                 placeholder="BPMN XML will appear here..."
                                             />
                                         </div>
@@ -673,16 +799,6 @@ const BPMNWorkspace: React.FC = () => {
                                 className="properties"
                                 style={{ width: `${propertiesWidth}%` }}
                             >
-                                <div className="keyboard-shortcuts">
-                                    <h5>Keyboard Shortcuts:</h5>
-                                    <ul>
-                                        <li><strong>Delete</strong> - Delete selected element</li>
-                                        <li><strong>Ctrl+Z</strong> - Undo</li>
-                                        <li><strong>Ctrl+Y</strong> - Redo</li>
-                                        <li><strong>Ctrl+S</strong> - Save to cache</li>
-                                        <li><strong>Ctrl+Shift+C</strong> - Clear all</li>
-                                    </ul>
-                                </div>
                                 <div className="properties-content">
                                     {selectedElement ? (
                                         <div>
@@ -795,6 +911,68 @@ const BPMNWorkspace: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Bottom Toolbar */}
+                    <div className="bottom-toolbar">
+                        <div className="toolbar-left">
+                            <button
+                                className={`toolbar-btn xml-toggle ${xmlPanelVisible ? 'active' : ''}`}
+                                onClick={toggleXmlPanel}
+                                title="Toggle XML View"
+                            >
+                                {xmlPanelVisible ? '📄 Hide XML' : '📄 Show XML'}
+                            </button>
+                            <button
+                                className="toolbar-btn shortcuts-btn"
+                                onClick={toggleKeyboardShortcuts}
+                                title="Show Keyboard Shortcuts"
+                            >
+                                ⌨️ Shortcuts
+                            </button>
+                        </div>
+                        <div className="toolbar-right">
+                            <span className="cache-status">
+                                {cacheEnabled ? '📁 Auto-save enabled' : '📁 Auto-save disabled'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Keyboard Shortcuts Popup */}
+                    {showKeyboardShortcuts && (
+                        <div className="shortcuts-overlay" onClick={toggleKeyboardShortcuts}>
+                            <div className="shortcuts-popup" onClick={(e) => e.stopPropagation()}>
+                                <div className="shortcuts-header">
+                                    <h4>Keyboard Shortcuts</h4>
+                                    <button
+                                        className="shortcuts-close"
+                                        onClick={toggleKeyboardShortcuts}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                                <div className="shortcuts-content">
+                                    <div className="shortcut-group">
+                                        <h5>General</h5>
+                                        <ul>
+                                            <li><kbd>Delete</kbd> - Delete selected element</li>
+                                            <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> - Undo</li>
+                                            <li><kbd>Ctrl</kbd> + <kbd>Y</kbd> - Redo</li>
+                                            <li><kbd>Ctrl</kbd> + <kbd>S</kbd> - Save to cache</li>
+                                            <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> - Clear all</li>
+                                        </ul>
+                                    </div>
+                                    <div className="shortcut-group">
+                                        <h5>Navigation</h5>
+                                        <ul>
+                                            <li><kbd>Mouse wheel</kbd> - Zoom in/out</li>
+                                            <li><kbd>Space</kbd> + <kbd>Drag</kbd> - Pan canvas</li>
+                                            <li><kbd>Ctrl</kbd> + <kbd>0</kbd> - Zoom to fit</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
