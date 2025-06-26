@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './BPMNWorkspace.css';
 
@@ -15,6 +16,12 @@ const BPMNWorkspace: React.FC = () => {
     const [propertiesWidth, setPropertiesWidth] = useState(20); // 20% of right panel
     const [isPropertiesDragging, setIsPropertiesDragging] = useState(false);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+        general: false, // Default expanded for general section
+        implementation: true,
+        extensionProperties: true,
+        advanced: true
+    });
     const splitterRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const xmlEditorRef = useRef<HTMLTextAreaElement>(null);
@@ -346,15 +353,38 @@ const BPMNWorkspace: React.FC = () => {
 
                 // Add event listeners
                 modelerInstance.on('element.click', (event: any) => {
-                    setSelectedElement(event.element);
-                    console.log('Element clicked:', event.element.type, event.element.id);
+                    console.log('Element clicked - type:', event.element.type, 'id:', event.element.id);
+                    console.log('Element businessObject type:', event.element.businessObject?.$type);
+
+                    // If clicking on the canvas/process root, treat as no selection
+                    if (event.element.type === 'bpmn:Process' ||
+                        event.element.id === 'Process_1' ||
+                        event.element.businessObject?.$type === 'bpmn:Process') {
+                        setSelectedElement(null);
+                        console.log('Canvas/Process clicked - clearing selection');
+                    } else {
+                        setSelectedElement(event.element);
+                        console.log('Element selected:', event.element.type, event.element.id);
+                    }
                     saveModelToCache(modelerInstance);
                 });
 
                 modelerInstance.on('selection.changed', (event: any) => {
                     if (event.newSelection && event.newSelection.length > 0) {
-                        setSelectedElement(event.newSelection[0]);
-                        console.log('Selection changed to:', event.newSelection[0].type, event.newSelection[0].id);
+                        const element = event.newSelection[0];
+                        console.log('Selection changed - type:', element.type, 'id:', element.id);
+                        console.log('Selection businessObject type:', element.businessObject?.$type);
+
+                        // If selecting the canvas/process root, treat as no selection
+                        if (element.type === 'bpmn:Process' ||
+                            element.id === 'Process_1' ||
+                            element.businessObject?.$type === 'bpmn:Process') {
+                            setSelectedElement(null);
+                            console.log('Process/Canvas selected - showing diagram properties');
+                        } else {
+                            setSelectedElement(element);
+                            console.log('Element selected via selection change:', element.type, element.id);
+                        }
                     } else {
                         setSelectedElement(null);
                         console.log('Selection cleared');
@@ -807,6 +837,14 @@ const BPMNWorkspace: React.FC = () => {
         setShowKeyboardShortcuts(!showKeyboardShortcuts);
     }, [showKeyboardShortcuts]);
 
+    // Toggle collapsible sections
+    const toggleSection = useCallback((sectionName: string) => {
+        setCollapsedSections(prev => ({
+            ...prev,
+            [sectionName]: !prev[sectionName]
+        }));
+    }, []);
+
     // Debug logging for layout
     useEffect(() => {
         console.log('Layout Debug:', {
@@ -928,8 +966,13 @@ const BPMNWorkspace: React.FC = () => {
                             >
                                 {/* Properties Panel Header */}
                                 <div className="properties-header">
-                                    <h3>{diagramProperties?.name || 'New Process'}</h3>
-                                    <span className="properties-subtitle">Properties</span>
+                                    <div className="properties-header-main">
+                                        <div className="properties-header-title">
+                                            <Settings className="header-icon gear" size={16} />
+                                            <h3>{diagramProperties?.name || 'New Process'}</h3>
+                                        </div>
+                                        <span className="properties-subtitle">Properties</span>
+                                    </div>
                                 </div>
 
                                 <div className="properties-content">
@@ -942,98 +985,141 @@ const BPMNWorkspace: React.FC = () => {
 
                                             {selectedElement.businessObject.$type === 'bpmn:ServiceTask' && (
                                                 <div>
+                                                    {/* General Section */}
                                                     <div className="property-group">
-                                                        <h4>General</h4>
-                                                        <div className="property-field">
-                                                            <label>Name</label>
-                                                            <input
-                                                                type="text"
-                                                                value={selectedElement.businessObject.name || ''}
-                                                                onChange={(e) => updateBasicProperty('name', e.target.value)}
-                                                                placeholder="Service Task Name"
-                                                            />
+                                                        <div
+                                                            className="property-group-header"
+                                                            onClick={() => toggleSection('general')}
+                                                        >
+                                                            <span className={`collapse-icon ${collapsedSections.general ? 'collapsed' : ''}`}>▼</span>
+                                                            <h4>General</h4>
                                                         </div>
+                                                        {!collapsedSections.general && (
+                                                            <div className="property-group-content">
+                                                                <div className="property-field">
+                                                                    <label>Name</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={selectedElement.businessObject.name || ''}
+                                                                        onChange={(e) => updateBasicProperty('name', e.target.value)}
+                                                                        placeholder="Service Task Name"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
+                                                    {/* Implementation Section */}
                                                     <div className="property-group">
-                                                        <h4>Implementation</h4>
-                                                        <div className="property-field">
-                                                            <label>Type</label>
-                                                            <select
-                                                                value={getExtensionProperty(selectedElement, 'camunda:type')}
-                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:type', e.target.value)}
-                                                            >
-                                                                <option value="">Select Type</option>
-                                                                <option value="external">External</option>
-                                                                <option value="expression">Expression</option>
-                                                                <option value="connector">Connector</option>
-                                                            </select>
+                                                        <div
+                                                            className="property-group-header"
+                                                            onClick={() => toggleSection('implementation')}
+                                                        >
+                                                            <span className={`collapse-icon ${collapsedSections.implementation ? 'collapsed' : ''}`}>▼</span>
+                                                            <h4>Implementation</h4>
                                                         </div>
-                                                        <div className="property-field">
-                                                            <label>Topic</label>
-                                                            <input
-                                                                type="text"
-                                                                value={getExtensionProperty(selectedElement, 'camunda:topic')}
-                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:topic', e.target.value)}
-                                                                placeholder="service-topic"
-                                                            />
-                                                        </div>
+                                                        {!collapsedSections.implementation && (
+                                                            <div className="property-group-content">
+                                                                <div className="property-field">
+                                                                    <label>Type</label>
+                                                                    <select
+                                                                        value={getExtensionProperty(selectedElement, 'camunda:type')}
+                                                                        onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:type', e.target.value)}
+                                                                    >
+                                                                        <option value="">Select Type</option>
+                                                                        <option value="external">External</option>
+                                                                        <option value="expression">Expression</option>
+                                                                        <option value="connector">Connector</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div className="property-field">
+                                                                    <label>Topic</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getExtensionProperty(selectedElement, 'camunda:topic')}
+                                                                        onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:topic', e.target.value)}
+                                                                        placeholder="service-topic"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
+                                                    {/* Extension Properties Section */}
                                                     <div className="property-group">
-                                                        <h4>Extension Properties</h4>
-                                                        <div className="property-field">
-                                                            <label>Service Type</label>
-                                                            <input
-                                                                type="text"
-                                                                value={getExtensionProperty(selectedElement, 'service.type')}
-                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.type', e.target.value)}
-                                                                placeholder="assistant"
-                                                            />
+                                                        <div
+                                                            className="property-group-header"
+                                                            onClick={() => toggleSection('extensionProperties')}
+                                                        >
+                                                            <span className={`collapse-icon ${collapsedSections.extensionProperties ? 'collapsed' : ''}`}>▼</span>
+                                                            <h4>Extension Properties</h4>
                                                         </div>
-                                                        <div className="property-field">
-                                                            <label>Service Name</label>
-                                                            <input
-                                                                type="text"
-                                                                value={getExtensionProperty(selectedElement, 'service.name')}
-                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.name', e.target.value)}
-                                                                placeholder="dadm-openai-assistant"
-                                                            />
-                                                        </div>
-                                                        <div className="property-field">
-                                                            <label>Service Version</label>
-                                                            <input
-                                                                type="text"
-                                                                value={getExtensionProperty(selectedElement, 'service.version')}
-                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.version', e.target.value)}
-                                                                placeholder="1.0"
-                                                            />
-                                                        </div>
+                                                        {!collapsedSections.extensionProperties && (
+                                                            <div className="property-group-content">
+                                                                <div className="property-field">
+                                                                    <label>Service Type</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getExtensionProperty(selectedElement, 'service.type')}
+                                                                        onChange={(e) => updateExtensionProperty(selectedElement, 'service.type', e.target.value)}
+                                                                        placeholder="assistant"
+                                                                    />
+                                                                </div>
+                                                                <div className="property-field">
+                                                                    <label>Service Name</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getExtensionProperty(selectedElement, 'service.name')}
+                                                                        onChange={(e) => updateExtensionProperty(selectedElement, 'service.name', e.target.value)}
+                                                                        placeholder="dadm-openai-assistant"
+                                                                    />
+                                                                </div>
+                                                                <div className="property-field">
+                                                                    <label>Service Version</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getExtensionProperty(selectedElement, 'service.version')}
+                                                                        onChange={(e) => updateExtensionProperty(selectedElement, 'service.version', e.target.value)}
+                                                                        placeholder="1.0"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
 
                                             {selectedElement.businessObject.$type !== 'bpmn:ServiceTask' && (
                                                 <div className="property-group">
-                                                    <h4>Basic Properties</h4>
-                                                    <div className="property-field">
-                                                        <label>Name</label>
-                                                        <input
-                                                            type="text"
-                                                            value={selectedElement.businessObject.name || ''}
-                                                            onChange={(e) => updateBasicProperty('name', e.target.value)}
-                                                            placeholder="Element Name"
-                                                        />
+                                                    <div
+                                                        className="property-group-header"
+                                                        onClick={() => toggleSection('general')}
+                                                    >
+                                                        <span className={`collapse-icon ${collapsedSections.general ? 'collapsed' : ''}`}>▼</span>
+                                                        <h4>General Properties</h4>
                                                     </div>
-                                                    <div className="property-field">
-                                                        <label>Element Type</label>
-                                                        <input
-                                                            type="text"
-                                                            value={selectedElement.businessObject.$type || ''}
-                                                            readOnly
-                                                            style={{ background: '#f5f5f5' }}
-                                                        />
-                                                    </div>
+                                                    {!collapsedSections.general && (
+                                                        <div className="property-group-content">
+                                                            <div className="property-field">
+                                                                <label>Name</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={selectedElement.businessObject.name || ''}
+                                                                    onChange={(e) => updateBasicProperty('name', e.target.value)}
+                                                                    placeholder="Element Name"
+                                                                />
+                                                            </div>
+                                                            <div className="property-field">
+                                                                <label>Element Type</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={selectedElement.businessObject.$type || ''}
+                                                                    readOnly
+                                                                    style={{ background: '#f5f5f5' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -1041,71 +1127,98 @@ const BPMNWorkspace: React.FC = () => {
                                         // Show diagram properties when nothing is selected
                                         <div>
                                             <div className="element-info">
-                                                <h4>Diagram</h4>
+                                                <h4>📋 Diagram</h4>
                                                 <p>Process ID: {diagramProperties?.id || 'Process_1'}</p>
+                                                {/* Debug info */}
+                                                <p style={{ fontSize: '10px', color: '#666' }}>
+                                                    Debug - selectedElement: {selectedElement ? 'Yes' : 'No'},
+                                                    diagramProps: {diagramProperties ? 'Yes' : 'No'}
+                                                </p>
                                             </div>
 
+                                            {/* General Section */}
                                             <div className="property-group">
-                                                <h5>General</h5>
-                                                <div className="property-field">
-                                                    <label>Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={diagramProperties?.name || ''}
-                                                        onChange={(e) => updateDiagramProperty('name', e.target.value)}
-                                                        placeholder="Process Name"
-                                                    />
+                                                <div
+                                                    className="property-group-header"
+                                                    onClick={() => toggleSection('general')}
+                                                >
+                                                    <span className={`collapse-icon ${collapsedSections.general ? 'collapsed' : ''}`}>▼</span>
+                                                    <h4>General</h4>
                                                 </div>
-                                                <div className="property-field">
-                                                    <label>ID</label>
-                                                    <input
-                                                        type="text"
-                                                        value={diagramProperties?.id || ''}
-                                                        onChange={(e) => updateDiagramProperty('id', e.target.value)}
-                                                        placeholder="Process_1"
-                                                    />
-                                                </div>
-                                                <div className="property-field">
-                                                    <label>Documentation</label>
-                                                    <textarea
-                                                        value={diagramProperties?.documentation || ''}
-                                                        onChange={(e) => updateDiagramProperty('documentation', e.target.value)}
-                                                        placeholder="Process documentation..."
-                                                        rows={3}
-                                                    />
-                                                </div>
-                                                <div className="property-field">
-                                                    <label>Executable</label>
-                                                    <select
-                                                        value={diagramProperties?.isExecutable ? 'true' : 'false'}
-                                                        onChange={(e) => updateDiagramProperty('isExecutable', e.target.value)}
-                                                    >
-                                                        <option value="true">Yes</option>
-                                                        <option value="false">No</option>
-                                                    </select>
-                                                </div>
+                                                {!collapsedSections.general && (
+                                                    <div className="property-group-content">
+                                                        <div className="property-field">
+                                                            <label>Name</label>
+                                                            <input
+                                                                type="text"
+                                                                value={diagramProperties?.name || ''}
+                                                                onChange={(e) => updateDiagramProperty('name', e.target.value)}
+                                                                placeholder="Process Name"
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>ID</label>
+                                                            <input
+                                                                type="text"
+                                                                value={diagramProperties?.id || ''}
+                                                                onChange={(e) => updateDiagramProperty('id', e.target.value)}
+                                                                placeholder="Process_1"
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Documentation</label>
+                                                            <textarea
+                                                                value={diagramProperties?.documentation || ''}
+                                                                onChange={(e) => updateDiagramProperty('documentation', e.target.value)}
+                                                                placeholder="Process documentation..."
+                                                                rows={3}
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Executable</label>
+                                                            <select
+                                                                value={diagramProperties?.isExecutable ? 'true' : 'false'}
+                                                                onChange={(e) => updateDiagramProperty('isExecutable', e.target.value)}
+                                                            >
+                                                                <option value="true">Yes</option>
+                                                                <option value="false">No</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
+                                            {/* Advanced Section */}
                                             <div className="property-group">
-                                                <h5>Advanced</h5>
-                                                <div className="property-field">
-                                                    <label>Target Namespace</label>
-                                                    <input
-                                                        type="text"
-                                                        value={diagramProperties?.targetNamespace || ''}
-                                                        readOnly
-                                                        style={{ background: '#f5f5f5' }}
-                                                    />
+                                                <div
+                                                    className="property-group-header"
+                                                    onClick={() => toggleSection('advanced')}
+                                                >
+                                                    <span className={`collapse-icon ${collapsedSections.advanced ? 'collapsed' : ''}`}>▼</span>
+                                                    <h4>Advanced</h4>
                                                 </div>
-                                                <div className="property-field">
-                                                    <label>Definitions ID</label>
-                                                    <input
-                                                        type="text"
-                                                        value={diagramProperties?.definitionsId || ''}
-                                                        readOnly
-                                                        style={{ background: '#f5f5f5' }}
-                                                    />
-                                                </div>
+                                                {!collapsedSections.advanced && (
+                                                    <div className="property-group-content">
+                                                        <div className="property-field">
+                                                            <label>Target Namespace</label>
+                                                            <input
+                                                                type="text"
+                                                                value={diagramProperties?.targetNamespace || ''}
+                                                                readOnly
+                                                                style={{ background: '#f5f5f5' }}
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Definitions ID</label>
+                                                            <input
+                                                                type="text"
+                                                                value={diagramProperties?.definitionsId || ''}
+                                                                readOnly
+                                                                style={{ background: '#f5f5f5' }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
