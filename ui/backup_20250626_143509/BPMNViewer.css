@@ -1,0 +1,439 @@
+body,
+.bpmn-viewer,
+.bpmn-container,
+input,
+textarea,
+select,
+button {
+    color: #222 !important;
+    background-color: #fff !important;
+}
+
+::placeholder {
+    color: #888 !important;
+    opacity: 1 !important;
+}
+
+.bpmn-viewer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fff;
+    overflow: hidden;
+}
+
+.bpmn-viewer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 4px;
+}
+
+.toolbar-button {
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #495057;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.toolbar-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bpmn-viewer-content {
+    flex: 1;
+    position: relative;
+    background-color: #fafafa;
+    min-height: 400px;
+}
+
+.bpmn-container {
+    width: 100%;
+    height: 600px;
+    /* Fixed height to match the working implementation */
+    min-height: 600px;
+    overflow: hidden;
+    /* Prevent content from flowing outside */
+    position: relative;
+    /* Ensure proper positioning context */
+}
+
+/* Ensure BPMN SVG elements are properly positioned */
+.bpmn-container .bjs-container,
+.bpmn-container .djs-container {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.bpmn-container svg {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: translate(0, 0) !important;
+}
+
+/* Allow SVG groups to maintain their transforms for proper positioning */
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.empty-state {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+}
+
+.empty-content {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.empty-content h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.empty-content p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.bpmn-viewer-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.error-content {
+    text-align: center;
+    padding: 40px;
+    color: #dc3545;
+}
+
+.error-content h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.error-content p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #6c757d;
+}
+
+.error-content button {
+    padding: 8px 16px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.error-content button:hover {
+    background-color: #0056b3;
+}
+
+/* Override some bpmn-js default styles */
+.bpmn-container .djs-container {
+    background-color: #ffffff !important;
+}
+
+/* Show palette in edit mode */
+.bpmn-container .djs-palette {
+    display: block !important;
+    background: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    z-index: 1000 !important;
+}
+
+/* Style for highlighted elements */
+.bpmn-container .highlighted {
+    stroke: #007bff !important;
+    stroke-width: 3px !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .bpmn-viewer-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .toolbar-group {
+        justify-content: center;
+    }
+
+    .toolbar-button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .bpmn-viewer-content {
+        min-height: 300px;
+    }
+
+    .empty-content {
+        padding: 20px;
+    }
+
+    .empty-content h3 {
+        font-size: 16px;
+    }
+
+    .empty-content p {
+        font-size: 13px;
+    }
+}
+
+.bpmn-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bpmn-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e9ecef;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    border-right: 1px solid #e9ecef;
+}
+
+.toolbar-section:last-child {
+    border-right: none;
+}
+
+.bpmn-toolbar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.bpmn-toolbar button:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.bpmn-toolbar button:active {
+    background: #e9ecef;
+}
+
+.bpmn-toolbar button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bpmn-toolbar button.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.bpmn-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.bpmn-canvas {
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #f8d7da;
+    color: #721c24;
+    padding: 16px 24px;
+    border-radius: 8px;
+    border: 1px solid #f5c6cb;
+    z-index: 10;
+    max-width: 80%;
+    text-align: center;
+}
+
+/* BPMN.js specific styles */
+.bpmn-viewer .djs-container {
+    background: #ffffff;
+}
+
+.bpmn-viewer .djs-palette {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Context pad visibility - multiple selectors to ensure it works */
+.bpmn-viewer .djs-context-pad,
+.bpmn-container .djs-context-pad,
+.djs-context-pad {
+    background: #f8f9fa !important;
+    border: 2px solid #007bff !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1001 !important;
+}
+
+/* Make context pad entries more visible */
+.bpmn-viewer .djs-context-pad .entry,
+.bpmn-container .djs-context-pad .entry,
+.djs-context-pad .entry {
+    background: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 3px !important;
+    margin: 2px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.bpmn-viewer .djs-context-pad .entry:hover,
+.bpmn-container .djs-context-pad .entry:hover,
+.djs-context-pad .entry:hover {
+    background: #e3f2fd !important;
+    border-color: #007bff !important;
+}
+
+.bpmn-viewer .djs-popup {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .bpmn-toolbar {
+        padding: 4px 8px;
+        gap: 4px;
+    }
+
+    .toolbar-section {
+        padding: 0 4px;
+    }
+
+    .bpmn-toolbar button {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
