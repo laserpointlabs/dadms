@@ -1,0 +1,451 @@
+.bpmn-workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f8f9fa;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.workspace-header {
+    background-color: #fff;
+    border-bottom: 2px solid #e9ecef;
+    padding: 20px 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-content h1 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #212529;
+}
+
+.header-content p {
+    margin: 0;
+    font-size: 16px;
+    color: #6c757d;
+    font-weight: 400;
+}
+
+.workspace-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    gap: 16px;
+}
+
+.model-selector {
+    flex: 1;
+    max-width: 300px;
+}
+
+.model-selector select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    background-color: #fff;
+    font-size: 14px;
+    color: #495057;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.model-selector select:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.primary-button,
+.secondary-button,
+.layout-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.primary-button {
+    background-color: #007bff;
+    color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.secondary-button {
+    background-color: #6c757d;
+    color: white;
+}
+
+.secondary-button:hover:not(:disabled) {
+    background-color: #545b62;
+}
+
+.layout-button {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #ced4da;
+}
+
+.layout-button:hover:not(:disabled) {
+    background-color: #dae0e5;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.layout-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.workspace-content {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    padding: 16px;
+    min-height: 500px;
+    height: calc(100vh - 200px);
+    position: relative;
+}
+
+.bpmn-workspace.side-by-side .workspace-content {
+    flex-direction: row;
+}
+
+.bpmn-workspace.stacked .workspace-content {
+    flex-direction: column;
+}
+
+.chat-panel {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.workspace-main {
+    flex: 2;
+    min-width: 0;
+    min-height: 400px;
+    /* Ensure minimum height for BPMN viewer */
+    height: 100%;
+    /* Ensure full height */
+    position: relative;
+    display: flex;
+    flex-direction: row;
+}
+
+.bpmn-canvas-container {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.properties-panel-container {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.splitter {
+    flex: 0 0 8px;
+    background: #e9ecef;
+    cursor: col-resize;
+    transition: background-color 0.2s ease;
+    position: relative;
+    z-index: 10;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.splitter:hover {
+    background: #007bff;
+}
+
+.splitter:active {
+    background: #0056b3;
+}
+
+.splitter * {
+    pointer-events: none;
+}
+
+.bpmn-workspace.stacked .chat-panel,
+.bpmn-workspace.stacked .workspace-main {
+    flex: 1;
+}
+
+.workspace-footer {
+    background-color: #fff;
+    border-top: 1px solid #e9ecef;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-info,
+.workspace-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.status-item,
+.info-item {
+    font-size: 12px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-item {
+    font-weight: 500;
+}
+
+.info-item {
+    font-weight: 400;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .workspace-content {
+        flex-direction: column;
+    }
+
+    .chat-panel,
+    .workspace-main {
+        flex: 1;
+    }
+
+    .workspace-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .model-selector {
+        max-width: none;
+    }
+
+    .action-buttons {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .workspace-header {
+        padding: 16px;
+    }
+
+    .header-content h1 {
+        font-size: 24px;
+    }
+
+    .header-content p {
+        font-size: 14px;
+    }
+
+    .workspace-content {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .workspace-footer {
+        padding: 8px 16px;
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .status-info,
+    .workspace-info {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .layout-button {
+        padding: 10px 16px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bpmn-workspace {
+        height: 100vh;
+    }
+
+    .workspace-header {
+        padding: 12px;
+    }
+
+    .header-content h1 {
+        font-size: 20px;
+    }
+
+    .workspace-content {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .layout-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Loading states */
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #6c757d;
+}
+
+.loading-state::before {
+    content: '⏳';
+    margin-right: 8px;
+}
+
+/* Animation for smooth transitions */
+.workspace-content {
+    transition: flex-direction 0.3s ease;
+}
+
+.chat-panel,
+.workspace-main {
+    transition: width 0.1s ease;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+/* Dark mode support (if needed later) */
+@media (prefers-color-scheme: dark) {
+    .bpmn-workspace {
+        background-color: #1a1a1a;
+        color: #e9ecef;
+    }
+
+    .workspace-header {
+        background-color: #2d3748;
+        border-bottom-color: #4a5568;
+    }
+
+    .workspace-footer {
+        background-color: #2d3748;
+        border-top-color: #4a5568;
+    }
+
+    .header-content h1 {
+        color: #e9ecef;
+    }
+
+    .model-selector select {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e9ecef;
+    }
+}
+
+/* Split Pane Styles */
+.Resizer {
+    background: #000;
+    opacity: 0.2;
+    z-index: 1;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -moz-background-clip: padding;
+    -webkit-background-clip: padding;
+    background-clip: padding-box;
+}
+
+.Resizer:hover {
+    -webkit-transition: all 2s ease;
+    transition: all 2s ease;
+}
+
+.Resizer.horizontal {
+    height: 11px;
+    margin: -5px 0;
+    border-top: 5px solid rgba(255, 255, 255, 0);
+    border-bottom: 5px solid rgba(255, 255, 255, 0);
+    cursor: row-resize;
+    width: 100%;
+}
+
+.Resizer.horizontal:hover {
+    border-top: 5px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 5px solid rgba(0, 0, 0, 0.5);
+}
+
+.Resizer.vertical {
+    width: 11px;
+    margin: 0 -5px;
+    border-left: 5px solid rgba(255, 255, 255, 0);
+    border-right: 5px solid rgba(255, 255, 255, 0);
+    cursor: col-resize;
+}
+
+.Resizer.vertical:hover {
+    border-left: 5px solid rgba(0, 0, 0, 0.5);
+    border-right: 5px solid rgba(0, 0, 0, 0.5);
+}
+
+.Resizer.disabled {
+    cursor: not-allowed;
+}
+
+.Resizer.disabled:hover {
+    border-color: transparent;
+}
+
+/* Split Pane Container */
+.Pane1 {
+    overflow: auto;
+}
+
+.Pane2 {
+    overflow: auto;
+}
