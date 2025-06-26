@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react';
+import { Settings, Workflow } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './BPMNWorkspace.css';
 
@@ -1127,13 +1127,8 @@ const BPMNWorkspace: React.FC = () => {
                                         // Show diagram properties when nothing is selected
                                         <div>
                                             <div className="element-info">
-                                                <h4>📋 Diagram</h4>
+                                                <h4><Workflow size={16} style={{ display: 'inline', marginRight: '6px' }} /> Diagram</h4>
                                                 <p>Process ID: {diagramProperties?.id || 'Process_1'}</p>
-                                                {/* Debug info */}
-                                                <p style={{ fontSize: '10px', color: '#666' }}>
-                                                    Debug - selectedElement: {selectedElement ? 'Yes' : 'No'},
-                                                    diagramProps: {diagramProperties ? 'Yes' : 'No'}
-                                                </p>
                                             </div>
 
                                             {/* General Section */}
