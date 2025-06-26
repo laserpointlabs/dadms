@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './BPMNWorkspace.css';
 
 const BPMNWorkspace: React.FC = () => {
-    const [leftPanelWidth, setLeftPanelWidth] = useState(20); // 20%
+    const [leftPanelWidth, setLeftPanelWidth] = useState(25); // 25%
     const [isDragging, setIsDragging] = useState(false);
     const [currentView, setCurrentView] = useState<'diagram' | 'xml'>('diagram');
     const [selectedElement, setSelectedElement] = useState<any>(null);
@@ -10,9 +10,16 @@ const BPMNWorkspace: React.FC = () => {
     const [propertyCache, setPropertyCache] = useState<Record<string, any>>({});
     const [xmlEditEnabled, setXmlEditEnabled] = useState(false);
     const [cacheEnabled, setCacheEnabled] = useState(true);
+    const [xmlPanelVisible, setXmlPanelVisible] = useState(false);
+    const [xmlPanelHeight, setXmlPanelHeight] = useState(30); // 30% of canvas area
+    const [isXmlDragging, setIsXmlDragging] = useState(false);
+    const [propertiesWidth, setPropertiesWidth] = useState(20); // 20% of right panel
+    const [isPropertiesDragging, setIsPropertiesDragging] = useState(false);
     const splitterRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const xmlEditorRef = useRef<HTMLTextAreaElement>(null);
+    const xmlSplitterRef = useRef<HTMLDivElement>(null);
+    const propertiesSplitterRef = useRef<HTMLDivElement>(null);
 
     // Empty BPMN XML to start from scratch
     const emptyXML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -77,6 +84,92 @@ const BPMNWorkspace: React.FC = () => {
             document.body.style.userSelect = '';
         };
     }, [isDragging, handleMouseMove, handleMouseUp]);
+
+    // XML Panel splitter handlers
+    const handleXmlMouseDown = useCallback((e: React.MouseEvent) => {
+        setIsXmlDragging(true);
+        e.preventDefault();
+    }, []);
+
+    const handleXmlMouseMove = useCallback((e: MouseEvent) => {
+        if (!isXmlDragging) return;
+
+        const canvasContainer = document.querySelector('.canvas-main-area')?.getBoundingClientRect();
+        if (!canvasContainer) return;
+
+        const newHeight = ((canvasContainer.bottom - e.clientY) / canvasContainer.height) * 100;
+        const constrainedHeight = Math.max(10, Math.min(80, newHeight));
+        setXmlPanelHeight(constrainedHeight);
+    }, [isXmlDragging]);
+
+    const handleXmlMouseUp = useCallback(() => {
+        setIsXmlDragging(false);
+    }, []);
+
+    // Properties splitter handlers
+    const handlePropertiesMouseDown = useCallback((e: React.MouseEvent) => {
+        setIsPropertiesDragging(true);
+        e.preventDefault();
+    }, []);
+
+    const handlePropertiesMouseMove = useCallback((e: MouseEvent) => {
+        if (!isPropertiesDragging) return;
+
+        const rightPanel = document.querySelector('.right-panel')?.getBoundingClientRect();
+        if (!rightPanel) return;
+
+        const newWidth = ((rightPanel.right - e.clientX) / rightPanel.width) * 100;
+        const constrainedWidth = Math.max(15, Math.min(50, newWidth));
+        setPropertiesWidth(constrainedWidth);
+    }, [isPropertiesDragging]);
+
+    const handlePropertiesMouseUp = useCallback(() => {
+        setIsPropertiesDragging(false);
+    }, []);
+
+    // XML panel mouse effect
+    React.useEffect(() => {
+        if (isXmlDragging) {
+            document.addEventListener('mousemove', handleXmlMouseMove);
+            document.addEventListener('mouseup', handleXmlMouseUp);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        } else {
+            document.removeEventListener('mousemove', handleXmlMouseMove);
+            document.removeEventListener('mouseup', handleXmlMouseUp);
+            if (!isDragging && !isPropertiesDragging) {
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleXmlMouseMove);
+            document.removeEventListener('mouseup', handleXmlMouseUp);
+        };
+    }, [isXmlDragging, handleXmlMouseMove, handleXmlMouseUp, isDragging, isPropertiesDragging]);
+
+    // Properties panel mouse effect
+    React.useEffect(() => {
+        if (isPropertiesDragging) {
+            document.addEventListener('mousemove', handlePropertiesMouseMove);
+            document.addEventListener('mouseup', handlePropertiesMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        } else {
+            document.removeEventListener('mousemove', handlePropertiesMouseMove);
+            document.removeEventListener('mouseup', handlePropertiesMouseUp);
+            if (!isDragging && !isXmlDragging) {
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handlePropertiesMouseMove);
+            document.removeEventListener('mouseup', handlePropertiesMouseUp);
+        };
+    }, [isPropertiesDragging, handlePropertiesMouseMove, handlePropertiesMouseUp, isDragging, isXmlDragging]);
 
     // Model caching functions (simplified like in comprehensive solution)
     const saveModelToCache = useCallback((modelerInstance?: any) => {
@@ -414,17 +507,29 @@ const BPMNWorkspace: React.FC = () => {
         saveModelToCache();
     }, [selectedElement, modeler, saveModelToCache]);
 
-    const switchView = useCallback((view: 'diagram' | 'xml') => {
-        setCurrentView(view);
+    const toggleXmlPanel = useCallback(() => {
+        const newVisible = !xmlPanelVisible;
+        setXmlPanelVisible(newVisible);
 
-        if (view === 'xml' && modeler && xmlEditorRef.current) {
+        if (newVisible && modeler && xmlEditorRef.current) {
             modeler.saveXML({ format: true }).then((result: any) => {
                 if (xmlEditorRef.current) {
                     xmlEditorRef.current.value = result.xml;
                 }
             });
         }
-    }, [modeler]);
+    }, [xmlPanelVisible, modeler]);
+
+    // Debug logging for layout
+    useEffect(() => {
+        console.log('Layout Debug:', {
+            leftPanelWidth,
+            propertiesWidth,
+            xmlPanelVisible,
+            xmlPanelHeight,
+            canvasRefCurrent: !!canvasRef.current
+        });
+    }, [leftPanelWidth, propertiesWidth, xmlPanelVisible, xmlPanelHeight]);
 
     return (
         <div className="bpmn-workspace">
@@ -469,16 +574,10 @@ const BPMNWorkspace: React.FC = () => {
                     <div className="bpmn-header">
                         <div className="view-toggle">
                             <button
-                                className={`toggle-btn ${currentView === 'diagram' ? 'active' : ''}`}
-                                onClick={() => switchView('diagram')}
+                                className={`toggle-btn ${xmlPanelVisible ? 'active' : ''}`}
+                                onClick={toggleXmlPanel}
                             >
-                                Diagram View
-                            </button>
-                            <button
-                                className={`toggle-btn ${currentView === 'xml' ? 'active' : ''}`}
-                                onClick={() => switchView('xml')}
-                            >
-                                XML View
+                                {xmlPanelVisible ? 'Hide XML' : 'Show XML'}
                             </button>
                             <button
                                 className="toggle-btn clear-btn"
@@ -507,140 +606,192 @@ const BPMNWorkspace: React.FC = () => {
 
                     {/* BPMN Main Content */}
                     <div className="bpmn-main-container">
-                        {/* Canvas Container */}
-                        <div className="canvas-container">
+                        {/* Canvas and Properties Container */}
+                        <div className="canvas-properties-container">
+                            {/* Canvas Main Area */}
                             <div
-                                ref={canvasRef}
-                                className={`canvas ${currentView === 'xml' ? 'hidden' : ''}`}
-                            />
-                            <textarea
-                                ref={xmlEditorRef}
-                                className={`xml-editor ${currentView === 'diagram' ? 'hidden' : ''}`}
-                                disabled={!xmlEditEnabled}
-                                placeholder="BPMN XML will appear here..."
-                            />
-                        </div>
+                                className="canvas-main-area"
+                                style={{ width: `${100 - propertiesWidth}%` }}
+                            >
+                                {/* Canvas Container */}
+                                <div
+                                    className="canvas-container"
+                                    style={{
+                                        height: xmlPanelVisible ? `${100 - xmlPanelHeight}%` : '100%'
+                                    }}
+                                >
+                                    <div
+                                        ref={canvasRef}
+                                        className="canvas"
+                                    />
+                                </div>
 
-                        {/* Properties Panel */}
-                        <div className="properties">
-                            <div className="keyboard-shortcuts">
-                                <h5>Keyboard Shortcuts:</h5>
-                                <ul>
-                                    <li><strong>Delete</strong> - Delete selected element</li>
-                                    <li><strong>Ctrl+Z</strong> - Undo</li>
-                                    <li><strong>Ctrl+Y</strong> - Redo</li>
-                                    <li><strong>Ctrl+S</strong> - Save to cache</li>
-                                    <li><strong>Ctrl+Shift+C</strong> - Clear all</li>
-                                </ul>
-                            </div>
-                            <div className="properties-content">
-                                {selectedElement ? (
-                                    <div>
-                                        <div className="element-info">
-                                            <h3>{selectedElement.businessObject.$type?.replace('bpmn:', '') || 'Element'}</h3>
-                                            <p>ID: {selectedElement.businessObject.id}</p>
+                                {/* XML Panel - Bottom Popup */}
+                                {xmlPanelVisible && (
+                                    <>
+                                        {/* XML Splitter */}
+                                        <div
+                                            ref={xmlSplitterRef}
+                                            className={`xml-splitter ${isXmlDragging ? 'dragging' : ''}`}
+                                            onMouseDown={handleXmlMouseDown}
+                                        />
+
+                                        {/* XML Editor */}
+                                        <div
+                                            className="xml-panel"
+                                            style={{ height: `${xmlPanelHeight}%` }}
+                                        >
+                                            <div className="xml-panel-header">
+                                                <h4>BPMN XML</h4>
+                                                <button
+                                                    className="xml-panel-close"
+                                                    onClick={toggleXmlPanel}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                ref={xmlEditorRef}
+                                                className="xml-editor"
+                                                disabled={!xmlEditEnabled}
+                                                placeholder="BPMN XML will appear here..."
+                                            />
                                         </div>
+                                    </>
+                                )}
+                            </div>
 
-                                        {selectedElement.businessObject.$type === 'bpmn:ServiceTask' && (
-                                            <div>
+                            {/* Properties Splitter */}
+                            <div
+                                ref={propertiesSplitterRef}
+                                className={`properties-splitter ${isPropertiesDragging ? 'dragging' : ''}`}
+                                onMouseDown={handlePropertiesMouseDown}
+                            />
+
+                            {/* Properties Panel */}
+                            <div
+                                className="properties"
+                                style={{ width: `${propertiesWidth}%` }}
+                            >
+                                <div className="keyboard-shortcuts">
+                                    <h5>Keyboard Shortcuts:</h5>
+                                    <ul>
+                                        <li><strong>Delete</strong> - Delete selected element</li>
+                                        <li><strong>Ctrl+Z</strong> - Undo</li>
+                                        <li><strong>Ctrl+Y</strong> - Redo</li>
+                                        <li><strong>Ctrl+S</strong> - Save to cache</li>
+                                        <li><strong>Ctrl+Shift+C</strong> - Clear all</li>
+                                    </ul>
+                                </div>
+                                <div className="properties-content">
+                                    {selectedElement ? (
+                                        <div>
+                                            <div className="element-info">
+                                                <h3>{selectedElement.businessObject.$type?.replace('bpmn:', '') || 'Element'}</h3>
+                                                <p>ID: {selectedElement.businessObject.id}</p>
+                                            </div>
+
+                                            {selectedElement.businessObject.$type === 'bpmn:ServiceTask' && (
+                                                <div>
+                                                    <div className="property-group">
+                                                        <h4>General</h4>
+                                                        <div className="property-field">
+                                                            <label>Name</label>
+                                                            <input
+                                                                type="text"
+                                                                value={selectedElement.businessObject.name || ''}
+                                                                onChange={(e) => updateBasicProperty('name', e.target.value)}
+                                                                placeholder="Service Task Name"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="property-group">
+                                                        <h4>Implementation</h4>
+                                                        <div className="property-field">
+                                                            <label>Type</label>
+                                                            <select
+                                                                value={getExtensionProperty(selectedElement, 'camunda:type')}
+                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:type', e.target.value)}
+                                                            >
+                                                                <option value="">Select Type</option>
+                                                                <option value="external">External</option>
+                                                                <option value="expression">Expression</option>
+                                                                <option value="connector">Connector</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Topic</label>
+                                                            <input
+                                                                type="text"
+                                                                value={getExtensionProperty(selectedElement, 'camunda:topic')}
+                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:topic', e.target.value)}
+                                                                placeholder="service-topic"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="property-group">
+                                                        <h4>Extension Properties</h4>
+                                                        <div className="property-field">
+                                                            <label>Service Type</label>
+                                                            <input
+                                                                type="text"
+                                                                value={getExtensionProperty(selectedElement, 'service.type')}
+                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.type', e.target.value)}
+                                                                placeholder="assistant"
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Service Name</label>
+                                                            <input
+                                                                type="text"
+                                                                value={getExtensionProperty(selectedElement, 'service.name')}
+                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.name', e.target.value)}
+                                                                placeholder="dadm-openai-assistant"
+                                                            />
+                                                        </div>
+                                                        <div className="property-field">
+                                                            <label>Service Version</label>
+                                                            <input
+                                                                type="text"
+                                                                value={getExtensionProperty(selectedElement, 'service.version')}
+                                                                onChange={(e) => updateExtensionProperty(selectedElement, 'service.version', e.target.value)}
+                                                                placeholder="1.0"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selectedElement.businessObject.$type !== 'bpmn:ServiceTask' && (
                                                 <div className="property-group">
-                                                    <h4>General</h4>
+                                                    <h4>Basic Properties</h4>
                                                     <div className="property-field">
                                                         <label>Name</label>
                                                         <input
                                                             type="text"
                                                             value={selectedElement.businessObject.name || ''}
                                                             onChange={(e) => updateBasicProperty('name', e.target.value)}
-                                                            placeholder="Service Task Name"
+                                                            placeholder="Element Name"
                                                         />
                                                     </div>
-                                                </div>
-
-                                                <div className="property-group">
-                                                    <h4>Implementation</h4>
                                                     <div className="property-field">
-                                                        <label>Type</label>
-                                                        <select
-                                                            value={getExtensionProperty(selectedElement, 'camunda:type')}
-                                                            onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:type', e.target.value)}
-                                                        >
-                                                            <option value="">Select Type</option>
-                                                            <option value="external">External</option>
-                                                            <option value="expression">Expression</option>
-                                                            <option value="connector">Connector</option>
-                                                        </select>
-                                                    </div>
-                                                    <div className="property-field">
-                                                        <label>Topic</label>
+                                                        <label>Element Type</label>
                                                         <input
                                                             type="text"
-                                                            value={getExtensionProperty(selectedElement, 'camunda:topic')}
-                                                            onChange={(e) => updateExtensionProperty(selectedElement, 'camunda:topic', e.target.value)}
-                                                            placeholder="service-topic"
+                                                            value={selectedElement.businessObject.$type || ''}
+                                                            readOnly
+                                                            style={{ background: '#f5f5f5' }}
                                                         />
                                                     </div>
                                                 </div>
-
-                                                <div className="property-group">
-                                                    <h4>Extension Properties</h4>
-                                                    <div className="property-field">
-                                                        <label>Service Type</label>
-                                                        <input
-                                                            type="text"
-                                                            value={getExtensionProperty(selectedElement, 'service.type')}
-                                                            onChange={(e) => updateExtensionProperty(selectedElement, 'service.type', e.target.value)}
-                                                            placeholder="assistant"
-                                                        />
-                                                    </div>
-                                                    <div className="property-field">
-                                                        <label>Service Name</label>
-                                                        <input
-                                                            type="text"
-                                                            value={getExtensionProperty(selectedElement, 'service.name')}
-                                                            onChange={(e) => updateExtensionProperty(selectedElement, 'service.name', e.target.value)}
-                                                            placeholder="dadm-openai-assistant"
-                                                        />
-                                                    </div>
-                                                    <div className="property-field">
-                                                        <label>Service Version</label>
-                                                        <input
-                                                            type="text"
-                                                            value={getExtensionProperty(selectedElement, 'service.version')}
-                                                            onChange={(e) => updateExtensionProperty(selectedElement, 'service.version', e.target.value)}
-                                                            placeholder="1.0"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {selectedElement.businessObject.$type !== 'bpmn:ServiceTask' && (
-                                            <div className="property-group">
-                                                <h4>Basic Properties</h4>
-                                                <div className="property-field">
-                                                    <label>Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={selectedElement.businessObject.name || ''}
-                                                        onChange={(e) => updateBasicProperty('name', e.target.value)}
-                                                        placeholder="Element Name"
-                                                    />
-                                                </div>
-                                                <div className="property-field">
-                                                    <label>Element Type</label>
-                                                    <input
-                                                        type="text"
-                                                        value={selectedElement.businessObject.$type || ''}
-                                                        readOnly
-                                                        style={{ background: '#f5f5f5' }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <p>Select a BPMN element to edit its properties</p>
-                                )}
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p>Select a BPMN element to edit its properties</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

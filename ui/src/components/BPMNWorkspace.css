@@ -176,19 +176,17 @@ body.dragging {
 
 .bpmn-main-container {
     display: flex;
-    gap: 20px;
+    flex-direction: column;
     height: calc(100% - 60px);
     background: #f5f5f5;
     padding: 0;
 }
 
 .canvas-container {
-    flex: 2;
     background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    position: relative;
     overflow: hidden;
+    position: relative;
+    flex: 1;
 }
 
 .canvas {
@@ -257,16 +255,6 @@ body.dragging {
 
 .xml-editor.hidden {
     display: none;
-}
-
-.properties {
-    flex: 1;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 20px;
-    overflow-y: auto;
-    max-height: 100%;
 }
 
 .property-group {
@@ -569,4 +557,197 @@ div[class*="popup"] {
 
 div[class*="popup"] * {
     color: #333 !important;
+}
+
+/* New layout styles for resizable panels */
+.canvas-properties-container {
+    display: flex;
+    height: 100%;
+    gap: 0;
+}
+
+.canvas-main-area {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* XML Panel styles */
+.xml-splitter {
+    height: 4px;
+    background-color: #dee2e6;
+    cursor: row-resize;
+    position: relative;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.xml-splitter:hover {
+    background-color: #007bff;
+}
+
+.xml-splitter.dragging {
+    background-color: #007bff;
+}
+
+.xml-panel {
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+}
+
+.xml-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #e9ecef;
+    border-bottom: 1px solid #ddd;
+    min-height: 35px;
+}
+
+.xml-panel-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.xml-panel-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+.xml-panel-close:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.xml-panel .xml-editor {
+    flex: 1;
+    border: none;
+    resize: none;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 12px;
+    background: white;
+    margin: 0;
+}
+
+/* Properties splitter styles */
+.properties-splitter {
+    width: 4px;
+    background-color: #dee2e6;
+    cursor: col-resize;
+    position: relative;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.properties-splitter:hover {
+    background-color: #007bff;
+}
+
+.properties-splitter.dragging {
+    background-color: #007bff;
+}
+
+/* Update properties panel for vertical layout */
+.properties {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.properties .keyboard-shortcuts {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    background: #e9ecef;
+    flex-shrink: 0;
+}
+
+.properties .keyboard-shortcuts h5 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.properties .keyboard-shortcuts ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11px;
+    color: #6c757d;
+}
+
+.properties .keyboard-shortcuts li {
+    margin: 2px 0;
+}
+
+.properties-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* Update canvas container for new layout */
+.canvas-container {
+    background: white;
+    overflow: hidden;
+    position: relative;
+    flex: 1;
+}
+
+.canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* Hide the old xml-editor when not in panel mode */
+.xml-editor.hidden {
+    display: none;
+}
+
+/* Responsive adjustments for new layout */
+@media (max-width: 1024px) {
+    .canvas-properties-container {
+        flex-direction: column;
+    }
+
+    .canvas-main-area {
+        width: 100% !important;
+        border-radius: 4px 4px 0 0;
+    }
+
+    .properties {
+        width: 100% !important;
+        border-radius: 0 0 4px 4px;
+        border-top: none;
+        border-left: 1px solid #ddd;
+    }
+
+    .properties-splitter {
+        display: none;
+    }
 }
