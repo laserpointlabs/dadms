@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './BPMNWorkspace.css';
 
 const BPMNWorkspace: React.FC = () => {
-    const [leftPanelWidth, setLeftPanelWidth] = useState(30); // 30%
+    const [leftPanelWidth, setLeftPanelWidth] = useState(20); // 20%
     const [isDragging, setIsDragging] = useState(false);
     const [currentView, setCurrentView] = useState<'diagram' | 'xml'>('diagram');
     const [selectedElement, setSelectedElement] = useState<any>(null);
     const [modeler, setModeler] = useState<any>(null);
     const [propertyCache, setPropertyCache] = useState<Record<string, any>>({});
     const [xmlEditEnabled, setXmlEditEnabled] = useState(false);
+    const [cacheEnabled, setCacheEnabled] = useState(true);
     const splitterRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const xmlEditorRef = useRef<HTMLTextAreaElement>(null);
@@ -77,11 +78,78 @@ const BPMNWorkspace: React.FC = () => {
         };
     }, [isDragging, handleMouseMove, handleMouseUp]);
 
+    // Model caching functions (simplified like in comprehensive solution)
+    const saveModelToCache = useCallback((modelerInstance?: any) => {
+        const modelerToUse = modelerInstance || modeler;
+        if (!modelerToUse || !cacheEnabled) return;
+
+        modelerToUse.saveXML({ format: true }).then((result: any) => {
+            localStorage.setItem('bpmn_model_cache', result.xml);
+            localStorage.setItem('bpmn_model_timestamp', Date.now().toString());
+            console.log('Model saved to cache');
+        }).catch((error: any) => {
+            console.error('Error saving model to cache:', error);
+        });
+    }, [modeler, cacheEnabled]);
+
+    // Simple cache loading function that doesn't depend on React state
+    const loadModelFromCache = () => {
+        const cachedXML = localStorage.getItem('bpmn_model_cache');
+        const timestamp = localStorage.getItem('bpmn_model_timestamp');
+
+        if (cachedXML && timestamp) {
+            const age = Date.now() - parseInt(timestamp);
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+            if (age < maxAge) {
+                console.log('Loading model from cache (age:', Math.round(age / 1000 / 60), 'minutes)');
+                return cachedXML;
+            } else {
+                // Clear expired cache
+                localStorage.removeItem('bpmn_model_cache');
+                localStorage.removeItem('bpmn_model_timestamp');
+                console.log('Cache expired, cleared');
+            }
+        }
+
+        return null;
+    };
+
+    const clearModelCache = () => {
+        localStorage.removeItem('bpmn_model_cache');
+        localStorage.removeItem('bpmn_model_timestamp');
+        console.log('Model cache cleared');
+    };
+
+    const clearModel = useCallback(() => {
+        if (window.confirm('Are you sure you want to clear the entire model? This cannot be undone.')) {
+            if (modeler) {
+                // Import empty XML
+                modeler.importXML(emptyXML).then(() => {
+                    setSelectedElement(null);
+                    setPropertyCache({});
+                    clearModelCache();
+
+                    // Zoom to fit after clearing
+                    setTimeout(() => {
+                        const canvas = modeler.get('canvas');
+                        canvas.zoom('fit-viewport');
+                    }, 100);
+
+                    console.log('Model cleared and cache removed');
+                }).catch((error: any) => {
+                    console.error('Error clearing model:', error);
+                });
+            }
+        }
+    }, [modeler, emptyXML]);
+
     // Initialize BPMN modeler
     useEffect(() => {
         const initModeler = async () => {
             try {
                 console.log('Starting BPMN modeler initialization...');
+                console.log('Checking cache first...');
 
                 // Check if BPMN.js library is available
                 const BpmnModeler = (window as any).BpmnJS;
@@ -100,8 +168,28 @@ const BPMNWorkspace: React.FC = () => {
 
                 console.log('BPMN Modeler created, importing XML...');
 
-                await modelerInstance.importXML(emptyXML);
+                // Try to load from cache first (always check cache regardless of cacheEnabled state during init)
+                const cachedXML = loadModelFromCache();
+                let xmlToLoad = emptyXML;
+                let loadMessage = 'Importing empty BPMN diagram...';
+
+                if (cachedXML) {
+                    xmlToLoad = cachedXML;
+                    loadMessage = 'Loading cached BPMN diagram...';
+                    console.log('Found cached model, loading...');
+                } else {
+                    console.log('No cached model found, using empty XML');
+                }
+
+                console.log(loadMessage);
+                await modelerInstance.importXML(xmlToLoad);
                 setModeler(modelerInstance);
+
+                // Initialize property cache from loaded XML
+                if (cachedXML) {
+                    // Extract properties from the loaded cached XML
+                    extractAndCacheExtensionProperties(modelerInstance, xmlToLoad);
+                }
 
                 // Verify that context pad is available
                 try {
@@ -121,6 +209,7 @@ const BPMNWorkspace: React.FC = () => {
                 modelerInstance.on('element.click', (event: any) => {
                     setSelectedElement(event.element);
                     console.log('Element clicked:', event.element.type, event.element.id);
+                    saveModelToCache(modelerInstance);
                 });
 
                 modelerInstance.on('selection.changed', (event: any) => {
@@ -131,6 +220,15 @@ const BPMNWorkspace: React.FC = () => {
                         setSelectedElement(null);
                         console.log('Selection cleared');
                     }
+                });
+
+                // Auto-save on model changes
+                modelerInstance.on('commandStack.changed', () => {
+                    saveModelToCache(modelerInstance);
+                });
+
+                modelerInstance.on('element.changed', () => {
+                    saveModelToCache(modelerInstance);
                 });
 
                 // Ensure canvas is properly sized and context pad works
@@ -150,7 +248,7 @@ const BPMNWorkspace: React.FC = () => {
         };
 
         initModeler();
-    }, []);
+    }, []); // Remove dependencies to prevent re-initialization
 
     // Handle canvas resize when splitter moves
     useEffect(() => {
@@ -165,7 +263,67 @@ const BPMNWorkspace: React.FC = () => {
         }
     }, [leftPanelWidth, modeler]);
 
-    // Utility functions from comprehensive solution
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Ctrl+Shift+C to clear model
+            if (event.ctrlKey && event.shiftKey && event.key === 'C') {
+                event.preventDefault();
+                clearModel();
+            }
+            // Ctrl+S to save (already handled by BPMN.js, but we can add cache save)
+            if (event.ctrlKey && event.key === 's') {
+                event.preventDefault();
+                saveModelToCache();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [clearModel, saveModelToCache]);
+
+    // Extract and cache extension properties from XML (like in comprehensive solution)
+    const extractAndCacheExtensionProperties = useCallback((modelerInstance: any, xmlContent: string) => {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+            const newCache: Record<string, any> = {};
+
+            // Find all service tasks
+            const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+            serviceTasks.forEach(serviceTask => {
+                const taskId = serviceTask.getAttribute('id');
+                if (!taskId) return;
+
+                // Initialize cache for this element
+                newCache[taskId] = {};
+
+                // Find extension elements
+                const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                if (!extensionElements) return;
+
+                // Extract camunda properties
+                const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+
+                properties.forEach(prop => {
+                    const name = prop.getAttribute('name');
+                    const value = prop.getAttribute('value');
+                    if (name && value) {
+                        newCache[taskId][name] = value;
+                        console.log('Cached property:', taskId, name, '=', value);
+                    }
+                });
+            });
+
+            setPropertyCache(newCache);
+            console.log('Property cache updated:', newCache);
+        } catch (error) {
+            console.error('Error extracting properties for cache:', error);
+        }
+    }, []);
+
     const getExtensionProperty = useCallback((element: any, propertyName: string) => {
         if (!element || !element.businessObject) return '';
 
@@ -223,7 +381,10 @@ const BPMNWorkspace: React.FC = () => {
             }
             return newCache;
         });
-    }, [modeler]);
+
+        // Auto-save to cache
+        saveModelToCache();
+    }, [modeler, saveModelToCache]);
 
     const updateBasicProperty = useCallback((propertyName: string, value: string) => {
         if (!selectedElement || !modeler) return;
@@ -248,7 +409,10 @@ const BPMNWorkspace: React.FC = () => {
             properties[propertyName] = value;
             modeling.updateProperties(selectedElement, properties);
         }
-    }, [selectedElement, modeler]);
+
+        // Auto-save to cache
+        saveModelToCache();
+    }, [selectedElement, modeler, saveModelToCache]);
 
     const switchView = useCallback((view: 'diagram' | 'xml') => {
         setCurrentView(view);
@@ -266,7 +430,14 @@ const BPMNWorkspace: React.FC = () => {
         <div className="bpmn-workspace">
             <div className="workspace-header">
                 <h2>BPMN Workspace</h2>
-                <p>Draggable vertical splitter - {leftPanelWidth.toFixed(0)}% | {(100 - leftPanelWidth).toFixed(0)}%</p>
+                <p>
+                    Draggable vertical splitter - {leftPanelWidth.toFixed(0)}% | {(100 - leftPanelWidth).toFixed(0)}%
+                    {cacheEnabled && (
+                        <span style={{ marginLeft: '20px', color: '#28a745' }}>
+                            📁 Cache Enabled (24h auto-expire)
+                        </span>
+                    )}
+                </p>
             </div>
 
             <div className="workspace-content">
@@ -309,6 +480,17 @@ const BPMNWorkspace: React.FC = () => {
                             >
                                 XML View
                             </button>
+                            <button
+                                className="toggle-btn clear-btn"
+                                onClick={clearModel}
+                                style={{
+                                    background: '#dc3545',
+                                    color: 'white',
+                                    borderColor: '#dc3545'
+                                }}
+                            >
+                                Clear All
+                            </button>
                             <div className="xml-edit-toggle">
                                 <label className="toggle-switch">
                                     <input
@@ -347,7 +529,8 @@ const BPMNWorkspace: React.FC = () => {
                                     <li><strong>Delete</strong> - Delete selected element</li>
                                     <li><strong>Ctrl+Z</strong> - Undo</li>
                                     <li><strong>Ctrl+Y</strong> - Redo</li>
-                                    <li><strong>Ctrl+S</strong> - Export diagram</li>
+                                    <li><strong>Ctrl+S</strong> - Save to cache</li>
+                                    <li><strong>Ctrl+Shift+C</strong> - Clear all</li>
                                 </ul>
                             </div>
                             <div className="properties-content">

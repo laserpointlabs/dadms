@@ -168,6 +168,12 @@ body.dragging {
     background: #0056b3;
 }
 
+/* Clear button specific styling */
+.toggle-btn.clear-btn:hover {
+    background: #c82333 !important;
+    border-color: #bd2130 !important;
+}
+
 .bpmn-main-container {
     display: flex;
     gap: 20px;
