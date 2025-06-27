@@ -290,10 +290,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
+            padding: 8px 20px;
             background: #f8f9fa;
             border-top: 1px solid #dee2e6;
-            min-height: 50px;
+            min-height: 52px;
             flex-shrink: 0;
         }
 
@@ -310,44 +310,33 @@
         }
 
         .toolbar-btn {
-            padding: 6px 12px;
-            border: 1px solid #ced4da;
-            background: white;
-            border-radius: 4px;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
+            color: #495057;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            position: relative;
         }
 
         .toolbar-btn:hover {
-            background: #e9ecef;
-            border-color: #adb5bd;
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
         }
 
         .toolbar-btn.active {
             background: #007bff;
             color: white;
-            border-color: #007bff;
         }
 
         .toolbar-btn.active:hover {
             background: #0056b3;
-            border-color: #0056b3;
-        }
-
-        .toolbar-btn.danger {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
-        }
-
-        .toolbar-btn.danger:hover {
-            background: #c82333;
-            border-color: #bd2130;
         }
 
         .status-message {
@@ -553,6 +542,10 @@
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+S</strong> - Manual save to
                                         cache</div>
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+R</strong> - Refresh canvas</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+R</strong> - Reset/Clear all
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Space</strong> - Toggle XML/Diagram view
+                                    </div>
                                     <div><strong>XML Edit Toggle</strong> - Enable/disable XML editing</div>
                                 </div>
                             </div>
@@ -565,14 +558,8 @@
         <!-- Bottom Toolbar -->
         <div class="bottom-toolbar">
             <div class="toolbar-left">
-                <button class="toolbar-btn active" onclick="switchView('diagram')">
-                    📊 Diagram View
-                </button>
-                <button class="toolbar-btn" onclick="switchView('xml')">
+                <button class="toolbar-btn" id="view-toggle-btn" onclick="toggleView()">
                     📝 XML View
-                </button>
-                <button class="toolbar-btn danger" onclick="clearModel()">
-                    🗑️ Clear All
                 </button>
             </div>
 
@@ -694,30 +681,10 @@
             console.log('Injecting extensions for element:', elementId);
             console.log('Attributes to inject:', attrs);
 
-            // Extract the actual attributes - now they should be stored directly
-            let actualAttrs = {};
-            if (attrs.$attrs) {
-                // Extract service properties from $attrs
-                Object.keys(attrs.$attrs).forEach(key => {
-                    if (key.startsWith('service.')) {
-                        actualAttrs[key] = attrs.$attrs[key];
-                    }
-                });
-            } else {
-                // Properties might be stored directly
-                Object.keys(attrs).forEach(key => {
-                    if (key.startsWith('service.')) {
-                        actualAttrs[key] = attrs[key];
-                    }
-                });
-            }
-
-            console.log('Extracted actual attributes:', actualAttrs);
-
             // Check for service extension properties
-            const serviceType = actualAttrs['service.type'];
-            const serviceName = actualAttrs['service.name'];
-            const serviceVersion = actualAttrs['service.version'];
+            const serviceType = attrs['service.type'];
+            const serviceName = attrs['service.name'];
+            const serviceVersion = attrs['service.version'];
 
             console.log('Service properties:', { serviceType, serviceName, serviceVersion });
 
@@ -728,21 +695,23 @@
 
             // Build extension elements
             let extensionElements = '';
-            extensionElements += '\n  <bpmn:extensionElements>';
+            extensionElements += '\n      <bpmn:extensionElements>';
+            extensionElements += '\n        <camunda:properties>';
             if (serviceType) {
-                extensionElements += `\n    <camunda:property name="service.type" value="${serviceType}" />`;
+                extensionElements += `\n          <camunda:property name="service.type" value="${serviceType}" />`;
             }
             if (serviceName) {
-                extensionElements += `\n    <camunda:property name="service.name" value="${serviceName}" />`;
+                extensionElements += `\n          <camunda:property name="service.name" value="${serviceName}" />`;
             }
             if (serviceVersion) {
-                extensionElements += `\n    <camunda:property name="service.version" value="${serviceVersion}" />`;
+                extensionElements += `\n          <camunda:property name="service.version" value="${serviceVersion}" />`;
             }
-            extensionElements += '\n  </bpmn:extensionElements>';
+            extensionElements += '\n        </camunda:properties>';
+            extensionElements += '\n      </bpmn:extensionElements>';
 
             console.log('Extension elements to add:', extensionElements);
 
-            // Handle self-closing service tasks: <bpmn:serviceTask id="..." service:type="..." />
+            // Handle self-closing service tasks: <bpmn:serviceTask id="..." />
             const selfClosingRegex = new RegExp(
                 `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*)(\\s*/>)`,
                 'g'
@@ -752,17 +721,8 @@
                 console.log('Found self-closing service task in XML:', elementId);
                 console.log('Start tag:', startTag);
 
-                // Remove service attributes from start tag
-                let cleanStartTag = startTag;
-                cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
-
-                console.log('Clean start tag:', cleanStartTag);
-
                 // Convert self-closing to opening tag + content + closing tag
-                const newContent = cleanStartTag + '>' + extensionElements + '\n    </bpmn:serviceTask>';
+                const newContent = startTag + '>' + extensionElements + '\n    </bpmn:serviceTask>';
                 console.log('New content:', newContent);
                 return newContent;
             });
@@ -779,15 +739,6 @@
                 console.log('Content:', content);
                 console.log('End tag:', endTag);
 
-                // Remove service attributes from start tag
-                let cleanStartTag = startTag;
-                cleanStartTag = cleanStartTag.replace(/\s+service\.type="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service\.name="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+service\.version="[^"]*"/g, '');
-                cleanStartTag = cleanStartTag.replace(/\s+\$attrs="\[object Object\]"/g, '');
-
-                console.log('Clean start tag:', cleanStartTag);
-
                 // Check if extension elements already exist in content
                 if (content.includes('<bpmn:extensionElements>')) {
                     console.log('Extension elements already exist, removing old ones');
@@ -795,7 +746,7 @@
                     content = content.replace(/<bpmn:extensionElements>[\s\S]*?<\/bpmn:extensionElements>/g, '');
                 }
 
-                const newContent = cleanStartTag + content + extensionElements + endTag;
+                const newContent = startTag + content + extensionElements + '\n    ' + endTag;
                 console.log('New content:', newContent);
                 return newContent;
             });
@@ -845,18 +796,22 @@
             });
         }
 
+        function toggleView() {
+            const newView = currentView === 'diagram' ? 'xml' : 'diagram';
+            switchView(newView);
+        }
+
         function switchView(view) {
             currentView = view;
             const canvas = document.getElementById('canvas');
             const xmlEditor = document.getElementById('xml-editor');
-            const diagramBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'diagram\')"]');
-            const xmlBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'xml\')"]');
+            const toggleBtn = document.getElementById('view-toggle-btn');
 
             if (view === 'diagram') {
                 canvas.classList.remove('hidden');
                 xmlEditor.classList.add('hidden');
-                diagramBtn.classList.add('active');
-                xmlBtn.classList.remove('active');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '📝 XML View';
 
                 // Clean up XML overlay when switching to diagram view
                 const overlay = xmlEditor.parentElement.querySelector('.xml-highlight-overlay');
@@ -870,12 +825,12 @@
                     updatePropertiesPanel();
                 }
 
-                updateStatus('Switched to Diagram View', 'success');
+                updateStatus('Diagram View', 'success');
             } else if (view === 'xml') {
                 canvas.classList.add('hidden');
                 xmlEditor.classList.remove('hidden');
-                diagramBtn.classList.remove('active');
-                xmlBtn.classList.add('active');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '📊 Diagram View';
 
                 // Sync current XML to editor with extension properties injected
                 if (modeler) {
@@ -890,7 +845,7 @@
                         // Apply styling to the XML editor
                         highlightXML(xmlEditor);
 
-                        updateStatus('Switched to XML View', 'success');
+                        updateStatus('XML View', 'success');
                     }).catch(error => {
                         updateStatus('Error loading XML: ' + error.message, 'error');
                         // Fallback - show empty XML template
@@ -899,7 +854,7 @@
                 } else {
                     // Fallback if modeler not ready
                     xmlEditor.value = emptyXML;
-                    updateStatus('Switched to XML View - Empty template loaded', 'info');
+                    updateStatus('XML View - Empty template loaded', 'info');
                 }
             }
         }
@@ -934,19 +889,14 @@
         function getExtensionProperty(element, propertyName) {
             if (!element || !element.businessObject) return '';
 
-            // First try to get from modeler attributes
-            const attrs = element.businessObject.$attrs || {};
-            let value = attrs[propertyName] || '';
+            const elementId = element.businessObject.id;
 
-            // If not found in modeler attributes, try to get from cache
-            if (!value) {
-                const elementId = element.businessObject.id;
-                if (propertyCache[elementId] && propertyCache[elementId][propertyName]) {
-                    value = propertyCache[elementId][propertyName];
-                }
+            // Get value from cache
+            if (propertyCache[elementId] && propertyCache[elementId][propertyName]) {
+                return propertyCache[elementId][propertyName];
             }
 
-            return value;
+            return '';
         }
 
         function updateExtensionProperty(element, propertyName, value) {
@@ -955,50 +905,86 @@
             console.log('Updating extension property:', propertyName, '=', value);
             console.log('Element:', element.businessObject.id);
 
-            const modeling = modeler.get('modeling');
-
-            // Get existing attributes directly from the element
-            let existingAttrs = {};
-            if (element.businessObject.$attrs) {
-                // Extract only the actual extension properties, not the $attrs wrapper
-                Object.keys(element.businessObject.$attrs).forEach(key => {
-                    if (key !== '$attrs' && key.startsWith('service.')) {
-                        existingAttrs[key] = element.businessObject.$attrs[key];
-                    }
-                });
-            }
-
-            console.log('Existing attributes before update:', existingAttrs);
-
-            // Update the specific property
-            if (value && value.trim() !== '') {
-                existingAttrs[propertyName] = value;
-            } else {
-                delete existingAttrs[propertyName];
-            }
-
-            console.log('Updated attributes after merge:', existingAttrs);
-
-            // Store properties directly on the element without the $attrs wrapper
-            const properties = {};
-            Object.keys(existingAttrs).forEach(key => {
-                properties[key] = existingAttrs[key];
-            });
-
-            modeling.updateProperties(element, properties);
-
-            // Update the property cache as well
             const elementId = element.businessObject.id;
+
+            // Update the property cache
             if (!propertyCache[elementId]) {
                 propertyCache[elementId] = {};
             }
+
             if (value && value.trim() !== '') {
                 propertyCache[elementId][propertyName] = value;
             } else {
                 delete propertyCache[elementId][propertyName];
+                // If no properties left, remove the element from cache
+                if (Object.keys(propertyCache[elementId]).length === 0) {
+                    delete propertyCache[elementId];
+                }
             }
 
+            console.log('Updated property cache:', propertyCache);
+
+            // Trigger XML update to reflect changes
             updateXMLView();
+        }
+
+        function updateImplementationProperty(element, propertyName, value) {
+            if (!element || !element.businessObject) return;
+
+            console.log('Updating implementation property:', propertyName, '=', value);
+            console.log('Element:', element.businessObject.id);
+
+            const modeling = modeler.get('modeling');
+
+            // Implementation properties should be set as attributes on the business object
+            const properties = {};
+
+            // Clean the value - empty strings should be undefined to remove the property
+            const cleanValue = (value && value.trim() !== '') ? value.trim() : undefined;
+            properties[propertyName] = cleanValue;
+
+            // Update the business object properties
+            modeling.updateProperties(element, properties);
+
+            console.log('Updated business object with implementation property');
+            console.log('Business object after update:', element.businessObject);
+            console.log('Property value after update:', element.businessObject[propertyName] || element.businessObject.$attrs[propertyName]);
+
+            // Force update the properties panel to reflect the change
+            if (selectedElement && selectedElement.businessObject.id === element.businessObject.id) {
+                updatePropertiesPanel();
+            }
+
+            // Trigger XML update to reflect changes
+            updateXMLView();
+        } function getImplementationProperty(element, propertyName) {
+            if (!element || !element.businessObject) return '';
+
+            // Get the property from the business object's attributes
+            const businessObject = element.businessObject;
+
+            // Try multiple ways to get the property value
+            let value = '';
+
+            // Method 1: Direct property access
+            if (businessObject[propertyName]) {
+                value = businessObject[propertyName];
+            }
+            // Method 2: Using the get method if available
+            else if (businessObject.get && typeof businessObject.get === 'function') {
+                try {
+                    value = businessObject.get(propertyName);
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+            // Method 3: From $attrs object
+            else if (businessObject.$attrs && businessObject.$attrs[propertyName]) {
+                value = businessObject.$attrs[propertyName];
+            }
+
+            console.log('Getting implementation property:', propertyName, '=', value, 'from element:', element.businessObject.id);
+            return value || '';
         }
 
         function updateBasicProperty(propertyName, value) {
@@ -1131,16 +1117,16 @@
                 // Implementation group
                 const implContent =
                     createPropertyField('Type',
-                        `<select id="service-type" onchange="updateExtensionProperty(selectedElement, 'camunda:type', this.value)">
+                        `<select id="service-type" onchange="updateImplementationProperty(selectedElement, 'camunda:type', this.value)">
                             <option value="">Select Type</option>
-                            <option value="external" ${getExtensionProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
-                            <option value="expression" ${getExtensionProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
-                            <option value="connector" ${getExtensionProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
+                            <option value="external" ${getImplementationProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
+                            <option value="expression" ${getImplementationProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
+                            <option value="connector" ${getImplementationProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
                         </select>`) +
                     createPropertyField('Topic',
                         `<input type="text" id="service-topic" 
-                               value="${getExtensionProperty(selectedElement, 'camunda:topic')}" 
-                               onchange="updateExtensionProperty(selectedElement, 'camunda:topic', this.value)"
+                               value="${getImplementationProperty(selectedElement, 'camunda:topic')}" 
+                               onchange="updateImplementationProperty(selectedElement, 'camunda:topic', this.value)"
                                placeholder="service-topic">`);
 
                 html += createPropertyGroup('Implementation', implContent, true);
@@ -1149,23 +1135,30 @@
                 const extContent =
                     createPropertyField('Service Type',
                         `<input type="text" id="service-ext-type" 
-                               value="${getExtensionProperty(selectedElement, 'service:type')}" 
-                               onchange="updateExtensionProperty(selectedElement, 'service:type', this.value)"
+                               value="${getExtensionProperty(selectedElement, 'service.type')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.type', this.value)"
                                placeholder="ai-service">`) +
                     createPropertyField('Service Name',
                         `<input type="text" id="service-ext-name" 
-                               value="${getExtensionProperty(selectedElement, 'service:name')}" 
-                               onchange="updateExtensionProperty(selectedElement, 'service:name', this.value)"
+                               value="${getExtensionProperty(selectedElement, 'service.name')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.name', this.value)"
                                placeholder="OpenAI GPT Service">`) +
                     createPropertyField('Service Version',
                         `<input type="text" id="service-ext-version" 
-                               value="${getExtensionProperty(selectedElement, 'service:version')}" 
-                               onchange="updateExtensionProperty(selectedElement, 'service:version', this.value)"
+                               value="${getExtensionProperty(selectedElement, 'service.version')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.version', this.value)"
                                placeholder="1.0">`);
 
                 html += createPropertyGroup('Extension Properties', extContent, true);
             } else {
                 // For other element types, show basic properties
+
+                // Get documentation text properly for all element types
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
                 const basicContent =
                     createPropertyField('Name',
                         `<input type="text" value="${elementName}" 
@@ -1179,6 +1172,15 @@
                         `<input type="text" value="${elementType}" readonly style="background:#f5f5f5;">`);
 
                 html += createPropertyGroup('Basic Properties', basicContent);
+
+                // Documentation group for all elements
+                const docContent =
+                    createPropertyField('Description',
+                        `<textarea id="element-documentation" 
+                                  onchange="updateBasicProperty('documentation', this.value)"
+                                  placeholder="Enter element documentation...">${documentationText}</textarea>`);
+
+                html += createPropertyGroup('Documentation', docContent, true);
             }
 
             document.getElementById('properties-content').innerHTML = html;
@@ -1679,9 +1681,20 @@
                 case 'R':
                     if (event.ctrlKey || event.metaKey) {
                         event.preventDefault();
-                        refreshCanvas();
-                        updateStatus('Canvas refreshed', 'success');
+                        if (event.shiftKey) {
+                            // Ctrl+Shift+R or Cmd+Shift+R = Reset/Clear all
+                            clearModel();
+                        } else {
+                            // Ctrl+R or Cmd+R = Refresh canvas
+                            refreshCanvas();
+                            updateStatus('Canvas refreshed', 'success');
+                        }
                     }
+                    break;
+                case ' ':
+                    // Spacebar = Toggle view
+                    event.preventDefault();
+                    toggleView();
                     break;
                 case 'h':
                 case 'H':
@@ -1824,15 +1837,13 @@
             if (!modeler) return xml;
 
             console.log('Injecting extension properties into XML...');
-            const elementRegistry = modeler.get('elementRegistry');
 
-            // Find all service tasks and inject their extension properties
-            elementRegistry.forEach(element => {
-                const businessObject = element.businessObject;
-                if (businessObject.$type === 'bpmn:ServiceTask') {
-                    console.log('Found service task:', businessObject.id);
-                    console.log('Attributes:', businessObject.$attrs);
-                    xml = injectServiceTaskExtensions(xml, businessObject.id, businessObject.$attrs || {});
+            // Inject properties from cache for all service tasks
+            Object.keys(propertyCache).forEach(elementId => {
+                const props = propertyCache[elementId];
+                if (props && Object.keys(props).length > 0) {
+                    console.log('Injecting cached properties for element:', elementId, props);
+                    xml = injectServiceTaskExtensions(xml, elementId, props);
                 }
             });
 
@@ -1843,6 +1854,8 @@
         // Function to extract and cache extension properties from XML
         function extractAndCacheExtensionProperties(clearCache = true) {
             if (!modeler) return;
+
+            console.log('Extracting extension properties from XML...');
 
             modeler.saveXML({ format: true }).then(result => {
                 const xmlContent = result.xml;
@@ -2063,15 +2076,14 @@
 
         // Update button states for new toolbar
         function updateButtonStates() {
-            const diagramBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'diagram\')"]');
-            const xmlBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'xml\')"]');
+            const toggleBtn = document.getElementById('view-toggle-btn');
 
             if (currentView === 'diagram') {
-                diagramBtn.classList.add('active');
-                xmlBtn.classList.remove('active');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '📝 XML View';
             } else {
-                xmlBtn.classList.add('active');
-                diagramBtn.classList.remove('active');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '📊 Diagram View';
             }
         }
     </script>
