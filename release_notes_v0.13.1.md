@@ -20,6 +20,7 @@
 - Fixed: Save/Save As always prompted for new file, now overwrites after first save
 - Fixed: File name lost on browser refresh
 - Fixed: Fullscreen mode not available for modeler
+- Fixed: Docker UI build errors due to broken component referencing lucide-react
 
 ## 📋 Migration Guide
 ### From v0.13.0 to v0.13.1

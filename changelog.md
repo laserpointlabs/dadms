@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save/Save As always prompted for new file, now overwrites after first save
 - File name lost on browser refresh
 - Fullscreen mode not available for modeler
+- Docker UI build errors due to broken component referencing lucide-react
 
 ## [0.13.0] - 2025-06-27
 
