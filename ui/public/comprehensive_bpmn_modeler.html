@@ -132,6 +132,12 @@
             width: 25%;
             min-width: 250px;
             max-width: 50%;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+
+        .properties.collapsed {
+            width: 32px;
+            min-width: 32px;
         }
 
         .properties-header {
@@ -141,7 +147,43 @@
             min-height: 40px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
+        }
+
+        .properties-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            color: #495057;
+            padding: 2px;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            line-height: 1;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .properties-toggle-btn:hover {
+            background: #dee2e6;
+            color: #212529;
+        }
+
+        .properties.collapsed .properties-content {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header h3 {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header {
+            justify-content: center;
+            padding: 8px 2px;
         }
 
         .properties-header h3 {
@@ -289,31 +331,31 @@
         .bottom-toolbar {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 8px 20px;
+            align-items: stretch;
+            padding: 0;
             background: #f8f9fa;
             border-top: 1px solid #dee2e6;
-            min-height: 52px;
+            min-height: 36px;
             flex-shrink: 0;
         }
 
         .toolbar-left {
             display: flex;
-            gap: 12px;
-            align-items: center;
+            align-items: stretch;
         }
 
         .toolbar-right {
             display: flex;
             align-items: center;
             gap: 12px;
+            padding: 0 12px;
         }
 
         .toolbar-btn {
-            padding: 8px 16px;
+            padding: 0 16px;
             border: none;
-            background: transparent;
-            border-radius: 6px;
+            background: #f8f9fa;
+            border-radius: 0;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
@@ -321,22 +363,23 @@
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: flex-start;
+            height: 36px;
             position: relative;
         }
 
         .toolbar-btn:hover {
-            background: rgba(0, 123, 255, 0.1);
-            color: #007bff;
+            background: #e9ecef;
+            color: #495057;
         }
 
         .toolbar-btn.active {
-            background: #007bff;
-            color: white;
+            background: #d6d8db;
+            color: #495057;
         }
 
         .toolbar-btn.active:hover {
-            background: #0056b3;
+            background: #d6d8db;
         }
 
         .status-message {
@@ -514,6 +557,10 @@
                 <div class="properties" id="properties-panel">
                     <div class="properties-header">
                         <h3>Properties Panel</h3>
+                        <button class="properties-toggle-btn" id="properties-toggle" onclick="togglePropertiesPanel()"
+                            title="Toggle Properties Panel">
+                            ◀
+                        </button>
                     </div>
                     <div class="properties-content">
                         <!-- Element info section -->
@@ -544,6 +591,8 @@
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+R</strong> - Refresh canvas</div>
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+R</strong> - Reset/Clear all
                                     </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+P</strong> - Toggle properties panel
+                                    </div>
                                     <div style="margin-bottom: 6px;"><strong>Space</strong> - Toggle XML/Diagram view
                                     </div>
                                     <div><strong>XML Edit Toggle</strong> - Enable/disable XML editing</div>
@@ -559,7 +608,7 @@
         <div class="bottom-toolbar">
             <div class="toolbar-left">
                 <button class="toolbar-btn" id="view-toggle-btn" onclick="toggleView()">
-                    📝 XML View
+                    XML
                 </button>
             </div>
 
@@ -811,7 +860,7 @@
                 canvas.classList.remove('hidden');
                 xmlEditor.classList.add('hidden');
                 toggleBtn.classList.remove('active');
-                toggleBtn.innerHTML = '📝 XML View';
+                toggleBtn.innerHTML = 'XML';
 
                 // Clean up XML overlay when switching to diagram view
                 const overlay = xmlEditor.parentElement.querySelector('.xml-highlight-overlay');
@@ -830,7 +879,7 @@
                 canvas.classList.add('hidden');
                 xmlEditor.classList.remove('hidden');
                 toggleBtn.classList.add('active');
-                toggleBtn.innerHTML = '📊 Diagram View';
+                toggleBtn.innerHTML = 'XML';
 
                 // Sync current XML to editor with extension properties injected
                 if (modeler) {
@@ -1712,6 +1761,14 @@
                         }
                     }
                     break;
+                case 'p':
+                case 'P':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        togglePropertiesPanel();
+                        updateStatus('Properties panel toggled', 'success');
+                    }
+                    break;
             }
         }
 
@@ -2006,6 +2063,27 @@
             }
         }
 
+        // Function to toggle the entire properties panel
+        function togglePropertiesPanel() {
+            const propertiesPanel = document.getElementById('properties-panel');
+            const toggleBtn = document.getElementById('properties-toggle');
+            const canvasArea = document.querySelector('.canvas-main-area');
+
+            if (propertiesPanel.classList.contains('collapsed')) {
+                // Expand
+                propertiesPanel.classList.remove('collapsed');
+                toggleBtn.innerHTML = '◀';
+                toggleBtn.title = 'Collapse Properties Panel';
+                canvasArea.style.flex = '0 0 75%'; // Adjust canvas width
+            } else {
+                // Collapse
+                propertiesPanel.classList.add('collapsed');
+                toggleBtn.innerHTML = '▶';
+                toggleBtn.title = 'Expand Properties Panel';
+                canvasArea.style.flex = '1'; // Canvas takes remaining space
+            }
+        }
+
         // Initialize draggable splitter functionality
         function initializeSplitter() {
             const splitter = document.getElementById('properties-splitter');
@@ -2086,10 +2164,10 @@
 
             if (currentView === 'diagram') {
                 toggleBtn.classList.remove('active');
-                toggleBtn.innerHTML = '📝 XML View';
+                toggleBtn.innerHTML = 'XML';
             } else {
                 toggleBtn.classList.add('active');
-                toggleBtn.innerHTML = '📊 Diagram View';
+                toggleBtn.innerHTML = 'XML';
             }
         }
     </script>

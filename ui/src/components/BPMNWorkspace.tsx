@@ -51,23 +51,8 @@ const BPMNWorkspace: React.FC = () => {
 
     return (
         <div className="bpmn-workspace">
-            <div className="workspace-header">
-                <h2>BPMN Workspace</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <p>
-                        Draggable vertical splitter - {leftPanelWidth.toFixed(0)}% | {(100 - leftPanelWidth).toFixed(0)}%
-                    </p>
-                    <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                            <input
-                                type="checkbox"
-                                checked={useComprehensiveSolution}
-                                onChange={(e) => setUseComprehensiveSolution(e.target.checked)}
-                            />
-                            Use Comprehensive Solution
-                        </label>
-                    </div>
-                </div>
+            <div className="workspace-header" style={{ padding: '8px 20px', minHeight: '40px' }}>
+                <h2 style={{ margin: '0', fontSize: '18px', fontWeight: '600' }}>BPMN Workspace</h2>
             </div>
 
             <div className="workspace-content">
