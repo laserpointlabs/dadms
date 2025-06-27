@@ -42,6 +42,7 @@ const BPMNWorkspace: React.FC = () => {
     id="Definitions_1"
     targetNamespace="http://bpmn.io/schema/bpmn">
     <bpmn:process id="Process_1" name="New Process" isExecutable="true">
+        <bpmn:documentation></bpmn:documentation>
     </bpmn:process>
     <bpmndi:BPMNDiagram id="BPMNDiagram_1">
         <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
@@ -224,16 +225,14 @@ const BPMNWorkspace: React.FC = () => {
     // Get diagram properties
     const getDiagramProperties = useCallback(() => {
         if (!modeler) return null;
-
         try {
             const definitions = modeler.getDefinitions();
             const process = definitions.rootElements?.find((element: any) => element.$type === 'bpmn:Process');
-
             return {
                 id: process?.id || 'Process_1',
                 name: process?.name || 'New Process',
                 documentation: process?.documentation?.[0]?.text || '',
-                isExecutable: process?.isExecutable || true,
+                isExecutable: typeof process?.isExecutable === 'boolean' ? process.isExecutable : true,
                 definitionsId: definitions.id || 'Definitions_1',
                 targetNamespace: definitions.targetNamespace || 'http://bpmn.io/schema/bpmn'
             };
@@ -300,9 +299,15 @@ const BPMNWorkspace: React.FC = () => {
                 } else if (property === 'isExecutable') {
                     process.isExecutable = value === 'true';
                 }
-
-                setDiagramProperties(getDiagramProperties());
-
+                // Always update all fields in state
+                setDiagramProperties({
+                    id: process.id || 'Process_1',
+                    name: process.name || 'New Process',
+                    documentation: process.documentation?.[0]?.text || '',
+                    isExecutable: typeof process.isExecutable === 'boolean' ? process.isExecutable : true,
+                    definitionsId: definitions.id || 'Definitions_1',
+                    targetNamespace: definitions.targetNamespace || 'http://bpmn.io/schema/bpmn'
+                });
                 // Save to cache with injected extension properties
                 modeler.saveXML({ format: true }).then((result: any) => {
                     const injectedXml = injectExtensionProperties(result.xml);
@@ -313,7 +318,7 @@ const BPMNWorkspace: React.FC = () => {
         } catch (error) {
             console.error('Error updating diagram property:', error);
         }
-    }, [modeler, getDiagramProperties, injectExtensionProperties]);
+    }, [modeler, injectExtensionProperties]);
 
     // Initialize BPMN modeler
     useEffect(() => {
