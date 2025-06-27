@@ -330,6 +330,17 @@ const BPMNWorkspace: React.FC = () => {
                 console.log(loadMessage);
                 await modelerInstance.importXML(xmlToLoad);
                 setModeler(modelerInstance);
+                // Immediately extract process properties from the just-imported model
+                const definitions = modelerInstance.getDefinitions();
+                const process = definitions.rootElements?.find((element: any) => element.$type === 'bpmn:Process');
+                setDiagramProperties({
+                    id: process?.id || 'Process_1',
+                    name: process?.name || 'New Process',
+                    documentation: process?.documentation?.[0]?.text || '',
+                    isExecutable: process?.isExecutable || true,
+                    definitionsId: definitions.id || 'Definitions_1',
+                    targetNamespace: definitions.targetNamespace || 'http://bpmn.io/schema/bpmn'
+                });
 
                 // Initialize property cache from loaded XML
                 if (cachedXML) {
@@ -380,13 +391,16 @@ const BPMNWorkspace: React.FC = () => {
                             element.id === 'Process_1' ||
                             element.businessObject?.$type === 'bpmn:Process') {
                             setSelectedElement(null);
+                            setDiagramProperties(getDiagramProperties()); // Ensure diagramProperties is always set
                             console.log('Process/Canvas selected - showing diagram properties');
                         } else {
                             setSelectedElement(element);
+                            setDiagramProperties(getDiagramProperties()); // Also update diagramProperties for consistency
                             console.log('Element selected via selection change:', element.type, element.id);
                         }
                     } else {
                         setSelectedElement(null);
+                        setDiagramProperties(getDiagramProperties()); // Always set diagramProperties when nothing is selected
                         console.log('Selection cleared');
                     }
                     // Update diagram properties whenever selection changes
@@ -448,7 +462,20 @@ const BPMNWorkspace: React.FC = () => {
                     clearModelCache();
 
                     // Update diagram properties with the new empty model
-                    setDiagramProperties(getDiagramProperties());
+                    setDiagramProperties({
+                        id: 'Process_1',
+                        name: 'New Process',
+                        documentation: '',
+                        isExecutable: true,
+                        definitionsId: 'Definitions_1',
+                        targetNamespace: 'http://bpmn.io/schema/bpmn'
+                    });
+
+                    // Save the empty model to cache so refresh does not reload old model
+                    modeler.saveXML({ format: true }).then((result: any) => {
+                        localStorage.setItem('bpmn_model_cache', result.xml);
+                        localStorage.setItem('bpmn_model_timestamp', Date.now().toString());
+                    });
 
                     // Zoom to fit after clearing
                     setTimeout(() => {
@@ -462,7 +489,7 @@ const BPMNWorkspace: React.FC = () => {
                 });
             }
         }
-    }, [modeler, emptyXML, getDiagramProperties]);
+    }, [modeler, emptyXML]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -832,6 +859,23 @@ const BPMNWorkspace: React.FC = () => {
             console.log('xmlEditorRef.current:', !!xmlEditorRef.current);
         }
     }, [xmlPanelVisible, modeler, injectExtensionProperties]);
+
+    // Update XML textarea whenever the model changes and the XML panel is open
+    useEffect(() => {
+        if (!modeler || !xmlPanelVisible || !xmlEditorRef.current) return;
+        // Save XML and inject extension properties
+        modeler.saveXML({ format: true }).then((result: any) => {
+            let xmlToShow = result.xml;
+            try {
+                xmlToShow = injectExtensionProperties(result.xml);
+            } catch (injectionError) {
+                // fallback to raw xml
+            }
+            if (xmlEditorRef.current) {
+                xmlEditorRef.current.value = xmlToShow;
+            }
+        });
+    }, [modeler, xmlPanelVisible, selectedElement, propertyCache, diagramProperties]);
 
     const toggleKeyboardShortcuts = useCallback(() => {
         setShowKeyboardShortcuts(!showKeyboardShortcuts);
@@ -1238,6 +1282,14 @@ const BPMNWorkspace: React.FC = () => {
                                 title="Show Keyboard Shortcuts"
                             >
                                 ⌨️ Shortcuts
+                            </button>
+                            <button
+                                className="toolbar-btn clear-btn"
+                                style={{ background: '#dc3545', color: 'white', borderColor: '#dc3545' }}
+                                onClick={clearModel}
+                                title="Clear Model"
+                            >
+                                🗑️ Clear Model
                             </button>
                         </div>
                         <div className="toolbar-right">
