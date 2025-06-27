@@ -2183,6 +2183,8 @@
         function loadModelFromCache() {
             const cachedXML = localStorage.getItem('bpmn_model_cache');
 
+
+
             const timestamp = localStorage.getItem('bpmn_model_timestamp');
 
             if (cachedXML && timestamp) {
@@ -2717,6 +2719,15 @@
         let hasUnsavedChanges = false;
         let currentFileHandle = null; // <-- Store the file handle
 
+        // Restore file name from localStorage on load
+        (function restoreFileNameFromStorage() {
+            const storedName = localStorage.getItem('bpmn_model_filename');
+            if (storedName) {
+                currentFileName = storedName;
+                updateWindowTitle();
+            }
+        })();
+
         // Menu Management Functions
         function toggleMenu(menuId) {
             // Close all other menus first
@@ -2866,7 +2877,6 @@
                 updateStatus('No model to save', 'error');
                 return;
             }
-            // Use File System Access API if we have a handle
             if (window.showSaveFilePicker && currentFileHandle) {
                 modeler.saveXML({ format: true }).then(result => {
                     const xmlToSave = injectExtensionProperties(result.xml);
@@ -2875,6 +2885,7 @@
                         writable.write(blob).then(() => {
                             writable.close().then(() => {
                                 hasUnsavedChanges = false;
+                                localStorage.setItem('bpmn_model_filename', currentFileName || ''); // persist name
                                 updateWindowTitle();
                                 updateStatus(`Model saved to: ${currentFileName}`, 'success');
                             });
@@ -2928,8 +2939,9 @@
                 };
                 window.showSaveFilePicker(options)
                     .then(fileHandle => {
-                        currentFileHandle = fileHandle; // <-- Save handle for future saves
+                        currentFileHandle = fileHandle;
                         currentFileName = fileHandle.name;
+                        localStorage.setItem('bpmn_model_filename', currentFileName || ''); // persist name
                         return fileHandle.createWritable().then(writable => ({ fileHandle, writable }));
                     })
                     .then(({ fileHandle, writable }) => {
