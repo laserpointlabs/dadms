@@ -926,6 +926,9 @@
 
             // Trigger XML update to reflect changes
             updateXMLView();
+
+            // Save to cache since extension properties don't trigger element.changed event
+            saveModelToCache();
         }
 
         function updateImplementationProperty(element, propertyName, value) {
@@ -1226,8 +1229,11 @@
                     updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
                 }
 
-                // Initialize property cache
-                extractAndCacheExtensionProperties();
+                // Initialize property cache - use a small delay to ensure XML is fully processed
+                setTimeout(() => {
+                    extractAndCacheExtensionProperties();
+                    console.log('Extension properties extracted from loaded model');
+                }, 100);
 
                 // Add event listeners
                 modeler.on('element.click', (event) => {
