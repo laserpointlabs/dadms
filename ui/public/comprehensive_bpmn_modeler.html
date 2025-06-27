@@ -2093,14 +2093,7 @@
                 case 'S':
                     if (event.ctrlKey || event.metaKey) {
                         event.preventDefault();
-                        if (event.shiftKey) {
-                            // Ctrl+Shift+S or Cmd+Shift+S = Manual save to cache
-                            saveModelToCache();
-                            updateStatus('Model manually saved to cache', 'success');
-                        } else {
-                            // Ctrl+S or Cmd+S = Export diagram
-                            exportDiagram();
-                        }
+                        saveFile(); // Always call saveFile, let it decide
                     }
                     break;
                 case 'r':
@@ -2189,6 +2182,7 @@
 
         function loadModelFromCache() {
             const cachedXML = localStorage.getItem('bpmn_model_cache');
+
             const timestamp = localStorage.getItem('bpmn_model_timestamp');
 
             if (cachedXML && timestamp) {
@@ -2721,6 +2715,7 @@
         // Global variables for file handling
         let currentFileName = null;
         let hasUnsavedChanges = false;
+        let currentFileHandle = null; // <-- Store the file handle
 
         // Menu Management Functions
         function toggleMenu(menuId) {
@@ -2871,14 +2866,29 @@
                 updateStatus('No model to save', 'error');
                 return;
             }
-
-            if (currentFileName) {
-                // Save with current filename
-                saveModelToFile(currentFileName);
-            } else {
-                // First save, prompt for filename
-                saveAsFile();
+            // Use File System Access API if we have a handle
+            if (window.showSaveFilePicker && currentFileHandle) {
+                modeler.saveXML({ format: true }).then(result => {
+                    const xmlToSave = injectExtensionProperties(result.xml);
+                    const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                    currentFileHandle.createWritable().then(writable => {
+                        writable.write(blob).then(() => {
+                            writable.close().then(() => {
+                                hasUnsavedChanges = false;
+                                updateWindowTitle();
+                                updateStatus(`Model saved to: ${currentFileName}`, 'success');
+                            });
+                        });
+                    }).catch(error => {
+                        updateStatus('Error saving file: ' + error.message, 'error');
+                        console.error('Save error:', error);
+                    });
+                });
+                closeAllMenus();
+                return;
             }
+            // Otherwise, fallback to Save As
+            saveToFolder();
             closeAllMenus();
         }
 
@@ -2901,19 +2911,12 @@
                 updateStatus('No model to save', 'error');
                 return;
             }
-
-            // Check if File System Access API is supported
             if (!('showSaveFilePicker' in window)) {
                 updateStatus('File System Access API not supported in this browser. Use "Save As..." instead.', 'error');
-                // Fallback to regular save as
-                setTimeout(() => {
-                    saveAsFile();
-                }, 1000);
+                setTimeout(() => { saveAsFile(); }, 1000);
                 return;
             }
-
             modeler.saveXML({ format: true }).then(result => {
-                // Inject extension properties into XML before saving
                 const xmlToSave = injectExtensionProperties(result.xml);
                 const blob = new Blob([xmlToSave], { type: 'application/xml' });
                 const options = {
@@ -2923,9 +2926,10 @@
                         accept: { 'application/xml': ['.bpmn', '.xml'] }
                     }]
                 };
-
                 window.showSaveFilePicker(options)
                     .then(fileHandle => {
+                        currentFileHandle = fileHandle; // <-- Save handle for future saves
+                        currentFileName = fileHandle.name;
                         return fileHandle.createWritable().then(writable => ({ fileHandle, writable }));
                     })
                     .then(({ fileHandle, writable }) => {
@@ -2935,7 +2939,6 @@
                         return writable.close().then(() => fileHandle);
                     })
                     .then(fileHandle => {
-                        currentFileName = fileHandle.name;
                         hasUnsavedChanges = false;
                         updateWindowTitle();
                         updateStatus(`Model saved to: ${fileHandle.name}`, 'success');
@@ -2951,7 +2954,6 @@
             }).catch(error => {
                 updateStatus('Error generating XML: ' + error.message, 'error');
             });
-
             closeAllMenus();
         }
 
@@ -3252,15 +3254,12 @@ Built with BPMN.js
             } else if (e.ctrlKey && e.altKey && e.key === 'O') {
                 e.preventDefault();
                 openFromFolder();
+            } else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveFile(); // Always call saveFile, let it decide
             } else if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 saveAsFile();
-            } else if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                saveFile();
-            } else if (e.ctrlKey && e.altKey && e.key === 'S') {
-                e.preventDefault();
-                saveToFolder();
             }
             // Edit operations
             else if (e.ctrlKey && e.key === 'z') {
