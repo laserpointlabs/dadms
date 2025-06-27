@@ -33,6 +33,104 @@
             overflow: hidden;
         }
 
+        /* Menu Bar Styles */
+        .menu-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            min-height: 32px;
+            flex-shrink: 0;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .menu-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: #495057;
+            font-size: 13px;
+            transition: background-color 0.2s ease;
+            border-radius: 0;
+        }
+
+        .menu-button:hover,
+        .menu-button.active {
+            background: #e9ecef;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-dropdown-item {
+            display: block;
+            padding: 8px 16px;
+            color: #495057;
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-dropdown-item:hover:not(.disabled) {
+            background: #f8f9fa;
+        }
+
+        .menu-dropdown-item.disabled {
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .menu-dropdown-item .shortcut {
+            float: right;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: #dee2e6;
+            margin: 4px 0;
+        }
+
+        /* File status indicator */
+        .file-status {
+            margin-left: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-status.modified {
+            color: #dc3545;
+        }
+
         .main-content {
             display: flex;
             flex: 1;
@@ -540,6 +638,95 @@
 
 <body>
     <div class="workspace-container">
+        <!-- Menu Bar -->
+        <div class="menu-bar">
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('file-menu')">File</button>
+                <div class="menu-dropdown" id="file-menu">
+                    <button class="menu-dropdown-item" onclick="newModel()">
+                        New Model <span class="shortcut">Ctrl+N</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="openFile()">
+                        Open... <span class="shortcut">Ctrl+O</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="saveFile()">
+                        Save <span class="shortcut">Ctrl+S</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="saveAsFile()">
+                        Save As... <span class="shortcut">Ctrl+Shift+S</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="importXMLDialog()">
+                        Import XML...
+                    </button>
+                    <button class="menu-dropdown-item" onclick="exportXMLToClipboard()">
+                        Export XML to Clipboard
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('edit-menu')">Edit</button>
+                <div class="menu-dropdown" id="edit-menu">
+                    <button class="menu-dropdown-item" onclick="undoAction()">
+                        Undo <span class="shortcut">Ctrl+Z</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="redoAction()">
+                        Redo <span class="shortcut">Ctrl+Y</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="deleteSelectedElement()">
+                        Delete Selected <span class="shortcut">Delete</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="selectAllElements()">
+                        Select All <span class="shortcut">Ctrl+A</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="clearCanvas()">
+                        Clear Canvas <span class="shortcut">Ctrl+Shift+R</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('view-menu')">View</button>
+                <div class="menu-dropdown" id="view-menu">
+                    <button class="menu-dropdown-item" onclick="toggleView()">
+                        Toggle XML View <span class="shortcut">Space</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="togglePropertiesPanel()">
+                        Toggle Properties Panel <span class="shortcut">Ctrl+P</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="zoomToFit()">
+                        Zoom to Fit <span class="shortcut">Ctrl+0</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="resetZoom()">
+                        Reset Zoom <span class="shortcut">Ctrl+1</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('help-menu')">Help</button>
+                <div class="menu-dropdown" id="help-menu">
+                    <button class="menu-dropdown-item" onclick="showKeyboardShortcuts()">
+                        Keyboard Shortcuts <span class="shortcut">F1</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="showAbout()">
+                        About
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-status" id="file-status">
+                Untitled
+            </div>
+        </div>
+
         <div class="main-content">
             <div class="canvas-properties-container">
                 <!-- Canvas Area -->
@@ -626,6 +813,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden file input for opening files -->
+    <input type="file" id="file-input" accept=".bpmn,.xml" style="display: none;">
 
     <!-- BPMN.js -->
     <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js"></script>
@@ -848,6 +1038,7 @@
         function toggleView() {
             const newView = currentView === 'diagram' ? 'xml' : 'diagram';
             switchView(newView);
+            closeAllMenus();
         }
 
         function switchView(view) {
@@ -973,6 +1164,9 @@
 
             console.log('Updated property cache:', propertyCache);
 
+            // Mark as modified
+            markAsModified();
+
             // Trigger XML update to reflect changes
             updateXMLView();
 
@@ -1066,6 +1260,9 @@
                 properties[propertyName] = value;
                 modeling.updateProperties(selectedElement, properties);
             }
+
+            // Mark as modified
+            markAsModified();
 
             updateXMLView();
         }
@@ -1184,20 +1381,30 @@
                 html += createPropertyGroup('Implementation', implContent, true);
 
                 // Extension Properties group
+                const serviceTypeValue = getExtensionProperty(selectedElement, 'service.type');
+                const serviceNameValue = getExtensionProperty(selectedElement, 'service.name');
+                const serviceVersionValue = getExtensionProperty(selectedElement, 'service.version');
+
+                console.log('Extension property values for element:', selectedElement.businessObject.id);
+                console.log('- service.type:', serviceTypeValue);
+                console.log('- service.name:', serviceNameValue);
+                console.log('- service.version:', serviceVersionValue);
+                console.log('- Property cache for element:', propertyCache[selectedElement.businessObject.id]);
+
                 const extContent =
                     createPropertyField('Service Type',
                         `<input type="text" id="service-ext-type" 
-                               value="${getExtensionProperty(selectedElement, 'service.type')}" 
+                               value="${serviceTypeValue}" 
                                onchange="updateExtensionProperty(selectedElement, 'service.type', this.value)"
                                placeholder="ai-service">`) +
                     createPropertyField('Service Name',
                         `<input type="text" id="service-ext-name" 
-                               value="${getExtensionProperty(selectedElement, 'service.name')}" 
+                               value="${serviceNameValue}" 
                                onchange="updateExtensionProperty(selectedElement, 'service.name', this.value)"
                                placeholder="OpenAI GPT Service">`) +
                     createPropertyField('Service Version',
                         `<input type="text" id="service-ext-version" 
-                               value="${getExtensionProperty(selectedElement, 'service.version')}" 
+                               value="${serviceVersionValue}" 
                                onchange="updateExtensionProperty(selectedElement, 'service.version', this.value)"
                                placeholder="1.0">`);
 
@@ -1278,11 +1485,19 @@
                     updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
                 }
 
-                // Initialize property cache - use a small delay to ensure XML is fully processed
-                setTimeout(() => {
-                    extractAndCacheExtensionProperties();
-                    console.log('Extension properties extracted from loaded model');
-                }, 100);
+                // Initialize property cache - use the new direct extraction method
+                if (cachedXML) {
+                    extractExtensionPropertiesFromInputXML(cachedXML);
+                    setTimeout(() => {
+                        updatePropertiesPanel();
+                        console.log('Extension properties extracted from cached model');
+                    }, 200);
+                } else {
+                    setTimeout(() => {
+                        extractAndCacheExtensionProperties();
+                        console.log('Extension properties extracted from empty model');
+                    }, 100);
+                }
 
                 // Add event listeners
                 modeler.on('element.click', (event) => {
@@ -1304,7 +1519,11 @@
                     saveModelToCache();
                 });
 
+                // Setup change tracking for unsaved changes indicator
+                setupChangeTracking();
+
                 updateXMLView();
+                updateWindowTitle();
 
                 // Ensure we start in diagram view
                 switchView('diagram');
@@ -1554,10 +1773,60 @@
         window.debugModeler = function () {
             console.log('Modeler:', modeler);
             console.log('Selected element:', selectedElement);
+            console.log('Property cache:', propertyCache);
+            console.log('Current view:', currentView);
+            console.log('Has unsaved changes:', hasUnsavedChanges);
+            console.log('Current filename:', currentFileName);
+
             if (selectedElement) {
-                console.log('Business object:', selectedElement.businessObject);
-                console.log('Attributes:', selectedElement.businessObject.$attrs);
+                console.log('Selected element business object:', selectedElement.businessObject);
+                console.log('Selected element type:', selectedElement.businessObject.$type);
+                console.log('Selected element ID:', selectedElement.businessObject.id);
+                console.log('Business object attributes:', selectedElement.businessObject.$attrs);
                 console.log('Documentation:', selectedElement.businessObject.documentation);
+
+                // Show cached properties for this element
+                const elementId = selectedElement.businessObject.id;
+                if (propertyCache[elementId]) {
+                    console.log('Cached properties for selected element:', propertyCache[elementId]);
+                } else {
+                    console.log('No cached properties for selected element');
+                }
+            }
+        };
+
+        // Add debug function for extension properties
+        window.debugExtensionProperties = function () {
+            console.log('=== EXTENSION PROPERTIES DEBUG ===');
+            console.log('Property cache:', propertyCache);
+
+            if (modeler) {
+                modeler.saveXML({ format: true }).then(result => {
+                    console.log('Current XML:', result.xml);
+
+                    // Parse and show what's actually in the XML
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(result.xml, 'text/xml');
+                    const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                    console.log('Service tasks found in XML:', serviceTasks.length);
+                    serviceTasks.forEach(serviceTask => {
+                        const taskId = serviceTask.getAttribute('id');
+                        console.log('Service task ID:', taskId);
+
+                        const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                        if (extensionElements) {
+                            console.log('Extension elements found for', taskId);
+                            const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                            console.log('Properties found:', properties.length);
+                            properties.forEach(prop => {
+                                console.log('- Property:', prop.getAttribute('name'), '=', prop.getAttribute('value'));
+                            });
+                        } else {
+                            console.log('No extension elements found for', taskId);
+                        }
+                    });
+                });
             }
         };
 
@@ -1604,11 +1873,30 @@
 
         // Add global function to refresh property cache
         window.refreshPropertyCache = function () {
-            extractAndCacheExtensionProperties();
-            if (selectedElement) {
-                updatePropertiesPanel();
+            console.log('Manually refreshing property cache...');
+
+            // Extract properties from current modeler state
+            extractAndCacheExtensionProperties(true);
+
+            // Also try to extract from current XML if available
+            if (modeler) {
+                modeler.saveXML({ format: true }).then(result => {
+                    extractExtensionPropertiesFromInputXML(result.xml);
+
+                    // Update properties panel if element is selected
+                    if (selectedElement) {
+                        updatePropertiesPanel();
+                    }
+
+                    updateStatus('Property cache refreshed from current model', 'success');
+                    console.log('Property cache after refresh:', propertyCache);
+                }).catch(error => {
+                    console.error('Error refreshing property cache:', error);
+                    updateStatus('Error refreshing property cache', 'error');
+                });
+            } else {
+                updateStatus('No modeler available to refresh cache', 'error');
             }
-            updateStatus('Property cache refreshed', 'success');
         };
 
         // Add global function to force refresh properties panel
@@ -2026,6 +2314,115 @@
             }
         }
 
+        // New function to extract extension properties directly from input XML
+        function extractExtensionPropertiesFromInputXML(xmlContent) {
+            console.log('Extracting extension properties from input XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Clear property cache
+                propertyCache = {};
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task for cache:', taskId);
+
+                    // Initialize cache for this element
+                    propertyCache[taskId] = {};
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) {
+                        console.log('No extension elements found for:', taskId);
+                        return;
+                    }
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            propertyCache[taskId][name] = value;
+                            console.log('Cached property from input XML:', taskId, name, '=', value);
+                        }
+                    });
+
+                    // Remove empty entries
+                    if (Object.keys(propertyCache[taskId]).length === 0) {
+                        delete propertyCache[taskId];
+                    }
+                });
+
+                console.log('Property cache updated from input XML:', propertyCache);
+            } catch (error) {
+                console.error('Error extracting extension properties from input XML:', error);
+            }
+        }
+
+        // Function to extract extension properties from XML and update modeler elements
+        function extractExtensionPropertiesFromXML(xmlContent) {
+            console.log('Extracting extension properties from XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task:', taskId);
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) return;
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                    const extractedProps = {};
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            extractedProps[name] = value;
+                            console.log('Extracted property:', name, '=', value);
+                        }
+                    });
+
+                    // Update the modeler element if it exists
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(taskId);
+
+                        if (element && Object.keys(extractedProps).length > 0) {
+                            console.log('Updating element with extracted properties:', extractedProps);
+
+                            // Update the element's attributes
+                            const modeling = modeler.get('modeling');
+                            modeling.updateProperties(element, extractedProps);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error extracting extension properties:', error);
+            }
+        }
+
         // Add function to toggle XML editing
         function toggleXMLEditing() {
             const xmlEditor = document.getElementById('xml-editor');
@@ -2170,6 +2567,491 @@
                 toggleBtn.innerHTML = 'XML';
             }
         }
+
+        // Global variables for file handling
+        let currentFileName = null;
+        let hasUnsavedChanges = false;
+
+        // Menu Management Functions
+        function toggleMenu(menuId) {
+            // Close all other menus first
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                if (menu.id !== menuId) {
+                    menu.classList.remove('show');
+                }
+            });
+            document.querySelectorAll('.menu-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Toggle the requested menu
+            const menu = document.getElementById(menuId);
+            const button = menu.previousElementSibling;
+
+            if (menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                button.classList.remove('active');
+            } else {
+                menu.classList.add('show');
+                button.classList.add('active');
+            }
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-item')) {
+                document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+                document.querySelectorAll('.menu-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+        });
+
+        // File Management Functions
+        function newModel() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to create a new model?')) {
+                return;
+            }
+
+            try {
+                currentFileName = null;
+                hasUnsavedChanges = false;
+                propertyCache = {};
+                selectedElement = null;
+
+                modeler.importXML(emptyXML).then(() => {
+                    updateStatus('New model created', 'success');
+                    updatePropertiesPanel();
+                    updateXMLView();
+                    clearModelCache();
+                    updateWindowTitle();
+                    closeAllMenus();
+                }).catch(error => {
+                    updateStatus('Error creating new model: ' + error.message, 'error');
+                });
+            } catch (error) {
+                updateStatus('Error creating new model: ' + error.message, 'error');
+            }
+        }
+
+        function openFile() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to open a new file?')) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.bpmn,.xml';
+            input.style.display = 'none';
+
+            input.onchange = function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    loadModelFromXML(e.target.result, file.name);
+                };
+                reader.readAsText(file);
+            };
+
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+            closeAllMenus();
+        }
+
+        function saveFile() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            if (currentFileName) {
+                // Save with current filename
+                saveModelToFile(currentFileName);
+            } else {
+                // First save, prompt for filename
+                saveAsFile();
+            }
+            closeAllMenus();
+        }
+
+        function saveAsFile() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            const filename = prompt('Enter filename (without extension):', currentFileName || 'untitled');
+            if (filename) {
+                const fullFilename = filename.endsWith('.bpmn') ? filename : filename + '.bpmn';
+                saveModelToFile(fullFilename);
+            }
+            closeAllMenus();
+        }
+
+        function loadModelFromXML(xmlContent, filename = null) {
+            if (!modeler) {
+                updateStatus('Modeler not initialized', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Loading model...', 'info');
+
+                // First, extract extension properties directly from the XML content
+                extractExtensionPropertiesFromInputXML(xmlContent);
+
+                modeler.importXML(xmlContent).then(() => {
+                    // Set current filename
+                    currentFileName = filename;
+                    hasUnsavedChanges = false;
+
+                    // Update UI - with a delay to ensure the modeler is ready
+                    setTimeout(() => {
+                        updatePropertiesPanel();
+                        updateXMLView();
+                        updateWindowTitle();
+
+                        // Save to cache
+                        saveModelToCache();
+
+                        // Zoom to fit
+                        if (modeler) {
+                            const canvas = modeler.get('canvas');
+                            canvas.zoom('fit-viewport');
+                        }
+
+                        updateStatus(`Model loaded successfully${filename ? ': ' + filename : ''}`, 'success');
+                        console.log('Model loaded, property cache:', propertyCache);
+                    }, 200);
+
+                }).catch(error => {
+                    updateStatus('Error loading model: ' + error.message, 'error');
+                    console.error('Error loading model:', error);
+                });
+
+            } catch (error) {
+                updateStatus('Error loading model: ' + error.message, 'error');
+                console.error('Error loading model:', error);
+            }
+        }
+
+        function saveModelToFile(filename) {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                // Inject extension properties into XML before saving
+                const xmlToSave = injectExtensionProperties(result.xml);
+
+                // Create download
+                const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(url);
+
+                // Update state
+                currentFileName = filename;
+                hasUnsavedChanges = false;
+                updateWindowTitle();
+
+                updateStatus(`Model saved as: ${filename}`, 'success');
+
+            }).catch(error => {
+                updateStatus('Error saving model: ' + error.message, 'error');
+                console.error('Error saving model:', error);
+            });
+        }
+
+        function importXMLDialog() {
+            const xmlContent = prompt('Paste your BPMN XML here:');
+            if (xmlContent && xmlContent.trim()) {
+                loadModelFromXML(xmlContent.trim());
+            }
+            closeAllMenus();
+        }
+
+        function exportXMLToClipboard() {
+            if (!modeler) {
+                updateStatus('No model to export', 'error');
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                const xmlToExport = injectExtensionProperties(result.xml);
+
+                navigator.clipboard.writeText(xmlToExport).then(() => {
+                    updateStatus('XML copied to clipboard', 'success');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = xmlToExport;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    updateStatus('XML copied to clipboard', 'success');
+                });
+            }).catch(error => {
+                updateStatus('Error exporting XML: ' + error.message, 'error');
+            });
+            closeAllMenus();
+        }
+
+        // Edit Menu Functions
+        function undoAction() {
+            if (modeler) {
+                const commandStack = modeler.get('commandStack');
+                if (commandStack.canUndo()) {
+                    commandStack.undo();
+                    updateStatus('Undo performed', 'info');
+                }
+            }
+            closeAllMenus();
+        }
+
+        function redoAction() {
+            if (modeler) {
+                const commandStack = modeler.get('commandStack');
+                if (commandStack.canRedo()) {
+                    commandStack.redo();
+                    updateStatus('Redo performed', 'info');
+                }
+            }
+            closeAllMenus();
+        }
+
+        function deleteSelectedElement() {
+            if (selectedElement && modeler) {
+                const modeling = modeler.get('modeling');
+                modeling.removeElements([selectedElement]);
+                selectedElement = null;
+                updatePropertiesPanel();
+                updateStatus('Element deleted', 'info');
+            }
+            closeAllMenus();
+        }
+
+        function selectAllElements() {
+            if (modeler) {
+                const elementRegistry = modeler.get('elementRegistry');
+                const selection = modeler.get('selection');
+                const allElements = elementRegistry.getAll().filter(element =>
+                    element.type !== 'bpmn:Process' && element.type !== 'label'
+                );
+                selection.select(allElements);
+                updateStatus(`Selected ${allElements.length} elements`, 'info');
+            }
+            closeAllMenus();
+        }
+
+        function clearCanvas() {
+            if (hasUnsavedChanges && !confirm('This will clear the entire canvas. Are you sure?')) {
+                return;
+            }
+            newModel();
+            closeAllMenus();
+        }
+
+        // View Menu Functions
+        function zoomToFit() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                canvas.zoom('fit-viewport');
+                updateStatus('Zoomed to fit', 'info');
+            }
+            closeAllMenus();
+        }
+
+        function resetZoom() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                canvas.zoom(1.0);
+                updateStatus('Zoom reset', 'info');
+            }
+            closeAllMenus();
+        }
+
+        // Help Menu Functions
+        function showKeyboardShortcuts() {
+            const shortcuts = `
+Keyboard Shortcuts:
+
+File Operations:
+• Ctrl+N - New Model
+• Ctrl+O - Open File
+• Ctrl+S - Save
+• Ctrl+Shift+S - Save As
+
+Edit Operations:
+• Ctrl+Z - Undo
+• Ctrl+Y - Redo  
+• Delete - Delete Selected Element
+• Ctrl+A - Select All
+• Ctrl+Shift+R - Clear Canvas
+
+View Operations:
+• Space - Toggle XML View
+• Ctrl+P - Toggle Properties Panel
+• Ctrl+0 - Zoom to Fit
+• Ctrl+1 - Reset Zoom
+
+Other:
+• F1 - Show Help
+• Ctrl+R - Refresh Canvas
+            `.trim();
+
+            alert(shortcuts);
+            closeAllMenus();
+        }
+
+        function showAbout() {
+            const about = `
+Comprehensive BPMN Modeler
+Version 1.0
+
+A powerful BPMN 2.0 diagram editor with support for:
+• Standard BPMN elements
+• Extension properties
+• XML editing
+• File import/export
+• Real-time property editing
+
+Built with BPMN.js
+            `.trim();
+
+            alert(about);
+            closeAllMenus();
+        }
+
+        // Utility Functions
+        function closeAllMenus() {
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            document.querySelectorAll('.menu-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function updateWindowTitle() {
+            const title = currentFileName ?
+                `Comprehensive BPMN Modeler - ${currentFileName}${hasUnsavedChanges ? ' *' : ''}` :
+                `Comprehensive BPMN Modeler${hasUnsavedChanges ? ' - Untitled *' : ''}`;
+            document.title = title;
+
+            // Update file status indicator
+            const fileStatus = document.getElementById('file-status');
+            if (fileStatus) {
+                const displayName = currentFileName || 'Untitled';
+                fileStatus.textContent = displayName + (hasUnsavedChanges ? ' *' : '');
+                fileStatus.className = hasUnsavedChanges ? 'file-status modified' : 'file-status';
+            }
+        }
+
+        function markAsModified() {
+            if (!hasUnsavedChanges) {
+                hasUnsavedChanges = true;
+                updateWindowTitle();
+            }
+        }
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            // Check if we're in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // File operations
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                newModel();
+            } else if (e.ctrlKey && e.key === 'o') {
+                e.preventDefault();
+                openFile();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                saveAsFile();
+            } else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveFile();
+            }
+            // Edit operations
+            else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undoAction();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redoAction();
+            } else if (e.key === 'Delete') {
+                e.preventDefault();
+                deleteSelectedElement();
+            } else if (e.ctrlKey && e.key === 'a') {
+                e.preventDefault();
+                selectAllElements();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                clearCanvas();
+            }
+            // View operations
+            else if (e.key === ' ') {
+                e.preventDefault();
+                toggleView();
+            } else if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                togglePropertiesPanel();
+            } else if (e.ctrlKey && e.key === '0') {
+                e.preventDefault();
+                zoomToFit();
+            } else if (e.ctrlKey && e.key === '1') {
+                e.preventDefault();
+                resetZoom();
+            }
+            // Help
+            else if (e.key === 'F1') {
+                e.preventDefault();
+                showKeyboardShortcuts();
+            }
+            // Refresh canvas
+            else if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                refreshCanvas();
+            }
+        });
+
+        // Track changes for unsaved indicator
+        function setupChangeTracking() {
+            if (modeler) {
+                modeler.on('commandStack.changed', () => {
+                    markAsModified();
+                });
+            }
+        }
+
+        // Warn about unsaved changes before leaving
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
     </script>
 </body>
 
