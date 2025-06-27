@@ -250,6 +250,28 @@ const BPMNWorkspace: React.FC = () => {
         }
     }, [modeler]);
 
+    // Function to inject extension properties into XML (similar to comprehensive solution)
+    const injectExtensionProperties = useCallback((xml: string) => {
+        if (!modeler) return xml;
+
+        console.log('Injecting extension properties into XML...');
+        const elementRegistry = modeler.get('elementRegistry');
+        let result = xml;
+
+        // Find all service tasks and inject their extension properties
+        elementRegistry.forEach((element: any) => {
+            const businessObject = element.businessObject;
+            if (businessObject.$type === 'bpmn:ServiceTask') {
+                console.log('Found service task for injection:', businessObject.id);
+                console.log('Attributes:', businessObject.$attrs);
+                result = injectServiceTaskExtensions(result, businessObject.id, businessObject.$attrs || {});
+            }
+        });
+
+        console.log('Final XML length after injection:', result.length);
+        return result;
+    }, [modeler]);
+
     // Update diagram properties
     const updateDiagramProperty = useCallback((property: string, value: string) => {
         if (!modeler) return;
@@ -279,16 +301,19 @@ const BPMNWorkspace: React.FC = () => {
                     process.isExecutable = value === 'true';
                 }
 
-                // Update the diagram properties state
                 setDiagramProperties(getDiagramProperties());
 
-                // Save to cache
-                saveModelToCache(modeler);
+                // Save to cache with injected extension properties
+                modeler.saveXML({ format: true }).then((result: any) => {
+                    const injectedXml = injectExtensionProperties(result.xml);
+                    localStorage.setItem('bpmn_model_cache', injectedXml);
+                    localStorage.setItem('bpmn_model_timestamp', Date.now().toString());
+                });
             }
         } catch (error) {
             console.error('Error updating diagram property:', error);
         }
-    }, [modeler, getDiagramProperties, saveModelToCache]);
+    }, [modeler, getDiagramProperties, injectExtensionProperties]);
 
     // Initialize BPMN modeler
     useEffect(() => {
@@ -642,28 +667,6 @@ const BPMNWorkspace: React.FC = () => {
         saveModelToCache();
     }, [selectedElement, modeler, saveModelToCache]);
 
-    // Function to inject extension properties into XML (similar to comprehensive solution)
-    const injectExtensionProperties = useCallback((xml: string) => {
-        if (!modeler) return xml;
-
-        console.log('Injecting extension properties into XML...');
-        const elementRegistry = modeler.get('elementRegistry');
-        let result = xml;
-
-        // Find all service tasks and inject their extension properties
-        elementRegistry.forEach((element: any) => {
-            const businessObject = element.businessObject;
-            if (businessObject.$type === 'bpmn:ServiceTask') {
-                console.log('Found service task for injection:', businessObject.id);
-                console.log('Attributes:', businessObject.$attrs);
-                result = injectServiceTaskExtensions(result, businessObject.id, businessObject.$attrs || {});
-            }
-        });
-
-        console.log('Final XML length after injection:', result.length);
-        return result;
-    }, [modeler]);
-
     // Function to inject service task extensions (similar to comprehensive solution)
     const injectServiceTaskExtensions = useCallback((xml: string, elementId: string, attrs: Record<string, any>) => {
         console.log('Injecting extensions for service task:', elementId, attrs);
@@ -899,6 +902,26 @@ const BPMNWorkspace: React.FC = () => {
             canvasRefCurrent: !!canvasRef.current
         });
     }, [leftPanelWidth, propertiesWidth, xmlPanelVisible, xmlPanelHeight]);
+
+    // Ensure properties panel is populated after model import or refresh
+    useEffect(() => {
+        if (modeler && !diagramProperties) {
+            try {
+                const definitions = modeler.getDefinitions();
+                const process = definitions.rootElements?.find((element: any) => element.$type === 'bpmn:Process');
+                setDiagramProperties({
+                    id: process?.id || 'Process_1',
+                    name: process?.name || 'New Process',
+                    documentation: process?.documentation?.[0]?.text || '',
+                    isExecutable: process?.isExecutable || true,
+                    definitionsId: definitions.id || 'Definitions_1',
+                    targetNamespace: definitions.targetNamespace || 'http://bpmn.io/schema/bpmn'
+                });
+            } catch (error) {
+                // fallback: do nothing
+            }
+        }
+    }, [modeler, diagramProperties]);
 
     return (
         <div className="bpmn-workspace">
