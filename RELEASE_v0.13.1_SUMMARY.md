@@ -24,4 +24,5 @@
 - No more lost extension properties after loading or editing BPMN models
 - Save/Save As works like a desktop app, with persistent file name and overwrite
 - Fullscreen mode maximizes modeling area for complex diagrams
+- Docker UI builds now work correctly without TypeScript errors
 - Release documentation and workflow now fully automated and transparent
