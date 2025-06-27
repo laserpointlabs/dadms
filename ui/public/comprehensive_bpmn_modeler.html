@@ -1127,15 +1127,30 @@
         }
 
         function getExtensionProperty(element, propertyName) {
-            if (!element || !element.businessObject) return '';
+            if (!element || !element.businessObject) {
+                console.log('getExtensionProperty: No element or business object');
+                return '';
+            }
 
             const elementId = element.businessObject.id;
+            console.log(`getExtensionProperty: Getting ${propertyName} for element ${elementId}`);
+            console.log('Current property cache:', propertyCache);
+            console.log('Cache keys:', Object.keys(propertyCache));
+            console.log('Cache for this element ID:', propertyCache[elementId]);
+
+            if (propertyCache[elementId]) {
+                console.log('Properties for this element:', Object.keys(propertyCache[elementId]));
+                console.log('Full element cache:', propertyCache[elementId]);
+            }
 
             // Get value from cache
             if (propertyCache[elementId] && propertyCache[elementId][propertyName]) {
-                return propertyCache[elementId][propertyName];
+                const value = propertyCache[elementId][propertyName];
+                console.log(`getExtensionProperty: Found cached value: ${value}`);
+                return value;
             }
 
+            console.log(`getExtensionProperty: No cached value found for ${elementId}.${propertyName}`);
             return '';
         }
 
@@ -1333,6 +1348,9 @@
 
             // Service Task specific properties
             if (isServiceTask) {
+                console.log('updatePropertiesPanel: Processing service task:', elementId);
+                console.log('updatePropertiesPanel: Property cache for this element:', propertyCache[elementId]);
+
                 // Get documentation text properly
                 let documentationText = '';
                 if (businessObject.documentation && businessObject.documentation.length > 0) {
@@ -1830,6 +1848,60 @@
             }
         };
 
+        // Add function to debug loaded XML content
+        window.debugLoadedXML = function () {
+            const cachedXML = localStorage.getItem('bpmn_model_cache');
+            if (cachedXML) {
+                console.log('=== CACHED XML DEBUG ===');
+                console.log('Cached XML content:');
+                console.log(cachedXML);
+
+                // Parse the cached XML and show structure
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(cachedXML, 'text/xml');
+
+                // Show all service tasks and their structure
+                const serviceTasks = xmlDoc.querySelectorAll('serviceTask, bpmn\\:serviceTask');
+                console.log('Service tasks in cached XML:', serviceTasks.length);
+
+                serviceTasks.forEach((task, index) => {
+                    console.log(`Service Task ${index + 1}:`);
+                    console.log('- ID:', task.getAttribute('id'));
+                    console.log('- Name:', task.getAttribute('name'));
+                    console.log('- Tag name:', task.tagName);
+                    console.log('- Namespace URI:', task.namespaceURI);
+                    console.log('- Children count:', task.children.length);
+
+                    // Show all children
+                    for (let i = 0; i < task.children.length; i++) {
+                        const child = task.children[i];
+                        console.log(`  Child ${i}: ${child.tagName} (${child.namespaceURI})`);
+
+                        // If it's extension elements, show its children too
+                        if (child.tagName.includes('extensionElements')) {
+                            console.log(`    Extension elements children: ${child.children.length}`);
+                            for (let j = 0; j < child.children.length; j++) {
+                                const grandchild = child.children[j];
+                                console.log(`      ${j}: ${grandchild.tagName} (${grandchild.namespaceURI})`);
+
+                                // If it's properties, show the property children
+                                if (grandchild.tagName.includes('properties')) {
+                                    console.log(`        Properties children: ${grandchild.children.length}`);
+                                    for (let k = 0; k < grandchild.children.length; k++) {
+                                        const prop = grandchild.children[k];
+                                        console.log(`          ${k}: ${prop.tagName} name="${prop.getAttribute('name')}" value="${prop.getAttribute('value')}"`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    console.log('---');
+                });
+            } else {
+                console.log('No cached XML found');
+            }
+        };
+
         // Add global delete function
         window.deleteElement = function () {
             deleteSelectedElement();
@@ -2207,19 +2279,41 @@
             if (!modeler) return;
 
             console.log('Extracting extension properties from XML...');
+            console.log('clearCache parameter:', clearCache);
+            console.log('Cache before extraction:', propertyCache);
 
             modeler.saveXML({ format: true }).then(result => {
                 const xmlContent = result.xml;
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
 
-                // Only clear cache if explicitly requested
-                if (clearCache) {
-                    propertyCache = {};
-                }
-
-                // Find all service tasks
+                // Find all service tasks in the XML to see if any have extension properties
                 const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+                let foundProperties = false;
+
+                serviceTasks.forEach(serviceTask => {
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (extensionElements) {
+                        const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                        if (properties.length > 0) {
+                            foundProperties = true;
+                        }
+                    }
+                });
+
+                // Only clear cache if explicitly requested AND either:
+                // 1. Cache is currently empty, OR
+                // 2. We found extension properties in the XML (indicating this is a legitimate extraction)
+                const shouldClearCache = clearCache && (Object.keys(propertyCache).length === 0 || foundProperties);
+                console.log('Found extension properties in XML:', foundProperties);
+                console.log('Should clear cache:', shouldClearCache);
+
+                if (shouldClearCache) {
+                    propertyCache = {};
+                    console.log('Cache cleared');
+                } else {
+                    console.log('Cache preserved - either clearCache=false or no properties found in XML');
+                }
 
                 serviceTasks.forEach(serviceTask => {
                     const taskId = serviceTask.getAttribute('id');
@@ -2230,28 +2324,40 @@
                         propertyCache[taskId] = {};
                     }
 
-                    // Find extension elements
-                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
-                    if (!extensionElements) {
-                        // If no extension elements found, clear the cache for this element
-                        propertyCache[taskId] = {};
-                        return;
-                    }
+                    // Only process if we found properties in XML or if we cleared the cache
+                    if (foundProperties || shouldClearCache) {
+                        console.log('Processing service task for cache (no existing cache):', taskId);
 
-                    // Extract camunda properties
-                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
-
-                    // Clear existing properties for this element to ensure we get fresh values
-                    propertyCache[taskId] = {};
-
-                    properties.forEach(prop => {
-                        const name = prop.getAttribute('name');
-                        const value = prop.getAttribute('value');
-                        if (name && value) {
-                            propertyCache[taskId][name] = value;
-                            console.log('Cached property:', taskId, name, '=', value);
+                        // Initialize cache for this element if it doesn't exist
+                        if (!propertyCache[taskId]) {
+                            propertyCache[taskId] = {};
                         }
-                    });
+
+                        // Find extension elements
+                        const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                        if (!extensionElements) {
+                            // If no extension elements found, clear the cache for this element
+                            propertyCache[taskId] = {};
+                            return;
+                        }
+
+                        // Extract camunda properties
+                        const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+
+                        // Clear existing properties for this element to ensure we get fresh values
+                        propertyCache[taskId] = {};
+
+                        properties.forEach(prop => {
+                            const name = prop.getAttribute('name');
+                            const value = prop.getAttribute('value');
+                            if (name && value) {
+                                propertyCache[taskId][name] = value;
+                                console.log('Cached property:', taskId, name, '=', value);
+                            }
+                        });
+                    } else {
+                        console.log('Skipping service task - already has cached properties:', taskId);
+                    }
                 });
 
                 console.log('Property cache updated:', propertyCache);
@@ -2326,8 +2432,10 @@
                 // Clear property cache
                 propertyCache = {};
 
-                // Find all service tasks
-                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+                // Find all service tasks - try multiple selectors
+                const serviceTasks = xmlDoc.querySelectorAll('serviceTask, bpmn\\:serviceTask');
+
+                console.log('Service tasks found in XML:', serviceTasks.length);
 
                 serviceTasks.forEach(serviceTask => {
                     const taskId = serviceTask.getAttribute('id');
@@ -2338,15 +2446,39 @@
                     // Initialize cache for this element
                     propertyCache[taskId] = {};
 
-                    // Find extension elements
-                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    // Find extension elements - try multiple selectors
+                    let extensionElements = serviceTask.querySelector('extensionElements');
+                    if (!extensionElements) {
+                        extensionElements = serviceTask.querySelector('bpmn\\:extensionElements');
+                    }
+
                     if (!extensionElements) {
                         console.log('No extension elements found for:', taskId);
+                        // Let's see what children this service task has
+                        console.log('Service task children:', serviceTask.children);
+                        for (let i = 0; i < serviceTask.children.length; i++) {
+                            const child = serviceTask.children[i];
+                            console.log(`Child ${i}:`, child.tagName, child.namespaceURI);
+                        }
                         return;
                     }
 
-                    // Extract camunda properties
-                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                    console.log('Found extension elements for:', taskId);
+
+                    // Extract camunda properties - try multiple selectors
+                    let properties = extensionElements.querySelectorAll('camunda\\:property');
+                    if (properties.length === 0) {
+                        properties = extensionElements.querySelectorAll('property');
+                    }
+                    if (properties.length === 0) {
+                        // Try looking inside camunda:properties wrapper
+                        const propertiesWrapper = extensionElements.querySelector('camunda\\:properties, properties');
+                        if (propertiesWrapper) {
+                            properties = propertiesWrapper.querySelectorAll('camunda\\:property, property');
+                        }
+                    }
+
+                    console.log('Properties found for', taskId, ':', properties.length);
 
                     properties.forEach(prop => {
                         const name = prop.getAttribute('name');
@@ -2364,6 +2496,13 @@
                 });
 
                 console.log('Property cache updated from input XML:', propertyCache);
+                console.log('Cache keys after extraction:', Object.keys(propertyCache));
+                if (Object.keys(propertyCache).length > 0) {
+                    Object.keys(propertyCache).forEach(elementId => {
+                        console.log(`Element ${elementId} properties:`, propertyCache[elementId]);
+                        console.log(`Element ${elementId} property keys:`, Object.keys(propertyCache[elementId]));
+                    });
+                }
             } catch (error) {
                 console.error('Error extracting extension properties from input XML:', error);
             }
@@ -3052,6 +3191,59 @@ Built with BPMN.js
                 return e.returnValue;
             }
         });
+
+        // Add debug function to compare cache keys with current elements
+        window.debugCacheKeyComparison = function () {
+            console.log('=== CACHE KEY COMPARISON DEBUG ===');
+            console.log('Property cache keys:', Object.keys(propertyCache));
+            console.log('Property cache contents:', propertyCache);
+
+            if (modeler) {
+                const elementRegistry = modeler.get('elementRegistry');
+                const allElements = elementRegistry.getAll();
+                const serviceTaskElements = allElements.filter(el =>
+                    el.businessObject && el.businessObject.$type === 'bpmn:ServiceTask'
+                );
+
+                console.log('Service task elements in current model:');
+                serviceTaskElements.forEach(el => {
+                    const elementId = el.businessObject.id;
+                    const hasCache = !!propertyCache[elementId];
+                    console.log(`- Element ID: "${elementId}", Has cache: ${hasCache}`);
+                    if (hasCache) {
+                        console.log(`  Cache contents:`, propertyCache[elementId]);
+                    }
+                });
+
+                if (selectedElement) {
+                    const selectedId = selectedElement.businessObject.id;
+                    console.log('Currently selected element ID:', `"${selectedId}"`);
+                    console.log('Selected element has cache:', !!propertyCache[selectedId]);
+
+                    // Check if there's a cache entry with similar ID
+                    const cacheKeys = Object.keys(propertyCache);
+                    console.log('All cache keys:', cacheKeys.map(k => `"${k}"`));
+
+                    const exactMatch = cacheKeys.find(key => key === selectedId);
+                    if (exactMatch) {
+                        console.log('Found exact match in cache');
+                    } else {
+                        console.log('No exact match found in cache');
+                        const similarKeys = cacheKeys.filter(key =>
+                            key.includes(selectedId) || selectedId.includes(key)
+                        );
+                        if (similarKeys.length > 0) {
+                            console.log('Similar cache keys found:', similarKeys);
+                        } else {
+                            console.log('No similar cache keys found');
+                        }
+                    }
+                }
+            } else {
+                console.log('Modeler not available');
+            }
+            console.log('=====================================');
+        };
     </script>
 </body>
 
