@@ -647,14 +647,14 @@
                         New Model <span class="shortcut">Ctrl+N</span>
                     </button>
                     <div class="menu-separator"></div>
-                    <button class="menu-dropdown-item" onclick="openFile()">
+                    <button class="menu-dropdown-item" onclick="openFromFolder()">
                         Open... <span class="shortcut">Ctrl+O</span>
                     </button>
                     <div class="menu-separator"></div>
                     <button class="menu-dropdown-item" onclick="saveFile()">
                         Save <span class="shortcut">Ctrl+S</span>
                     </button>
-                    <button class="menu-dropdown-item" onclick="saveAsFile()">
+                    <button class="menu-dropdown-item" onclick="saveToFolder()">
                         Save As... <span class="shortcut">Ctrl+Shift+S</span>
                     </button>
                     <div class="menu-separator"></div>
@@ -1787,6 +1787,17 @@
         // Initialize draggable splitter when page loads
         document.addEventListener('DOMContentLoaded', initializeSplitter);
 
+        // Check File System Access API availability
+        document.addEventListener('DOMContentLoaded', function () {
+            const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
+            if (hasFileSystemAccess) {
+                console.log('File System Access API is available');
+                // You could add a subtle indicator here if desired
+            } else {
+                console.log('File System Access API not available - using fallback methods');
+            }
+        });
+
         // Add global debug function
         window.debugModeler = function () {
             console.log('Modeler:', modeler);
@@ -2802,6 +2813,59 @@
             closeAllMenus();
         }
 
+        function openFromFolder() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to open a new file?')) {
+                return;
+            }
+
+            // Check if File System Access API is supported
+            if (!('showOpenFilePicker' in window)) {
+                updateStatus('File System Access API not supported in this browser. Use "Open..." instead.', 'error');
+                // Fallback to regular open
+                setTimeout(() => {
+                    openFile();
+                }, 1000);
+                return;
+            }
+
+            const options = {
+                types: [{
+                    description: 'BPMN Files',
+                    accept: {
+                        'application/xml': ['.bpmn', '.xml']
+                    }
+                }],
+                multiple: false
+            };
+
+            window.showOpenFilePicker(options)
+                .then(fileHandles => {
+                    if (fileHandles.length > 0) {
+                        const fileHandle = fileHandles[0];
+                        return fileHandle.getFile();
+                    }
+                })
+                .then(file => {
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            loadModelFromXML(e.target.result, file.name);
+                        };
+                        reader.readAsText(file);
+                    }
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError') {
+                        updateStatus('Open cancelled', 'info');
+                    } else {
+                        updateStatus('Error opening file: ' + error.message, 'error');
+                        console.error('Open error:', error);
+                    }
+                });
+
+            closeAllMenus();
+        }
+
         function saveFile() {
             if (!modeler) {
                 updateStatus('No model to save', 'error');
@@ -2829,6 +2893,65 @@
                 const fullFilename = filename.endsWith('.bpmn') ? filename : filename + '.bpmn';
                 saveModelToFile(fullFilename);
             }
+            closeAllMenus();
+        }
+
+        function saveToFolder() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            // Check if File System Access API is supported
+            if (!('showSaveFilePicker' in window)) {
+                updateStatus('File System Access API not supported in this browser. Use "Save As..." instead.', 'error');
+                // Fallback to regular save as
+                setTimeout(() => {
+                    saveAsFile();
+                }, 1000);
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                // Inject extension properties into XML before saving
+                const xmlToSave = injectExtensionProperties(result.xml);
+                const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                const options = {
+                    suggestedName: currentFileName || 'untitled.bpmn',
+                    types: [{
+                        description: 'BPMN Files',
+                        accept: { 'application/xml': ['.bpmn', '.xml'] }
+                    }]
+                };
+
+                window.showSaveFilePicker(options)
+                    .then(fileHandle => {
+                        return fileHandle.createWritable().then(writable => ({ fileHandle, writable }));
+                    })
+                    .then(({ fileHandle, writable }) => {
+                        return writable.write(blob).then(() => ({ fileHandle, writable }));
+                    })
+                    .then(({ fileHandle, writable }) => {
+                        return writable.close().then(() => fileHandle);
+                    })
+                    .then(fileHandle => {
+                        currentFileName = fileHandle.name;
+                        hasUnsavedChanges = false;
+                        updateWindowTitle();
+                        updateStatus(`Model saved to: ${fileHandle.name}`, 'success');
+                    })
+                    .catch(error => {
+                        if (error.name === 'AbortError') {
+                            updateStatus('Save cancelled', 'info');
+                        } else {
+                            updateStatus('Error saving file: ' + error.message, 'error');
+                            console.error('Save error:', error);
+                        }
+                    });
+            }).catch(error => {
+                updateStatus('Error generating XML: ' + error.message, 'error');
+            });
+
             closeAllMenus();
         }
 
@@ -3034,8 +3157,10 @@ Keyboard Shortcuts:
 File Operations:
 • Ctrl+N - New Model
 • Ctrl+O - Open File
+• Ctrl+Alt+O - Open from Folder
 • Ctrl+S - Save
 • Ctrl+Shift+S - Save As
+• Ctrl+Alt+S - Save to Folder
 
 Edit Operations:
 • Ctrl+Z - Undo
@@ -3124,12 +3249,18 @@ Built with BPMN.js
             } else if (e.ctrlKey && e.key === 'o') {
                 e.preventDefault();
                 openFile();
+            } else if (e.ctrlKey && e.altKey && e.key === 'O') {
+                e.preventDefault();
+                openFromFolder();
             } else if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 saveAsFile();
             } else if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 saveFile();
+            } else if (e.ctrlKey && e.altKey && e.key === 'S') {
+                e.preventDefault();
+                saveToFolder();
             }
             // Edit operations
             else if (e.ctrlKey && e.key === 'z') {
