@@ -94,10 +94,11 @@ function App() {
                     component="main"
                     sx={{
                         flexGrow: 1,
-                        bgcolor: 'background.default',
-                        p: 3,
+                        bgcolor: 'background.paper',
+                        p: 0,
                         mt: 8,
-                        minHeight: 'calc(100vh - 64px)'
+                        height: 'calc(100vh - 64px)',
+                        overflow: 'hidden'
                     }}
                 >
                     <Routes>

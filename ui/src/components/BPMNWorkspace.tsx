@@ -51,7 +51,7 @@ const BPMNWorkspace: React.FC = () => {
 
     return (
         <div className="bpmn-workspace">
-            <div className="workspace-header" style={{ padding: '8px 20px', minHeight: '40px' }}>
+            <div className="workspace-header">
                 <h2 style={{ margin: '0', fontSize: '18px', fontWeight: '600' }}>BPMN Workspace</h2>
             </div>
 
