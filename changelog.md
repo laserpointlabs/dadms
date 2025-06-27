@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2025-06-27
+
+### Added
+- **Comprehensive BPMN Workspace**: Complete redesign and modernization of BPMN modeling interface
+  - Hybrid React + HTML/iframe architecture for robust BPMN.js integration
+  - Edge-to-edge layout maximizing modeling canvas real estate
+  - Draggable panel splitter for resizable left panel (10-90% width)
+  - Collapsible properties panel with smooth animations and keyboard shortcut (Ctrl+P)
+  - Modern toolbar with single "XML" toggle button and clean design
+- **Conditional Layout System**: Route-aware styling for optimal page-specific layouts
+  - BPMN workspace gets edge-to-edge, no-padding layout for maximum screen utilization
+  - Other pages maintain traditional padding and scrolling for content readability
+  - React Router integration with useLocation hook for intelligent layout detection
+  - Preserved vertical scrolling capability for management pages
+- **Advanced Property Management**: Comprehensive property handling for all BPMN element types
+  - Extension property injection as proper `<bpmn:extensionElements>` in XML
+  - Implementation properties (`camunda:type`, `camunda:topic`) with business object persistence
+  - Property cache system with localStorage persistence across sessions
+  - Real-time XML synchronization between visual model and text representation
+- **Enhanced User Interface**: Professional-grade UI with modern design principles
+  - Compact layout with reduced padding and optimized space usage
+  - Responsive design with mobile-friendly panel stacking
+  - Keyboard shortcuts for all major functions (XML toggle, clear model, help)
+  - Smooth transitions and visual feedback for all interactions
+
+### Enhanced
+- **BPMN Modeling Experience**: Complete overhaul of modeling interface
+  - Always-in-sync XML and diagram views with real-time updates
+  - Reliable model clearing and property persistence
+  - Improved BPMN.js context pad and palette visibility
+  - Professional property grouping and organization
+- **Application Architecture**: Robust foundation for future enhancements
+  - Isolated BPMN.js state management preventing React conflicts
+  - Performance optimizations through caching and debouncing
+  - Comprehensive error handling and debugging tools
+  - Extensible property system for custom BPMN extensions
+
+### Fixed
+- **Layout Issues**: Resolved padding and scrolling problems across application
+  - Fixed black areas around workspace on BPMN page
+  - Restored proper padding and scrolling for management pages
+  - Corrected height calculations preventing workspace overflow
+  - Eliminated layout conflicts between different page types
+
 ## [0.12.1] - 2025-06-21
 
 ### Added
