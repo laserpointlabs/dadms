@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2025-06-27
+
+### Added
+- Fullscreen mode for BPMN modeler workspace (toolbar button, menu, F11)
+- Persistent file name in toolbar after browser refresh
+- Release automation and documentation improvements
+
+### Enhanced
+- Extension property extraction, caching, and injection logic for BPMN service tasks
+- Properties panel reliably displays and edits all extension properties after model load
+- File System Access API Save/Save As with desktop-like overwrite behavior
+
+### Fixed
+- Extension properties lost or not shown after loading BPMN models
+- Save/Save As always prompted for new file, now overwrites after first save
+- File name lost on browser refresh
+- Fullscreen mode not available for modeler
+
 ## [0.13.0] - 2025-06-27
 
 ### Added
