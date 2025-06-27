@@ -11,146 +11,61 @@
     <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn.css" />
 
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+        * {
+            box-sizing: border-box;
         }
 
-        .header {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            height: 100vh;
+            overflow: hidden;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
+            flex-direction: column;
+        }
+
+        .workspace-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-properties-container {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .canvas-main-area {
+            display: flex;
+            flex-direction: column;
             background: white;
             border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .view-toggle {
-            display: flex;
-            gap: 10px;
-        }
-
-        .toggle-btn {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            background: #f8f9fa;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .toggle-btn.active {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .main-container {
-            display: flex;
-            gap: 20px;
-            height: 90vh;
+            overflow: hidden;
+            position: relative;
+            flex: 1;
         }
 
         .canvas-container {
-            flex: 2;
             background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            position: relative;
             overflow: hidden;
+            position: relative;
+            flex: 1;
         }
 
         .canvas {
             width: 100%;
             height: 100%;
-        }
-
-        /* Ensure bpmn.io palette is styled properly */
-        .djs-palette {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            left: 20px !important;
-            top: 20px !important;
-        }
-
-        .djs-palette .entry {
-            border-radius: 3px;
-        }
-
-        .djs-palette .entry:hover {
-            background: #e9ecef;
-        }
-
-        /* Ensure palette icons are visible */
-        .djs-palette .entry div {
-            color: #333;
-        }
-
-        /* Remove conflicting palette styles */
-        .canvas-container .djs-palette {
-            position: absolute;
-            z-index: 100;
-        }
-
-        .properties {
-            flex: 1;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .property-group {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-        }
-
-        .property-group h4 {
-            margin: 0 0 15px 0;
-            color: #333;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .property-field {
-            margin-bottom: 15px;
-        }
-
-        .property-field label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #555;
-            font-size: 12px;
-        }
-
-        .property-field input,
-        .property-field select,
-        .property-field textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-
-        .property-field textarea {
-            min-height: 60px;
-            resize: vertical;
-        }
-
-        .property-field select {
-            background: white;
         }
 
         .xml-editor {
@@ -172,6 +87,10 @@
             overflow-y: auto;
         }
 
+        .hidden {
+            display: none !important;
+        }
+
         .xml-editor:focus {
             background: #ffffff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
@@ -184,155 +103,279 @@
             opacity: 0.8;
         }
 
-        .xml-editor:disabled:focus {
-            background: #f5f5f5;
-            box-shadow: none;
+        /* Properties splitter styles */
+        .properties-splitter {
+            width: 4px;
+            background-color: #dee2e6;
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s ease;
+            flex-shrink: 0;
         }
 
-        .xml-view {
-            margin-top: 20px;
-            padding: 15px;
+        .properties-splitter:hover {
+            background-color: #007bff;
+        }
+
+        .properties-splitter.dragging {
+            background-color: #007bff;
+        }
+
+        /* Properties panel */
+        .properties {
             background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            max-height: 200px;
+            border: 1px solid #ddd;
+            border-left: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 25%;
+            min-width: 250px;
+            max-width: 50%;
+        }
+
+        .properties-header {
+            background: #e9ecef;
+            border-bottom: 1px solid #ddd;
+            padding: 8px 12px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .properties-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .properties-content {
+            flex: 1;
             overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+            padding: 0;
         }
 
-        .status {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+        /* Property Groups */
+        .property-group {
+            margin-bottom: 1px;
+            border: 1px solid #cccccc;
+            border-radius: 0;
+            background: #ffffff;
+            overflow: hidden;
         }
 
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .property-group-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #cccccc;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            user-select: none;
         }
 
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .property-group-header:hover {
+            background: #e9ecef;
         }
 
-        .status.info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+        .collapse-icon {
+            font-size: 10px;
+            color: #333333;
+            transition: transform 0.2s ease;
+            width: 12px;
+            text-align: center;
+            font-weight: bold;
         }
 
-        .hidden {
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .property-group-header h4 {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #222222;
+        }
+
+        .property-group-content {
+            padding: 0;
+            margin: 0;
+            background: #ffffff;
+        }
+
+        .property-group-content.collapsed {
             display: none;
         }
 
-        .element-info {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            border-left: 4px solid #2196f3;
+        .property-field {
+            margin: 0 0 1px 0;
+            padding: 8px 12px;
         }
 
-        .element-info h3 {
-            margin: 0 0 5px 0;
-            color: #1976d2;
+        .property-field label {
+            display: block;
+            margin-bottom: 4px;
+            padding: 0;
+            font-weight: 600;
+            color: #333333;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            margin: 0;
+            padding: 6px 8px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            background: #ffffff;
+            color: #111827;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .property-field input:focus,
+        .property-field select:focus,
+        .property-field textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .property-field textarea {
+            min-height: 60px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        .property-field select {
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        /* Element Info */
+        .element-info {
+            margin-bottom: 1px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 0;
+            border-left: 4px solid #007bff;
+        }
+
+        .element-info h4 {
+            margin: 0 0 8px 0;
             font-size: 14px;
+            font-weight: 600;
+            color: #222222;
         }
 
         .element-info p {
             margin: 0;
-            color: #424242;
             font-size: 12px;
+            color: #555555;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
 
-        .checkbox-group {
+        /* Bottom Toolbar */
+        .bottom-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            min-height: 50px;
+            flex-shrink: 0;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .toolbar-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
         }
 
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-        }
-
-        .multi-input {
-            display: flex;
-            gap: 5px;
-        }
-
-        .multi-input input {
-            flex: 1;
-        }
-
-        .add-remove-btn {
-            padding: 4px 8px;
-            background: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 3px;
+        .toolbar-btn {
+            padding: 6px 12px;
+            border: 1px solid #ced4da;
+            background: white;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        .add-remove-btn:hover {
-            background: #5a6268;
+        .toolbar-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
         }
 
-        .delete-btn {
+        .toolbar-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .toolbar-btn.active:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .toolbar-btn.danger {
             background: #dc3545;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-            width: 100%;
+            border-color: #dc3545;
         }
 
-        .delete-btn:hover {
+        .toolbar-btn.danger:hover {
             background: #c82333;
+            border-color: #bd2130;
         }
 
-        .delete-btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .keyboard-shortcuts {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 11px;
-            color: #666;
-        }
-
-        .keyboard-shortcuts h5 {
-            margin: 0 0 5px 0;
-            color: #333;
+        .status-message {
             font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .keyboard-shortcuts ul {
-            margin: 0;
-            padding-left: 15px;
+        .status-message.success {
+            color: #28a745;
         }
 
-        .keyboard-shortcuts li {
-            margin-bottom: 2px;
+        .status-message.error {
+            color: #dc3545;
         }
 
-        /* XML Edit Toggle Switch Styles */
+        .status-message.info {
+            color: #17a2b8;
+        }
+
+        /* XML Edit Toggle Switch */
         .xml-edit-toggle {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-left: 15px;
         }
 
         .toggle-label {
@@ -386,83 +429,166 @@
             transform: translateX(20px);
         }
 
-        /* Ensure the canvas container can handle XML editor scrolling */
-        .canvas-container {
-            flex: 2;
+        /* BPMN.js Palette Styling */
+        .djs-palette {
             background: white;
             border: 1px solid #ddd;
             border-radius: 4px;
-            position: relative;
-            overflow: hidden;
+            left: 20px !important;
+            top: 20px !important;
+            position: absolute;
+            z-index: 100;
         }
 
-        /* XML highlight overlay styles */
-        .xml-highlight-overlay {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            min-height: 100% !important;
-            pointer-events: none !important;
-            z-index: 1 !important;
+        .djs-palette .entry {
+            border-radius: 3px;
+        }
+
+        .djs-palette .entry:hover {
+            background: #e9ecef;
+        }
+
+        .djs-palette .entry div {
+            color: #333;
+        }
+
+        /* Context pad styling */
+        .djs-context-pad .entry {
+            background: white !important;
+            border: 1px solid #ccc !important;
+        }
+
+        .djs-context-pad .entry:hover {
+            background: #f0f0f0 !important;
+        }
+
+        .djs-context-pad .entry div {
+            color: #333 !important;
+            opacity: 1 !important;
+        }
+
+        /* Popup menu fixes */
+        .djs-popup,
+        .djs-popup-body,
+        .djs-popup-content {
+            background: white !important;
+            color: #333 !important;
+        }
+
+        .djs-popup * {
+            color: #333 !important;
+        }
+
+        /* Responsive behavior */
+        @media (max-width: 1024px) {
+            .properties {
+                width: 30%;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .canvas-properties-container {
+                flex-direction: column;
+            }
+
+            .properties {
+                width: 100%;
+                height: 40%;
+                border-left: 1px solid #ddd;
+                border-top: none;
+            }
+
+            .properties-splitter {
+                display: none;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <h1>Comprehensive BPMN Modeler</h1>
-        <div class="view-toggle">
-            <button class="toggle-btn active" onclick="switchView('diagram')">Diagram View</button>
-            <button class="toggle-btn" onclick="switchView('xml')">XML View</button>
-            <button class="toggle-btn" onclick="clearModel()"
-                style="background: #dc3545; color: white; border-color: #dc3545;">Clear All</button>
-            <div class="xml-edit-toggle">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="xml-edit-toggle" onchange="toggleXMLEditing()">
-                    <span class="slider"></span>
-                </label>
-                <span class="toggle-label">XML Edit</span>
+    <div class="workspace-container">
+        <div class="main-content">
+            <div class="canvas-properties-container">
+                <!-- Canvas Area -->
+                <div class="canvas-main-area">
+                    <div class="canvas-container">
+                        <div id="canvas" class="canvas"></div>
+                        <textarea id="xml-editor" class="xml-editor hidden" disabled></textarea>
+                    </div>
+                </div>
+
+                <!-- Draggable Splitter -->
+                <div class="properties-splitter" id="properties-splitter"></div>
+
+                <!-- Properties Panel -->
+                <div class="properties" id="properties-panel">
+                    <div class="properties-header">
+                        <h3>Properties Panel</h3>
+                    </div>
+                    <div class="properties-content">
+                        <!-- Element info section -->
+                        <div id="element-info-section" class="element-info hidden">
+                            <h4 id="element-type">No Element Selected</h4>
+                            <p id="element-id">Select a BPMN element to edit its properties</p>
+                        </div>
+
+                        <!-- Properties groups will be dynamically inserted here -->
+                        <div id="properties-content">
+                        </div>
+
+                        <!-- Keyboard shortcuts as a collapsible group -->
+                        <div class="property-group">
+                            <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                                <span class="collapse-icon">▼</span>
+                                <h4>Keyboard Shortcuts</h4>
+                            </div>
+                            <div class="property-group-content">
+                                <div style="padding: 12px; font-size: 11px; line-height: 1.4;">
+                                    <div style="margin-bottom: 6px;"><strong>Delete</strong> - Delete selected element
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Z</strong> - Undo</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Y</strong> - Redo</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+S</strong> - Export diagram</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+S</strong> - Manual save to
+                                        cache</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+R</strong> - Refresh canvas</div>
+                                    <div><strong>XML Edit Toggle</strong> - Enable/disable XML editing</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="status" class="status info">Initializing BPMN modeler...</div>
-
-    <div class="main-container">
-        <!-- Canvas Container -->
-        <div class="canvas-container">
-            <div id="canvas" class="canvas"></div>
-            <textarea id="xml-editor" class="xml-editor hidden" disabled></textarea>
-        </div>
-
-        <!-- Properties Panel -->
-        <div class="properties">
-            <div class="keyboard-shortcuts">
-                <h5>Keyboard Shortcuts:</h5>
-                <ul>
-                    <li><strong>Delete</strong> - Delete selected element</li>
-                    <li><strong>Ctrl+Z</strong> - Undo</li>
-                    <li><strong>Ctrl+Y</strong> - Redo</li>
-                    <li><strong>Ctrl+S</strong> - Export diagram</li>
-                    <li><strong>Ctrl+Shift+S</strong> - Manual save to cache</li>
-                    <li><strong>Ctrl+R</strong> - Refresh canvas</li>
-                    <li><strong>XML Edit Toggle</strong> - Enable/disable XML editing</li>
-                </ul>
+        <!-- Bottom Toolbar -->
+        <div class="bottom-toolbar">
+            <div class="toolbar-left">
+                <button class="toolbar-btn active" onclick="switchView('diagram')">
+                    📊 Diagram View
+                </button>
+                <button class="toolbar-btn" onclick="switchView('xml')">
+                    📝 XML View
+                </button>
+                <button class="toolbar-btn danger" onclick="clearModel()">
+                    🗑️ Clear All
+                </button>
             </div>
-            <div id="properties-content">
-                <p>Select a BPMN element to edit its properties</p>
+
+            <div class="toolbar-right">
+                <div class="status-message" id="status-message">
+                    Initializing BPMN modeler...
+                </div>
+                <div class="xml-edit-toggle">
+                    <span class="toggle-label">XML Edit</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="xml-edit-toggle" onchange="toggleXMLEditing()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="xml-view">
-        <strong>Current XML:</strong>
-        <div style="font-size: 11px; color: #666; margin-bottom: 5px;">
-            💡 Switch to XML View to see the generated XML. Use the "XML Edit" toggle to enable direct editing.
-        </div>
-        <pre id="xml-output">Loading...</pre>
     </div>
 
     <!-- BPMN.js -->
@@ -496,12 +622,6 @@
         </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>
 </bpmn:definitions>`;
-
-        function updateStatus(message, type = 'success') {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
-        }
 
         // Function to properly format XML with consistent indentation
         function formatXML(xml) {
@@ -709,7 +829,6 @@
 
                 console.log('Final XML after injection:', xml.substring(0, 500) + '...');
 
-                document.getElementById('xml-output').textContent = xml;
                 if (currentView === 'xml') {
                     xmlEditor.value = xml;
 
@@ -721,7 +840,8 @@
                     }, 10);
                 }
             }).catch(error => {
-                document.getElementById('xml-output').textContent = 'Error: ' + error.message;
+                console.error('Error generating XML:', error);
+                updateStatus('Error generating XML: ' + error.message, 'error');
             });
         }
 
@@ -729,8 +849,8 @@
             currentView = view;
             const canvas = document.getElementById('canvas');
             const xmlEditor = document.getElementById('xml-editor');
-            const diagramBtn = document.querySelector('.toggle-btn[onclick="switchView(\'diagram\')"]');
-            const xmlBtn = document.querySelector('.toggle-btn[onclick="switchView(\'xml\')"]');
+            const diagramBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'diagram\')"]');
+            const xmlBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'xml\')"]');
 
             if (view === 'diagram') {
                 canvas.classList.remove('hidden');
@@ -762,7 +882,7 @@
                     modeler.saveXML({ format: true }).then(result => {
                         // Inject extension properties into XML
                         let xml = injectExtensionProperties(result.xml);
-                        document.getElementById('xml-editor').value = xml;
+                        xmlEditor.value = xml;
 
                         // Extract and cache extension properties from the current XML
                         extractAndCacheExtensionProperties();
@@ -773,7 +893,13 @@
                         updateStatus('Switched to XML View', 'success');
                     }).catch(error => {
                         updateStatus('Error loading XML: ' + error.message, 'error');
+                        // Fallback - show empty XML template
+                        xmlEditor.value = emptyXML;
                     });
+                } else {
+                    // Fallback if modeler not ready
+                    xmlEditor.value = emptyXML;
+                    updateStatus('Switched to XML View - Empty template loaded', 'info');
                 }
             }
         }
@@ -908,8 +1034,12 @@
 
         function updatePropertiesPanel() {
             if (!selectedElement) {
+                // Show element info section as hidden and clear properties
+                const elementInfoSection = document.getElementById('element-info-section');
+                elementInfoSection.classList.add('hidden');
+
                 document.getElementById('properties-content').innerHTML =
-                    '<p>Select a BPMN element to edit its properties</p>';
+                    '<div style="padding: 12px; color: #666; text-align: center;">Select a BPMN element to edit its properties</div>';
                 return;
             }
 
@@ -917,6 +1047,40 @@
             const elementType = businessObject.$type;
             const elementId = businessObject.id;
             const elementName = businessObject.name || '';
+
+            // Update element info section
+            const elementInfoSection = document.getElementById('element-info-section');
+            elementInfoSection.classList.remove('hidden');
+            document.getElementById('element-type').textContent = elementType.replace('bpmn:', '');
+            document.getElementById('element-id').textContent = `ID: ${elementId}`;
+
+            // Helper function to create collapsible property groups
+            function createPropertyGroup(title, content, collapsed = false) {
+                const collapseIcon = collapsed ? '▶' : '▼';
+                const contentClass = collapsed ? 'property-group-content collapsed' : 'property-group-content';
+
+                return `
+                    <div class="property-group">
+                        <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                            <span class="collapse-icon${collapsed ? ' collapsed' : ''}">${collapseIcon}</span>
+                            <h4>${title}</h4>
+                        </div>
+                        <div class="${contentClass}">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Helper function to create property fields
+            function createPropertyField(label, inputHtml) {
+                return `
+                    <div class="property-field">
+                        <label>${label}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            }
 
             // Determine element category
             const isServiceTask = elementType === 'bpmn:ServiceTask';
@@ -930,12 +1094,7 @@
             const isUserTask = elementType === 'bpmn:UserTask';
             const isTask = elementType === 'bpmn:Task';
 
-            let html = `
-                <div class="element-info">
-                    <h3>${elementType.replace('bpmn:', '')}</h3>
-                    <p>ID: ${elementId}</p>
-                </div>
-            `;
+            let html = '';
 
             // Service Task specific properties
             if (isServiceTask) {
@@ -945,101 +1104,81 @@
                     documentationText = businessObject.documentation[0].text || '';
                 }
 
-                html += `
-                    <div class="property-group">
-                        <h4>General</h4>
-                        <div class="property-field">
-                            <label>Name</label>
-                            <input type="text" id="service-name" 
-                                   value="${businessObject.name || ''}" 
-                                   onchange="updateBasicProperty('name', this.value)"
-                                   placeholder="Service Task Name">
-                        </div>
-                        <div class="property-field">
-                            <label>ID</label>
-                            <input type="text" id="service-id" 
-                                   value="${businessObject.id || ''}" 
-                                   onchange="updateBasicProperty('id', this.value)"
-                                   placeholder="ServiceTask_1">
-                        </div>
-                    </div>
-                    
-                    <div class="property-group">
-                        <h4>Documentation</h4>
-                        <div class="property-field">
-                            <label>Description</label>
-                            <textarea id="service-documentation" 
-                                      onchange="updateBasicProperty('documentation', this.value)"
-                                      placeholder="Enter service task documentation...">${documentationText}</textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="property-group">
-                        <h4>Implementation</h4>
-                        <div class="property-field">
-                            <label>Type</label>
-                            <select id="service-type" onchange="updateExtensionProperty(selectedElement, 'camunda:type', this.value)">
-                                <option value="">Select Type</option>
-                                <option value="external" ${getExtensionProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
-                                <option value="expression" ${getExtensionProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
-                                <option value="connector" ${getExtensionProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
-                            </select>
-                        </div>
-                        <div class="property-field">
-                            <label>Topic</label>
-                            <input type="text" id="service-topic" 
-                                   value="${getExtensionProperty(selectedElement, 'camunda:topic')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'camunda:topic', this.value)"
-                                   placeholder="service-topic">
-                        </div>
-                    </div>
-                    
-                    <div class="property-group">
-                        <h4>Extension Properties</h4>
-                        <div class="property-field">
-                            <label>Service Type</label>
-                            <input type="text" id="service-ext-type" 
-                                   value="${getExtensionProperty(selectedElement, 'service.type')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service.type', this.value)"
-                                   placeholder="assistant">
-                        </div>
-                        <div class="property-field">
-                            <label>Service Name</label>
-                            <input type="text" id="service-ext-name" 
-                                   value="${getExtensionProperty(selectedElement, 'service.name')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service.name', this.value)"
-                                   placeholder="dadm-openai-assistant">
-                        </div>
-                        <div class="property-field">
-                            <label>Service Version</label>
-                            <input type="text" id="service-ext-version" 
-                                   value="${getExtensionProperty(selectedElement, 'service.version')}" 
-                                   onchange="updateExtensionProperty(selectedElement, 'service.version', this.value)"
-                                   placeholder="1.0">
-                        </div>
-                    </div>
-                `;
+                // General properties group
+                const generalContent =
+                    createPropertyField('Name',
+                        `<input type="text" id="service-name" 
+                               value="${businessObject.name || ''}" 
+                               onchange="updateBasicProperty('name', this.value)"
+                               placeholder="Service Task Name">`) +
+                    createPropertyField('ID',
+                        `<input type="text" id="service-id" 
+                               value="${businessObject.id || ''}" 
+                               onchange="updateBasicProperty('id', this.value)"
+                               placeholder="ServiceTask_1">`);
+
+                html += createPropertyGroup('General', generalContent);
+
+                // Documentation group
+                const docContent =
+                    createPropertyField('Description',
+                        `<textarea id="service-documentation" 
+                                  onchange="updateBasicProperty('documentation', this.value)"
+                                  placeholder="Enter service task documentation...">${documentationText}</textarea>`);
+
+                html += createPropertyGroup('Documentation', docContent, true);
+
+                // Implementation group
+                const implContent =
+                    createPropertyField('Type',
+                        `<select id="service-type" onchange="updateExtensionProperty(selectedElement, 'camunda:type', this.value)">
+                            <option value="">Select Type</option>
+                            <option value="external" ${getExtensionProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
+                            <option value="expression" ${getExtensionProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
+                            <option value="connector" ${getExtensionProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
+                        </select>`) +
+                    createPropertyField('Topic',
+                        `<input type="text" id="service-topic" 
+                               value="${getExtensionProperty(selectedElement, 'camunda:topic')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'camunda:topic', this.value)"
+                               placeholder="service-topic">`);
+
+                html += createPropertyGroup('Implementation', implContent, true);
+
+                // Extension Properties group
+                const extContent =
+                    createPropertyField('Service Type',
+                        `<input type="text" id="service-ext-type" 
+                               value="${getExtensionProperty(selectedElement, 'service:type')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service:type', this.value)"
+                               placeholder="ai-service">`) +
+                    createPropertyField('Service Name',
+                        `<input type="text" id="service-ext-name" 
+                               value="${getExtensionProperty(selectedElement, 'service:name')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service:name', this.value)"
+                               placeholder="OpenAI GPT Service">`) +
+                    createPropertyField('Service Version',
+                        `<input type="text" id="service-ext-version" 
+                               value="${getExtensionProperty(selectedElement, 'service:version')}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service:version', this.value)"
+                               placeholder="1.0">`);
+
+                html += createPropertyGroup('Extension Properties', extContent, true);
             } else {
-                // For non-service tasks, show basic properties
-                html += `
-                    <div class="property-group">
-                        <h4>Basic Properties</h4>
-                        <div class="property-field">
-                            <label>Name</label>
-                            <input type="text" value="${elementName}" 
-                                   onchange="updateBasicProperty('name', this.value)">
-                        </div>
-                        <div class="property-field">
-                            <label>ID</label>
-                            <input type="text" value="${elementId}" 
-                                   onchange="updateBasicProperty('id', this.value)">
-                        </div>
-                        <div class="property-field">
-                            <label>Element Type</label>
-                            <input type="text" value="${elementType}" readonly style="background:#f5f5f5;">
-                        </div>
-                    </div>
-                `;
+                // For other element types, show basic properties
+                const basicContent =
+                    createPropertyField('Name',
+                        `<input type="text" value="${elementName}" 
+                               onchange="updateBasicProperty('name', this.value)"
+                               placeholder="Element Name">`) +
+                    createPropertyField('ID',
+                        `<input type="text" value="${elementId}" 
+                               onchange="updateBasicProperty('id', this.value)"
+                               placeholder="Element_1">`) +
+                    createPropertyField('Element Type',
+                        `<input type="text" value="${elementType}" readonly style="background:#f5f5f5;">`);
+
+                html += createPropertyGroup('Basic Properties', basicContent);
             }
 
             document.getElementById('properties-content').innerHTML = html;
@@ -1109,6 +1248,9 @@
                 });
 
                 updateXMLView();
+
+                // Ensure we start in diagram view
+                switchView('diagram');
 
             } catch (error) {
                 updateStatus('Error: ' + error.message, 'error');
@@ -1347,6 +1489,9 @@
 
         // Setup XML editor when page loads
         document.addEventListener('DOMContentLoaded', setupXMLEditor);
+
+        // Initialize draggable splitter when page loads
+        document.addEventListener('DOMContentLoaded', initializeSplitter);
 
         // Add global debug function
         window.debugModeler = function () {
@@ -1823,6 +1968,110 @@
                 xmlEditor.style.color = '#666';
                 xmlEditor.style.cursor = 'not-allowed';
                 updateStatus('XML editing disabled - XML is read-only', 'info');
+            }
+        }
+
+        // Function to toggle property groups
+        function togglePropertyGroup(headerElement) {
+            const icon = headerElement.querySelector('.collapse-icon');
+            const content = headerElement.nextElementSibling;
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }
+        }
+
+        // Initialize draggable splitter functionality
+        function initializeSplitter() {
+            const splitter = document.getElementById('properties-splitter');
+            const canvasArea = document.querySelector('.canvas-main-area');
+            const propertiesPanel = document.getElementById('properties-panel');
+            const container = document.querySelector('.canvas-properties-container');
+
+            let isDragging = false;
+            let startX = 0;
+            let startCanvasWidth = 0;
+            let startPropertiesWidth = 0;
+
+            splitter.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+
+                const containerRect = container.getBoundingClientRect();
+                startCanvasWidth = canvasArea.getBoundingClientRect().width;
+                startPropertiesWidth = propertiesPanel.getBoundingClientRect().width;
+
+                splitter.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaX = e.clientX - startX;
+                const containerRect = container.getBoundingClientRect();
+                const containerWidth = containerRect.width;
+
+                // Calculate new widths
+                const newCanvasWidth = startCanvasWidth + deltaX;
+                const newPropertiesWidth = startPropertiesWidth - deltaX;
+
+                // Enforce minimum widths
+                const minCanvasWidth = 400;
+                const minPropertiesWidth = 250;
+                const maxPropertiesWidth = containerWidth * 0.6; // Max 60% of container
+
+                if (newCanvasWidth >= minCanvasWidth &&
+                    newPropertiesWidth >= minPropertiesWidth &&
+                    newPropertiesWidth <= maxPropertiesWidth) {
+
+                    const canvasPercentage = (newCanvasWidth / containerWidth) * 100;
+                    const propertiesPercentage = (newPropertiesWidth / containerWidth) * 100;
+
+                    canvasArea.style.flex = `0 0 ${canvasPercentage}%`;
+                    propertiesPanel.style.flex = `0 0 ${propertiesPercentage}%`;
+                }
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    splitter.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
+        // Update the status function to work with the new toolbar
+        function updateStatus(message, type = 'success') {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+        }
+
+        // Update button states for new toolbar
+        function updateButtonStates() {
+            const diagramBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'diagram\')"]');
+            const xmlBtn = document.querySelector('.toolbar-btn[onclick="switchView(\'xml\')"]');
+
+            if (currentView === 'diagram') {
+                diagramBtn.classList.add('active');
+                xmlBtn.classList.remove('active');
+            } else {
+                xmlBtn.classList.add('active');
+                diagramBtn.classList.remove('active');
             }
         }
     </script>
