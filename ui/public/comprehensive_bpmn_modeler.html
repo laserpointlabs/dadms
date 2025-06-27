@@ -706,6 +706,10 @@
                     <button class="menu-dropdown-item" onclick="resetZoom()">
                         Reset Zoom <span class="shortcut">Ctrl+1</span>
                     </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="toggleFullscreen()">
+                        Toggle Fullscreen <span class="shortcut">F11</span>
+                    </button>
                 </div>
             </div>
 
@@ -720,6 +724,12 @@
                         About
                     </button>
                 </div>
+            </div>
+
+            <!-- Add Fullscreen Button to the top toolbar -->
+            <div class="menu-item">
+                <button class="menu-button" id="fullscreen-btn" title="Toggle Fullscreen" onclick="toggleFullscreen()">⛶
+                </button>
             </div>
 
             <div class="file-status" id="file-status">
@@ -2133,6 +2143,10 @@
                         updateStatus('Properties panel toggled', 'success');
                     }
                     break;
+                case 'F11':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
             }
         }
 
@@ -2167,6 +2181,8 @@
         // Browser caching functions
         function saveModelToCache() {
             if (!modeler) return;
+
+
 
             modeler.saveXML({ format: true }).then(result => {
                 // Inject extension properties into XML before saving to cache
@@ -3314,6 +3330,11 @@ Built with BPMN.js
                 e.preventDefault();
                 refreshCanvas();
             }
+            // Fullscreen
+            else if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
         });
 
         // Track changes for unsaved indicator
@@ -3386,6 +3407,26 @@ Built with BPMN.js
             }
             console.log('=====================================');
         };
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            const ws = document.querySelector('.workspace-container');
+            if (!document.fullscreenElement) {
+                ws.requestFullscreen().catch(err => {
+                    updateStatus('Error entering fullscreen: ' + err.message, 'error');
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Add F11 keyboard shortcut for fullscreen
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
     </script>
 </body>
 
