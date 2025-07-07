@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:owl="http://www.w3.org/2002/07/owl#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#presents">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates that a component makes available an interface.</rdfs:comment>
+    <rdfs:label>presents</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#status">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label>status</rdfs:label>
+    <rdfs:comment>Status of the entity (e.g., proposed, verified, implemented, obsolete).</rdfs:comment>
+    <rdfs:domain rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Condition">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:comment>A state or circumstance that influences the execution, behavior, or validity of processes, functions, or requirements.</rdfs:comment>
+    <rdfs:label>Condition</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Na0e2284b41bb43cca4d657b55dd38750">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Process"/>
+    <rdf:rest rdf:nodeID="Naeb94d2640144939bc36910bd49332bd"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#identifier">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label>identifier</rdfs:label>
+    <rdfs:comment>Unique external identifier for traceability.</rdfs:comment>
+    <rdfs:domain rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Requirement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:subClassOf rdf:nodeID="Nb0936c9e36bf48099de1d2449339e496"/>
+    <rdfs:subClassOf rdf:nodeID="N4c1f29ba67f04507a7df3a897114fc02"/>
+    <rdfs:comment>A statement of need or condition that must be satisfied by the system, product, or process.</rdfs:comment>
+    <rdfs:label>Requirement</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#performs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates that a component or actor executes a process or function.</rdfs:comment>
+    <rdfs:label>performs</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N345ab47265224b1884b6b8ef4079c500">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#is_triggered_by"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Condition"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Nb1671f1f38974473be5e7627a4eb995b">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#performs"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Process"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Nd1010f817f92434ca0835b9baf71fd40">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Interface"/>
+    <rdf:rest rdf:nodeID="Na0e2284b41bb43cca4d657b55dd38750"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N60c6b2e1254248bd9a743bf782fc6569">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+    <owl:members rdf:nodeID="Nd851c7744af844949a024525f4cf6e70"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#name">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label>name</rdfs:label>
+    <rdfs:comment>Human-readable name for the entity.</rdfs:comment>
+    <rdfs:domain rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Constraint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:comment>A restriction or limitation imposed on requirements, components, processes, or functions.</rdfs:comment>
+    <rdfs:label>Constraint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Nb0936c9e36bf48099de1d2449339e496">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#has_constraint"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Constraint"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N51ea47f228544090bd02ea7672d3ce4b">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Function"/>
+    <rdf:rest rdf:nodeID="Nd1010f817f92434ca0835b9baf71fd40"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N1414798b6aff4edaa596b542f24fec4a">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#specifically_depends_upon"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Component"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#has_constraint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Associates a requirement, component, process, or function with a specific constraint.</rdfs:comment>
+    <rdfs:label>has constraint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N4c1f29ba67f04507a7df3a897114fc02">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#specifies"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Component"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Component">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:subClassOf rdf:nodeID="Nb1671f1f38974473be5e7627a4eb995b"/>
+    <rdfs:subClassOf rdf:nodeID="Ncfe24e1ed1724570bebd1b3acc6d7bb8"/>
+    <rdfs:comment>A physical or logical part of a system that fulfills one or more functions and may realize requirements.</rdfs:comment>
+    <rdfs:label>Component</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+    <rdfs:comment>The RCPF ontology defines a formal structure for representing Requirements, Components, Processes, and Functions within complex systems engineering projects. 
+    
+This ontology is designed to facilitate integration and traceability across requirements engineering, system architecture, process modeling, and function allocation. 
+    
+It enables users to model relationships between system requirements, physical and logical components, processes, and the functions they perform, supporting advanced reasoning, validation, and lifecycle management. 
+    
+The ontology aims to enhance interoperability among engineering tools and support digital thread initiatives by providing a shared vocabulary and data structure.</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N5cce4a44dd974f4ca5d4b37ef0809200">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#realizes"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Function"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#is_triggered_by">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates that a process, function, or component is initiated or activated by a condition or event.</rdfs:comment>
+    <rdfs:label>is triggered by</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Process">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:subClassOf rdf:nodeID="N5cce4a44dd974f4ca5d4b37ef0809200"/>
+    <rdfs:comment>A sequence of actions or activities that transform inputs into outputs and achieve specific objectives.</rdfs:comment>
+    <rdfs:label>Process</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Ncfe24e1ed1724570bebd1b3acc6d7bb8">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#presents"/>
+    <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Interface"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#realizes">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates that a component or process fulfills or implements a requirement or function.</rdfs:comment>
+    <rdfs:label>realizes</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Ne7fe895c135e48d49e14139ff7128868">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Condition"/>
+    <rdf:rest rdf:nodeID="N35f2c754ae764ceba92989287ad03f79"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Naeb94d2640144939bc36910bd49332bd">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Requirement"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#specifically_depends_upon">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates a directed dependency where one element requires the existence or characteristics of another.</rdfs:comment>
+    <rdfs:label>specifically depends upon</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Function">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:subClassOf rdf:nodeID="N345ab47265224b1884b6b8ef4079c500"/>
+    <rdfs:subClassOf rdf:nodeID="N1414798b6aff4edaa596b542f24fec4a"/>
+    <rdfs:comment>A specific activity or purpose that a component or system is intended to perform.</rdfs:comment>
+    <rdfs:label>Function</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Interface">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:comment>A point or boundary where two components, systems, or functions interact or exchange information.</rdfs:comment>
+    <rdfs:label>Interface</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="N35f2c754ae764ceba92989287ad03f79">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Constraint"/>
+    <rdf:rest rdf:nodeID="N51ea47f228544090bd02ea7672d3ce4b"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="Nd851c7744af844949a024525f4cf6e70">
+    <rdf:first rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#Component"/>
+    <rdf:rest rdf:nodeID="Ne7fe895c135e48d49e14139ff7128868"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/rcpf#specifies">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    <rdfs:comment>Indicates that a requirement or constraint defines details or properties of a component, process, or function.</rdfs:comment>
+    <rdfs:label>specifies</rdfs:label>
+  </rdf:Description>
+</rdf:RDF>
