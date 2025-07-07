@@ -384,7 +384,7 @@ graph TB
         subgraph "Container Management"
             DOCKER[Docker<br/>Container Runtime<br/>Image Management<br/>Network Isolation]
             COMPOSE[Docker Compose<br/>Multi-Container Apps<br/>Development Environment<br/>Service Definition]
-            K8S[Kubernetes (Optional)<br/>Production Orchestration<br/>Auto-scaling<br/>Service Mesh]
+            K8S["Kubernetes (Optional)<br/>Production Orchestration<br/>Auto-scaling<br/>Service Mesh"]
         end
         
         subgraph "Process Management"

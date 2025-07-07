@@ -173,6 +173,9 @@ This ontological foundation enables DADM to understand domain relationships and 
 ### [Ontology Extraction Process](ontology_extraction_process.md)
 Detailed workflow for AI-powered ontology development with convergence criteria and SME validation.
 
+### [Data Transformation and Ontology Mapping](data_transformation_ontology_mapping.md)
+Probabilistic ontology establishment, domain-specific transformations, and hierarchical data mapping between abstraction levels.
+
 ### [Conceptual Design Bootstrapping](conceptual_design_bootstrapping.md)
 Using CPF ontology and extracted requirements to automatically generate conceptual system designs.
 
