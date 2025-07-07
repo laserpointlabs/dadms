@@ -45,8 +45,8 @@ graph TB
         end
         
         subgraph "Knowledge Stores"
-            FUSEKI[Apache Fuseki<br/>SPARQL Endpoint<br/>Ontology Store<br/>RDF Repository)]
-            CACHE[Redis Cache<br/>Session Storage<br/>Performance Data<br/>Temporary Results)]
+            FUSEKI[Apache Fuseki<br/>SPARQL Endpoint<br/>Ontology Store<br/>RDF Repository]
+            CACHE[Redis Cache<br/>Session Storage<br/>Performance Data<br/>Temporary Results]
         end
     end
     
