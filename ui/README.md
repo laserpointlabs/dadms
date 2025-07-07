@@ -1,6 +1,6 @@
 # DADM React UI
 
-A comprehensive React-based user interface for the DADM (Decision Analysis & Decision Management) system.
+A comprehensive React-based user interface for the DADM (Decision Analysis and Decision Management) system.
 
 ## Features
 

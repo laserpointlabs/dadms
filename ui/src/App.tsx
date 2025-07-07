@@ -54,7 +54,7 @@ function AppContent({ selectedPath, setSelectedPath }: { selectedPath: string; s
             >
                 <Toolbar>
                     <Typography variant="h6" noWrap component="div">
-                        DADM - Decision Analysis & Decision Management
+                        DADM - Decision Analysis and Decision Management
                     </Typography>
                 </Toolbar>
             </AppBar>

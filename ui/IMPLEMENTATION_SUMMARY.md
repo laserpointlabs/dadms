@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-We have successfully created a comprehensive React-based user interface for the DADM (Decision Analysis & Decision Management) system. The UI provides full access to all CLI commands, real-time monitoring, analysis data viewing, thread context management, and AI chat capabilities.
+We have successfully created a comprehensive React-based user interface for the DADM (Decision Analysis and Decision Management) system. The UI provides full access to all CLI commands, real-time monitoring, analysis data viewing, thread context management, and AI chat capabilities.
 
 ## 🏗️ Architecture
 
