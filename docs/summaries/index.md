@@ -69,6 +69,9 @@ Requirements extraction, evaluation, capture, and management from domain documen
 ### [Service Architecture](service_architecture.md)
 Flexible service layer design, orchestration capabilities, and microservice integration patterns.
 
+### [Prompt Service Management](prompt_service_management.md)
+Centralized prompt management, validation framework, and governance controls for AI interactions.
+
 ### [AI Integration Strategy](ai_integration_strategy.md)
 Hidden AI architecture, domain agents, and intelligent process assistance.
 

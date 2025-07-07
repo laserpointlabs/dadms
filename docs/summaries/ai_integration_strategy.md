@@ -85,6 +85,22 @@ graph TD
   - Documentation requirement validation
   - Audit trail generation
 
+### Prompt Service Integration
+
+The Prompt Service provides centralized management and governance of AI interactions across all domain agents. This ensures consistent, high-quality responses while enabling controlled experimentation and continuous improvement.
+
+#### Managed Prompt Execution
+- **Template-Based Interactions**: All AI agent interactions use validated, versioned prompt templates
+- **Parameter Injection**: Dynamic context and domain knowledge injected into prompts
+- **Quality Assurance**: Automated testing and validation of prompt effectiveness
+- **Performance Monitoring**: Real-time tracking of prompt performance and user satisfaction
+
+#### BPMN Workflow Integration
+- **Service Task Configuration**: Users select approved prompts when configuring AI-enabled service tasks
+- **Dynamic Parameter Mapping**: BPMN process variables automatically map to prompt parameters
+- **Response Standardization**: Consistent AI response formats across all workflow integrations
+- **Error Handling**: Graceful handling of prompt execution failures within process flows
+
 ### Intelligent Process Assistance
 
 ```mermaid

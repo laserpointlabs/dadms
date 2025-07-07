@@ -22,6 +22,7 @@ graph TB
             AI_SVC[OpenAI Service<br/>LLM Integration<br/>Thread Management<br/>Domain Agents]
             ONT_SVC[Ontology Service<br/>CPF Framework<br/>Knowledge Management<br/>SPARQL Queries]
             REQ_SVC[Requirements Service<br/>Document Processing<br/>Extraction & Classification]
+            PROMPT_SVC[Prompt Service<br/>Template Management<br/>Version Control<br/>Validation & Testing]
         end
         
         subgraph "Domain Services"
@@ -63,6 +64,7 @@ graph TB
     SO --> AI_SVC
     SO --> ONT_SVC
     SO --> REQ_SVC
+    SO --> PROMPT_SVC
     SO --> ACQ_SVC
     SO --> TECH_SVC
     SO --> COST_SVC
@@ -72,11 +74,13 @@ graph TB
     AI_SVC --> CAM
     ONT_SVC --> CAM
     REQ_SVC --> CAM
+    PROMPT_SVC --> AI_SVC
     
     CAM --> PG
     AI_SVC --> NEO
     AI_SVC --> QD
     ONT_SVC --> FUSEKI
+    PROMPT_SVC --> PG
     SO --> CACHE
     
     DOCKER --> PM2

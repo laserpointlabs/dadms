@@ -38,6 +38,7 @@ graph TB
     subgraph "Core Services"
         BS[BPMN AI Service<br/>Workflow Generation]
         OS[OpenAI Service<br/>LLM Integration]
+        PS[Prompt Service<br/>Template Management<br/>Validation & Testing]
         ONT[Ontology Service<br/>Knowledge Management]
         REQ[Requirements Service<br/>Domain Analysis]
         CAP[Capability Service<br/>Performance Tracking]
