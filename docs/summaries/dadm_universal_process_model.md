@@ -573,6 +573,63 @@ graph TB
 
 ## Capability Assessment & Batting Average
 
+### **Why "Batting Average"? Moving Beyond Rhetoric to Results**
+
+DADM uses the term "batting average" deliberately to establish a culture of **measurable performance over theoretical perfection**. Just as a baseball player's batting average represents actual hits divided by actual at-bats, DADM's batting averages measure **real outcomes against real attempts** - not promises, projections, or perfectly crafted models.
+
+#### **The Problem with Traditional Modeling**
+Traditional approaches like SysML often suffer from "rhetoric over results":
+- **Beautiful Documentation, Unknown Performance**: Models look comprehensive but lack performance validation
+- **Process Compliance Over Outcome Achievement**: Focus on following procedures rather than achieving results
+- **Theoretical Perfection Over Practical Effectiveness**: Emphasis on model completeness rather than decision quality
+- **Activity Metrics Over Impact Metrics**: Measuring effort rather than outcomes
+
+#### **The Baseball Analogy: Why It Works**
+In baseball, a .300 batting average (30% success rate) makes you an All-Star because:
+- **Everyone understands the metric**: Simple, transparent, comparable
+- **It measures what matters**: Actual performance under real conditions
+- **It drives improvement**: Players focus on getting better results, not better explanations
+- **It enables fair comparison**: Compare players across teams, leagues, and eras
+- **It accepts imperfection**: Excellence doesn't require 100% success
+
+#### **DADM's Batting Average Philosophy**
+```mermaid
+flowchart LR
+    subgraph "DADM Approach"
+        ATTEMPT[Decision Attempt] --> MEASURE[Measure Outcome]
+        MEASURE --> LEARN[Learn & Improve]
+        LEARN --> BETTER[Better Next Time]
+        BETTER --> ATTEMPT
+    end
+    
+    subgraph "Batting Average Benefits"
+        TRANSPARENT[Transparent Performance]
+        COMPARABLE[Comparable Metrics]
+        ACCOUNTABLE[Accountability Culture]
+        IMPROVEMENT[Continuous Improvement]
+    end
+    
+    MEASURE --> TRANSPARENT
+    LEARN --> COMPARABLE
+    BETTER --> ACCOUNTABLE
+    ATTEMPT --> IMPROVEMENT
+```
+
+```mermaid
+flowchart TB
+    subgraph "Traditional Approach (SysML)"
+        DOC[Perfect Documentation] --> COMPLY[Process Compliance]
+        COMPLY --> HOPE[Hope for Success]
+        HOPE --> UNKNOWN[Unknown Outcomes]
+    end
+````
+
+**Key Principles:**
+- **"Show, Don't Tell"**: Demonstrate effectiveness through results, not documentation
+- **"Good Enough, Getting Better"**: Accept imperfection while pursuing improvement
+- **"Outcomes Over Outputs"**: Measure impact, not activity
+- **"Learning Over Perfection"**: Value continuous improvement over initial perfection
+
 ### **Continuous Performance Tracking**
 
 ```mermaid
@@ -602,21 +659,99 @@ graph LR
     IMPROVE --> COLLECT
 ```
 
+### **Batting Average Examples: What Good Looks Like**
+
+#### **Process Phase Performance Standards**
+| Phase | Rookie (.200) | Professional (.300) | All-Star (.400) | Hall of Fame (.500+) |
+|-------|---------------|-------------------|----------------|---------------------|
+| **Event Detection** | 20% of critical events detected | 30% accuracy with minimal false positives | 40% detection with context | 50%+ predictive detection |
+| **Objective Setting** | Basic goals identified | Clear, measurable objectives | Stakeholder-aligned priorities | Adaptive objective optimization |
+| **Data Collection** | Some relevant data gathered | 30% data quality/completeness | 40% relevant, validated data | 50%+ predictive data sets |
+| **Model Performance** | Models sometimes work | 30% prediction accuracy | 40% robust predictions | 50%+ adaptive learning models |
+| **Decision Outcomes** | Decisions made on time | 30% achieve stated objectives | 40% exceed expectations | 50%+ create unexpected value |
+
+#### **Real-World Batting Average Scenarios**
+
+**Aircraft Acquisition Example:**
+```
+Event Detection: 0.350 (35% of program risks identified before they become critical)
+Objective Setting: 0.420 (42% of objectives met or exceeded within budget/schedule)
+Data Collection: 0.290 (29% of collected data directly influenced decision quality)
+Model Performance: 0.380 (38% of cost/schedule predictions within 10% of actual)
+Decision Outcomes: 0.440 (44% of major decisions resulted in better-than-expected outcomes)
+Overall Program Batting Average: 0.376 (Strong Professional Performance)
+```
+
+**System Integration Project:**
+```
+Event Detection: 0.280 (28% of integration issues caught before system test)
+Objective Setting: 0.310 (31% of requirements clearly traced to business value)
+Data Collection: 0.250 (25% of technical data supported architecture decisions)
+Model Performance: 0.340 (34% of interface models predicted actual behavior)
+Decision Outcomes: 0.360 (36% of technical decisions improved system performance)
+Overall Project Batting Average: 0.308 (Solid Professional Performance)
+```
+
 ### **Phase-Specific Batting Averages**
 
-Each phase of the universal process maintains its own performance metrics:
+Each phase of the universal process maintains its own performance metrics with specific success criteria:
 
-- **Event Detection**: Accuracy of trigger identification, false positive/negative rates
-- **Objective Setting**: Clarity and completeness of goal definition
-- **Assumption Management**: Validity of assumptions, impact of incorrect assumptions
-- **Ontology Utilization**: Effectiveness of knowledge framework application
-- **Data Quality**: Relevance, accuracy, and completeness of data collection
-- **Model Performance**: Prediction accuracy, calibration quality
-- **Simulation Reliability**: Scenario accuracy, outcome prediction quality
-- **Validation Effectiveness**: Verification accuracy, error detection rate
-- **Analysis Quality**: Insight generation, decision support effectiveness
-- **Decision Outcomes**: Success rate, stakeholder satisfaction, goal achievement
-- **Learning Integration**: Knowledge retention, process improvement rate
+- **Event Detection (Target: 0.300+)**: Accuracy of trigger identification, false positive/negative rates, early warning effectiveness
+- **Objective Setting (Target: 0.350+)**: Clarity and completeness of goal definition, stakeholder alignment, measurability 
+- **Assumption Management (Target: 0.280+)**: Validity of assumptions, impact of incorrect assumptions, assumption tracking accuracy
+- **Ontology Utilization (Target: 0.320+)**: Effectiveness of knowledge framework application, concept reuse, semantic consistency
+- **Data Quality (Target: 0.300+)**: Relevance, accuracy, and completeness of data collection, data-to-insight conversion
+- **Model Performance (Target: 0.350+)**: Prediction accuracy, calibration quality, model generalizability
+- **Simulation Reliability (Target: 0.340+)**: Scenario accuracy, outcome prediction quality, simulation-to-reality correlation
+- **Validation Effectiveness (Target: 0.380+)**: Verification accuracy, error detection rate, validation completeness
+- **Analysis Quality (Target: 0.330+)**: Insight generation, decision support effectiveness, analysis-to-action conversion
+- **Decision Outcomes (Target: 0.400+)**: Success rate, stakeholder satisfaction, goal achievement, unintended consequences
+- **Learning Integration (Target: 0.250+)**: Knowledge retention, process improvement rate, adaptation speed
+
+### **Building a Results-Driven Culture**
+
+#### **Accountability Through Transparency**
+```mermaid
+graph TB
+    subgraph "Measurement Culture"
+        TRACK[Track Everything<br/>No Decision Unmeasured]
+        REPORT[Report Honestly<br/>Good and Bad Results]
+        COMPARE[Compare Fairly<br/>Standardized Metrics]
+        IMPROVE[Improve Systematically<br/>Data-Driven Changes]
+    end
+    
+    subgraph "Cultural Outcomes"
+        TRUST[Higher Trust<br/>Performance-Based Credibility]
+        LEARNING[Faster Learning<br/>Rapid Iteration Cycles]
+        QUALITY[Better Quality<br/>Results-Focused Decisions]
+        INNOVATION[More Innovation<br/>Safe-to-Fail Experiments]
+    end
+    
+    TRACK --> TRUST
+    REPORT --> LEARNING
+    COMPARE --> QUALITY
+    IMPROVE --> INNOVATION
+    
+    TRUST --> TRACK
+    LEARNING --> REPORT
+    QUALITY --> COMPARE
+    INNOVATION --> IMPROVE
+```
+
+**Key Cultural Shifts:**
+- **From "Perfect Plans" to "Perfect Learning"**: Embrace iteration over perfection
+- **From "Best Practices" to "Better Practices"**: Continuous improvement over static procedures
+- **From "Expert Opinion" to "Evidence-Based"**: Data-driven decisions over authority-based decisions
+- **From "Risk Avoidance" to "Risk Management"**: Intelligent risk-taking over risk paralysis
+
+#### **Making Batting Averages Meaningful**
+1. **Context Matters**: A .200 batting average in extremely challenging conditions may represent excellent performance
+2. **Trend Trumps Snapshot**: Improvement trajectory is more important than current performance
+3. **System Performance**: Individual phase performance contributes to overall system effectiveness
+4. **Competitive Benchmarking**: Compare against industry standards and best-in-class performance
+5. **Mission Criticality**: Higher standards for life-safety and mission-critical decisions
+
+This batting average approach transforms DADM from another modeling tool into a **performance management system** that continuously proves its value through measurable results rather than theoretical promises.
 
 ## Implementation Roadmap
 
