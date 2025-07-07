@@ -173,6 +173,9 @@ This ontological foundation enables DADM to understand domain relationships and 
 ### [Ontology Extraction Process](ontology_extraction_process.md)
 Detailed workflow for AI-powered ontology development with convergence criteria and SME validation.
 
+### [Comprehensive Data Access Framework](comprehensive_data_access_framework.md)
+Unified data repository with advanced search, impact analysis, and decision interdependency tracking for organizational intelligence.
+
 ### [Data Transformation and Ontology Mapping](data_transformation_ontology_mapping.md)
 Probabilistic ontology establishment, domain-specific transformations, and hierarchical data mapping between abstraction levels.
 
