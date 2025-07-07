@@ -1,10 +1,10 @@
 # DADM System Documentation Index
 **Date**: July 7, 2025  
-**Project**: Decision Analysis & Decision Management (DADM) Platform
+**Project**: Decision Analysis and Decision Management (DADM) Platform
 
 ## Introduction
 
-This documentation suite represents the comprehensive vision and implementation plan for the Decision Analysis & Decision Management (DADM) Platform - a revolutionary approach that transforms traditional static process modeling into intelligent, executable knowledge management systems. 
+This documentation suite represents the comprehensive vision and implementation plan for the Decision Analysis and Decision Management (DADM) Platform - a revolutionary approach that transforms traditional static process modeling into intelligent, executable knowledge management systems. 
 
 DADM bridges the critical gap between requirements documentation and operational implementation by leveraging AI-powered automation, semantic ontologies, and real-time process execution. The platform enables organizations to move beyond static documentation toward living, learning systems that continuously improve decision-making capabilities.
 
@@ -53,6 +53,9 @@ graph TB
 The architecture enables seamless integration between human expertise and AI capabilities, ensuring that domain knowledge is captured, structured, and made actionable through executable processes.
 
 ## Overview Documents
+
+### [DADM Universal Process Model](dadm_universal_process_model.md)
+The foundational decision-making framework illustrated through the "punch example" - demonstrating how DADM's universal process applies to any decision scenario, from immediate physical responses to complex organizational decisions.
 
 ### [System Status and MVP Overview](Status_MVP_and_Nextsteps_7_7_25.md)
 Executive summary of current capabilities, competitive advantages, and development roadmap.

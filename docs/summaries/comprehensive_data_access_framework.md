@@ -1,6 +1,6 @@
 # Comprehensive Data Access Framework
 **Date**: July 7, 2025  
-**Project**: Decision Analysis & Decision Management (DADM) Platform
+**Project**: Decision Analysis and Decision Management (DADM) Platform
 
 ## Executive Summary
 

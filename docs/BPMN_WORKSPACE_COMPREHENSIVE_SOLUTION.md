@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details the comprehensive BPMN modeling solution implemented for the DADM (Decision Analysis & Decision Management) platform. The solution provides a robust, always-in-sync BPMN modeling experience with proper property handling, modern UI, and reliable XML persistence.
+This document details the comprehensive BPMN modeling solution implemented for the DADM (Decision Analysis and Decision Management) platform. The solution provides a robust, always-in-sync BPMN modeling experience with proper property handling, modern UI, and reliable XML persistence.
 
 ## Architecture
 

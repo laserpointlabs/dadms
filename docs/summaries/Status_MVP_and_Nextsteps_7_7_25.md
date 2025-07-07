@@ -1,6 +1,6 @@
 # DADM System Status, MVP, and Next Steps
 **Date**: July 7, 2025  
-**Project**: Decision Analysis & Decision Management (DADM) Platform  
+**Project**: Decision Analysis and Decision Management (DADM) Platform  
 **Status**: Advanced Prototype → MVP Definition Phase
 
 ## Executive Summary
