@@ -1,0 +1,290 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52/"
+     xml:base="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52/"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:opla-sd="http://ontologydesignpatterns.org/opla-sd#">
+    <owl:Ontology rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ontologydesignpatterns.org/opla-sd#entityPosition -->
+
+    <owl:AnnotationProperty rdf:about="http://ontologydesignpatterns.org/opla-sd#entityPosition"/>
+    
+
+
+    <!-- http://ontologydesignpatterns.org/opla-sd#entityPositionX -->
+
+    <owl:AnnotationProperty rdf:about="http://ontologydesignpatterns.org/opla-sd#entityPositionX"/>
+    
+
+
+    <!-- http://ontologydesignpatterns.org/opla-sd#entityPositionY -->
+
+    <owl:AnnotationProperty rdf:about="http://ontologydesignpatterns.org/opla-sd#entityPositionY"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_62ae13a9_795a_4e21_ba51_3797266cb8a4 -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_62ae13a9_795a_4e21_ba51_3797266cb8a4">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">is_triggered_by</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_78621008_7bf2_433b_9388_0566de360c5e -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_78621008_7bf2_433b_9388_0566de360c5e">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">presents</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_9fa9c2c3_b1df_47da_8768_0be81df249ed -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_9fa9c2c3_b1df_47da_8768_0be81df249ed">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">has_constraint</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_b0a64d1e_7add_43fb_b387_3fb5cd54aaf8 -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_b0a64d1e_7add_43fb_b387_3fb5cd54aaf8">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">specifies</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_bcc233a0_d417_44a2_9ea0_c487470fb334 -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_bcc233a0_d417_44a2_9ea0_c487470fb334">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">realizes</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e6a278d4_a2b9_4568_9393_67759de8f389 -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e6a278d4_a2b9_4568_9393_67759de8f389">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">specifically_depends_upon</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e9338341_9200_42b8_b030_fd1509252d64 -->
+
+    <owl:ObjectProperty rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e9338341_9200_42b8_b030_fd1509252d64">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:label xml:lang="en">performs</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_17840291_6d80_4012_aced_3f01c5d1add4 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_17840291_6d80_4012_aced_3f01c5d1add4">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_bcc233a0_d417_44a2_9ea0_c487470fb334"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_4af862e7_45a8_4dda_bc47_9de9924b5416"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <opla-sd:entityPosition>
+            <rdf:Description>
+                <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">62.7846903177197</opla-sd:entityPositionX>
+                <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">153.43318194516453</opla-sd:entityPositionY>
+                <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+            </rdf:Description>
+        </opla-sd:entityPosition>
+        <rdfs:label xml:lang="en">Process</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_4af862e7_45a8_4dda_bc47_9de9924b5416 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_4af862e7_45a8_4dda_bc47_9de9924b5416">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_62ae13a9_795a_4e21_ba51_3797266cb8a4"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_78339876_ba62_47be_9ae0_001c829657d8"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e6a278d4_a2b9_4568_9393_67759de8f389"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_5021650c_2e9d_417d_8e90_89d5172e4e5d"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label xml:lang="en">Function</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_5021650c_2e9d_417d_8e90_89d5172e4e5d -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_5021650c_2e9d_417d_8e90_89d5172e4e5d">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_78621008_7bf2_433b_9388_0566de360c5e"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_e5950891_311b_43ba_b334_c95bcc706c72"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_e9338341_9200_42b8_b030_fd1509252d64"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_17840291_6d80_4012_aced_3f01c5d1add4"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label xml:lang="en">Component</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_52dbacdc_09be_4fd0_ba05_e7836a83a148 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_52dbacdc_09be_4fd0_ba05_e7836a83a148">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_9fa9c2c3_b1df_47da_8768_0be81df249ed"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_63486ee1_a0c7_4808_aa09_8bc8d2929056"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLObjectProperty_b0a64d1e_7add_43fb_b387_3fb5cd54aaf8"/>
+                <owl:someValuesFrom rdf:resource="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_5021650c_2e9d_417d_8e90_89d5172e4e5d"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <opla-sd:entityPosition>
+            <rdf:Description>
+                <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">130.13440641536698</opla-sd:entityPositionX>
+                <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">360.047059304155</opla-sd:entityPositionY>
+                <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+            </rdf:Description>
+        </opla-sd:entityPosition>
+        <rdfs:label xml:lang="en">Requirement</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_63486ee1_a0c7_4808_aa09_8bc8d2929056 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_63486ee1_a0c7_4808_aa09_8bc8d2929056">
+        <rdfs:label xml:lang="en">Constraint</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_78339876_ba62_47be_9ae0_001c829657d8 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_78339876_ba62_47be_9ae0_001c829657d8">
+        <rdfs:label xml:lang="en">Condition</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_e5950891_311b_43ba_b334_c95bcc706c72 -->
+
+    <owl:Class rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_e5950891_311b_43ba_b334_c95bcc706c72">
+        <rdfs:label xml:lang="en">Interface</rdfs:label>
+    </owl:Class>
+    <rdf:Description>
+        <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">93.00652788621517</opla-sd:entityPositionX>
+        <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">31.811853549966322</opla-sd:entityPositionY>
+        <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+    </rdf:Description>
+    <rdf:Description>
+        <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">74.16360425709803</opla-sd:entityPositionX>
+        <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">19.540819867965727</opla-sd:entityPositionY>
+        <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+    </rdf:Description>
+    <rdf:Description>
+        <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">101.49301841945675</opla-sd:entityPositionX>
+        <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">93.16965452638993</opla-sd:entityPositionY>
+        <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+    </rdf:Description>
+    <rdf:Description>
+        <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">260.24952776620285</opla-sd:entityPositionX>
+        <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">279.5653112434816</opla-sd:entityPositionY>
+        <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+    </rdf:Description>
+    <rdf:Description>
+        <opla-sd:entityPositionX rdf:datatype="http://www.w3.org/2001/XMLSchema#double">239.78340814883194</opla-sd:entityPositionX>
+        <opla-sd:entityPositionY rdf:datatype="http://www.w3.org/2001/XMLSchema#double">499.9452975917224</opla-sd:entityPositionY>
+        <rdfs:comment xml:lang="en">This is an entity positioning annotation generated by CoModIDE (https://comodide.com/). Removing this annotation will break rendering the CoModIDE schema diagram view.</rdfs:comment>
+    </rdf:Description>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // General axioms
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_17840291_6d80_4012_aced_3f01c5d1add4"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_4af862e7_45a8_4dda_bc47_9de9924b5416"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_5021650c_2e9d_417d_8e90_89d5172e4e5d"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_52dbacdc_09be_4fd0_ba05_e7836a83a148"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_63486ee1_a0c7_4808_aa09_8bc8d2929056"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_78339876_ba62_47be_9ae0_001c829657d8"/>
+            <rdf:Description rdf:about="http://us.mil.navy/xma-adt/wirr/ontologies/2025/6/7/untitled-ontology-52#OWLClass_e5950891_311b_43ba_b334_c95bcc706c72"/>
+        </owl:members>
+    </rdf:Description>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 4.5.29.2024-05-13T12:11:03Z) https://github.com/owlcs/owlapi -->
+
