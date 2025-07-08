@@ -280,6 +280,9 @@ Cross-domain integration, program bootstrapping, comprehensive capability assess
 ### [Aircraft Acquisition MVP](aircraft_acquisition_mvp.md)
 Detailed MVP scenario using aircraft acquisition as the primary use case.
 
+### [Trading System MVP](trading_system_mvp.md)
+Financial trading system demonstrating DADM's universal process model with immediate feedback, clear success metrics, and measurable batting averages for trading strategies.
+
 ### [Process Modeling Examples](process_modeling_examples.md)
 Sample workflows, templates, and best practices for executable process design.
 
