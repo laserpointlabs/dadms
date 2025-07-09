@@ -280,6 +280,51 @@ export const promptService = {
         return promptApi.post(`/prompts/${id}/test`, testData || {});
     },
 
+    // Get saved test results for a prompt
+    getTestResults: async (id: string, version?: number): Promise<AxiosResponse<{ success: boolean; data: TestPromptResponse }>> => {
+        const params = version ? { version } : {};
+        return promptApi.get(`/prompts/${id}/test-results`, { params });
+    },
+
+    // Get test execution history for a prompt
+    getTestHistory: async (id: string): Promise<AxiosResponse<{
+        success: boolean; data: Array<{
+            execution_id: string;
+            prompt_version: number;
+            created_at: string;
+            total_tests: number;
+            passed_tests: number;
+            failed_tests: number;
+            avg_comparison_score?: number;
+        }>
+    }>> => {
+        return promptApi.get(`/prompts/${id}/test-history`);
+    },
+
+    // Get all versions of a prompt
+    getPromptVersions: async (id: string): Promise<AxiosResponse<{
+        success: boolean; data: Array<{
+            version: number;
+            created_at: string;
+            updated_at: string;
+            text: string;
+            type: string;
+            tags: string[];
+        }>
+    }>> => {
+        return promptApi.get(`/prompts/${id}/versions`);
+    },
+
+    // Get a specific version of a prompt
+    getPromptByVersion: async (id: string, version: number): Promise<AxiosResponse<{ success: boolean; data: Prompt }>> => {
+        return promptApi.get(`/prompts/${id}/version/${version}`);
+    },
+
+    // Update a specific version of a prompt
+    updatePromptVersion: async (id: string, version: number, prompt: Partial<Prompt>): Promise<AxiosResponse<{ success: boolean; data: Prompt }>> => {
+        return promptApi.put(`/prompts/${id}/version/${version}`, prompt);
+    },
+
     // Get available LLMs
     getAvailableLLMs: async (): Promise<AxiosResponse<{ success: boolean; data: AvailableLLMs }>> => {
         return promptApi.get('/llms/available');
