@@ -590,6 +590,7 @@ app.post('/prompts/:id/test', async (req, res) => {
                     const result = {
                         test_case_id: testCase.id,
                         test_case_name: testCase.name,
+                        test_input: testInput,
                         passed,
                         actual_output: llmResponse.content,
                         llm_response: llmResponse,
@@ -608,6 +609,7 @@ app.post('/prompts/:id/test', async (req, res) => {
                     const result = {
                         test_case_id: testCase.id,
                         test_case_name: testCase.name,
+                        test_input: request.input_override || testCase.input,
                         passed: false,
                         error: error instanceof Error ? error.message : 'Unknown error',
                         execution_time_ms: executionTime

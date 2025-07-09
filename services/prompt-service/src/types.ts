@@ -74,6 +74,7 @@ export interface LLMResponse {
 export interface PromptTestResult {
     test_case_id: string;
     test_case_name: string;
+    test_input?: any;
     passed: boolean;
     actual_output?: any;
     llm_response?: LLMResponse;
