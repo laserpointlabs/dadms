@@ -1,0 +1,392 @@
+import axios, { AxiosResponse } from 'axios';
+
+// Microservices API configuration
+const MICROSERVICES_BASE_URL = process.env.REACT_APP_MICROSERVICES_BASE_URL || 'http://localhost';
+const PROMPT_SERVICE_PORT = process.env.REACT_APP_PROMPT_SERVICE_PORT || '3001';
+const TOOL_SERVICE_PORT = process.env.REACT_APP_TOOL_SERVICE_PORT || '3002';
+const WORKFLOW_SERVICE_PORT = process.env.REACT_APP_WORKFLOW_SERVICE_PORT || '3003';
+const AI_OVERSIGHT_SERVICE_PORT = process.env.REACT_APP_AI_OVERSIGHT_SERVICE_PORT || '3004';
+
+// Create service-specific axios instances
+const createServiceApi = (port: string) => {
+    const api = axios.create({
+        baseURL: `${MICROSERVICES_BASE_URL}:${port}`,
+        timeout: 30000,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    // Request interceptor to add user ID
+    api.interceptors.request.use(
+        (config) => {
+            const userId = localStorage.getItem('user_id') || 'default-user';
+            config.headers['x-user-id'] = userId;
+            return config;
+        },
+        (error) => Promise.reject(error)
+    );
+
+    // Response interceptor for error handling
+    api.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            console.error(`API Error (${port}):`, error);
+            return Promise.reject(error);
+        }
+    );
+
+    return api;
+};
+
+const promptApi = createServiceApi(PROMPT_SERVICE_PORT);
+const toolApi = createServiceApi(TOOL_SERVICE_PORT);
+const workflowApi = createServiceApi(WORKFLOW_SERVICE_PORT);
+const aiOversightApi = createServiceApi(AI_OVERSIGHT_SERVICE_PORT);
+
+// Types
+export interface Prompt {
+    id: string;
+    version: number;
+    text: string;
+    type: 'simple' | 'tool-aware' | 'workflow-aware';
+    test_cases: TestCase[];
+    tool_dependencies: string[];
+    workflow_dependencies: string[];
+    tags: string[];
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+    metadata: any;
+}
+
+export interface TestCase {
+    id: string;
+    name: string;
+    input: any;
+    expected_output: any;
+    scoring_logic?: string;
+    enabled: boolean;
+}
+
+export interface CreatePromptRequest {
+    text: string;
+    type: 'simple' | 'tool-aware' | 'workflow-aware';
+    test_cases?: Omit<TestCase, 'id'>[];
+    tool_dependencies?: string[];
+    workflow_dependencies?: string[];
+    tags?: string[];
+    metadata?: any;
+}
+
+export interface Tool {
+    id: string;
+    name: string;
+    description: string;
+    endpoint: string;
+    capabilities: string[];
+    status: 'healthy' | 'unhealthy' | 'unknown';
+    version: string;
+    metadata: any;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateToolRequest {
+    name: string;
+    description: string;
+    endpoint: string;
+    capabilities: string[];
+    version: string;
+    metadata?: any;
+}
+
+export interface Workflow {
+    id: string;
+    name: string;
+    description: string;
+    bpmn_xml: string;
+    version: number;
+    linked_prompts: string[];
+    linked_tools: string[];
+    annotations: any;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+    status: 'draft' | 'active' | 'inactive';
+}
+
+export interface CreateWorkflowRequest {
+    name: string;
+    description: string;
+    bpmn_xml: string;
+    linked_prompts?: string[];
+    linked_tools?: string[];
+    annotations?: any;
+}
+
+export interface WorkflowExecution {
+    id: string;
+    workflow_id: string;
+    execution_id: string;
+    status: 'running' | 'completed' | 'failed' | 'cancelled';
+    input_data: any;
+    output_data?: any;
+    error_message?: string;
+    started_at: string;
+    completed_at?: string;
+    steps: ExecutionStep[];
+}
+
+export interface ExecutionStep {
+    id: string;
+    name: string;
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+    input_data: any;
+    output_data?: any;
+    error_message?: string;
+    started_at?: string;
+    completed_at?: string;
+}
+
+export interface Agent {
+    id: string;
+    name: string;
+    description: string;
+    event_types: string[];
+    enabled: boolean;
+    config: any;
+}
+
+export interface Finding {
+    finding_id: string;
+    event_id: string;
+    entity_type: string;
+    entity_id: string;
+    agent_name: string;
+    level: 'info' | 'suggestion' | 'warning' | 'error';
+    message: string;
+    suggested_action?: string;
+    details?: any;
+    timestamp: string;
+    resolved: boolean;
+}
+
+export interface TestResult {
+    test_case_id: string;
+    passed: boolean;
+    actual_output: any;
+    execution_time_ms: number;
+    error_message?: string;
+}
+
+export interface TestSummary {
+    total: number;
+    passed: number;
+    failed: number;
+    execution_time_ms: number;
+}
+
+// Prompt Service
+export const promptService = {
+    // Get all prompts
+    getPrompts: async (): Promise<AxiosResponse<{ success: boolean; data: Prompt[] }>> => {
+        return promptApi.get('/prompts');
+    },
+
+    // Get prompt by ID
+    getPrompt: async (id: string): Promise<AxiosResponse<{ success: boolean; data: Prompt }>> => {
+        return promptApi.get(`/prompts/${id}`);
+    },
+
+    // Create new prompt
+    createPrompt: async (prompt: CreatePromptRequest): Promise<AxiosResponse<{ success: boolean; data: Prompt }>> => {
+        return promptApi.post('/prompts', prompt);
+    },
+
+    // Update prompt
+    updatePrompt: async (id: string, prompt: Partial<CreatePromptRequest>): Promise<AxiosResponse<{ success: boolean; data: Prompt }>> => {
+        return promptApi.put(`/prompts/${id}`, prompt);
+    },
+
+    // Delete prompt
+    deletePrompt: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return promptApi.delete(`/prompts/${id}`);
+    },
+
+    // Test prompt
+    testPrompt: async (id: string, testData?: { test_case_ids?: string[]; input_override?: string }): Promise<AxiosResponse<{ success: boolean; data: { prompt_id: string; results: TestResult[]; summary: TestSummary } }>> => {
+        return promptApi.post(`/prompts/${id}/test`, testData || {});
+    },
+};
+
+// Tool Service
+export const toolService = {
+    // Get all tools
+    getTools: async (): Promise<AxiosResponse<{ success: boolean; data: Tool[] }>> => {
+        return toolApi.get('/tools');
+    },
+
+    // Get tool by ID
+    getTool: async (id: string): Promise<AxiosResponse<{ success: boolean; data: Tool }>> => {
+        return toolApi.get(`/tools/${id}`);
+    },
+
+    // Register new tool
+    registerTool: async (tool: CreateToolRequest): Promise<AxiosResponse<{ success: boolean; data: Tool }>> => {
+        return toolApi.post('/tools', tool);
+    },
+
+    // Update tool
+    updateTool: async (id: string, tool: Partial<CreateToolRequest>): Promise<AxiosResponse<{ success: boolean; data: Tool }>> => {
+        return toolApi.put(`/tools/${id}`, tool);
+    },
+
+    // Delete tool
+    deleteTool: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return toolApi.delete(`/tools/${id}`);
+    },
+
+    // Invoke tool
+    invokeTool: async (id: string, input: any): Promise<AxiosResponse<{ success: boolean; data: any }>> => {
+        return toolApi.post(`/tools/${id}/invoke`, { input });
+    },
+
+    // Health check tool
+    healthCheckTool: async (id: string): Promise<AxiosResponse<{ success: boolean; data: any }>> => {
+        return toolApi.post(`/tools/${id}/health-check`);
+    },
+};
+
+// Workflow Service
+export const workflowService = {
+    // Get all workflows
+    getWorkflows: async (): Promise<AxiosResponse<{ success: boolean; data: Workflow[] }>> => {
+        return workflowApi.get('/workflows');
+    },
+
+    // Get workflow by ID
+    getWorkflow: async (id: string): Promise<AxiosResponse<{ success: boolean; data: Workflow }>> => {
+        return workflowApi.get(`/workflows/${id}`);
+    },
+
+    // Create new workflow
+    createWorkflow: async (workflow: CreateWorkflowRequest): Promise<AxiosResponse<{ success: boolean; data: Workflow }>> => {
+        return workflowApi.post('/workflows', workflow);
+    },
+
+    // Update workflow
+    updateWorkflow: async (id: string, workflow: Partial<CreateWorkflowRequest>): Promise<AxiosResponse<{ success: boolean; data: Workflow }>> => {
+        return workflowApi.put(`/workflows/${id}`, workflow);
+    },
+
+    // Delete workflow
+    deleteWorkflow: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return workflowApi.delete(`/workflows/${id}`);
+    },
+
+    // Execute workflow
+    executeWorkflow: async (id: string, input: any): Promise<AxiosResponse<{ success: boolean; data: WorkflowExecution }>> => {
+        return workflowApi.post(`/workflows/${id}/execute`, input);
+    },
+
+    // Get execution status
+    getExecution: async (id: string): Promise<AxiosResponse<{ success: boolean; data: WorkflowExecution }>> => {
+        return workflowApi.get(`/executions/${id}`);
+    },
+
+    // Get workflow executions
+    getWorkflowExecutions: async (workflowId: string): Promise<AxiosResponse<{ success: boolean; data: WorkflowExecution[] }>> => {
+        return workflowApi.get(`/workflows/${workflowId}/executions`);
+    },
+};
+
+// AI Oversight Service
+export const aiOversightService = {
+    // Get all agents
+    getAgents: async (): Promise<AxiosResponse<{ success: boolean; data: Agent[] }>> => {
+        return aiOversightApi.get('/ai-review/agents');
+    },
+
+    // Enable/disable agent
+    enableAgent: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return aiOversightApi.post(`/ai-review/agents/${id}/enable`);
+    },
+
+    disableAgent: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return aiOversightApi.post(`/ai-review/agents/${id}/disable`);
+    },
+
+    // Get findings
+    getFindings: async (filters?: {
+        entity_type?: string;
+        entity_id?: string;
+        level?: string;
+        resolved?: boolean;
+        agent_name?: string;
+        since?: string;
+        limit?: number;
+    }): Promise<AxiosResponse<{ success: boolean; data: Finding[] }>> => {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        return aiOversightApi.get(`/ai-review/findings${params.toString() ? `?${params.toString()}` : ''}`);
+    },
+
+    // Resolve finding
+    resolveFinding: async (id: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return aiOversightApi.post(`/ai-review/findings/${id}/resolve`);
+    },
+
+    // Submit event for review (internal use)
+    submitEvent: async (event: any): Promise<AxiosResponse<{ success: boolean; data: Finding[] }>> => {
+        return aiOversightApi.post('/ai-review/events', event);
+    },
+};
+
+// Health check service for all microservices
+export const healthService = {
+    checkAllServices: async (): Promise<{ [key: string]: { healthy: boolean; response?: any; error?: string } }> => {
+        const services = {
+            prompt: promptApi,
+            tool: toolApi,
+            workflow: workflowApi,
+            aiOversight: aiOversightApi,
+        };
+
+        const results: { [key: string]: { healthy: boolean; response?: any; error?: string } } = {};
+
+        await Promise.all(
+            Object.entries(services).map(async ([name, api]) => {
+                try {
+                    const response = await api.get('/health');
+                    results[name] = {
+                        healthy: response.data.status === 'healthy',
+                        response: response.data,
+                    };
+                } catch (error) {
+                    results[name] = {
+                        healthy: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                    };
+                }
+            })
+        );
+
+        return results;
+    },
+};
+
+export default {
+    promptService,
+    toolService,
+    workflowService,
+    aiOversightService,
+    healthService,
+}; 

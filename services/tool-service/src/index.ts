@@ -132,7 +132,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 
 // Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Health check
 app.get('/health', (req, res) => {
