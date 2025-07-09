@@ -37,7 +37,7 @@ import {
     Tabs,
     Typography
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { Agent, Finding } from '../services/microservices-api';
 import { aiOversightService } from '../services/microservices-api';
 
@@ -73,11 +73,6 @@ const AIOverview: React.FC = () => {
     const [filterEntityType, setFilterEntityType] = useState<string>('all');
     const [filterResolved, setFilterResolved] = useState<boolean>(false);
 
-    useEffect(() => {
-        loadAgents();
-        loadFindings();
-    }, []);
-
     const loadAgents = async () => {
         try {
             setLoading(true);
@@ -91,7 +86,7 @@ const AIOverview: React.FC = () => {
         }
     };
 
-    const loadFindings = async () => {
+    const loadFindings = useCallback(async () => {
         try {
             setLoading(true);
             const filters: any = {};
@@ -107,7 +102,12 @@ const AIOverview: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filterLevel, filterEntityType, filterResolved]);
+
+    useEffect(() => {
+        loadAgents();
+        loadFindings();
+    }, [loadFindings]);
 
     const handleToggleAgent = async (agent: Agent) => {
         try {

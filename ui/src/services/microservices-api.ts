@@ -144,6 +144,14 @@ export interface AvailableLLMs {
     [provider: string]: string[];
 }
 
+export interface LLMConfigStatus {
+    [provider: string]: {
+        configured: boolean;
+        source: string;
+        models: string[];
+    };
+}
+
 export interface Tool {
     id: string;
     name: string;
@@ -273,6 +281,11 @@ export const promptService = {
     // Get available LLMs
     getAvailableLLMs: async (): Promise<AxiosResponse<{ success: boolean; data: AvailableLLMs }>> => {
         return promptApi.get('/llms/available');
+    },
+
+    // Get LLM configuration status
+    getLLMConfigStatus: async (): Promise<AxiosResponse<{ success: boolean; data: LLMConfigStatus }>> => {
+        return promptApi.get('/llms/config-status');
     },
 };
 
@@ -438,10 +451,12 @@ export const healthService = {
     },
 };
 
-export default {
+const microservicesApi = {
     promptService,
     toolService,
     workflowService,
     aiOversightService,
     healthService,
-}; 
+};
+
+export default microservicesApi; 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LLMConfig, LLMResponse } from './types';
+import { LLMConfig, LLMProvider, LLMResponse } from './types';
 
 export class LLMService {
     private static instance: LLMService;
@@ -22,15 +22,25 @@ export class LLMService {
                 processedPrompt = processedPrompt.replace(new RegExp(placeholder, 'g'), String(value));
             });
 
+            // Get API key from environment variables first, then from config
+            const envApiKey = this.getApiKeyFromEnv(config.provider);
+            const apiKey = envApiKey || config.apiKey;
+
+            // Create config with environment API key if available
+            const effectiveConfig = {
+                ...config,
+                apiKey: apiKey
+            };
+
             switch (config.provider) {
                 case 'openai':
-                    return await this.callOpenAI(processedPrompt, config, startTime);
+                    return await this.callOpenAI(processedPrompt, effectiveConfig, startTime);
                 case 'anthropic':
-                    return await this.callAnthropic(processedPrompt, config, startTime);
+                    return await this.callAnthropic(processedPrompt, effectiveConfig, startTime);
                 case 'local':
-                    return await this.callLocal(processedPrompt, config, startTime);
+                    return await this.callLocal(processedPrompt, effectiveConfig, startTime);
                 case 'mock':
-                    return await this.callMock(processedPrompt, config, startTime);
+                    return await this.callMock(processedPrompt, effectiveConfig, startTime);
                 default:
                     throw new Error(`Unsupported LLM provider: ${config.provider}`);
             }
@@ -45,9 +55,50 @@ export class LLMService {
         }
     }
 
+    /**
+     * Get API key from environment variables based on provider
+     * Following the same pattern as the openai-service
+     */
+    private getApiKeyFromEnv(provider: LLMProvider): string | undefined {
+        switch (provider) {
+            case 'openai':
+                return process.env.OPENAI_API_KEY;
+            case 'anthropic':
+                return process.env.ANTHROPIC_API_KEY;
+            case 'local':
+                // For local models like Ollama, no API key typically needed
+                return undefined;
+            case 'mock':
+                // Mock doesn't need real API keys
+                return undefined;
+            default:
+                return undefined;
+        }
+    }
+
+    /**
+     * Check if API key is available for a provider (either from env or config)
+     */
+    public isProviderConfigured(provider: LLMProvider, config?: LLMConfig): boolean {
+        const envApiKey = this.getApiKeyFromEnv(provider);
+        const configApiKey = config?.apiKey;
+
+        switch (provider) {
+            case 'openai':
+            case 'anthropic':
+                return !!(envApiKey || configApiKey);
+            case 'local':
+            case 'mock':
+                // These don't require API keys
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private async callOpenAI(prompt: string, config: LLMConfig, startTime: number): Promise<LLMResponse> {
         if (!config.apiKey) {
-            throw new Error('OpenAI API key is required');
+            throw new Error('OpenAI API key is required. Set OPENAI_API_KEY environment variable or provide apiKey in config.');
         }
 
         const response = await axios.post(
@@ -87,7 +138,7 @@ export class LLMService {
 
     private async callAnthropic(prompt: string, config: LLMConfig, startTime: number): Promise<LLMResponse> {
         if (!config.apiKey) {
-            throw new Error('Anthropic API key is required');
+            throw new Error('Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable or provide apiKey in config.');
         }
 
         const response = await axios.post(

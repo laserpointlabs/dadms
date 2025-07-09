@@ -1,100 +1,75 @@
 version: '3.8'
 
 services:
-  # Prompt Service
+  event-bus:
+    build: ./shared/event-bus
+    ports:
+      - "3005:3005"
+    networks:
+      - dadm-network
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
   prompt-service:
-    build:
-      context: ./prompt-service
-      dockerfile: Dockerfile
+    build: ./prompt-service
     ports:
       - "3001:3001"
     environment:
-      - PORT=3001
+      - NODE_ENV=development
       - EVENT_BUS_HOST=event-bus
       - EVENT_BUS_PORT=3005
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      # Pass through API keys from host environment
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
       - event-bus
     networks:
       - dadm-network
+    restart: unless-stopped
 
-  # Tool Service
   tool-service:
-    build:
-      context: ./tool-service
-      dockerfile: Dockerfile
+    build: ./tool-service
     ports:
       - "3002:3002"
     environment:
-      - PORT=3002
+      - NODE_ENV=development
       - EVENT_BUS_HOST=event-bus
       - EVENT_BUS_PORT=3005
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
     depends_on:
       - event-bus
     networks:
       - dadm-network
+    restart: unless-stopped
 
-  # Workflow Service
   workflow-service:
-    build:
-      context: ./workflow-service
-      dockerfile: Dockerfile
+    build: ./workflow-service
     ports:
       - "3003:3003"
     environment:
-      - PORT=3003
+      - NODE_ENV=development
       - EVENT_BUS_HOST=event-bus
       - EVENT_BUS_PORT=3005
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
     depends_on:
       - event-bus
     networks:
       - dadm-network
+    restart: unless-stopped
 
-  # AI Oversight Service
   ai-oversight-service:
-    build:
-      context: ./ai-oversight-service
-      dockerfile: Dockerfile
+    build: ./ai-oversight-service
     ports:
       - "3004:3004"
     environment:
-      - PORT=3004
+      - NODE_ENV=development
       - EVENT_BUS_HOST=event-bus
       - EVENT_BUS_PORT=3005
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
     depends_on:
       - event-bus
     networks:
       - dadm-network
-
-  # Event Bus (Simple HTTP server)
-  event-bus:
-    build:
-      context: ./shared/event-bus
-      dockerfile: Dockerfile
-    ports:
-      - "3005:3005"
-    environment:
-      - PORT=3005
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - dadm-network
+    restart: unless-stopped
 
 networks:
   dadm-network:
-    driver: bridge
-
-volumes:
-  data:
-  logs: 
+    driver: bridge 

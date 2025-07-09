@@ -688,6 +688,57 @@ app.get('/llms/available', (req, res) => {
     });
 });
 
+// New endpoint to check API key availability
+/**
+ * @swagger
+ * /llms/config-status:
+ *   get:
+ *     summary: Check API key configuration status
+ *     description: Check which LLM providers have API keys configured via environment variables
+ *     tags: [LLMs]
+ *     responses:
+ *       200:
+ *         description: Configuration status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ */
+app.get('/llms/config-status', (req, res) => {
+    const configStatus = {
+        openai: {
+            configured: !!process.env.OPENAI_API_KEY,
+            source: process.env.OPENAI_API_KEY ? 'environment' : 'none',
+            models: AVAILABLE_LLMS.openai
+        },
+        anthropic: {
+            configured: !!process.env.ANTHROPIC_API_KEY,
+            source: process.env.ANTHROPIC_API_KEY ? 'environment' : 'none',
+            models: AVAILABLE_LLMS.anthropic
+        },
+        local: {
+            configured: true, // Local models don't need API keys
+            source: 'local',
+            models: AVAILABLE_LLMS.local
+        },
+        mock: {
+            configured: true, // Mock doesn't need real API keys
+            source: 'mock',
+            models: AVAILABLE_LLMS.mock
+        }
+    };
+
+    res.json({
+        success: true,
+        data: configStatus
+    });
+});
+
 // Start server
 async function startServer() {
     try {
