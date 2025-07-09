@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Prompt Service
+  prompt-service:
+    build:
+      context: ./prompt-service
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - EVENT_BUS_HOST=event-bus
+      - EVENT_BUS_PORT=3005
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - event-bus
+    networks:
+      - dadm-network
+
+  # Tool Service
+  tool-service:
+    build:
+      context: ./tool-service
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - EVENT_BUS_HOST=event-bus
+      - EVENT_BUS_PORT=3005
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - event-bus
+    networks:
+      - dadm-network
+
+  # Workflow Service
+  workflow-service:
+    build:
+      context: ./workflow-service
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - EVENT_BUS_HOST=event-bus
+      - EVENT_BUS_PORT=3005
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - event-bus
+    networks:
+      - dadm-network
+
+  # AI Oversight Service
+  ai-oversight-service:
+    build:
+      context: ./ai-oversight-service
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - EVENT_BUS_HOST=event-bus
+      - EVENT_BUS_PORT=3005
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - event-bus
+    networks:
+      - dadm-network
+
+  # Event Bus (Simple HTTP server)
+  event-bus:
+    build:
+      context: ./shared/event-bus
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - dadm-network
+
+networks:
+  dadm-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs: 
