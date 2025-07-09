@@ -11,25 +11,26 @@ services:
     environment:
       - REACT_APP_API_BASE_URL=http://localhost:8000
       - REACT_APP_WS_URL=ws://localhost:8001
+      - REACT_APP_MICROSERVICES_BASE_URL=http://192.168.86.22
+      - REACT_APP_PROMPT_SERVICE_PORT=3001
+      - REACT_APP_TOOL_SERVICE_PORT=3002
+      - REACT_APP_WORKFLOW_SERVICE_PORT=3003
+      - REACT_APP_AI_OVERSIGHT_SERVICE_PORT=3004
       - REACT_APP_ENABLE_REAL_TIME=true
       - REACT_APP_ENABLE_AI_CHAT=true
       - REACT_APP_LOG_LEVEL=debug
       - BROWSER=none
       - DOCKER=true
+      # Pass through API keys from host environment
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - .:/app
       - /app/node_modules
-    networks:
-      - dadm-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-networks:
-  dadm-network:
-    external: true
-    name: docker_dadm-network

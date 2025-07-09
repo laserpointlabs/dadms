@@ -10,6 +10,7 @@ import {
     ExpandMore as ExpandMoreIcon,
     PlayArrow as PlayIcon,
     Psychology as PsychologyIcon,
+    Refresh as RefreshIcon,
     Science as ScienceIcon,
     AccountTree as WorkflowIcon
 } from '@mui/icons-material';
@@ -53,8 +54,8 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
     AvailableLLMs,
-    Finding,
     LLMConfig,
+    LLMConfigStatus,
     Prompt,
     promptService,
     TestPromptRequest,
@@ -93,11 +94,13 @@ const PromptManager: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
     const [testResults, setTestResults] = useState<TestPromptResponse | null>(null);
     const [testLoading, setTestLoading] = useState(false);
-    const [findings, setFindings] = useState<Finding[]>([]);
     const [tabValue, setTabValue] = useState(0);
     const [availableLLMs, setAvailableLLMs] = useState<AvailableLLMs>({});
+    const [llmConfigStatus, setLLMConfigStatus] = useState<LLMConfigStatus>({});
     const [llmConfigs, setLLMConfigs] = useState<LLMConfig[]>([
         {
             provider: 'mock',
@@ -112,6 +115,7 @@ const PromptManager: React.FC = () => {
     useEffect(() => {
         loadPrompts();
         loadAvailableLLMs();
+        loadLLMConfigStatus();
     }, []);
 
     const loadPrompts = async () => {
@@ -132,6 +136,15 @@ const PromptManager: React.FC = () => {
             setAvailableLLMs(response.data.data);
         } catch (err) {
             console.error('Failed to load available LLMs:', err);
+        }
+    };
+
+    const loadLLMConfigStatus = async () => {
+        try {
+            const response = await promptService.getLLMConfigStatus();
+            setLLMConfigStatus(response.data.data);
+        } catch (err) {
+            console.error('Failed to load LLM configuration status:', err);
         }
     };
 
@@ -161,6 +174,106 @@ const PromptManager: React.FC = () => {
         setSelectedTestCases(prompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
         setIsTestDialogOpen(true);
         setTestResults(null);
+    };
+
+    const openEditDialog = (prompt: Prompt) => {
+        setEditingPrompt({ ...prompt });
+        setIsEditDialogOpen(true);
+    };
+
+    const handleSavePrompt = async () => {
+        if (!editingPrompt) return;
+
+        try {
+            setLoading(true);
+            const updateRequest = {
+                text: editingPrompt.text,
+                type: editingPrompt.type,
+                tags: editingPrompt.tags,
+                test_cases: editingPrompt.test_cases.map(tc => ({
+                    name: tc.name,
+                    input: tc.input,
+                    expected_output: tc.expected_output,
+                    enabled: tc.enabled
+                })),
+                tool_dependencies: editingPrompt.tool_dependencies,
+                workflow_dependencies: editingPrompt.workflow_dependencies,
+                metadata: editingPrompt.metadata
+            };
+
+            const response = await promptService.updatePrompt(editingPrompt.id, updateRequest);
+
+            // Update the prompts list with the updated prompt
+            setPrompts(prompts.map(p => p.id === editingPrompt.id ? response.data.data : p));
+            setIsEditDialogOpen(false);
+            setEditingPrompt(null);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update prompt');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeletePrompt = async (promptId: string) => {
+        if (!window.confirm('Are you sure you want to delete this prompt?')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await promptService.deletePrompt(promptId);
+            setPrompts(prompts.filter(p => p.id !== promptId));
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete prompt');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateEditingPrompt = (field: keyof Prompt, value: any) => {
+        if (!editingPrompt) return;
+        setEditingPrompt({
+            ...editingPrompt,
+            [field]: value
+        });
+    };
+
+    const handleAddTestCase = () => {
+        if (!editingPrompt) return;
+        const newTestCase = {
+            id: Date.now().toString(), // Temporary ID
+            name: 'New Test Case',
+            input: {},
+            expected_output: {},
+            enabled: true
+        };
+        setEditingPrompt({
+            ...editingPrompt,
+            test_cases: [...editingPrompt.test_cases, newTestCase]
+        });
+    };
+
+    const handleUpdateTestCase = (index: number, field: string, value: any) => {
+        if (!editingPrompt) return;
+        const updatedTestCases = [...editingPrompt.test_cases];
+        updatedTestCases[index] = {
+            ...updatedTestCases[index],
+            [field]: value
+        };
+        setEditingPrompt({
+            ...editingPrompt,
+            test_cases: updatedTestCases
+        });
+    };
+
+    const handleRemoveTestCase = (index: number) => {
+        if (!editingPrompt) return;
+        setEditingPrompt({
+            ...editingPrompt,
+            test_cases: editingPrompt.test_cases.filter((_, i) => i !== index)
+        });
     };
 
     const handleAddLLMConfig = () => {
@@ -381,6 +494,56 @@ const PromptManager: React.FC = () => {
                                 </Button>
                             </Box>
 
+                            {/* API Key Configuration Status */}
+                            <Card sx={{ mb: 3 }}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>
+                                        API Key Configuration Status
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                                        Environment variables are checked first, then manual configuration
+                                    </Typography>
+
+                                    <Grid container spacing={2}>
+                                        {Object.entries(llmConfigStatus).map(([provider, status]) => (
+                                            <Grid item xs={12} sm={6} md={3} key={provider}>
+                                                <Card
+                                                    variant="outlined"
+                                                    sx={{
+                                                        bgcolor: status.configured ? 'success.light' : 'warning.light',
+                                                        borderColor: status.configured ? 'success.main' : 'warning.main'
+                                                    }}
+                                                >
+                                                    <CardContent sx={{ py: 2 }}>
+                                                        <Box display="flex" alignItems="center" mb={1}>
+                                                            {provider === 'openai' && <ApiIcon sx={{ mr: 1 }} />}
+                                                            {provider === 'anthropic' && <PsychologyIcon sx={{ mr: 1 }} />}
+                                                            {provider === 'local' && <ComputerIcon sx={{ mr: 1 }} />}
+                                                            {provider === 'mock' && <ScienceIcon sx={{ mr: 1 }} />}
+                                                            <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
+                                                                {provider}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Chip
+                                                            label={status.configured ? 'Configured' : 'Not Configured'}
+                                                            color={status.configured ? 'success' : 'warning'}
+                                                            size="small"
+                                                            sx={{ mb: 1 }}
+                                                        />
+                                                        <Typography variant="caption" display="block" color="text.secondary">
+                                                            Source: {status.source}
+                                                        </Typography>
+                                                        <Typography variant="caption" display="block" color="text.secondary">
+                                                            Models: {status.models?.length || 0}
+                                                        </Typography>
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+
                             {llmConfigs.map((config, index) => (
                                 <Card key={index} sx={{ mb: 2 }}>
                                     <CardContent>
@@ -388,13 +551,25 @@ const PromptManager: React.FC = () => {
                                             <Typography variant="subtitle1">
                                                 LLM Configuration {index + 1}
                                             </Typography>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleRemoveLLMConfig(index)}
-                                                disabled={llmConfigs.length === 1}
-                                            >
-                                                <DeleteIcon />
-                                            </IconButton>
+                                            <Box>
+                                                {/* Show if this provider is configured via environment */}
+                                                {llmConfigStatus[config.provider]?.configured &&
+                                                    llmConfigStatus[config.provider]?.source === 'environment' && (
+                                                        <Chip
+                                                            label="ENV KEY"
+                                                            size="small"
+                                                            color="success"
+                                                            sx={{ mr: 1 }}
+                                                        />
+                                                    )}
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleRemoveLLMConfig(index)}
+                                                    disabled={llmConfigs.length === 1}
+                                                >
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Box>
                                         </Box>
 
                                         <Grid container spacing={2}>
@@ -409,24 +584,32 @@ const PromptManager: React.FC = () => {
                                                             <Box display="flex" alignItems="center">
                                                                 <ApiIcon sx={{ mr: 1 }} />
                                                                 OpenAI
+                                                                {llmConfigStatus.openai?.configured && (
+                                                                    <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
+                                                                )}
                                                             </Box>
                                                         </MenuItem>
                                                         <MenuItem value="anthropic">
                                                             <Box display="flex" alignItems="center">
                                                                 <PsychologyIcon sx={{ mr: 1 }} />
                                                                 Anthropic
+                                                                {llmConfigStatus.anthropic?.configured && (
+                                                                    <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
+                                                                )}
                                                             </Box>
                                                         </MenuItem>
                                                         <MenuItem value="local">
                                                             <Box display="flex" alignItems="center">
                                                                 <ComputerIcon sx={{ mr: 1 }} />
                                                                 Local
+                                                                <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
                                                             </Box>
                                                         </MenuItem>
                                                         <MenuItem value="mock">
                                                             <Box display="flex" alignItems="center">
                                                                 <ScienceIcon sx={{ mr: 1 }} />
                                                                 Mock
+                                                                <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
                                                             </Box>
                                                         </MenuItem>
                                                     </Select>
@@ -454,7 +637,16 @@ const PromptManager: React.FC = () => {
                                                     type="password"
                                                     value={config.apiKey || ''}
                                                     onChange={(e) => handleUpdateLLMConfig(index, 'apiKey', e.target.value)}
-                                                    helperText="Required for OpenAI and Anthropic"
+                                                    helperText={
+                                                        llmConfigStatus[config.provider]?.configured &&
+                                                            llmConfigStatus[config.provider]?.source === 'environment'
+                                                            ? `API key configured via ${config.provider.toUpperCase()}_API_KEY environment variable`
+                                                            : `Required for ${config.provider}. Set ${config.provider.toUpperCase()}_API_KEY environment variable or enter manually.`
+                                                    }
+                                                    disabled={
+                                                        llmConfigStatus[config.provider]?.configured &&
+                                                        llmConfigStatus[config.provider]?.source === 'environment'
+                                                    }
                                                 />
                                             </Grid>
                                             <Grid item xs={6}>
@@ -559,11 +751,237 @@ const PromptManager: React.FC = () => {
         </Dialog>
     );
 
+    const renderEditDialog = () => (
+        <Dialog open={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)} maxWidth="md" fullWidth>
+            <DialogTitle>
+                <Box display="flex" alignItems="center">
+                    <EditIcon sx={{ mr: 1 }} />
+                    Edit Prompt
+                </Box>
+            </DialogTitle>
+            <DialogContent>
+                {editingPrompt && (
+                    <Box sx={{ mt: 2 }}>
+                        <Grid container spacing={3}>
+                            {/* Prompt Text */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Prompt Text"
+                                    multiline
+                                    rows={4}
+                                    value={editingPrompt.text}
+                                    onChange={(e) => handleUpdateEditingPrompt('text', e.target.value)}
+                                    helperText="Use {variable_name} for variables that will be replaced during execution"
+                                />
+                            </Grid>
+
+                            {/* Type */}
+                            <Grid item xs={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Type</InputLabel>
+                                    <Select
+                                        value={editingPrompt.type}
+                                        onChange={(e) => handleUpdateEditingPrompt('type', e.target.value)}
+                                    >
+                                        <MenuItem value="simple">
+                                            <Box display="flex" alignItems="center">
+                                                <CodeIcon sx={{ mr: 1 }} />
+                                                Simple
+                                            </Box>
+                                        </MenuItem>
+                                        <MenuItem value="tool-aware">
+                                            <Box display="flex" alignItems="center">
+                                                <ScienceIcon sx={{ mr: 1 }} />
+                                                Tool-aware
+                                            </Box>
+                                        </MenuItem>
+                                        <MenuItem value="workflow-aware">
+                                            <Box display="flex" alignItems="center">
+                                                <WorkflowIcon sx={{ mr: 1 }} />
+                                                Workflow-aware
+                                            </Box>
+                                        </MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Tags */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Tags"
+                                    value={editingPrompt.tags.join(', ')}
+                                    onChange={(e) => handleUpdateEditingPrompt('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                                    helperText="Comma-separated tags"
+                                />
+                            </Grid>
+
+                            {/* Test Cases */}
+                            <Grid item xs={12}>
+                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                    <Typography variant="h6">Test Cases</Typography>
+                                    <Button
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddTestCase}
+                                        variant="outlined"
+                                        size="small"
+                                    >
+                                        Add Test Case
+                                    </Button>
+                                </Box>
+
+                                {editingPrompt.test_cases.map((testCase, index) => (
+                                    <Card key={testCase.id || index} sx={{ mb: 2 }}>
+                                        <CardContent>
+                                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                                <Typography variant="subtitle2">
+                                                    Test Case {index + 1}
+                                                </Typography>
+                                                <Box>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Switch
+                                                                checked={testCase.enabled}
+                                                                onChange={(e) => handleUpdateTestCase(index, 'enabled', e.target.checked)}
+                                                                size="small"
+                                                            />
+                                                        }
+                                                        label="Enabled"
+                                                    />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRemoveTestCase(index)}
+                                                        disabled={editingPrompt.test_cases.length === 1}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Test Case Name"
+                                                        value={testCase.name}
+                                                        onChange={(e) => handleUpdateTestCase(index, 'name', e.target.value)}
+                                                        size="small"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Input (JSON)"
+                                                        multiline
+                                                        rows={3}
+                                                        value={typeof testCase.input === 'string' ? testCase.input : JSON.stringify(testCase.input, null, 2)}
+                                                        onChange={(e) => {
+                                                            try {
+                                                                const parsed = JSON.parse(e.target.value);
+                                                                handleUpdateTestCase(index, 'input', parsed);
+                                                            } catch {
+                                                                handleUpdateTestCase(index, 'input', e.target.value);
+                                                            }
+                                                        }}
+                                                        size="small"
+                                                        helperText="JSON format expected"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Expected Output (JSON)"
+                                                        multiline
+                                                        rows={3}
+                                                        value={typeof testCase.expected_output === 'string' ? testCase.expected_output : JSON.stringify(testCase.expected_output, null, 2)}
+                                                        onChange={(e) => {
+                                                            try {
+                                                                const parsed = JSON.parse(e.target.value);
+                                                                handleUpdateTestCase(index, 'expected_output', parsed);
+                                                            } catch {
+                                                                handleUpdateTestCase(index, 'expected_output', e.target.value);
+                                                            }
+                                                        }}
+                                                        size="small"
+                                                        helperText="JSON format expected"
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+
+                                {editingPrompt.test_cases.length === 0 && (
+                                    <Alert severity="info">
+                                        No test cases. Add test cases to validate your prompt's behavior.
+                                    </Alert>
+                                )}
+                            </Grid>
+
+                            {/* Tool Dependencies */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Tool Dependencies"
+                                    value={editingPrompt.tool_dependencies.join(', ')}
+                                    onChange={(e) => handleUpdateEditingPrompt('tool_dependencies', e.target.value.split(',').map(dep => dep.trim()).filter(dep => dep))}
+                                    helperText="Comma-separated tool IDs"
+                                />
+                            </Grid>
+
+                            {/* Workflow Dependencies */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Workflow Dependencies"
+                                    value={editingPrompt.workflow_dependencies.join(', ')}
+                                    onChange={(e) => handleUpdateEditingPrompt('workflow_dependencies', e.target.value.split(',').map(dep => dep.trim()).filter(dep => dep))}
+                                    helperText="Comma-separated workflow IDs"
+                                />
+                            </Grid>
+                        </Grid>
+                    </Box>
+                )}
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                <Button
+                    onClick={handleSavePrompt}
+                    variant="contained"
+                    startIcon={<EditIcon />}
+                    disabled={!editingPrompt || loading}
+                >
+                    Save Changes
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h4">Prompt Manager</Typography>
                 <Box>
+                    <Button
+                        variant="outlined"
+                        startIcon={<RefreshIcon />}
+                        onClick={async () => {
+                            try {
+                                setLoading(true);
+                                await loadPrompts();
+                                await loadLLMConfigStatus();
+                                setError(null);
+                            } catch (err) {
+                                setError('Failed to connect to microservices');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        sx={{ mr: 1 }}
+                    >
+                        Test Connection
+                    </Button>
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
@@ -586,6 +1004,13 @@ const PromptManager: React.FC = () => {
                 </Box>
             )}
 
+            {/* Connection Status */}
+            {!loading && !error && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                    ✅ Connected to microservices successfully! Found {prompts.length} prompts.
+                </Alert>
+            )}
+
             {/* Main content */}
             <Grid container spacing={3}>
                 {prompts.map((prompt) => (
@@ -605,10 +1030,10 @@ const PromptManager: React.FC = () => {
                                         </Typography>
                                     </Box>
                                     <Box>
-                                        <IconButton size="small" onClick={() => console.log('Edit prompt')}>
+                                        <IconButton size="small" onClick={() => openEditDialog(prompt)}>
                                             <EditIcon />
                                         </IconButton>
-                                        <IconButton size="small" onClick={() => console.log('Delete prompt')}>
+                                        <IconButton size="small" onClick={() => handleDeletePrompt(prompt.id)}>
                                             <DeleteIcon />
                                         </IconButton>
                                     </Box>
@@ -639,8 +1064,28 @@ const PromptManager: React.FC = () => {
                 ))}
             </Grid>
 
+            {/* Show message if no prompts */}
+            {!loading && prompts.length === 0 && (
+                <Box display="flex" flexDirection="column" alignItems="center" p={4}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No prompts found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Create your first prompt to get started with LLM testing
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => console.log('Create prompt functionality')}
+                    >
+                        Create Your First Prompt
+                    </Button>
+                </Box>
+            )}
+
             {/* Dialogs */}
             {renderLLMConfigDialog()}
+            {renderEditDialog()}
         </Box>
     );
 };
