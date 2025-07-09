@@ -1,16 +1,17 @@
 export interface Prompt {
     id: string;
+    name: string;
     version: number;
     text: string;
     type: 'simple' | 'tool-aware' | 'workflow-aware';
     test_cases: TestCase[];
-    tool_dependencies?: string[];
-    workflow_dependencies?: string[];
+    tool_dependencies: string[];
+    workflow_dependencies: string[];
     tags: string[];
     created_by: string;
     created_at: string;
     updated_at: string;
-    metadata?: Record<string, any>;
+    metadata: any;
 }
 
 export interface TestCase {
@@ -23,23 +24,25 @@ export interface TestCase {
 }
 
 export interface CreatePromptRequest {
+    name: string;
     text: string;
     type: 'simple' | 'tool-aware' | 'workflow-aware';
     test_cases?: Omit<TestCase, 'id'>[];
     tool_dependencies?: string[];
     workflow_dependencies?: string[];
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: any;
 }
 
 export interface UpdatePromptRequest {
+    name?: string;
     text?: string;
     type?: 'simple' | 'tool-aware' | 'workflow-aware';
     test_cases?: Omit<TestCase, 'id'>[];
     tool_dependencies?: string[];
     workflow_dependencies?: string[];
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: any;
 }
 
 // LLM Provider Types

@@ -19,20 +19,21 @@ export class PromptDatabase {
         if (!this.db) throw new Error('Database not initialized');
 
         await this.db.exec(`
-      CREATE TABLE IF NOT EXISTS prompts (
-        id TEXT PRIMARY KEY,
-        version INTEGER NOT NULL,
-        text TEXT NOT NULL,
-        type TEXT NOT NULL,
-        tool_dependencies TEXT,
-        workflow_dependencies TEXT,
-        tags TEXT,
-        created_by TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        metadata TEXT
-      )
-    `);
+            CREATE TABLE IF NOT EXISTS prompts (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                text TEXT NOT NULL,
+                type TEXT NOT NULL CHECK (type IN ('simple', 'tool-aware', 'workflow-aware')),
+                tool_dependencies TEXT NOT NULL DEFAULT '[]',
+                workflow_dependencies TEXT NOT NULL DEFAULT '[]',
+                tags TEXT NOT NULL DEFAULT '[]',
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                metadata TEXT NOT NULL DEFAULT '{}'
+            )
+        `);
 
         await this.db.exec(`
       CREATE TABLE IF NOT EXISTS test_cases (
@@ -46,6 +47,36 @@ export class PromptDatabase {
         FOREIGN KEY (prompt_id) REFERENCES prompts (id)
       )
     `);
+
+        // Migration: Check if name column exists and add it if not
+        await this.migrateDatabase();
+    }
+
+    private async migrateDatabase(): Promise<void> {
+        if (!this.db) throw new Error('Database not initialized');
+
+        try {
+            // Check if name column exists
+            const tableInfo = await this.db.all("PRAGMA table_info(prompts)");
+            const hasNameColumn = tableInfo.some((col: any) => col.name === 'name');
+
+            if (!hasNameColumn) {
+                console.log('Adding name column to prompts table...');
+                await this.db.exec('ALTER TABLE prompts ADD COLUMN name TEXT DEFAULT "Untitled Prompt"');
+
+                // Update existing records to have a default name
+                await this.db.exec(`
+                    UPDATE prompts 
+                    SET name = 'Prompt ' || substr(id, 1, 8)
+                    WHERE name IS NULL OR name = ''
+                `);
+
+                console.log('Name column added successfully.');
+            }
+        } catch (error) {
+            console.error('Migration error:', error);
+            // If migration fails, we can continue with existing schema
+        }
     }
 
     async createPrompt(prompt: Omit<Prompt, 'id' | 'created_at' | 'updated_at'>): Promise<Prompt> {
@@ -55,10 +86,11 @@ export class PromptDatabase {
         const now = new Date().toISOString();
 
         await this.db.run(`
-      INSERT INTO prompts (id, version, text, type, tool_dependencies, workflow_dependencies, tags, created_by, created_at, updated_at, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO prompts (id, name, version, text, type, tool_dependencies, workflow_dependencies, tags, created_by, created_at, updated_at, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
             id,
+            prompt.name,
             prompt.version,
             prompt.text,
             prompt.type,
@@ -102,6 +134,7 @@ export class PromptDatabase {
 
         return {
             id: promptRow.id,
+            name: promptRow.name,
             version: promptRow.version,
             text: promptRow.text,
             type: promptRow.type,
@@ -134,6 +167,7 @@ export class PromptDatabase {
 
             result.push({
                 id: promptRow.id,
+                name: promptRow.name,
                 version: promptRow.version,
                 text: promptRow.text,
                 type: promptRow.type,
@@ -158,40 +192,51 @@ export class PromptDatabase {
         return result;
     }
 
-    async updatePrompt(id: string, updates: Partial<Prompt>): Promise<Prompt | null> {
+    async updatePrompt(id: string, prompt: Partial<Prompt>): Promise<Prompt | null> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const existing = await this.getPromptById(id);
-        if (!existing) return null;
+        const existingPrompt = await this.getPromptById(id);
+        if (!existingPrompt) {
+            return null;
+        }
 
-        const updatedPrompt = { ...existing, ...updates, version: existing.version + 1 };
-        const now = new Date().toISOString();
+        const updatedPrompt: Prompt = {
+            ...existingPrompt,
+            ...prompt,
+            id: existingPrompt.id, // Ensure ID doesn't change
+            version: existingPrompt.version + 1,
+            updated_at: new Date().toISOString()
+        };
 
+        // Update the prompt record
         await this.db.run(`
-      UPDATE prompts 
-      SET version = ?, text = ?, type = ?, tool_dependencies = ?, workflow_dependencies = ?, tags = ?, updated_at = ?, metadata = ?
-      WHERE id = ?
-    `, [
+            UPDATE prompts 
+            SET name = ?, version = ?, text = ?, type = ?, tool_dependencies = ?, workflow_dependencies = ?, tags = ?, updated_at = ?, metadata = ?
+            WHERE id = ?
+        `, [
+            updatedPrompt.name,
             updatedPrompt.version,
             updatedPrompt.text,
             updatedPrompt.type,
             JSON.stringify(updatedPrompt.tool_dependencies || []),
             JSON.stringify(updatedPrompt.workflow_dependencies || []),
             JSON.stringify(updatedPrompt.tags || []),
-            now,
+            updatedPrompt.updated_at,
             JSON.stringify(updatedPrompt.metadata || {}),
             id
         ]);
 
         // Update test cases if provided
-        if (updates.test_cases) {
+        if (prompt.test_cases) {
+            // Delete existing test cases
             await this.db.run('DELETE FROM test_cases WHERE prompt_id = ?', [id]);
 
-            for (const testCase of updatedPrompt.test_cases) {
+            // Insert updated test cases
+            for (const testCase of prompt.test_cases) {
                 await this.db.run(`
-          INSERT INTO test_cases (id, prompt_id, name, input, expected_output, scoring_logic, enabled)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [
+                    INSERT INTO test_cases (id, prompt_id, name, input, expected_output, scoring_logic, enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                `, [
                     testCase.id,
                     id,
                     testCase.name,
@@ -203,7 +248,7 @@ export class PromptDatabase {
             }
         }
 
-        return this.getPromptById(id);
+        return await this.getPromptById(id);
     }
 
     async deletePrompt(id: string): Promise<boolean> {
