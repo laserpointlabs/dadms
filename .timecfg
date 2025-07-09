@@ -18,6 +18,8 @@ tracking:
     - "meetings"
     - "testing"
     - "deployment"
+    - "planning"
+    - "review"
   default_category: "development"
   auto_commit: true
   break_reminders: false
@@ -39,3 +41,5 @@ aliases:
   docs: "documentation"
   meet: "meetings"
   test: "testing"
+  plan: "planning"
+  
