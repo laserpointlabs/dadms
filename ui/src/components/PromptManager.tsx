@@ -140,6 +140,10 @@ const PromptManager: React.FC = () => {
     }>({});
     const [versionedPrompts, setVersionedPrompts] = useState<{ [key: string]: Prompt }>({});
 
+    // Test results detail view state
+    const [selectedTestResult, setSelectedTestResult] = useState<any>(null);
+    const [testResultDetailOpen, setTestResultDetailOpen] = useState(false);
+
     useEffect(() => {
         loadPrompts();
         loadAvailableLLMs();
@@ -766,9 +770,10 @@ const PromptManager: React.FC = () => {
                             <TableRow>
                                 <TableCell>Test Case</TableCell>
                                 <TableCell>Status</TableCell>
-                                <TableCell>LLM Response</TableCell>
+                                <TableCell sx={{ maxWidth: 300 }}>LLM Response</TableCell>
                                 <TableCell>Comparison Score</TableCell>
                                 <TableCell>Execution Time</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -792,12 +797,21 @@ const PromptManager: React.FC = () => {
                                             />
                                         )}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell sx={{ maxWidth: 300 }}>
                                         {result.llm_response ? (
                                             <Box>
-                                                <Typography variant="body2" noWrap>
-                                                    {result.llm_response.content.substring(0, 100)}
-                                                    {result.llm_response.content.length > 100 && '...'}
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 3,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        wordBreak: 'break-word'
+                                                    }}
+                                                >
+                                                    {result.llm_response.content}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {result.llm_response.provider}-{result.llm_response.model}
@@ -826,6 +840,18 @@ const PromptManager: React.FC = () => {
                                         )}
                                     </TableCell>
                                     <TableCell>{result.execution_time_ms}ms</TableCell>
+                                    <TableCell>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => {
+                                                setSelectedTestResult(result);
+                                                setTestResultDetailOpen(true);
+                                            }}
+                                        >
+                                            View Details
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -864,6 +890,147 @@ const PromptManager: React.FC = () => {
                         ))}
                     </Box>
                 )}
+
+                {/* Test Result Detail Dialog */}
+                <Dialog
+                    open={testResultDetailOpen}
+                    onClose={() => setTestResultDetailOpen(false)}
+                    maxWidth="md"
+                    fullWidth
+                    PaperProps={{
+                        sx: { maxHeight: '80vh' }
+                    }}
+                >
+                    <DialogTitle>
+                        Test Result Details: {selectedTestResult?.test_case_name}
+                    </DialogTitle>
+                    <DialogContent>
+                        {selectedTestResult && (
+                            <Box>
+                                {/* Status */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Status
+                                    </Typography>
+                                    <Chip
+                                        icon={selectedTestResult.passed ? <CheckCircleIcon /> : <ErrorIcon />}
+                                        label={selectedTestResult.passed ? "Passed" : "Failed"}
+                                        color={selectedTestResult.passed ? "success" : "error"}
+                                        size="small"
+                                    />
+                                </Box>
+
+                                {/* LLM Response */}
+                                {selectedTestResult.llm_response && (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            LLM Response
+                                        </Typography>
+                                        <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                {selectedTestResult.llm_response.content}
+                                            </Typography>
+                                        </Paper>
+                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                            Provider: {selectedTestResult.llm_response.provider} |
+                                            Model: {selectedTestResult.llm_response.model} |
+                                            Tokens: {selectedTestResult.llm_response.usage?.total_tokens || 0} |
+                                            Time: {selectedTestResult.llm_response.response_time_ms}ms
+                                        </Typography>
+                                    </Box>
+                                )}
+
+                                {/* Test Input */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Test Input
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        {selectedTestResult.test_input ? (
+                                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                {JSON.stringify(selectedTestResult.test_input, null, 2)}
+                                            </pre>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">
+                                                Test input data not available
+                                            </Typography>
+                                        )}
+                                    </Paper>
+                                </Box>
+
+                                {/* Expected Output */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Expected Output
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {JSON.stringify(selectedTestResult.expected_output, null, 2)}
+                                        </pre>
+                                    </Paper>
+                                </Box>
+
+                                {/* Actual Output */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Actual Output
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {selectedTestResult.actual_output}
+                                        </Typography>
+                                    </Paper>
+                                </Box>
+
+                                {/* Comparison Score */}
+                                {selectedTestResult.comparison_score !== undefined && (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Comparison Score
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Typography variant="h4" color="primary">
+                                                {(selectedTestResult.comparison_score * 100).toFixed(1)}%
+                                            </Typography>
+                                            <LinearProgress
+                                                variant="determinate"
+                                                value={selectedTestResult.comparison_score * 100}
+                                                sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
+                                            />
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {/* Error (if any) */}
+                                {selectedTestResult.error && (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Error
+                                        </Typography>
+                                        <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+                                            <Typography variant="body2">
+                                                {selectedTestResult.error}
+                                            </Typography>
+                                        </Paper>
+                                    </Box>
+                                )}
+
+                                {/* Execution Time */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Execution Time
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        {selectedTestResult.execution_time_ms}ms
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setTestResultDetailOpen(false)}>Close</Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         );
     };

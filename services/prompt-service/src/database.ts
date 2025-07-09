@@ -57,6 +57,7 @@ export class PromptDatabase {
         prompt_version INTEGER NOT NULL,
         test_case_id TEXT NOT NULL,
         test_case_name TEXT NOT NULL,
+        test_input TEXT,
         passed INTEGER NOT NULL,
         actual_output TEXT,
         llm_response TEXT,
@@ -115,6 +116,16 @@ export class PromptDatabase {
                 `);
 
                 console.log('Name column added successfully.');
+            }
+
+            // Check if test_input column exists in test_results table
+            const testResultsTableInfo = await this.db.all("PRAGMA table_info(test_results)");
+            const hasTestInputColumn = testResultsTableInfo.some((col: any) => col.name === 'test_input');
+
+            if (!hasTestInputColumn) {
+                console.log('Adding test_input column to test_results table...');
+                await this.db.exec('ALTER TABLE test_results ADD COLUMN test_input TEXT');
+                console.log('Test input column added successfully.');
             }
         } catch (error) {
             console.error('Migration error:', error);
@@ -448,17 +459,18 @@ export class PromptDatabase {
 
             await this.db.run(`
                 INSERT INTO test_results (
-                    id, prompt_id, prompt_version, test_case_id, test_case_name, passed, 
+                    id, prompt_id, prompt_version, test_case_id, test_case_name, test_input, passed, 
                     actual_output, llm_response, expected_output, comparison_score, error, 
                     execution_time_ms, llm_provider, llm_model, llm_config, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 resultId,
                 testResponse.prompt_id,
                 promptVersion,
                 result.test_case_id,
                 result.test_case_name,
+                (result as any).test_input ? JSON.stringify((result as any).test_input) : null,
                 result.passed ? 1 : 0,
                 result.actual_output ? JSON.stringify(result.actual_output) : null,
                 result.llm_response ? JSON.stringify(result.llm_response) : null,
@@ -512,6 +524,7 @@ export class PromptDatabase {
         const testResults: PromptTestResult[] = results.map((row: any) => ({
             test_case_id: row.test_case_id,
             test_case_name: row.test_case_name,
+            test_input: row.test_input ? JSON.parse(row.test_input) : undefined,
             passed: row.passed === 1,
             actual_output: row.actual_output ? JSON.parse(row.actual_output) : undefined,
             llm_response: row.llm_response ? JSON.parse(row.llm_response) : undefined,
