@@ -47,6 +47,7 @@ const aiOversightApi = createServiceApi(AI_OVERSIGHT_SERVICE_PORT);
 // Types
 export interface Prompt {
     id: string;
+    name: string;
     version: number;
     text: string;
     type: 'simple' | 'tool-aware' | 'workflow-aware';
@@ -70,6 +71,7 @@ export interface TestCase {
 }
 
 export interface CreatePromptRequest {
+    name: string;
     text: string;
     type: 'simple' | 'tool-aware' | 'workflow-aware';
     test_cases?: Omit<TestCase, 'id'>[];

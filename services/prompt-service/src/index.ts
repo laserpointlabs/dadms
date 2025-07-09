@@ -301,10 +301,10 @@ app.post('/prompts', async (req, res) => {
         const request: CreatePromptRequest = req.body;
 
         // Validate required fields
-        if (!request.text || !request.type) {
+        if (!request.name || !request.text || !request.type) {
             return res.status(400).json({
                 success: false,
-                error: 'Text and type are required'
+                error: 'Name, text, and type are required'
             });
         }
 
@@ -315,6 +315,7 @@ app.post('/prompts', async (req, res) => {
         })) || [];
 
         const prompt = await db.createPrompt({
+            name: request.name,
             version: 1,
             text: request.text,
             type: request.type,
@@ -388,6 +389,7 @@ app.put('/prompts/:id', async (req, res) => {
         } else {
             delete updateData.test_cases;
         }
+
         const updatedPrompt = await db.updatePrompt(req.params.id, updateData);
         if (!updatedPrompt) {
             return res.status(404).json({ success: false, error: 'Prompt not found' });

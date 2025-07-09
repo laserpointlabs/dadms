@@ -4,6 +4,7 @@ import {
     CheckCircle as CheckCircleIcon,
     Code as CodeIcon,
     Computer as ComputerIcon,
+    ContentCopy as CopyIcon,
     Delete as DeleteIcon,
     Edit as EditIcon,
     Error as ErrorIcon,
@@ -187,6 +188,7 @@ const PromptManager: React.FC = () => {
         try {
             setLoading(true);
             const updateRequest = {
+                name: editingPrompt.name,
                 text: editingPrompt.text,
                 type: editingPrompt.type,
                 tags: editingPrompt.tags,
@@ -274,6 +276,15 @@ const PromptManager: React.FC = () => {
             ...editingPrompt,
             test_cases: editingPrompt.test_cases.filter((_, i) => i !== index)
         });
+    };
+
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            // You could add a toast notification here
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+        }
     };
 
     const handleAddLLMConfig = () => {
@@ -763,6 +774,38 @@ const PromptManager: React.FC = () => {
                 {editingPrompt && (
                     <Box sx={{ mt: 2 }}>
                         <Grid container spacing={3}>
+                            {/* Prompt Name */}
+                            <Grid item xs={8}>
+                                <TextField
+                                    fullWidth
+                                    label="Prompt Name"
+                                    value={editingPrompt.name || ''}
+                                    onChange={(e) => handleUpdateEditingPrompt('name', e.target.value)}
+                                    helperText="A descriptive name to identify this prompt"
+                                />
+                            </Grid>
+
+                            {/* Prompt ID (read-only) */}
+                            <Grid item xs={4}>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Prompt ID
+                                    </Typography>
+                                    <Box display="flex" alignItems="center">
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', mr: 1 }}>
+                                            {editingPrompt.id}
+                                        </Typography>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => copyToClipboard(editingPrompt.id)}
+                                            title="Copy ID"
+                                        >
+                                            <CopyIcon sx={{ fontSize: '16px' }} />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
                             {/* Prompt Text */}
                             <Grid item xs={12}>
                                 <TextField
@@ -835,9 +878,26 @@ const PromptManager: React.FC = () => {
                                     <Card key={testCase.id || index} sx={{ mb: 2 }}>
                                         <CardContent>
                                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                                <Typography variant="subtitle2">
-                                                    Test Case {index + 1}
-                                                </Typography>
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                        Test Case {index + 1}: {testCase.name}
+                                                    </Typography>
+                                                    <Box display="flex" alignItems="center" mt={0.5}>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                                            ID: {testCase.id || 'new'}
+                                                        </Typography>
+                                                        {testCase.id && (
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => copyToClipboard(testCase.id)}
+                                                                title="Copy test case ID"
+                                                                sx={{ ml: 0.5, p: 0.25 }}
+                                                            >
+                                                                <CopyIcon sx={{ fontSize: '10px' }} />
+                                                            </IconButton>
+                                                        )}
+                                                    </Box>
+                                                </Box>
                                                 <Box>
                                                     <FormControlLabel
                                                         control={
@@ -1017,18 +1077,52 @@ const PromptManager: React.FC = () => {
                     <Grid item xs={12} md={6} lg={4} key={prompt.id}>
                         <Card>
                             <CardContent>
+                                {/* Header with name and actions */}
                                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                                    <Box>
-                                        <Typography variant="h6" gutterBottom>
-                                            {prompt.type === 'simple' && <CodeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />}
-                                            {prompt.type === 'tool-aware' && <ScienceIcon sx={{ mr: 1, verticalAlign: 'middle' }} />}
-                                            {prompt.type === 'workflow-aware' && <WorkflowIcon sx={{ mr: 1, verticalAlign: 'middle' }} />}
-                                            {prompt.type}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {prompt.text.substring(0, 100)}...
+                                    <Box flexGrow={1}>
+                                        <Box display="flex" alignItems="center" mb={1}>
+                                            {prompt.type === 'simple' && <CodeIcon sx={{ mr: 1, color: 'primary.main' }} />}
+                                            {prompt.type === 'tool-aware' && <ScienceIcon sx={{ mr: 1, color: 'warning.main' }} />}
+                                            {prompt.type === 'workflow-aware' && <WorkflowIcon sx={{ mr: 1, color: 'success.main' }} />}
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                                {prompt.name || 'Unnamed Prompt'}
+                                            </Typography>
+                                        </Box>
+
+                                        {/* ID display with copy functionality */}
+                                        <Box display="flex" alignItems="center" mb={1}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                                ID: {prompt.id.substring(0, 8)}...
+                                            </Typography>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => copyToClipboard(prompt.id)}
+                                                title="Copy full ID"
+                                                sx={{ ml: 0.5, p: 0.25 }}
+                                            >
+                                                <CopyIcon sx={{ fontSize: '12px' }} />
+                                            </IconButton>
+                                        </Box>
+
+                                        {/* Type badge */}
+                                        <Chip
+                                            label={prompt.type}
+                                            size="small"
+                                            sx={{
+                                                mb: 1,
+                                                textTransform: 'capitalize',
+                                                bgcolor: prompt.type === 'simple' ? 'primary.light' :
+                                                    prompt.type === 'tool-aware' ? 'warning.light' : 'success.light'
+                                            }}
+                                        />
+
+                                        {/* Prompt text preview */}
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                            {prompt.text.length > 100 ? `${prompt.text.substring(0, 100)}...` : prompt.text}
                                         </Typography>
                                     </Box>
+
+                                    {/* Action buttons */}
                                     <Box>
                                         <IconButton size="small" onClick={() => openEditDialog(prompt)}>
                                             <EditIcon />
@@ -1039,24 +1133,41 @@ const PromptManager: React.FC = () => {
                                     </Box>
                                 </Box>
 
+                                {/* Tags */}
                                 <Box mb={2}>
                                     {prompt.tags.map((tag) => (
-                                        <Chip key={tag} label={tag} size="small" sx={{ mr: 1, mb: 1 }} />
+                                        <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />
                                     ))}
                                 </Box>
 
+                                {/* Test cases info and actions */}
                                 <Box display="flex" justifyContent="space-between" alignItems="center">
-                                    <Typography variant="caption" color="text.secondary">
-                                        {prompt.test_cases.length} test cases
-                                    </Typography>
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {prompt.test_cases.length} test case{prompt.test_cases.length !== 1 ? 's' : ''}
+                                        </Typography>
+                                        {prompt.test_cases.length > 0 && (
+                                            <Typography variant="caption" display="block" color="text.secondary">
+                                                {prompt.test_cases.filter(tc => tc.enabled).length} enabled
+                                            </Typography>
+                                        )}
+                                    </Box>
                                     <Button
                                         startIcon={<PlayIcon />}
                                         onClick={() => openTestDialog(prompt)}
                                         variant="outlined"
                                         size="small"
+                                        disabled={prompt.test_cases.length === 0}
                                     >
                                         Test
                                     </Button>
+                                </Box>
+
+                                {/* Version and metadata */}
+                                <Box mt={1} pt={1} borderTop="1px solid" borderColor="divider">
+                                    <Typography variant="caption" color="text.secondary">
+                                        v{prompt.version} • Created by {prompt.created_by} • {new Date(prompt.created_at).toLocaleDateString()}
+                                    </Typography>
                                 </Box>
                             </CardContent>
                         </Card>
