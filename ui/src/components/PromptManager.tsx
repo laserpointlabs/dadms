@@ -366,10 +366,16 @@ const PromptManager: React.FC = () => {
 
     const handleRemoveTestCase = (index: number) => {
         if (!editingPrompt) return;
-        setEditingPrompt({
-            ...editingPrompt,
-            test_cases: editingPrompt.test_cases.filter((_, i) => i !== index)
-        });
+
+        const testCase = editingPrompt.test_cases[index];
+        const confirmMessage = `Are you sure you want to delete test case "${testCase.name}"?\n\nThis action cannot be undone.`;
+
+        if (window.confirm(confirmMessage)) {
+            setEditingPrompt({
+                ...editingPrompt,
+                test_cases: editingPrompt.test_cases.filter((_, i) => i !== index)
+            });
+        }
     };
 
     const getExampleTestCase = (exampleType: 'text-analysis' | 'data-processing' | 'math-calculation' | 'data-transformation') => {
@@ -1180,7 +1186,7 @@ const PromptManager: React.FC = () => {
                                                     <IconButton
                                                         size="small"
                                                         onClick={() => handleRemoveTestCase(index)}
-                                                        disabled={editingPrompt.test_cases.length === 1}
+                                                        title="Delete test case"
                                                     >
                                                         <DeleteIcon />
                                                     </IconButton>
@@ -1536,7 +1542,7 @@ const PromptManager: React.FC = () => {
                                                     <IconButton
                                                         size="small"
                                                         onClick={() => handleRemoveTestCase(index)}
-                                                        disabled={editingPrompt?.test_cases?.length === 1}
+                                                        title="Delete test case"
                                                     >
                                                         <DeleteIcon />
                                                     </IconButton>
