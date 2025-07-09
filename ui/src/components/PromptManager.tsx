@@ -98,6 +98,7 @@ const PromptManager: React.FC = () => {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
     const [testResults, setTestResults] = useState<TestPromptResponse | null>(null);
     const [testLoading, setTestLoading] = useState(false);
     const [tabValue, setTabValue] = useState(0);
@@ -113,6 +114,7 @@ const PromptManager: React.FC = () => {
     ]);
     const [enableComparison, setEnableComparison] = useState(false);
     const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
+    const [renderCounter, setRenderCounter] = useState(0);
 
     useEffect(() => {
         loadPrompts();
@@ -318,7 +320,15 @@ const PromptManager: React.FC = () => {
     };
 
     const handleAddTestCase = () => {
-        if (!editingPrompt) return;
+        console.log('handleAddTestCase called');
+        console.log('editingPrompt:', editingPrompt);
+        console.log('editingPrompt.test_cases:', editingPrompt?.test_cases);
+
+        if (!editingPrompt) {
+            console.error('No editingPrompt found in handleAddTestCase');
+            return;
+        }
+
         const newTestCase = {
             id: Date.now().toString(), // Temporary ID
             name: 'New Test Case',
@@ -326,10 +336,19 @@ const PromptManager: React.FC = () => {
             expected_output: {},
             enabled: true
         };
+
+        // Ensure test_cases is an array
+        const currentTestCases = editingPrompt.test_cases || [];
+
+        console.log('Adding new test case:', newTestCase);
+        console.log('Current test cases:', currentTestCases);
+
         setEditingPrompt({
             ...editingPrompt,
-            test_cases: [...editingPrompt.test_cases, newTestCase]
+            test_cases: [...currentTestCases, newTestCase]
         });
+
+        console.log('Test case added successfully');
     };
 
     const handleUpdateTestCase = (index: number, field: string, value: any) => {
@@ -351,6 +370,114 @@ const PromptManager: React.FC = () => {
             ...editingPrompt,
             test_cases: editingPrompt.test_cases.filter((_, i) => i !== index)
         });
+    };
+
+    const getExampleTestCase = (exampleType: 'text-analysis' | 'data-processing' | 'math-calculation' | 'data-transformation') => {
+        const examples = {
+            'text-analysis': {
+                name: 'Sentiment Analysis Example',
+                prompt_text: 'Analyze the sentiment of the following text: "{text}". Respond with a JSON object containing "sentiment" (positive/negative/neutral) and "confidence" (0-1 scale).',
+                input: { text: 'This product is absolutely amazing! I love it.' },
+                expected_output: {
+                    sentiment: 'positive',
+                    confidence: 0.95,
+                    reasoning: 'The text contains highly positive words like "absolutely amazing" and "love it"'
+                }
+            },
+            'data-processing': {
+                name: 'Data Processing Example',
+                prompt_text: 'Given the following array of numbers: {numbers}, calculate and return a JSON object with the sum, average, count, minimum, and maximum values.',
+                input: { numbers: [1, 2, 3, 4, 5] },
+                expected_output: {
+                    sum: 15,
+                    average: 3,
+                    count: 5,
+                    min: 1,
+                    max: 5
+                }
+            },
+            'math-calculation': {
+                name: 'Math Calculation Example',
+                prompt_text: 'Solve this mathematical problem: "{operation}". Provide the result and a brief explanation of how you calculated it. Return as JSON with "result" and "explanation" fields.',
+                input: { operation: 'Calculate 15% of 200' },
+                expected_output: {
+                    result: 30,
+                    explanation: 'To calculate 15% of 200: 200 × 0.15 = 30',
+                    steps: ['Convert percentage to decimal: 15% = 0.15', 'Multiply: 200 × 0.15 = 30']
+                }
+            },
+            'data-transformation': {
+                name: 'Data Transformation Example',
+                prompt_text: 'Transform the following user data: {users}. Extract just the names into an array and calculate the average age. Return as JSON with "names" array and "average_age" number.',
+                input: { users: [{ 'name': 'John', 'age': 30 }, { 'name': 'Jane', 'age': 25 }] },
+                expected_output: {
+                    names: ['John', 'Jane'],
+                    average_age: 27.5,
+                    total_users: 2
+                }
+            }
+        };
+        return examples[exampleType];
+    };
+
+    const handleUseExample = (index: number, exampleType: 'text-analysis' | 'data-processing' | 'math-calculation' | 'data-transformation') => {
+        if (!editingPrompt) {
+            console.error('No editingPrompt found');
+            return;
+        }
+
+        console.log('handleUseExample called with:', { index, exampleType });
+        console.log('Current editingPrompt.test_cases:', editingPrompt.test_cases);
+
+        const example = getExampleTestCase(exampleType);
+        console.log('Example data:', example);
+
+        // Update all test case fields in a single state update
+        const updatedTestCases = [...editingPrompt.test_cases];
+        console.log('Before update - test case at index:', updatedTestCases[index]);
+
+        updatedTestCases[index] = {
+            ...updatedTestCases[index],
+            name: example.name,
+            input: example.input,
+            expected_output: example.expected_output
+        };
+
+        console.log('After update - test case at index:', updatedTestCases[index]);
+        console.log('Full updated test cases:', updatedTestCases);
+
+        // Force immediate state update
+        const newEditingPrompt = {
+            ...editingPrompt,
+            test_cases: updatedTestCases
+        };
+
+        setEditingPrompt(newEditingPrompt);
+
+        // Force re-render by incrementing counter
+        setRenderCounter(prev => prev + 1);
+
+        console.log('State update called with:', newEditingPrompt);
+
+        // Show suggested prompt text immediately (no setTimeout to avoid stale closure)
+        const shouldUpdatePrompt = window.confirm(
+            `Test case populated with ${example.name}!\n\n` +
+            `Input: ${JSON.stringify(example.input, null, 2)}\n\n` +
+            `Expected Output: ${JSON.stringify(example.expected_output, null, 2)}\n\n` +
+            `Suggested prompt text for this example:\n"${example.prompt_text}"\n\n` +
+            `Would you like to update the prompt text with this suggestion?`
+        );
+
+        if (shouldUpdatePrompt) {
+            // Update prompt text without affecting test cases
+            setEditingPrompt(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    text: example.prompt_text
+                };
+            });
+        }
     };
 
     const copyToClipboard = async (text: string) => {
@@ -569,7 +696,16 @@ const PromptManager: React.FC = () => {
                     <TabPanel value={tabValue} index={0}>
                         <Box>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                <Typography variant="h6">LLM Configurations</Typography>
+                                <Box display="flex" alignItems="center">
+                                    <Typography variant="h6">LLM Configurations</Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Configure different LLM providers to test your prompts. Set API keys via environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY) for security, or enter them manually here."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <Button
                                     startIcon={<AddIcon />}
                                     onClick={handleAddLLMConfig}
@@ -851,6 +987,18 @@ const PromptManager: React.FC = () => {
                         <Grid container spacing={3}>
                             {/* Prompt Name */}
                             <Grid item xs={8}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Name
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Give your prompt a clear, descriptive name that explains its purpose. This helps you find and organize prompts later."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Prompt Name"
@@ -883,6 +1031,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Prompt Text */}
                             <Grid item xs={12}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Text
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Write your AI prompt here. Use {variable_name} syntax for dynamic values that will be replaced at runtime. Be clear and specific about what you want the AI to do."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Prompt Text"
@@ -896,6 +1056,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Type */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Type
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Simple: Basic prompts • Tool-aware: Integrates with analysis tools • Workflow-aware: Part of complex workflows"
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <FormControl fullWidth>
                                     <InputLabel>Type</InputLabel>
                                     <Select
@@ -926,6 +1098,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Tags */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Tags
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Add tags to organize and categorize your prompts. Use comma-separated values like: analysis, data, optimization"
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Tags"
@@ -938,7 +1122,16 @@ const PromptManager: React.FC = () => {
                             {/* Test Cases */}
                             <Grid item xs={12}>
                                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Typography variant="h6">Test Cases</Typography>
+                                    <Box display="flex" alignItems="center">
+                                        <Typography variant="h6">Test Cases</Typography>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ ml: 0.5 }}
+                                            title="Test cases validate your prompt's behavior with real input/output examples. Click example buttons below to populate with complete working examples including suggested prompt text that uses the input variables."
+                                        >
+                                            <ScienceIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Box>
                                     <Button
                                         startIcon={<AddIcon />}
                                         onClick={handleAddTestCase}
@@ -950,7 +1143,7 @@ const PromptManager: React.FC = () => {
                                 </Box>
 
                                 {editingPrompt.test_cases.map((testCase, index) => (
-                                    <Card key={testCase.id || index} sx={{ mb: 2 }}>
+                                    <Card key={`edit-card-${testCase.id || index}-${renderCounter}`} sx={{ mb: 2 }}>
                                         <CardContent>
                                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                                                 <Box>
@@ -1004,8 +1197,44 @@ const PromptManager: React.FC = () => {
                                                         size="small"
                                                     />
                                                 </Grid>
+                                                <Grid item xs={12}>
+                                                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Use Example:
+                                                        </Typography>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'text-analysis')}
+                                                        >
+                                                            Text Analysis
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'data-processing')}
+                                                        >
+                                                            Data Processing
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'math-calculation')}
+                                                        >
+                                                            Math
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'data-transformation')}
+                                                        >
+                                                            Data Transform
+                                                        </Button>
+                                                    </Box>
+                                                </Grid>
                                                 <Grid item xs={6}>
                                                     <TextField
+                                                        key={`edit-input-${index}-${renderCounter}`}
                                                         fullWidth
                                                         label="Input (JSON)"
                                                         multiline
@@ -1025,6 +1254,7 @@ const PromptManager: React.FC = () => {
                                                 </Grid>
                                                 <Grid item xs={6}>
                                                     <TextField
+                                                        key={`edit-output-${index}-${renderCounter}`}
                                                         fullWidth
                                                         label="Expected Output (JSON)"
                                                         multiline
@@ -1056,6 +1286,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Tool Dependencies */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Tool Dependencies
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="List tools this prompt depends on. Use comma-separated tool IDs. Leave empty if no tools are required."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Tool Dependencies"
@@ -1067,6 +1309,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Workflow Dependencies */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Workflow Dependencies
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="List workflows this prompt depends on. Use comma-separated workflow IDs. Leave empty if no workflows are required."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Workflow Dependencies"
@@ -1109,6 +1363,18 @@ const PromptManager: React.FC = () => {
                         <Grid container spacing={3}>
                             {/* Prompt Name */}
                             <Grid item xs={12}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Name
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Give your prompt a clear, descriptive name that explains its purpose. This helps you find and organize prompts later."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Prompt Name"
@@ -1124,6 +1390,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Prompt Text */}
                             <Grid item xs={12}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Text
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Write your AI prompt here. Use {variable_name} syntax for dynamic values that will be replaced at runtime. Be clear and specific about what you want the AI to do."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Prompt Text"
@@ -1141,6 +1419,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Type */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Prompt Type
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Simple: Basic prompts • Tool-aware: Integrates with analysis tools • Workflow-aware: Part of complex workflows"
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <FormControl fullWidth>
                                     <InputLabel>Type</InputLabel>
                                     <Select
@@ -1175,6 +1465,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Tags */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Tags
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="Add tags to organize and categorize your prompts. Use comma-separated values like: analysis, data, optimization"
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Tags"
@@ -1191,7 +1493,16 @@ const PromptManager: React.FC = () => {
                             {/* Test Cases */}
                             <Grid item xs={12}>
                                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Typography variant="h6">Test Cases</Typography>
+                                    <Box display="flex" alignItems="center">
+                                        <Typography variant="h6">Test Cases</Typography>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ ml: 0.5 }}
+                                            title="Test cases validate your prompt's behavior with real input/output examples. Click example buttons below to populate with complete working examples including suggested prompt text that uses the input variables."
+                                        >
+                                            <ScienceIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Box>
                                     <Button
                                         startIcon={<AddIcon />}
                                         onClick={handleAddTestCase}
@@ -1203,7 +1514,7 @@ const PromptManager: React.FC = () => {
                                 </Box>
 
                                 {editingPrompt?.test_cases?.map((testCase, index) => (
-                                    <Card key={testCase.id || index} sx={{ mb: 2 }}>
+                                    <Card key={`create-card-${testCase.id || index}-${renderCounter}`} sx={{ mb: 2 }}>
                                         <CardContent>
                                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                                                 <Box>
@@ -1242,8 +1553,44 @@ const PromptManager: React.FC = () => {
                                                         size="small"
                                                     />
                                                 </Grid>
+                                                <Grid item xs={12}>
+                                                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Use Example:
+                                                        </Typography>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'text-analysis')}
+                                                        >
+                                                            Text Analysis
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'data-processing')}
+                                                        >
+                                                            Data Processing
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'math-calculation')}
+                                                        >
+                                                            Math
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => handleUseExample(index, 'data-transformation')}
+                                                        >
+                                                            Data Transform
+                                                        </Button>
+                                                    </Box>
+                                                </Grid>
                                                 <Grid item xs={6}>
                                                     <TextField
+                                                        key={`create-input-${index}-${renderCounter}`}
                                                         fullWidth
                                                         label="Input (JSON)"
                                                         multiline
@@ -1263,6 +1610,7 @@ const PromptManager: React.FC = () => {
                                                 </Grid>
                                                 <Grid item xs={6}>
                                                     <TextField
+                                                        key={`create-output-${index}-${renderCounter}`}
                                                         fullWidth
                                                         label="Expected Output (JSON)"
                                                         multiline
@@ -1294,6 +1642,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Tool Dependencies */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Tool Dependencies
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="List tools this prompt depends on. Use comma-separated tool IDs. Leave empty if no tools are required."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Tool Dependencies"
@@ -1309,6 +1669,18 @@ const PromptManager: React.FC = () => {
 
                             {/* Workflow Dependencies */}
                             <Grid item xs={6}>
+                                <Box display="flex" alignItems="center" mb={1}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        Workflow Dependencies
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        sx={{ ml: 0.5 }}
+                                        title="List workflows this prompt depends on. Use comma-separated workflow IDs. Leave empty if no workflows are required."
+                                    >
+                                        <ScienceIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Box>
                                 <TextField
                                     fullWidth
                                     label="Workflow Dependencies"
@@ -1342,10 +1714,100 @@ const PromptManager: React.FC = () => {
         );
     };
 
+    const renderHelpDialog = () => (
+        <Dialog open={isHelpDialogOpen} onClose={() => setIsHelpDialogOpen(false)} maxWidth="md" fullWidth>
+            <DialogTitle>
+                <Box display="flex" alignItems="center">
+                    <ScienceIcon sx={{ mr: 1 }} />
+                    Prompt Manager Help Guide
+                </Box>
+            </DialogTitle>
+            <DialogContent>
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Welcome to the Prompt Manager!
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                        The Prompt Manager helps you create, test, and manage AI prompts for your workflows.
+                        Here's how to get started:
+                    </Typography>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        🚀 Creating Prompts
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                        • Click "Create Prompt" to start building a new prompt<br />
+                        • Give it a descriptive name to identify it later<br />
+                        • Write your prompt text using {`{variable_name}`} for dynamic values<br />
+                        • Choose the appropriate type: Simple, Tool-aware, or Workflow-aware<br />
+                        • Add relevant tags for organization
+                    </Typography>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        🧪 Test Cases
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                        • Add test cases to validate your prompt's behavior<br />
+                        • Each test case should have sample input and expected output<br />
+                        • Use JSON format for structured data<br />
+                        • Enable/disable test cases as needed<br />
+                        • Test cases help ensure your prompts work consistently
+                    </Typography>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        🤖 LLM Testing
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                        • Click "Test" on any prompt to run it with real LLMs<br />
+                        • Configure multiple LLM providers (OpenAI, Anthropic, etc.)<br />
+                        • Set API keys via environment variables for security<br />
+                        • Compare responses across different models<br />
+                        • View execution times and response quality scores
+                    </Typography>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        🔧 Prompt Types
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                        • <strong>Simple:</strong> Basic prompts for general use<br />
+                        • <strong>Tool-aware:</strong> Prompts that integrate with analysis tools<br />
+                        • <strong>Workflow-aware:</strong> Prompts designed for complex workflows
+                    </Typography>
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        💡 Pro Tips
+                    </Typography>
+                    <Typography variant="body2" paragraph>
+                        • Use descriptive names and tags for easy searching<br />
+                        • Start with simple test cases and gradually add complexity<br />
+                        • Test with multiple LLMs to ensure robustness<br />
+                        • Keep prompt text focused and clear<br />
+                        • Review test results to refine your prompts
+                    </Typography>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setIsHelpDialogOpen(false)} variant="contained">
+                    Got it!
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h4">Prompt Manager</Typography>
+                <Box display="flex" alignItems="center">
+                    <Typography variant="h4">Prompt Manager</Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => setIsHelpDialogOpen(true)}
+                        sx={{ ml: 1 }}
+                        title="Learn how to use the Prompt Manager"
+                    >
+                        <ScienceIcon />
+                    </IconButton>
+                </Box>
                 <Box>
                     <Button
                         variant="outlined"
@@ -1390,7 +1852,15 @@ const PromptManager: React.FC = () => {
 
             {/* Connection Status */}
             {!loading && !error && (
-                <Alert severity="success" sx={{ mb: 2 }}>
+                <Alert severity="success" sx={{ mb: 2 }} action={
+                    <IconButton
+                        size="small"
+                        color="inherit"
+                        title="Each prompt card shows: Name & ID (click to copy), Type badge, Preview text, Tags, Test case count, Edit/Delete buttons, and Test button"
+                    >
+                        <ScienceIcon />
+                    </IconButton>
+                }>
                     ✅ Connected to microservices successfully! Found {prompts.length} prompts.
                 </Alert>
             )}
@@ -1522,6 +1992,7 @@ const PromptManager: React.FC = () => {
             {renderLLMConfigDialog()}
             {renderEditDialog()}
             {renderCreateDialog()}
+            {renderHelpDialog()}
         </Box>
     );
 };
