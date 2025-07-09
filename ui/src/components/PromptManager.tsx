@@ -97,6 +97,7 @@ const PromptManager: React.FC = () => {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [testResults, setTestResults] = useState<TestPromptResponse | null>(null);
     const [testLoading, setTestLoading] = useState(false);
     const [tabValue, setTabValue] = useState(0);
@@ -182,6 +183,76 @@ const PromptManager: React.FC = () => {
         setIsEditDialogOpen(true);
     };
 
+    const openCreateDialog = () => {
+        const newPrompt: Prompt = {
+            id: '', // Will be set by backend
+            name: '',
+            version: 1,
+            text: '',
+            type: 'simple',
+            test_cases: [],
+            tool_dependencies: [],
+            workflow_dependencies: [],
+            tags: [],
+            created_by: 'testuser', // You might want to get this from auth context
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            metadata: {}
+        };
+        console.log('Opening create dialog with new prompt:', newPrompt);
+        setEditingPrompt(newPrompt);
+        setIsCreateDialogOpen(true);
+    };
+
+    const handleCloseCreateDialog = () => {
+        console.log('Closing create dialog');
+        setIsCreateDialogOpen(false);
+        setEditingPrompt(null);
+        setError(null);
+    };
+
+    const handleCreatePrompt = async () => {
+        console.log('handleCreatePrompt called, editingPrompt:', editingPrompt);
+        if (!editingPrompt) {
+            console.error('Cannot create prompt: editingPrompt is null');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const createRequest = {
+                name: editingPrompt.name || 'Untitled Prompt',
+                text: editingPrompt.text,
+                type: editingPrompt.type,
+                tags: editingPrompt.tags,
+                test_cases: editingPrompt.test_cases.map(tc => ({
+                    name: tc.name,
+                    input: tc.input,
+                    expected_output: tc.expected_output,
+                    enabled: tc.enabled
+                })),
+                tool_dependencies: editingPrompt.tool_dependencies,
+                workflow_dependencies: editingPrompt.workflow_dependencies,
+                metadata: editingPrompt.metadata
+            };
+
+            console.log('Sending create request:', createRequest);
+            const response = await promptService.createPrompt(createRequest);
+            console.log('Create response:', response);
+
+            // Add the new prompt to the beginning of the prompts list
+            setPrompts([response.data.data, ...prompts]);
+            setIsCreateDialogOpen(false);
+            setEditingPrompt(null);
+            setError(null);
+        } catch (err) {
+            console.error('Error creating prompt:', err);
+            setError(err instanceof Error ? err.message : 'Failed to create prompt');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSavePrompt = async () => {
         if (!editingPrompt) return;
 
@@ -235,7 +306,11 @@ const PromptManager: React.FC = () => {
     };
 
     const handleUpdateEditingPrompt = (field: keyof Prompt, value: any) => {
-        if (!editingPrompt) return;
+        console.log('Updating field:', field, 'with value:', value, 'current editingPrompt:', editingPrompt);
+        if (!editingPrompt) {
+            console.error('editingPrompt is null, cannot update field:', field);
+            return;
+        }
         setEditingPrompt({
             ...editingPrompt,
             [field]: value
@@ -1018,6 +1093,255 @@ const PromptManager: React.FC = () => {
         </Dialog>
     );
 
+    const renderCreateDialog = () => {
+        console.log('Rendering create dialog. isCreateDialogOpen:', isCreateDialogOpen, 'editingPrompt:', editingPrompt, 'loading:', loading);
+
+        return (
+            <Dialog open={isCreateDialogOpen} onClose={handleCloseCreateDialog} maxWidth="md" fullWidth>
+                <DialogTitle>
+                    <Box display="flex" alignItems="center">
+                        <AddIcon sx={{ mr: 1 }} />
+                        Create New Prompt
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mt: 2 }}>
+                        <Grid container spacing={3}>
+                            {/* Prompt Name */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Prompt Name"
+                                    value={editingPrompt?.name || ''}
+                                    onChange={(e) => {
+                                        console.log('Name field onChange:', e.target.value);
+                                        handleUpdateEditingPrompt('name', e.target.value);
+                                    }}
+                                    helperText="A descriptive name to identify this prompt"
+                                    disabled={false}
+                                />
+                            </Grid>
+
+                            {/* Prompt Text */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Prompt Text"
+                                    multiline
+                                    rows={4}
+                                    value={editingPrompt?.text || ''}
+                                    onChange={(e) => {
+                                        console.log('Text field onChange:', e.target.value);
+                                        handleUpdateEditingPrompt('text', e.target.value);
+                                    }}
+                                    helperText="Use {variable_name} for variables that will be replaced during execution"
+                                    disabled={false}
+                                />
+                            </Grid>
+
+                            {/* Type */}
+                            <Grid item xs={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Type</InputLabel>
+                                    <Select
+                                        value={editingPrompt?.type || 'simple'}
+                                        onChange={(e) => {
+                                            console.log('Type field onChange:', e.target.value);
+                                            handleUpdateEditingPrompt('type', e.target.value);
+                                        }}
+                                        disabled={false}
+                                    >
+                                        <MenuItem value="simple">
+                                            <Box display="flex" alignItems="center">
+                                                <CodeIcon sx={{ mr: 1 }} />
+                                                Simple
+                                            </Box>
+                                        </MenuItem>
+                                        <MenuItem value="tool-aware">
+                                            <Box display="flex" alignItems="center">
+                                                <ScienceIcon sx={{ mr: 1 }} />
+                                                Tool-aware
+                                            </Box>
+                                        </MenuItem>
+                                        <MenuItem value="workflow-aware">
+                                            <Box display="flex" alignItems="center">
+                                                <WorkflowIcon sx={{ mr: 1 }} />
+                                                Workflow-aware
+                                            </Box>
+                                        </MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Tags */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Tags"
+                                    value={editingPrompt?.tags?.join(', ') || ''}
+                                    onChange={(e) => {
+                                        console.log('Tags field onChange:', e.target.value);
+                                        handleUpdateEditingPrompt('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag));
+                                    }}
+                                    helperText="Comma-separated tags"
+                                    disabled={false}
+                                />
+                            </Grid>
+
+                            {/* Test Cases */}
+                            <Grid item xs={12}>
+                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                    <Typography variant="h6">Test Cases</Typography>
+                                    <Button
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddTestCase}
+                                        variant="outlined"
+                                        size="small"
+                                    >
+                                        Add Test Case
+                                    </Button>
+                                </Box>
+
+                                {editingPrompt?.test_cases?.map((testCase, index) => (
+                                    <Card key={testCase.id || index} sx={{ mb: 2 }}>
+                                        <CardContent>
+                                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                        Test Case {index + 1}: {testCase.name}
+                                                    </Typography>
+                                                </Box>
+                                                <Box>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Switch
+                                                                checked={testCase.enabled}
+                                                                onChange={(e) => handleUpdateTestCase(index, 'enabled', e.target.checked)}
+                                                                size="small"
+                                                            />
+                                                        }
+                                                        label="Enabled"
+                                                    />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRemoveTestCase(index)}
+                                                        disabled={editingPrompt?.test_cases?.length === 1}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Test Case Name"
+                                                        value={testCase.name}
+                                                        onChange={(e) => handleUpdateTestCase(index, 'name', e.target.value)}
+                                                        size="small"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Input (JSON)"
+                                                        multiline
+                                                        rows={3}
+                                                        value={typeof testCase.input === 'string' ? testCase.input : JSON.stringify(testCase.input, null, 2)}
+                                                        onChange={(e) => {
+                                                            try {
+                                                                const parsed = JSON.parse(e.target.value);
+                                                                handleUpdateTestCase(index, 'input', parsed);
+                                                            } catch {
+                                                                handleUpdateTestCase(index, 'input', e.target.value);
+                                                            }
+                                                        }}
+                                                        size="small"
+                                                        helperText="JSON format expected"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Expected Output (JSON)"
+                                                        multiline
+                                                        rows={3}
+                                                        value={typeof testCase.expected_output === 'string' ? testCase.expected_output : JSON.stringify(testCase.expected_output, null, 2)}
+                                                        onChange={(e) => {
+                                                            try {
+                                                                const parsed = JSON.parse(e.target.value);
+                                                                handleUpdateTestCase(index, 'expected_output', parsed);
+                                                            } catch {
+                                                                handleUpdateTestCase(index, 'expected_output', e.target.value);
+                                                            }
+                                                        }}
+                                                        size="small"
+                                                        helperText="JSON format expected"
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+
+                                {(!editingPrompt?.test_cases || editingPrompt.test_cases.length === 0) && (
+                                    <Alert severity="info">
+                                        No test cases. Add test cases to validate your prompt's behavior.
+                                    </Alert>
+                                )}
+                            </Grid>
+
+                            {/* Tool Dependencies */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Tool Dependencies"
+                                    value={editingPrompt?.tool_dependencies?.join(', ') || ''}
+                                    onChange={(e) => {
+                                        console.log('Tool Dependencies onChange:', e.target.value);
+                                        handleUpdateEditingPrompt('tool_dependencies', e.target.value.split(',').map(dep => dep.trim()).filter(dep => dep));
+                                    }}
+                                    helperText="Comma-separated tool IDs"
+                                    disabled={false}
+                                />
+                            </Grid>
+
+                            {/* Workflow Dependencies */}
+                            <Grid item xs={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Workflow Dependencies"
+                                    value={editingPrompt?.workflow_dependencies?.join(', ') || ''}
+                                    onChange={(e) => {
+                                        console.log('Workflow Dependencies onChange:', e.target.value);
+                                        handleUpdateEditingPrompt('workflow_dependencies', e.target.value.split(',').map(dep => dep.trim()).filter(dep => dep));
+                                    }}
+                                    helperText="Comma-separated workflow IDs"
+                                    disabled={false}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseCreateDialog}>Cancel</Button>
+                    <Button
+                        onClick={() => {
+                            console.log('Create button clicked, editingPrompt:', editingPrompt, 'loading:', loading);
+                            handleCreatePrompt();
+                        }}
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        disabled={!editingPrompt || loading}
+                    >
+                        Create Prompt
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
+    };
+
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -1045,7 +1369,7 @@ const PromptManager: React.FC = () => {
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
-                        onClick={() => console.log('Create prompt functionality')}
+                        onClick={openCreateDialog}
                     >
                         Create Prompt
                     </Button>
@@ -1187,7 +1511,7 @@ const PromptManager: React.FC = () => {
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
-                        onClick={() => console.log('Create prompt functionality')}
+                        onClick={openCreateDialog}
                     >
                         Create Your First Prompt
                     </Button>
@@ -1197,6 +1521,7 @@ const PromptManager: React.FC = () => {
             {/* Dialogs */}
             {renderLLMConfigDialog()}
             {renderEditDialog()}
+            {renderCreateDialog()}
         </Box>
     );
 };
