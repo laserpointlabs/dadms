@@ -79,6 +79,71 @@ export interface CreatePromptRequest {
     metadata?: any;
 }
 
+// LLM Types
+export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'mock';
+
+export interface LLMConfig {
+    provider: LLMProvider;
+    model: string;
+    apiKey?: string;
+    baseUrl?: string;
+    temperature?: number;
+    maxTokens?: number;
+    timeout?: number;
+}
+
+export interface LLMResponse {
+    provider: LLMProvider;
+    model: string;
+    content: string;
+    usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
+    finish_reason?: string;
+    response_time_ms: number;
+}
+
+export interface TestResult {
+    test_case_id: string;
+    test_case_name: string;
+    passed: boolean;
+    actual_output?: any;
+    llm_response?: LLMResponse;
+    expected_output?: any;
+    comparison_score?: number;
+    error?: string;
+    execution_time_ms: number;
+}
+
+export interface TestSummary {
+    total: number;
+    passed: number;
+    failed: number;
+    execution_time_ms: number;
+    avg_comparison_score?: number;
+}
+
+export interface TestPromptRequest {
+    test_case_ids?: string[];
+    input_override?: any;
+    llm_configs?: LLMConfig[];
+    enable_comparison?: boolean;
+}
+
+export interface TestPromptResponse {
+    prompt_id: string;
+    prompt_text: string;
+    results: TestResult[];
+    llm_comparisons?: { [provider_model: string]: LLMResponse[] };
+    summary: TestSummary;
+}
+
+export interface AvailableLLMs {
+    [provider: string]: string[];
+}
+
 export interface Tool {
     id: string;
     name: string;
@@ -173,21 +238,6 @@ export interface Finding {
     resolved: boolean;
 }
 
-export interface TestResult {
-    test_case_id: string;
-    passed: boolean;
-    actual_output: any;
-    execution_time_ms: number;
-    error_message?: string;
-}
-
-export interface TestSummary {
-    total: number;
-    passed: number;
-    failed: number;
-    execution_time_ms: number;
-}
-
 // Prompt Service
 export const promptService = {
     // Get all prompts
@@ -215,9 +265,14 @@ export const promptService = {
         return promptApi.delete(`/prompts/${id}`);
     },
 
-    // Test prompt
-    testPrompt: async (id: string, testData?: { test_case_ids?: string[]; input_override?: string }): Promise<AxiosResponse<{ success: boolean; data: { prompt_id: string; results: TestResult[]; summary: TestSummary } }>> => {
+    // Test prompt with LLM
+    testPrompt: async (id: string, testData?: TestPromptRequest): Promise<AxiosResponse<{ success: boolean; data: TestPromptResponse }>> => {
         return promptApi.post(`/prompts/${id}/test`, testData || {});
+    },
+
+    // Get available LLMs
+    getAvailableLLMs: async (): Promise<AxiosResponse<{ success: boolean; data: AvailableLLMs }>> => {
+        return promptApi.get('/llms/available');
     },
 };
 

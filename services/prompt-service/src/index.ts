@@ -8,13 +8,15 @@ import { v4 as uuidv4 } from 'uuid';
 // TODO: Refactor event-bus to be a node module for proper import. Temporarily disabling event bus integration for build compatibility.
 // import { EventBus } from '../../shared/event-bus/src/event-bus';
 import { PromptDatabase } from './database';
-import { CreatePromptRequest, TestPromptRequest, UpdatePromptRequest } from './types';
+import { LLMService } from './llm-service';
+import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, TestPromptRequest, UpdatePromptRequest } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize database
+// Initialize database and LLM service
 const db = new PromptDatabase();
+const llmService = LLMService.getInstance();
 
 // // Initialize event bus
 // const eventBus = new EventBus({
@@ -123,7 +125,21 @@ const swaggerOptions = {
                     type: 'object',
                     properties: {
                         test_case_ids: { type: 'array', items: { type: 'string' } },
-                        input_override: { type: 'string' }
+                        input_override: { type: 'string' },
+                        llm_configs: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    provider: { type: 'string', enum: ['openai', 'anthropic', 'local', 'mock'] },
+                                    model: { type: 'string' },
+                                    apiKey: { type: 'string' },
+                                    temperature: { type: 'number' },
+                                    maxTokens: { type: 'number' }
+                                }
+                            }
+                        },
+                        enable_comparison: { type: 'boolean' }
                     }
                 },
                 TestResult: {
@@ -441,8 +457,8 @@ app.delete('/prompts/:id', async (req, res) => {
  * @swagger
  * /prompts/{id}/test:
  *   post:
- *     summary: Test a prompt
- *     description: Execute test cases for a specific prompt
+ *     summary: Test a prompt with real LLMs
+ *     description: Execute test cases for a specific prompt using configured LLM providers
  *     tags: [Prompts]
  *     parameters:
  *       - in: path
@@ -455,28 +471,35 @@ app.delete('/prompts/:id', async (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/TestPromptRequest'
- *     responses:
- *       200:
- *         description: Test executed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
+ *             type: object
+ *             properties:
+ *               test_case_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               input_override:
+ *                 type: object
+ *               llm_configs:
+ *                 type: array
+ *                 items:
  *                   type: object
  *                   properties:
- *                     prompt_id:
+ *                     provider:
  *                       type: string
- *                     results:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/TestResult'
- *                     summary:
- *                       $ref: '#/components/schemas/TestSummary'
+ *                       enum: ['openai', 'anthropic', 'local', 'mock']
+ *                     model:
+ *                       type: string
+ *                     apiKey:
+ *                       type: string
+ *                     temperature:
+ *                       type: number
+ *                     maxTokens:
+ *                       type: number
+ *               enable_comparison:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Test executed successfully with LLM responses
  *       404:
  *         description: Prompt not found
  *       500:
@@ -491,23 +514,119 @@ app.post('/prompts/:id/test', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Prompt not found' });
         }
 
-        // Simple test execution (stub implementation)
+        // Default LLM configs if none provided
+        const defaultLLMConfigs: LLMConfig[] = [
+            {
+                provider: 'mock',
+                model: 'mock-gpt',
+                temperature: 0.7,
+                maxTokens: 1000
+            }
+        ];
+
+        const llmConfigs = request.llm_configs && request.llm_configs.length > 0
+            ? request.llm_configs
+            : defaultLLMConfigs;
+
+        // Get test cases to run
         const testCases = request.test_case_ids
             ? prompt.test_cases.filter(tc => request.test_case_ids!.includes(tc.id))
             : prompt.test_cases.filter(tc => tc.enabled);
 
-        const results = testCases.map(tc => ({
-            test_case_id: tc.id,
-            passed: Math.random() > 0.3, // Stub: 70% pass rate
-            actual_output: request.input_override || tc.input,
-            execution_time_ms: Math.floor(Math.random() * 1000)
-        }));
+        if (testCases.length === 0) {
+            return res.json({
+                success: true,
+                data: {
+                    prompt_id: req.params.id,
+                    prompt_text: prompt.text,
+                    results: [],
+                    summary: {
+                        total: 0,
+                        passed: 0,
+                        failed: 0,
+                        execution_time_ms: 0
+                    }
+                }
+            });
+        }
 
+        const results = [];
+        const llmComparisons: { [key: string]: any[] } = {};
+        let totalExecutionTime = 0;
+
+        // Run tests with each LLM config
+        for (const llmConfig of llmConfigs) {
+            const providerModel = `${llmConfig.provider}-${llmConfig.model}`;
+            llmComparisons[providerModel] = [];
+
+            for (const testCase of testCases) {
+                const startTime = Date.now();
+
+                try {
+                    // Use input override if provided, otherwise use test case input
+                    const testInput = request.input_override || testCase.input;
+
+                    // Call LLM with the prompt and test input
+                    const llmResponse = await llmService.callLLM(
+                        prompt.text,
+                        testInput,
+                        llmConfig
+                    );
+
+                    const executionTime = Date.now() - startTime;
+                    totalExecutionTime += executionTime;
+
+                    // Compare response with expected output
+                    const comparisonScore = llmService.compareResponses(
+                        testCase.expected_output,
+                        llmResponse.content
+                    );
+
+                    // Determine if test passed (threshold can be configurable)
+                    const passed = comparisonScore >= 0.7;
+
+                    const result = {
+                        test_case_id: testCase.id,
+                        test_case_name: testCase.name,
+                        passed,
+                        actual_output: llmResponse.content,
+                        llm_response: llmResponse,
+                        expected_output: testCase.expected_output,
+                        comparison_score: comparisonScore,
+                        execution_time_ms: executionTime
+                    };
+
+                    results.push(result);
+                    llmComparisons[providerModel].push(llmResponse);
+
+                } catch (error) {
+                    const executionTime = Date.now() - startTime;
+                    totalExecutionTime += executionTime;
+
+                    const result = {
+                        test_case_id: testCase.id,
+                        test_case_name: testCase.name,
+                        passed: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                        execution_time_ms: executionTime
+                    };
+
+                    results.push(result);
+                }
+            }
+        }
+
+        // Calculate summary
+        const passedCount = results.filter(r => r.passed).length;
         const summary = {
             total: results.length,
-            passed: results.filter(r => r.passed).length,
-            failed: results.filter(r => !r.passed).length,
-            execution_time_ms: results.reduce((sum, r) => sum + r.execution_time_ms, 0)
+            passed: passedCount,
+            failed: results.length - passedCount,
+            execution_time_ms: totalExecutionTime,
+            avg_comparison_score: results
+                .filter(r => 'comparison_score' in r && r.comparison_score !== undefined)
+                .reduce((sum, r) => sum + ((r as any).comparison_score || 0), 0) /
+                Math.max(1, results.filter(r => 'comparison_score' in r && r.comparison_score !== undefined).length)
         };
 
         // Publish event
@@ -527,7 +646,9 @@ app.post('/prompts/:id/test', async (req, res) => {
             success: true,
             data: {
                 prompt_id: req.params.id,
+                prompt_text: prompt.text,
                 results,
+                llm_comparisons: request.enable_comparison ? llmComparisons : undefined,
                 summary
             }
         });
@@ -537,6 +658,34 @@ app.post('/prompts/:id/test', async (req, res) => {
             error: error instanceof Error ? error.message : 'Internal server error'
         });
     }
+});
+
+// New endpoint to get available LLMs
+/**
+ * @swagger
+ * /llms/available:
+ *   get:
+ *     summary: Get available LLM providers and models
+ *     description: Retrieve list of supported LLM providers and their available models
+ *     tags: [LLMs]
+ *     responses:
+ *       200:
+ *         description: Available LLMs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ */
+app.get('/llms/available', (req, res) => {
+    res.json({
+        success: true,
+        data: AVAILABLE_LLMS
+    });
 });
 
 // Start server
