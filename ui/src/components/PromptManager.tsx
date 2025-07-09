@@ -97,6 +97,7 @@ const PromptManager: React.FC = () => {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+    const [editingVersion, setEditingVersion] = useState<number | null>(null); // Track which version is being edited
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
     const [testResults, setTestResults] = useState<TestPromptResponse | null>(null);
@@ -115,6 +116,29 @@ const PromptManager: React.FC = () => {
     const [enableComparison, setEnableComparison] = useState(false);
     const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
     const [renderCounter, setRenderCounter] = useState(0);
+    const [testHistory, setTestHistory] = useState<Array<{
+        execution_id: string;
+        prompt_version: number;
+        created_at: string;
+        total_tests: number;
+        passed_tests: number;
+        failed_tests: number;
+        avg_comparison_score?: number;
+    }>>([]);
+
+    // Version management state
+    const [selectedVersions, setSelectedVersions] = useState<{ [promptId: string]: number }>({});
+    const [promptVersions, setPromptVersions] = useState<{
+        [promptId: string]: Array<{
+            version: number;
+            created_at: string;
+            updated_at: string;
+            text: string;
+            type: string;
+            tags: string[];
+        }>
+    }>({});
+    const [versionedPrompts, setVersionedPrompts] = useState<{ [key: string]: Prompt }>({});
 
     useEffect(() => {
         loadPrompts();
@@ -127,6 +151,11 @@ const PromptManager: React.FC = () => {
             setLoading(true);
             const response = await promptService.getPrompts();
             setPrompts(response.data.data);
+
+            // Load versions for each prompt
+            for (const prompt of response.data.data) {
+                await loadPromptVersions(prompt.id);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load prompts');
         } finally {
@@ -174,14 +203,105 @@ const PromptManager: React.FC = () => {
     };
 
     const openTestDialog = (prompt: Prompt) => {
-        setSelectedPrompt(prompt);
-        setSelectedTestCases(prompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+        const displayPrompt = getDisplayPrompt(prompt);
+        setSelectedPrompt(displayPrompt);
+        setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
         setIsTestDialogOpen(true);
-        setTestResults(null);
+
+        // Load previous test results for the selected version
+        loadPreviousTestResults(displayPrompt.id);
+    };
+
+    const loadPreviousTestResults = async (promptId: string) => {
+        try {
+            const response = await promptService.getTestResults(promptId);
+            setTestResults(response.data.data);
+        } catch (err) {
+            // If no previous results found, that's okay - just leave testResults as null
+            console.log('No previous test results found for prompt:', promptId);
+            setTestResults(null);
+        }
+
+        // Also load test history
+        loadTestHistory(promptId);
+    };
+
+    const loadTestHistory = async (promptId: string) => {
+        try {
+            const response = await promptService.getTestHistory(promptId);
+            setTestHistory(response.data.data);
+        } catch (err) {
+            console.error('Failed to load test history:', err);
+            setTestHistory([]);
+        }
+    };
+
+    const loadTestResultsForVersion = async (promptId: string, version: number) => {
+        try {
+            setTestLoading(true);
+            const response = await promptService.getTestResults(promptId, version);
+            setTestResults(response.data.data);
+        } catch (err) {
+            console.error(`Failed to load test results for version ${version}:`, err);
+            setError('Failed to load test results for selected version');
+        } finally {
+            setTestLoading(false);
+        }
+    };
+
+    // Version management functions
+    const loadPromptVersions = async (promptId: string) => {
+        try {
+            const response = await promptService.getPromptVersions(promptId);
+            setPromptVersions(prev => ({
+                ...prev,
+                [promptId]: response.data.data
+            }));
+
+            // Set default selected version to the latest if not already set
+            if (!selectedVersions[promptId] && response.data.data.length > 0) {
+                setSelectedVersions(prev => ({
+                    ...prev,
+                    [promptId]: response.data.data[0].version
+                }));
+            }
+        } catch (err) {
+            console.error('Failed to load prompt versions:', err);
+        }
+    };
+
+    const handleVersionChange = async (promptId: string, version: number) => {
+        try {
+            setSelectedVersions(prev => ({
+                ...prev,
+                [promptId]: version
+            }));
+
+            // Load the specific version data
+            const response = await promptService.getPromptByVersion(promptId, version);
+            setVersionedPrompts(prev => ({
+                ...prev,
+                [`${promptId}-${version}`]: response.data.data
+            }));
+        } catch (err) {
+            console.error(`Failed to load prompt version ${version}:`, err);
+            setError('Failed to load selected prompt version');
+        }
+    };
+
+    const getDisplayPrompt = (prompt: Prompt): Prompt => {
+        const selectedVersion = selectedVersions[prompt.id];
+        if (selectedVersion && selectedVersion !== prompt.version) {
+            const versionedPrompt = versionedPrompts[`${prompt.id}-${selectedVersion}`];
+            return versionedPrompt || prompt;
+        }
+        return prompt;
     };
 
     const openEditDialog = (prompt: Prompt) => {
-        setEditingPrompt({ ...prompt });
+        const displayPrompt = getDisplayPrompt(prompt);
+        setEditingPrompt(displayPrompt);
+        setEditingVersion(selectedVersions[prompt.id] || displayPrompt.version); // Set the version being edited
         setIsEditDialogOpen(true);
     };
 
@@ -207,14 +327,12 @@ const PromptManager: React.FC = () => {
     };
 
     const handleCloseCreateDialog = () => {
-        console.log('Closing create dialog');
         setIsCreateDialogOpen(false);
         setEditingPrompt(null);
         setError(null);
     };
 
     const handleCreatePrompt = async () => {
-        console.log('handleCreatePrompt called, editingPrompt:', editingPrompt);
         if (!editingPrompt) {
             console.error('Cannot create prompt: editingPrompt is null');
             return;
@@ -238,12 +356,15 @@ const PromptManager: React.FC = () => {
                 metadata: editingPrompt.metadata
             };
 
-            console.log('Sending create request:', createRequest);
             const response = await promptService.createPrompt(createRequest);
-            console.log('Create response:', response);
+            const newPrompt = response.data.data;
 
             // Add the new prompt to the beginning of the prompts list
-            setPrompts([response.data.data, ...prompts]);
+            setPrompts([newPrompt, ...prompts]);
+
+            // Load versions for the new prompt (will be version 1)
+            await loadPromptVersions(newPrompt.id);
+
             setIsCreateDialogOpen(false);
             setEditingPrompt(null);
             setError(null);
@@ -266,22 +387,62 @@ const PromptManager: React.FC = () => {
                 type: editingPrompt.type,
                 tags: editingPrompt.tags,
                 test_cases: editingPrompt.test_cases.map(tc => ({
+                    id: tc.id,
                     name: tc.name,
                     input: tc.input,
                     expected_output: tc.expected_output,
-                    enabled: tc.enabled
+                    enabled: tc.enabled,
+                    scoring_logic: tc.scoring_logic
                 })),
                 tool_dependencies: editingPrompt.tool_dependencies,
                 workflow_dependencies: editingPrompt.workflow_dependencies,
                 metadata: editingPrompt.metadata
             };
 
-            const response = await promptService.updatePrompt(editingPrompt.id, updateRequest);
+            let response: any;
+            let updatedPrompt: Prompt;
 
-            // Update the prompts list with the updated prompt
-            setPrompts(prompts.map(p => p.id === editingPrompt.id ? response.data.data : p));
+            // Check if we're editing a specific version or creating a new version
+            const isEditingSpecificVersion = editingVersion !== null && selectedVersions[editingPrompt.id] !== undefined;
+
+            if (isEditingSpecificVersion) {
+                // Update the specific version in place
+                response = await promptService.updatePromptVersion(editingPrompt.id, editingVersion!, updateRequest);
+                updatedPrompt = response.data.data;
+
+                // Update the cached versioned prompt
+                setVersionedPrompts(prev => ({
+                    ...prev,
+                    [`${editingPrompt.id}-${editingVersion}`]: updatedPrompt
+                }));
+
+                // If we're editing the latest version, also update the main prompts list
+                const currentLatestVersion = Math.max(...(promptVersions[editingPrompt.id] || []).map(v => v.version), editingPrompt.version);
+                if (editingVersion === currentLatestVersion) {
+                    setPrompts(prompts.map(p => p.id === editingPrompt.id ? updatedPrompt : p));
+                }
+            } else {
+                // Create new version (default behavior)
+                response = await promptService.updatePrompt(editingPrompt.id, updateRequest);
+                updatedPrompt = response.data.data;
+
+                // Update the prompts list with the new version
+                setPrompts(prompts.map(p => p.id === editingPrompt.id ? updatedPrompt : p));
+
+                // Clear selected version to show the new latest version
+                setSelectedVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[editingPrompt.id];
+                    return updated;
+                });
+            }
+
+            // Reload versions for this prompt
+            await loadPromptVersions(editingPrompt.id);
+
             setIsEditDialogOpen(false);
             setEditingPrompt(null);
+            setEditingVersion(null);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update prompt');
@@ -299,6 +460,30 @@ const PromptManager: React.FC = () => {
             setLoading(true);
             await promptService.deletePrompt(promptId);
             setPrompts(prompts.filter(p => p.id !== promptId));
+
+            // Clean up version-related state for deleted prompt
+            setSelectedVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setPromptVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setVersionedPrompts(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(key => {
+                    if (key.startsWith(`${promptId}-`)) {
+                        delete updated[key];
+                    }
+                });
+                return updated;
+            });
+
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete prompt');
@@ -683,6 +868,84 @@ const PromptManager: React.FC = () => {
         );
     };
 
+    const renderTestHistory = () => {
+        if (testHistory.length === 0) return null;
+
+        return (
+            <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                    Test History
+                </Typography>
+                <TableContainer component={Paper}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Version</TableCell>
+                                <TableCell>Date</TableCell>
+                                <TableCell>Total</TableCell>
+                                <TableCell>Passed</TableCell>
+                                <TableCell>Failed</TableCell>
+                                <TableCell>Avg Score</TableCell>
+                                <TableCell>Actions</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {testHistory.map((execution) => (
+                                <TableRow key={execution.execution_id} hover>
+                                    <TableCell>
+                                        <Chip
+                                            label={`v${execution.prompt_version}`}
+                                            size="small"
+                                            color="primary"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {new Date(execution.created_at).toLocaleDateString()}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {new Date(execution.created_at).toLocaleTimeString()}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>{execution.total_tests}</TableCell>
+                                    <TableCell>
+                                        <Typography color="success.main">
+                                            {execution.passed_tests}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography color="error.main">
+                                            {execution.failed_tests}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        {execution.avg_comparison_score ? (
+                                            <Typography variant="body2">
+                                                {(execution.avg_comparison_score * 100).toFixed(1)}%
+                                            </Typography>
+                                        ) : (
+                                            '-'
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => selectedPrompt && loadTestResultsForVersion(selectedPrompt.id, execution.prompt_version)}
+                                            disabled={testLoading}
+                                        >
+                                            View Results
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Box>
+        );
+    };
+
     const renderLLMConfigDialog = () => (
         <Dialog open={isTestDialogOpen} onClose={() => setIsTestDialogOpen(false)} maxWidth="md" fullWidth>
             <DialogTitle>
@@ -962,6 +1225,7 @@ const PromptManager: React.FC = () => {
                             </Box>
                         )}
                         {renderTestResults()}
+                        {renderTestHistory()}
                     </TabPanel>
                 </Box>
             </DialogContent>
@@ -980,11 +1244,19 @@ const PromptManager: React.FC = () => {
     );
 
     const renderEditDialog = () => (
-        <Dialog open={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)} maxWidth="md" fullWidth>
+        <Dialog open={isEditDialogOpen} onClose={closeEditDialog} maxWidth="md" fullWidth>
             <DialogTitle>
                 <Box display="flex" alignItems="center">
                     <EditIcon sx={{ mr: 1 }} />
                     Edit Prompt
+                    {editingVersion && (
+                        <Chip
+                            label={`Version ${editingVersion}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ ml: 1 }}
+                        />
+                    )}
                 </Box>
             </DialogTitle>
             <DialogContent>
@@ -1340,18 +1612,27 @@ const PromptManager: React.FC = () => {
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                <Button onClick={closeEditDialog}>Cancel</Button>
                 <Button
                     onClick={handleSavePrompt}
                     variant="contained"
                     startIcon={<EditIcon />}
                     disabled={!editingPrompt || loading}
                 >
-                    Save Changes
+                    {editingVersion && selectedVersions[editingPrompt?.id || ''] !== undefined
+                        ? `Update Version ${editingVersion}`
+                        : 'Create New Version'}
                 </Button>
             </DialogActions>
         </Dialog>
     );
+
+    const closeEditDialog = () => {
+        setIsEditDialogOpen(false);
+        setEditingPrompt(null);
+        setEditingVersion(null);
+        setError(null);
+    };
 
     const renderCreateDialog = () => {
         console.log('Rendering create dialog. isCreateDialogOpen:', isCreateDialogOpen, 'editingPrompt:', editingPrompt, 'loading:', loading);
@@ -1873,106 +2154,153 @@ const PromptManager: React.FC = () => {
 
             {/* Main content */}
             <Grid container spacing={3}>
-                {prompts.map((prompt) => (
-                    <Grid item xs={12} md={6} lg={4} key={prompt.id}>
-                        <Card>
-                            <CardContent>
-                                {/* Header with name and actions */}
-                                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                                    <Box flexGrow={1}>
-                                        <Box display="flex" alignItems="center" mb={1}>
-                                            {prompt.type === 'simple' && <CodeIcon sx={{ mr: 1, color: 'primary.main' }} />}
-                                            {prompt.type === 'tool-aware' && <ScienceIcon sx={{ mr: 1, color: 'warning.main' }} />}
-                                            {prompt.type === 'workflow-aware' && <WorkflowIcon sx={{ mr: 1, color: 'success.main' }} />}
-                                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                {prompt.name || 'Unnamed Prompt'}
+                {prompts.map((prompt) => {
+                    const displayPrompt = getDisplayPrompt(prompt);
+                    const versions = promptVersions[prompt.id] || [];
+                    const selectedVersion = selectedVersions[prompt.id] || prompt.version;
+
+                    return (
+                        <Grid item xs={12} md={6} lg={4} key={prompt.id}>
+                            <Card>
+                                <CardContent>
+                                    {/* Header with name and actions */}
+                                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                                        <Box flexGrow={1}>
+                                            <Box display="flex" alignItems="center" mb={1}>
+                                                {displayPrompt.type === 'simple' && <CodeIcon sx={{ mr: 1, color: 'primary.main' }} />}
+                                                {displayPrompt.type === 'tool-aware' && <ScienceIcon sx={{ mr: 1, color: 'warning.main' }} />}
+                                                {displayPrompt.type === 'workflow-aware' && <WorkflowIcon sx={{ mr: 1, color: 'success.main' }} />}
+                                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                                    {displayPrompt.name || 'Unnamed Prompt'}
+                                                </Typography>
+                                            </Box>
+
+                                            {/* ID display with copy functionality */}
+                                            <Box display="flex" alignItems="center" mb={1}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                                    ID: {prompt.id.substring(0, 8)}...
+                                                </Typography>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => copyToClipboard(prompt.id)}
+                                                    title="Copy full ID"
+                                                    sx={{ ml: 0.5, p: 0.25 }}
+                                                >
+                                                    <CopyIcon sx={{ fontSize: '12px' }} />
+                                                </IconButton>
+                                            </Box>
+
+                                            {/* Type badge and Version selector */}
+                                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                                <Chip
+                                                    label={displayPrompt.type}
+                                                    size="small"
+                                                    sx={{
+                                                        textTransform: 'capitalize',
+                                                        bgcolor: displayPrompt.type === 'simple' ? 'primary.light' :
+                                                            displayPrompt.type === 'tool-aware' ? 'warning.light' : 'success.light'
+                                                    }}
+                                                />
+
+                                                {/* Version selector */}
+                                                {versions.length > 1 && (
+                                                    <FormControl size="small" sx={{ minWidth: 80 }}>
+                                                        <Select
+                                                            value={selectedVersion}
+                                                            onChange={(e) => handleVersionChange(prompt.id, e.target.value as number)}
+                                                            displayEmpty
+                                                            sx={{
+                                                                height: 24,
+                                                                fontSize: '0.75rem',
+                                                                '& .MuiSelect-select': {
+                                                                    py: 0.5,
+                                                                    px: 1
+                                                                }
+                                                            }}
+                                                        >
+                                                            {versions.map((version) => (
+                                                                <MenuItem key={version.version} value={version.version}>
+                                                                    v{version.version}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                )}
+
+                                                {/* Current version indicator if only one version */}
+                                                {versions.length <= 1 && (
+                                                    <Chip
+                                                        label={`v${displayPrompt.version}`}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="primary"
+                                                    />
+                                                )}
+                                            </Box>
+
+                                            {/* Prompt text preview */}
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                {displayPrompt.text.length > 100 ? `${displayPrompt.text.substring(0, 100)}...` : displayPrompt.text}
                                             </Typography>
                                         </Box>
 
-                                        {/* ID display with copy functionality */}
-                                        <Box display="flex" alignItems="center" mb={1}>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                                ID: {prompt.id.substring(0, 8)}...
-                                            </Typography>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => copyToClipboard(prompt.id)}
-                                                title="Copy full ID"
-                                                sx={{ ml: 0.5, p: 0.25 }}
-                                            >
-                                                <CopyIcon sx={{ fontSize: '12px' }} />
+                                        {/* Action buttons */}
+                                        <Box>
+                                            <IconButton size="small" onClick={() => openEditDialog(prompt)}>
+                                                <EditIcon />
+                                            </IconButton>
+                                            <IconButton size="small" onClick={() => handleDeletePrompt(prompt.id)}>
+                                                <DeleteIcon />
                                             </IconButton>
                                         </Box>
-
-                                        {/* Type badge */}
-                                        <Chip
-                                            label={prompt.type}
-                                            size="small"
-                                            sx={{
-                                                mb: 1,
-                                                textTransform: 'capitalize',
-                                                bgcolor: prompt.type === 'simple' ? 'primary.light' :
-                                                    prompt.type === 'tool-aware' ? 'warning.light' : 'success.light'
-                                            }}
-                                        />
-
-                                        {/* Prompt text preview */}
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            {prompt.text.length > 100 ? `${prompt.text.substring(0, 100)}...` : prompt.text}
-                                        </Typography>
                                     </Box>
 
-                                    {/* Action buttons */}
-                                    <Box>
-                                        <IconButton size="small" onClick={() => openEditDialog(prompt)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => handleDeletePrompt(prompt.id)}>
-                                            <DeleteIcon />
-                                        </IconButton>
+                                    {/* Tags */}
+                                    <Box mb={2}>
+                                        {displayPrompt.tags.map((tag) => (
+                                            <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />
+                                        ))}
                                     </Box>
-                                </Box>
 
-                                {/* Tags */}
-                                <Box mb={2}>
-                                    {prompt.tags.map((tag) => (
-                                        <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />
-                                    ))}
-                                </Box>
-
-                                {/* Test cases info and actions */}
-                                <Box display="flex" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {prompt.test_cases.length} test case{prompt.test_cases.length !== 1 ? 's' : ''}
-                                        </Typography>
-                                        {prompt.test_cases.length > 0 && (
-                                            <Typography variant="caption" display="block" color="text.secondary">
-                                                {prompt.test_cases.filter(tc => tc.enabled).length} enabled
+                                    {/* Test cases info and actions */}
+                                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {displayPrompt.test_cases.length} test case{displayPrompt.test_cases.length !== 1 ? 's' : ''}
                                             </Typography>
-                                        )}
+                                            {displayPrompt.test_cases.length > 0 && (
+                                                <Typography variant="caption" display="block" color="text.secondary">
+                                                    {displayPrompt.test_cases.filter(tc => tc.enabled).length} enabled
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                        <Button
+                                            startIcon={<PlayIcon />}
+                                            onClick={() => openTestDialog(prompt)}
+                                            variant="outlined"
+                                            size="small"
+                                            disabled={displayPrompt.test_cases.length === 0}
+                                        >
+                                            Test
+                                        </Button>
                                     </Box>
-                                    <Button
-                                        startIcon={<PlayIcon />}
-                                        onClick={() => openTestDialog(prompt)}
-                                        variant="outlined"
-                                        size="small"
-                                        disabled={prompt.test_cases.length === 0}
-                                    >
-                                        Test
-                                    </Button>
-                                </Box>
 
-                                {/* Version and metadata */}
-                                <Box mt={1} pt={1} borderTop="1px solid" borderColor="divider">
-                                    <Typography variant="caption" color="text.secondary">
-                                        v{prompt.version} • Created by {prompt.created_by} • {new Date(prompt.created_at).toLocaleDateString()}
-                                    </Typography>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
+                                    {/* Version and metadata */}
+                                    <Box mt={1} pt={1} borderTop="1px solid" borderColor="divider">
+                                        <Typography variant="caption" color="text.secondary">
+                                            v{displayPrompt.version} • Created by {displayPrompt.created_by} • {new Date(displayPrompt.created_at).toLocaleDateString()}
+                                            {selectedVersion !== prompt.version && (
+                                                <Typography component="span" sx={{ ml: 1, color: 'warning.main', fontWeight: 'bold' }}>
+                                                    (Viewing older version)
+                                                </Typography>
+                                            )}
+                                        </Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    );
+                })}
             </Grid>
 
             {/* Show message if no prompts */}

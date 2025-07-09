@@ -631,6 +631,28 @@ app.post('/prompts/:id/test', async (req, res) => {
                 Math.max(1, results.filter(r => 'comparison_score' in r && r.comparison_score !== undefined).length)
         };
 
+        // Create test response object
+        const testResponse = {
+            prompt_id: req.params.id,
+            prompt_text: prompt.text,
+            results,
+            llm_comparisons: request.enable_comparison ? llmComparisons : undefined,
+            summary
+        };
+
+        // Save test results to database
+        try {
+            await db.saveTestResults(
+                testResponse,
+                prompt.version,
+                llmConfigs,
+                req.headers['x-user-id'] as string || 'anonymous'
+            );
+        } catch (saveError) {
+            console.error('Failed to save test results:', saveError);
+            // Continue without failing the request - test results are still returned
+        }
+
         // Publish event
         // await eventBus.publishEvent({
         //     event_type: 'prompt_tested',
@@ -646,14 +668,365 @@ app.post('/prompts/:id/test', async (req, res) => {
 
         return res.json({
             success: true,
-            data: {
-                prompt_id: req.params.id,
-                prompt_text: prompt.text,
-                results,
-                llm_comparisons: request.enable_comparison ? llmComparisons : undefined,
-                summary
-            }
+            data: testResponse
         });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/test-results:
+ *   get:
+ *     summary: Get saved test results for a prompt
+ *     description: Retrieve the most recent test results for a specific prompt, optionally filtered by version
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: query
+ *         name: version
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Specific prompt version to get results for
+ *     responses:
+ *       200:
+ *         description: Test results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/TestPromptResponse'
+ *       404:
+ *         description: Prompt or test results not found
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/prompts/:id/test-results', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+        const version = req.query.version ? parseInt(req.query.version as string, 10) : undefined;
+
+        const testResults = await db.getTestResults(promptId, version);
+
+        if (!testResults) {
+            return res.status(404).json({
+                success: false,
+                error: 'No test results found for this prompt' + (version ? ` version ${version}` : '')
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: testResults
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/test-history:
+ *   get:
+ *     summary: Get test execution history for a prompt
+ *     description: Retrieve the history of all test executions for a specific prompt across all versions
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *     responses:
+ *       200:
+ *         description: Test history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       execution_id:
+ *                         type: string
+ *                       prompt_version:
+ *                         type: integer
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       total_tests:
+ *                         type: integer
+ *                       passed_tests:
+ *                         type: integer
+ *                       failed_tests:
+ *                         type: integer
+ *                       avg_comparison_score:
+ *                         type: number
+ *       404:
+ *         description: Prompt not found
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/prompts/:id/test-history', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+
+        // Check if prompt exists
+        const prompt = await db.getPromptById(promptId);
+        if (!prompt) {
+            return res.status(404).json({ success: false, error: 'Prompt not found' });
+        }
+
+        const testHistory = await db.getTestHistory(promptId);
+
+        return res.json({
+            success: true,
+            data: testHistory
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/versions:
+ *   get:
+ *     summary: Get all versions of a prompt
+ *     description: Retrieve all versions of a specific prompt with basic information
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *     responses:
+ *       200:
+ *         description: Prompt versions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       version:
+ *                         type: integer
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
+ *                       text:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       tags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *       404:
+ *         description: Prompt not found
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/prompts/:id/versions', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+
+        // Check if prompt exists
+        const prompt = await db.getPromptById(promptId);
+        if (!prompt) {
+            return res.status(404).json({ success: false, error: 'Prompt not found' });
+        }
+
+        const versions = await db.getAllVersions(promptId);
+
+        return res.json({
+            success: true,
+            data: versions
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/version/{version}:
+ *   get:
+ *     summary: Get a specific version of a prompt
+ *     description: Retrieve a specific version of a prompt with full details
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: path
+ *         name: version
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The version number
+ *     responses:
+ *       200:
+ *         description: Prompt version retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Prompt'
+ *       404:
+ *         description: Prompt or version not found
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/prompts/:id/version/:version', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+        const version = parseInt(req.params.version, 10);
+
+        if (isNaN(version)) {
+            return res.status(400).json({ success: false, error: 'Invalid version number' });
+        }
+
+        const prompt = await db.getPromptByVersion(promptId, version);
+
+        if (!prompt) {
+            return res.status(404).json({
+                success: false,
+                error: `Prompt version ${version} not found`
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: prompt
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/version/{version}:
+ *   put:
+ *     summary: Update a specific version of a prompt
+ *     description: Update a specific version of a prompt with new data
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: path
+ *         name: version
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The version number to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdatePromptRequest'
+ *     responses:
+ *       200:
+ *         description: Prompt version updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Prompt'
+ *       404:
+ *         description: Prompt version not found
+ *       500:
+ *         description: Internal server error
+ */
+app.put('/prompts/:id/version/:version', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+        const version = parseInt(req.params.version, 10);
+        const request: UpdatePromptRequest = req.body;
+
+        if (isNaN(version)) {
+            return res.status(400).json({ success: false, error: 'Invalid version number' });
+        }
+
+        let updateData: any = { ...request };
+        if (request.test_cases) {
+            updateData.test_cases = request.test_cases.map(tc => ({
+                ...tc,
+                id: (tc as any).id || uuidv4(),
+                enabled: typeof tc.enabled === 'boolean' ? tc.enabled : true
+            }));
+        } else {
+            delete updateData.test_cases;
+        }
+
+        const updatedPrompt = await db.updatePromptVersion(promptId, version, updateData);
+        if (!updatedPrompt) {
+            return res.status(404).json({ success: false, error: 'Prompt version not found' });
+        }
+
+        // TODO: Publish event to event bus after refactor
+
+        return res.json({ success: true, data: updatedPrompt });
     } catch (error) {
         return res.status(500).json({
             success: false,
