@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2025-07-10
+
+### Added
+- **Comprehensive Prompt Management System**: Advanced prompt testing and management interface
+  - Full CRUD operations for prompt templates with versioning support
+  - Integrated test case management with LLM integration for validation
+  - Real-time testing interface with detailed result analysis and comparison
+  - API key configuration status monitoring for OpenAI integration
+- **Enhanced User Interface**: Modern React-based PromptManager with intuitive workflows
+  - Create, edit, and delete prompt templates with rich text editing
+  - Test result detail view with expandable response analysis
+  - Help dialog system with contextual guidance
+  - Event-bus service for seamless component communication
+- **Database Migration Support**: Robust database schema evolution
+  - Automatic migration system for prompt database schema updates
+  - Support for adding new fields (name field) to existing prompt records
+  - Backward compatibility preservation during schema changes
+
+### Enhanced
+- Prompt database architecture with comprehensive field support
+- LLM integration capabilities with OpenAI service connectivity
+- Test case removal and management functionality
+- UI responsiveness and user experience improvements
+
+### Fixed
+- Database schema compatibility issues during prompt system evolution
+- UI state management in PromptManager components
+- Test result handling and display consistency
+
 ## [0.13.1] - 2025-06-27
 
 ### Added
