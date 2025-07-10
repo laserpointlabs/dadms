@@ -31,6 +31,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
     FormControl,
     FormControlLabel,
     Grid,
@@ -206,14 +207,41 @@ const PromptManager: React.FC = () => {
         }
     };
 
-    const openTestDialog = (prompt: Prompt) => {
+    const openTestDialog = async (prompt: Prompt) => {
         const displayPrompt = getDisplayPrompt(prompt);
         setSelectedPrompt(displayPrompt);
-        setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+        setTabValue(0); // Reset to Configuration tab
         setIsTestDialogOpen(true);
+
+        // Load saved test configuration
+        try {
+            const configResponse = await promptService.getTestConfig(displayPrompt.id, displayPrompt.version);
+            if (configResponse.data.data.llm_configs && configResponse.data.data.llm_configs.length > 0) {
+                setLLMConfigs(configResponse.data.data.llm_configs);
+            }
+            if (configResponse.data.data.test_case_ids && configResponse.data.data.test_case_ids.length > 0) {
+                setSelectedTestCases(configResponse.data.data.test_case_ids);
+            } else {
+                // Default to enabled test cases if no saved selection
+                setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+            }
+        } catch (err) {
+            // If no saved config, use defaults
+            setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+        }
 
         // Load previous test results for the selected version
         loadPreviousTestResults(displayPrompt.id);
+    };
+
+    const closeTestDialog = () => {
+        setIsTestDialogOpen(false);
+        setTabValue(0); // Reset to Configuration tab
+        setTestResults(null); // Clear test results
+        setTestHistory([]); // Clear test history
+        setSelectedPrompt(null); // Clear selected prompt
+        setSelectedTestCases([]); // Clear selected test cases
+        setTestLoading(false); // Reset loading state
     };
 
     const loadPreviousTestResults = async (promptId: string) => {
@@ -245,6 +273,8 @@ const PromptManager: React.FC = () => {
             setTestLoading(true);
             const response = await promptService.getTestResults(promptId, version);
             setTestResults(response.data.data);
+            // Switch to Results tab to show the loaded results
+            setTabValue(2);
         } catch (err) {
             console.error(`Failed to load test results for version ${version}:`, err);
             setError('Failed to load test results for selected version');
@@ -496,6 +526,121 @@ const PromptManager: React.FC = () => {
         }
     };
 
+    const handleDeletePromptVersion = async (promptId: string, version: number) => {
+        const versions = promptVersions[promptId] || [];
+        const versionCount = versions.length;
+
+        const message = versionCount <= 1
+            ? 'This is the only version. Deleting it will delete the entire prompt. Are you sure?'
+            : `Are you sure you want to delete version ${version}?`;
+
+        if (!window.confirm(message)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await promptService.deletePromptVersion(promptId, version);
+
+            if (versionCount <= 1) {
+                // The entire prompt was deleted
+                setPrompts(prompts.filter(p => p.id !== promptId));
+
+                // Clean up version-related state
+                setSelectedVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[promptId];
+                    return updated;
+                });
+
+                setPromptVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[promptId];
+                    return updated;
+                });
+
+                setVersionedPrompts(prev => {
+                    const updated = { ...prev };
+                    Object.keys(updated).forEach(key => {
+                        if (key.startsWith(`${promptId}-`)) {
+                            delete updated[key];
+                        }
+                    });
+                    return updated;
+                });
+            } else {
+                // Only the version was deleted, reload versions
+                await loadPromptVersions(promptId);
+
+                // If we deleted the selected version, select the latest version
+                if (selectedVersions[promptId] === version) {
+                    const remainingVersions = promptVersions[promptId]?.filter(v => v.version !== version) || [];
+                    if (remainingVersions.length > 0) {
+                        const latestVersion = Math.max(...remainingVersions.map(v => v.version));
+                        setSelectedVersions(prev => ({ ...prev, [promptId]: latestVersion }));
+                    }
+                }
+
+                // Remove the specific version from versionedPrompts
+                setVersionedPrompts(prev => {
+                    const updated = { ...prev };
+                    delete updated[`${promptId}-${version}`];
+                    return updated;
+                });
+
+                // Reload prompts to get updated version info
+                await loadPrompts();
+            }
+
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete prompt version');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAllVersions = async (promptId: string) => {
+        if (!window.confirm('Are you sure you want to delete ALL versions of this prompt? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await promptService.deleteAllPromptVersions(promptId);
+            setPrompts(prompts.filter(p => p.id !== promptId));
+
+            // Clean up version-related state for deleted prompt
+            setSelectedVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setPromptVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setVersionedPrompts(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(key => {
+                    if (key.startsWith(`${promptId}-`)) {
+                        delete updated[key];
+                    }
+                });
+                return updated;
+            });
+
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete all prompt versions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateEditingPrompt = (field: keyof Prompt, value: any) => {
         console.log('Updating field:', field, 'with value:', value, 'current editingPrompt:', editingPrompt);
         if (!editingPrompt) {
@@ -709,9 +854,117 @@ const PromptManager: React.FC = () => {
         setLLMConfigs(llmConfigs.filter((_: LLMConfig, i: number) => i !== index));
     };
 
+    const saveTestConfiguration = async () => {
+        if (!selectedPrompt) return;
+
+        try {
+            await promptService.saveTestConfig(
+                selectedPrompt.id,
+                selectedPrompt.version,
+                llmConfigs,
+                selectedTestCases
+            );
+        } catch (err) {
+            console.error('Failed to save test configuration:', err);
+        }
+    };
+
     const renderTestResults = () => {
         if (!testResults) return null;
 
+        // Check if testResults is an array (from getTestResults) or has a summary (from testPrompt)
+        const isArrayResponse = Array.isArray(testResults);
+        const hasResults = isArrayResponse ? testResults.length > 0 : testResults.results && testResults.results.length > 0;
+
+        if (!hasResults) {
+            return (
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        No test results available
+                    </Typography>
+                </Box>
+            );
+        }
+
+        // Handle array response (from getTestResults endpoint)
+        if (isArrayResponse) {
+            return (
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Previous Test Results
+                    </Typography>
+
+                    {/* Simple table for array results */}
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Test Case</TableCell>
+                                    <TableCell>Status</TableCell>
+                                    <TableCell>Score</TableCell>
+                                    <TableCell>Execution Time</TableCell>
+                                    <TableCell>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {testResults.map((result: any, index: number) => (
+                                    <TableRow key={result.id || index} hover>
+                                        <TableCell>{result.test_case_name || 'Unknown'}</TableCell>
+                                        <TableCell>
+                                            {result.passed ? (
+                                                <Chip
+                                                    icon={<CheckCircleIcon />}
+                                                    label="Passed"
+                                                    color="success"
+                                                    size="small"
+                                                />
+                                            ) : (
+                                                <Chip
+                                                    icon={<ErrorIcon />}
+                                                    label="Failed"
+                                                    color="error"
+                                                    size="small"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {result.score !== null && result.score !== undefined ?
+                                                `${(result.score * 100).toFixed(1)}%` : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {new Date(result.execution_time).toLocaleString()}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    setSelectedTestResult({
+                                                        test_case_id: result.test_case_id,
+                                                        test_case_name: result.test_case_name,
+                                                        passed: result.passed,
+                                                        actual_output: result.actual_output,
+                                                        expected_output: {},
+                                                        comparison_score: result.score,
+                                                        execution_time_ms: 0,
+                                                        error: result.error_message
+                                                    });
+                                                    setTestResultDetailOpen(true);
+                                                }}
+                                            >
+                                                View Details
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Box>
+            );
+        }
+
+        // Handle full response with summary (from testPrompt endpoint)
         return (
             <Box sx={{ mt: 2 }}>
                 <Typography variant="h6" gutterBottom>
@@ -719,49 +972,51 @@ const PromptManager: React.FC = () => {
                 </Typography>
 
                 {/* Summary Card */}
-                <Card sx={{ mb: 2 }}>
-                    <CardContent>
-                        <Grid container spacing={2}>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="primary">
-                                    {testResults.summary.total}
-                                </Typography>
-                                <Typography variant="body2">Total Tests</Typography>
+                {testResults.summary && (
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Grid container spacing={2}>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="primary">
+                                        {testResults.summary.total}
+                                    </Typography>
+                                    <Typography variant="body2">Total Tests</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="success.main">
+                                        {testResults.summary.passed}
+                                    </Typography>
+                                    <Typography variant="body2">Passed</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="error.main">
+                                        {testResults.summary.failed}
+                                    </Typography>
+                                    <Typography variant="body2">Failed</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4">
+                                        {testResults.summary.execution_time_ms}ms
+                                    </Typography>
+                                    <Typography variant="body2">Execution Time</Typography>
+                                </Grid>
                             </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="success.main">
-                                    {testResults.summary.passed}
-                                </Typography>
-                                <Typography variant="body2">Passed</Typography>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="error.main">
-                                    {testResults.summary.failed}
-                                </Typography>
-                                <Typography variant="body2">Failed</Typography>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4">
-                                    {testResults.summary.execution_time_ms}ms
-                                </Typography>
-                                <Typography variant="body2">Execution Time</Typography>
-                            </Grid>
-                        </Grid>
 
-                        {testResults.summary.avg_comparison_score !== undefined && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="body2" gutterBottom>
-                                    Average Comparison Score: {(testResults.summary.avg_comparison_score * 100).toFixed(1)}%
-                                </Typography>
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={testResults.summary.avg_comparison_score * 100}
-                                    sx={{ height: 8, borderRadius: 4 }}
-                                />
-                            </Box>
-                        )}
-                    </CardContent>
-                </Card>
+                            {testResults.summary.avg_comparison_score !== undefined && (
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" gutterBottom>
+                                        Average Comparison Score: {(testResults.summary.avg_comparison_score * 100).toFixed(1)}%
+                                    </Typography>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={testResults.summary.avg_comparison_score * 100}
+                                        sx={{ height: 8, borderRadius: 4 }}
+                                    />
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Detailed Results */}
                 <TableContainer component={Paper}>
@@ -891,146 +1146,6 @@ const PromptManager: React.FC = () => {
                     </Box>
                 )}
 
-                {/* Test Result Detail Dialog */}
-                <Dialog
-                    open={testResultDetailOpen}
-                    onClose={() => setTestResultDetailOpen(false)}
-                    maxWidth="md"
-                    fullWidth
-                    PaperProps={{
-                        sx: { maxHeight: '80vh' }
-                    }}
-                >
-                    <DialogTitle>
-                        Test Result Details: {selectedTestResult?.test_case_name}
-                    </DialogTitle>
-                    <DialogContent>
-                        {selectedTestResult && (
-                            <Box>
-                                {/* Status */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Status
-                                    </Typography>
-                                    <Chip
-                                        icon={selectedTestResult.passed ? <CheckCircleIcon /> : <ErrorIcon />}
-                                        label={selectedTestResult.passed ? "Passed" : "Failed"}
-                                        color={selectedTestResult.passed ? "success" : "error"}
-                                        size="small"
-                                    />
-                                </Box>
-
-                                {/* LLM Response */}
-                                {selectedTestResult.llm_response && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            LLM Response
-                                        </Typography>
-                                        <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                {selectedTestResult.llm_response.content}
-                                            </Typography>
-                                        </Paper>
-                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                            Provider: {selectedTestResult.llm_response.provider} |
-                                            Model: {selectedTestResult.llm_response.model} |
-                                            Tokens: {selectedTestResult.llm_response.usage?.total_tokens || 0} |
-                                            Time: {selectedTestResult.llm_response.response_time_ms}ms
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {/* Test Input */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Test Input
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        {selectedTestResult.test_input ? (
-                                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                {JSON.stringify(selectedTestResult.test_input, null, 2)}
-                                            </pre>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">
-                                                Test input data not available
-                                            </Typography>
-                                        )}
-                                    </Paper>
-                                </Box>
-
-                                {/* Expected Output */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Expected Output
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                            {JSON.stringify(selectedTestResult.expected_output, null, 2)}
-                                        </pre>
-                                    </Paper>
-                                </Box>
-
-                                {/* Actual Output */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Actual Output
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                            {selectedTestResult.actual_output}
-                                        </Typography>
-                                    </Paper>
-                                </Box>
-
-                                {/* Comparison Score */}
-                                {selectedTestResult.comparison_score !== undefined && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Comparison Score
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Typography variant="h4" color="primary">
-                                                {(selectedTestResult.comparison_score * 100).toFixed(1)}%
-                                            </Typography>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={selectedTestResult.comparison_score * 100}
-                                                sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
-                                            />
-                                        </Box>
-                                    </Box>
-                                )}
-
-                                {/* Error (if any) */}
-                                {selectedTestResult.error && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Error
-                                        </Typography>
-                                        <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-                                            <Typography variant="body2">
-                                                {selectedTestResult.error}
-                                            </Typography>
-                                        </Paper>
-                                    </Box>
-                                )}
-
-                                {/* Execution Time */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Execution Time
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        {selectedTestResult.execution_time_ms}ms
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setTestResultDetailOpen(false)}>Close</Button>
-                    </DialogActions>
-                </Dialog>
             </Box>
         );
     };
@@ -1057,55 +1172,68 @@ const PromptManager: React.FC = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {testHistory.map((execution) => (
-                                <TableRow key={execution.execution_id} hover>
-                                    <TableCell>
-                                        <Chip
-                                            label={`v${execution.prompt_version}`}
-                                            size="small"
-                                            color="primary"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {new Date(execution.created_at).toLocaleDateString()}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {new Date(execution.created_at).toLocaleTimeString()}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>{execution.total_tests}</TableCell>
-                                    <TableCell>
-                                        <Typography color="success.main">
-                                            {execution.passed_tests}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography color="error.main">
-                                            {execution.failed_tests}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        {execution.avg_comparison_score ? (
-                                            <Typography variant="body2">
-                                                {(execution.avg_comparison_score * 100).toFixed(1)}%
+                            {testHistory.map((execution) => {
+                                const executionDate = new Date(execution.created_at);
+                                const isValidDate = !isNaN(executionDate.getTime());
+
+                                return (
+                                    <TableRow key={execution.execution_id} hover>
+                                        <TableCell>
+                                            <Chip
+                                                label={`v${execution.prompt_version}`}
+                                                size="small"
+                                                color="primary"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {isValidDate ? (
+                                                <>
+                                                    <Typography variant="body2">
+                                                        {executionDate.toLocaleDateString()}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {executionDate.toLocaleTimeString()}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Invalid date
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>{execution.total_tests}</TableCell>
+                                        <TableCell>
+                                            <Typography color="success.main">
+                                                {execution.passed_tests}
                                             </Typography>
-                                        ) : (
-                                            '-'
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => selectedPrompt && loadTestResultsForVersion(selectedPrompt.id, execution.prompt_version)}
-                                            disabled={testLoading}
-                                        >
-                                            View Results
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography color="error.main">
+                                                {execution.failed_tests}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            {execution.avg_comparison_score !== null && execution.avg_comparison_score !== undefined ? (
+                                                <Typography variant="body2">
+                                                    {(execution.avg_comparison_score * 100).toFixed(1)}%
+                                                </Typography>
+                                            ) : (
+                                                '-'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => selectedPrompt && loadTestResultsForVersion(selectedPrompt.id, execution.prompt_version)}
+                                                disabled={testLoading}
+                                            >
+                                                View Results
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -1142,14 +1270,24 @@ const PromptManager: React.FC = () => {
                                         <ScienceIcon sx={{ fontSize: 16 }} />
                                     </IconButton>
                                 </Box>
-                                <Button
-                                    startIcon={<AddIcon />}
-                                    onClick={handleAddLLMConfig}
-                                    variant="outlined"
-                                    size="small"
-                                >
-                                    Add LLM
-                                </Button>
+                                <Box>
+                                    <Button
+                                        onClick={saveTestConfiguration}
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{ mr: 1 }}
+                                    >
+                                        Save Config
+                                    </Button>
+                                    <Button
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddLLMConfig}
+                                        variant="outlined"
+                                        size="small"
+                                    >
+                                        Add LLM
+                                    </Button>
+                                </Box>
                             </Box>
 
                             {/* API Key Configuration Status */}
@@ -1397,7 +1535,7 @@ const PromptManager: React.FC = () => {
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setIsTestDialogOpen(false)}>Close</Button>
+                <Button onClick={closeTestDialog}>Close</Button>
                 <Button
                     onClick={handleTest}
                     variant="contained"
@@ -2371,37 +2509,80 @@ const PromptManager: React.FC = () => {
 
                                                 {/* Version selector */}
                                                 {versions.length > 1 && (
-                                                    <FormControl size="small" sx={{ minWidth: 80 }}>
-                                                        <Select
-                                                            value={selectedVersion}
-                                                            onChange={(e) => handleVersionChange(prompt.id, e.target.value as number)}
-                                                            displayEmpty
+                                                    <>
+                                                        <FormControl size="small" sx={{ minWidth: 80 }}>
+                                                            <Select
+                                                                value={selectedVersion}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === 'delete-all') {
+                                                                        handleDeleteAllVersions(prompt.id);
+                                                                    } else {
+                                                                        handleVersionChange(prompt.id, value as number);
+                                                                    }
+                                                                }}
+                                                                displayEmpty
+                                                                sx={{
+                                                                    height: 24,
+                                                                    fontSize: '0.75rem',
+                                                                    '& .MuiSelect-select': {
+                                                                        py: 0.5,
+                                                                        px: 1
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {versions.map((version) => (
+                                                                    <MenuItem key={version.version} value={version.version}>
+                                                                        v{version.version}
+                                                                    </MenuItem>
+                                                                ))}
+                                                                <Divider />
+                                                                <MenuItem value="delete-all" sx={{ color: 'error.main' }}>
+                                                                    🗑️ Delete All Versions
+                                                                </MenuItem>
+                                                            </Select>
+                                                        </FormControl>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDeletePromptVersion(prompt.id, selectedVersion)}
+                                                            title={`Delete version ${selectedVersion}`}
                                                             sx={{
-                                                                height: 24,
-                                                                fontSize: '0.75rem',
-                                                                '& .MuiSelect-select': {
-                                                                    py: 0.5,
-                                                                    px: 1
+                                                                ml: 0.5,
+                                                                p: 0.5,
+                                                                '&:hover': {
+                                                                    color: 'error.main'
                                                                 }
                                                             }}
                                                         >
-                                                            {versions.map((version) => (
-                                                                <MenuItem key={version.version} value={version.version}>
-                                                                    v{version.version}
-                                                                </MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </FormControl>
+                                                            <DeleteIcon sx={{ fontSize: 16 }} />
+                                                        </IconButton>
+                                                    </>
                                                 )}
 
                                                 {/* Current version indicator if only one version */}
                                                 {versions.length <= 1 && (
-                                                    <Chip
-                                                        label={`v${displayPrompt.version}`}
-                                                        size="small"
-                                                        variant="outlined"
-                                                        color="primary"
-                                                    />
+                                                    <>
+                                                        <Chip
+                                                            label={`v${displayPrompt.version}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="primary"
+                                                        />
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDeletePromptVersion(prompt.id, displayPrompt.version)}
+                                                            title="Delete this version (will delete entire prompt)"
+                                                            sx={{
+                                                                ml: 0.5,
+                                                                p: 0.5,
+                                                                '&:hover': {
+                                                                    color: 'error.main'
+                                                                }
+                                                            }}
+                                                        >
+                                                            <DeleteIcon sx={{ fontSize: 16 }} />
+                                                        </IconButton>
+                                                    </>
                                                 )}
                                             </Box>
 
@@ -2494,6 +2675,147 @@ const PromptManager: React.FC = () => {
             {renderEditDialog()}
             {renderCreateDialog()}
             {renderHelpDialog()}
+
+            {/* Test Result Detail Dialog */}
+            <Dialog
+                open={testResultDetailOpen}
+                onClose={() => setTestResultDetailOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { maxHeight: '80vh' }
+                }}
+            >
+                <DialogTitle>
+                    Test Result Details: {selectedTestResult?.test_case_name}
+                </DialogTitle>
+                <DialogContent>
+                    {selectedTestResult && (
+                        <Box>
+                            {/* Status */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Status
+                                </Typography>
+                                <Chip
+                                    icon={selectedTestResult.passed ? <CheckCircleIcon /> : <ErrorIcon />}
+                                    label={selectedTestResult.passed ? "Passed" : "Failed"}
+                                    color={selectedTestResult.passed ? "success" : "error"}
+                                    size="small"
+                                />
+                            </Box>
+
+                            {/* LLM Response */}
+                            {selectedTestResult.llm_response && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        LLM Response
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {selectedTestResult.llm_response.content}
+                                        </Typography>
+                                    </Paper>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                        Provider: {selectedTestResult.llm_response.provider} |
+                                        Model: {selectedTestResult.llm_response.model} |
+                                        Tokens: {selectedTestResult.llm_response.usage?.total_tokens || 0} |
+                                        Time: {selectedTestResult.llm_response.response_time_ms}ms
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {/* Test Input */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Test Input
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    {selectedTestResult.test_input ? (
+                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {JSON.stringify(selectedTestResult.test_input, null, 2)}
+                                        </pre>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Test input data not available
+                                        </Typography>
+                                    )}
+                                </Paper>
+                            </Box>
+
+                            {/* Expected Output */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Expected Output
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        {JSON.stringify(selectedTestResult.expected_output, null, 2)}
+                                    </pre>
+                                </Paper>
+                            </Box>
+
+                            {/* Actual Output */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Actual Output
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        {selectedTestResult.actual_output}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+
+                            {/* Comparison Score */}
+                            {selectedTestResult.comparison_score !== undefined && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Comparison Score
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Typography variant="h4" color="primary">
+                                            {(selectedTestResult.comparison_score * 100).toFixed(1)}%
+                                        </Typography>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={selectedTestResult.comparison_score * 100}
+                                            sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
+                                        />
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* Error (if any) */}
+                            {selectedTestResult.error && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Error
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+                                        <Typography variant="body2">
+                                            {selectedTestResult.error}
+                                        </Typography>
+                                    </Paper>
+                                </Box>
+                            )}
+
+                            {/* Execution Time */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Execution Time
+                                </Typography>
+                                <Typography variant="body1">
+                                    {selectedTestResult.execution_time_ms}ms
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setTestResultDetailOpen(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

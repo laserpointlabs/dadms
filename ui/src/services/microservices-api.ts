@@ -275,6 +275,16 @@ export const promptService = {
         return promptApi.delete(`/prompts/${id}`);
     },
 
+    // Delete specific version of a prompt
+    deletePromptVersion: async (id: string, version: number): Promise<AxiosResponse<void>> => {
+        return promptApi.delete(`/prompts/${id}/version/${version}`);
+    },
+
+    // Delete all versions of a prompt
+    deleteAllPromptVersions: async (id: string): Promise<AxiosResponse<void>> => {
+        return promptApi.delete(`/prompts/${id}/all-versions`);
+    },
+
     // Test prompt with LLM
     testPrompt: async (id: string, testData?: TestPromptRequest): Promise<AxiosResponse<{ success: boolean; data: TestPromptResponse }>> => {
         return promptApi.post(`/prompts/${id}/test`, testData || {});
@@ -333,6 +343,20 @@ export const promptService = {
     // Get LLM configuration status
     getLLMConfigStatus: async (): Promise<AxiosResponse<{ success: boolean; data: LLMConfigStatus }>> => {
         return promptApi.get('/llms/config-status');
+    },
+
+    // Save test configuration (LLM configs and test case selections)
+    saveTestConfig: async (promptId: string, version: number, llmConfigs: LLMConfig[], testCaseIds: string[]): Promise<AxiosResponse<{ status: string; message: string }>> => {
+        return promptApi.post(`/prompts/${promptId}/test-config`, {
+            version,
+            llm_configs: llmConfigs,
+            test_case_ids: testCaseIds
+        });
+    },
+
+    // Get test configuration (LLM configs and test case selections)
+    getTestConfig: async (promptId: string, version: number): Promise<AxiosResponse<{ status: string; data: { llm_configs: LLMConfig[]; test_case_ids: string[] } }>> => {
+        return promptApi.get(`/prompts/${promptId}/test-config`, { params: { version } });
     },
 };
 
