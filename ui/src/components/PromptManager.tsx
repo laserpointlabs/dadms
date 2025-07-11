@@ -2637,6 +2637,52 @@ const PromptManager: React.FC = () => {
         </Dialog>
     );
 
+    const handleCopyPrompt = async (promptToCopy: any) => {
+        try {
+            setLoading(true);
+
+            // Create a copy of the prompt with modified name and new metadata
+            const copyRequest = {
+                name: `Copy of ${promptToCopy.name}`,
+                text: promptToCopy.text,
+                type: promptToCopy.type,
+                tags: [...(promptToCopy.tags || []), 'copy'], // Add 'copy' tag to distinguish
+                test_cases: promptToCopy.test_cases.map((tc: any) => ({
+                    name: tc.name,
+                    input: tc.input,
+                    expected_output: tc.expected_output,
+                    enabled: tc.enabled
+                })),
+                tool_dependencies: promptToCopy.tool_dependencies || [],
+                workflow_dependencies: promptToCopy.workflow_dependencies || [],
+                metadata: {
+                    ...promptToCopy.metadata,
+                    copied_from: promptToCopy.id,
+                    copied_at: new Date().toISOString()
+                }
+            };
+
+            const response = await promptService.createPrompt(copyRequest);
+            const newPrompt = response.data.data;
+
+            // Add the new prompt to the beginning of the prompts list
+            setPrompts([newPrompt, ...prompts]);
+
+            // Load versions for the new prompt (will be version 1)
+            await loadPromptVersions(newPrompt.id);
+
+            setError(null);
+
+            // Show success feedback
+            console.log(`Successfully created copy of prompt: ${newPrompt.name}`);
+        } catch (err) {
+            console.error('Error copying prompt:', err);
+            setError(err instanceof Error ? err.message : 'Failed to copy prompt');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -2845,6 +2891,14 @@ const PromptManager: React.FC = () => {
 
                                         {/* Action buttons */}
                                         <Box>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleCopyPrompt(displayPrompt)}
+                                                title="Copy prompt"
+                                                sx={{ mr: 0.5 }}
+                                            >
+                                                <CopyIcon />
+                                            </IconButton>
                                             <IconButton size="small" onClick={() => openEditDialog(prompt)}>
                                                 <EditIcon />
                                             </IconButton>
@@ -3071,4 +3125,4 @@ const PromptManager: React.FC = () => {
     );
 };
 
-export default PromptManager; 
+export default PromptManager;

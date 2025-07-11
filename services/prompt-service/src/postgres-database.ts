@@ -481,7 +481,7 @@ export class PostgresPromptDatabase {
         let query = `
             SELECT 
                 tr.*,
-                COALESCE(tc.name, tr.test_case_name, 'Unknown Test Case') as test_case_name
+                COALESCE(tc.name, 'Unknown Test Case') as test_case_name
             FROM test_results tr
             LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
             WHERE tr.prompt_id = $1
