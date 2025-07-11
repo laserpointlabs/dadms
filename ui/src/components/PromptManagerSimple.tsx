@@ -413,6 +413,114 @@ const PromptManagerSimple: React.FC = () => {
         }
     };
 
+    // Prompt templates for common use cases
+    const promptTemplates = {
+        decision: {
+            name: "Decision Making Prompt",
+            text: "Analyze the situation: {{situation}}\n\nConsider the following options:\n{{options}}\n\nEvaluate each option based on:\n- Pros and cons\n- Risk assessment\n- Expected outcomes\n\nProvide a clear recommendation with reasoning.",
+            description: "For making informed decisions between multiple options",
+            type: "decision",
+            test_cases: [
+                {
+                    id: "decision-test-1",
+                    name: "Business Decision Test",
+                    input: {
+                        situation: "Our startup needs to choose a technology stack",
+                        options: "React vs Vue.js for frontend development"
+                    },
+                    expected_output: "A structured analysis with recommendation",
+                    enabled: true
+                }
+            ]
+        },
+        calculation: {
+            name: "Calculation Prompt",
+            text: "Calculate the following: {{calculation}}\n\nShow your work step by step:\n1. Identify the problem\n2. List the given values\n3. Apply the appropriate formula\n4. Perform the calculation\n5. State the final answer with units\n\nProvide only the numerical result at the end: {{result}}",
+            description: "For mathematical calculations and problem solving",
+            type: "calculation",
+            test_cases: [
+                {
+                    id: "calc-test-1",
+                    name: "Basic Math Test",
+                    input: {
+                        calculation: "What is 15% of 240?"
+                    },
+                    expected_output: "36",
+                    enabled: true
+                }
+            ]
+        },
+        qa_focused: {
+            name: "Focused Q&A Prompt",
+            text: "Question: {{question}}\n\nContext: {{context}}\n\nProvide a focused, accurate answer that:\n- Directly addresses the question\n- Is based on the given context\n- Is concise but complete\n- Includes relevant details\n\nAnswer:",
+            description: "For answering specific questions with focused responses",
+            type: "qa",
+            test_cases: [
+                {
+                    id: "qa-test-1",
+                    name: "Context-based Question",
+                    input: {
+                        question: "What is the capital of France?",
+                        context: "European geography and major cities"
+                    },
+                    expected_output: "Paris",
+                    enabled: true
+                }
+            ]
+        },
+        analysis: {
+            name: "Analysis Prompt",
+            text: "Analyze the following {{subject}}: {{content}}\n\nProvide a comprehensive analysis including:\n- Key findings\n- Patterns or trends\n- Strengths and weaknesses\n- Implications\n- Recommendations\n\nStructure your response clearly with headers for each section.",
+            description: "For analyzing data, text, or situations",
+            type: "analysis",
+            test_cases: [
+                {
+                    id: "analysis-test-1",
+                    name: "Text Analysis Test",
+                    input: {
+                        subject: "customer feedback",
+                        content: "Product is great but shipping was slow"
+                    },
+                    expected_output: "Structured analysis with findings and recommendations",
+                    enabled: true
+                }
+            ]
+        },
+        classification: {
+            name: "Classification Prompt",
+            text: "Classify the following {{item}}: {{content}}\n\nAvailable categories: {{categories}}\n\nRules for classification:\n- Choose the most appropriate category\n- Provide confidence level (1-10)\n- Explain your reasoning briefly\n\nResponse format:\nCategory: [category name]\nConfidence: [1-10]\nReason: [brief explanation]",
+            description: "For categorizing or classifying content",
+            type: "classification",
+            test_cases: [
+                {
+                    id: "class-test-1",
+                    name: "Email Classification",
+                    input: {
+                        item: "email",
+                        content: "Urgent: Server down, need immediate assistance",
+                        categories: "urgent, normal, low-priority, spam"
+                    },
+                    expected_output: "Category: urgent\nConfidence: 9\nReason: Contains 'urgent' and describes critical issue",
+                    enabled: true
+                }
+            ]
+        }
+    };
+
+    const applyTemplate = (templateKey: string) => {
+        const template = promptTemplates[templateKey as keyof typeof promptTemplates];
+        if (template && editingPrompt) {
+            setEditingPrompt({
+                ...editingPrompt,
+                name: template.name,
+                text: template.text,
+                description: template.description,
+                type: template.type,
+                test_cases: template.test_cases
+            });
+        }
+    };
+
     // Render functions
     const renderPromptCard = (prompt: Prompt) => (
         <Card key={prompt.id} sx={{ mb: 2 }}>
@@ -715,6 +823,64 @@ const PromptManagerSimple: React.FC = () => {
                     {isCreating ? 'Create New Prompt' : 'Edit Prompt'}
                 </DialogTitle>
                 <DialogContent>
+                    {isCreating && (
+                        <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                            <Typography variant="h6" gutterBottom color="primary">
+                                🚀 Quick Start Templates
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 2 }}>
+                                Choose a template below to get started quickly, or create your own from scratch. Templates include example test cases and best practices.
+                            </Typography>
+
+                            <Box display="flex" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('decision')}
+                                    sx={{ mb: 1 }}
+                                >
+                                    🎯 Decision Making
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('calculation')}
+                                    sx={{ mb: 1 }}
+                                >
+                                    🧮 Calculations
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('qa_focused')}
+                                    sx={{ mb: 1 }}
+                                >
+                                    ❓ Q&A Focused
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('analysis')}
+                                    sx={{ mb: 1 }}
+                                >
+                                    📊 Analysis
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('classification')}
+                                    sx={{ mb: 1 }}
+                                >
+                                    🏷️ Classification
+                                </Button>
+                            </Box>
+
+                            <Typography variant="caption" color="text.secondary">
+                                💡 <strong>Tips:</strong> Use {'{'}{'{'} variable {'}'} {'}'} for dynamic content • Add test cases to validate your prompt • Consider edge cases in your testing
+                            </Typography>
+                        </Box>
+                    )}
+
                     <Box sx={{ mt: 1 }}>
                         <TextField
                             label="Name"
