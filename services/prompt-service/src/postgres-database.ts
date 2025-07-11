@@ -633,12 +633,30 @@ export class PostgresPromptDatabase {
 
     async getPromptTestSelections(promptId: string, version: number): Promise<string[]> {
         const result = await this.pool.query(`
-            SELECT test_case_id
+            SELECT test_case_id 
             FROM prompt_test_selections
             WHERE prompt_id = $1 AND prompt_version = $2 AND is_selected = true
         `, [promptId, version]);
 
         return result.rows.map(row => row.test_case_id);
+    }
+
+    async deleteTestResults(promptId: string, version?: number): Promise<boolean> {
+        try {
+            let query = 'DELETE FROM test_results WHERE prompt_id = $1::uuid';
+            const params: any[] = [promptId];
+
+            if (version !== undefined) {
+                query += ' AND prompt_version = $2';
+                params.push(version);
+            }
+
+            const result = await this.pool.query(query, params);
+            return (result.rowCount ?? 0) > 0;
+        } catch (error) {
+            console.error('Error deleting test results:', error);
+            throw error;
+        }
     }
 
     async close(): Promise<void> {

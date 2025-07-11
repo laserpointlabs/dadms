@@ -311,6 +311,12 @@ export const promptService = {
         return promptApi.get(`/prompts/${id}/test-history`);
     },
 
+    // Delete test results for a prompt
+    deleteTestResults: async (id: string, version?: number): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        const params = version ? { version } : {};
+        return promptApi.delete(`/prompts/${id}/test-results`, { params });
+    },
+
     // Get all versions of a prompt
     getPromptVersions: async (id: string): Promise<AxiosResponse<{
         success: boolean; data: Array<{
