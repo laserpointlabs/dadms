@@ -77,6 +77,9 @@ const PromptManagerSimple: React.FC = () => {
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
     const [testResults, setTestResults] = useState<TestPromptResponse | null>(null);
     const [testLoading, setTestLoading] = useState(false);
+    const [historicalResults, setHistoricalResults] = useState<TestPromptResponse | null>(null);
+    const [loadingHistorical, setLoadingHistorical] = useState(false);
+    const [hiddenTestResults, setHiddenTestResults] = useState<Set<string>>(new Set());
 
     // Edit/Create state
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -113,9 +116,14 @@ const PromptManagerSimple: React.FC = () => {
         // Clear all previous state
         setSelectedPrompt(prompt);
         setTestResults(null);
+        setHistoricalResults(null);
         setError(null);
         setTestLoading(false);
+        setLoadingHistorical(false);
         setIsTestDialogOpen(true);
+
+        // Load existing test results
+        loadHistoricalResults(prompt.id);
     };
 
     const closeTestDialog = () => {
@@ -125,8 +133,11 @@ const PromptManagerSimple: React.FC = () => {
         setIsTestDialogOpen(false);
         setSelectedPrompt(null);
         setTestResults(null);
+        setHistoricalResults(null);
         setError(null);
         setTestLoading(false);
+        setLoadingHistorical(false);
+        setHiddenTestResults(new Set());
     };
 
     const runTest = async () => {
@@ -348,6 +359,60 @@ const PromptManagerSimple: React.FC = () => {
         setIsCreating(false);
     };
 
+    const loadHistoricalResults = async (promptId: string) => {
+        try {
+            setLoadingHistorical(true);
+            console.log('🔄 Loading historical test results for prompt:', promptId);
+
+            const response = await promptService.getTestResults(promptId);
+
+            if (response.data.success && response.data.data) {
+                console.log('✅ Historical results loaded:', response.data.data);
+                setHistoricalResults(response.data.data);
+            } else {
+                console.log('ℹ️ No historical test results found');
+                setHistoricalResults(null);
+            }
+        } catch (err) {
+            console.log('ℹ️ No historical results available:', err);
+            setHistoricalResults(null);
+        } finally {
+            setLoadingHistorical(false);
+        }
+    };
+
+    // Test result management functions
+    const hideTestResult = (resultIndex: number, isHistorical: boolean) => {
+        const key = `${isHistorical ? 'historical' : 'current'}-${resultIndex}`;
+        setHiddenTestResults(prev => new Set(prev).add(key));
+    };
+
+    const clearAllTestResults = async () => {
+        if (!selectedPrompt) return;
+
+        if (!window.confirm('Are you sure you want to clear all test results for this prompt? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setError(null);
+            console.log('🗑️ Clearing all test results for prompt:', selectedPrompt.id);
+
+            await promptService.deleteTestResults(selectedPrompt.id);
+
+            // Clear both current and historical results
+            setTestResults(null);
+            setHistoricalResults(null);
+            setHiddenTestResults(new Set());
+
+            console.log('✅ All test results cleared successfully');
+        } catch (err) {
+            console.error('💥 Failed to clear test results:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to clear test results';
+            setError(errorMessage);
+        }
+    };
+
     // Render functions
     const renderPromptCard = (prompt: Prompt) => (
         <Card key={prompt.id} sx={{ mb: 2 }}>
@@ -391,49 +456,58 @@ const PromptManagerSimple: React.FC = () => {
         </Card>
     );
 
-    const renderTestResults = () => {
-        if (!testResults) return null;
+    const renderTestResults = (results?: TestPromptResponse, isHistorical = false) => {
+        const resultsData = results || testResults;
+        if (!resultsData) return null;
+
+        const titlePrefix = isHistorical ? '📚 Historical' : '🚀 Current';
 
         return (
             <Box sx={{ mt: 2 }}>
+                {!isHistorical && (
+                    <Typography variant="h6" gutterBottom color="success.main">
+                        {titlePrefix} Test Results
+                    </Typography>
+                )}
+
                 {/* Summary */}
-                <Card sx={{ mb: 2 }}>
+                <Card sx={{ mb: 2, border: isHistorical ? '1px solid #e0e0e0' : 'none' }}>
                     <CardContent>
                         <Grid container spacing={2}>
                             <Grid item xs={3}>
                                 <Typography variant="h4" color="primary">
-                                    {testResults.summary.total}
+                                    {resultsData.summary.total}
                                 </Typography>
                                 <Typography variant="body2">Total Tests</Typography>
                             </Grid>
                             <Grid item xs={3}>
                                 <Typography variant="h4" color="success.main">
-                                    {testResults.summary.passed}
+                                    {resultsData.summary.passed}
                                 </Typography>
                                 <Typography variant="body2">Passed</Typography>
                             </Grid>
                             <Grid item xs={3}>
                                 <Typography variant="h4" color="error.main">
-                                    {testResults.summary.failed}
+                                    {resultsData.summary.failed}
                                 </Typography>
                                 <Typography variant="body2">Failed</Typography>
                             </Grid>
                             <Grid item xs={3}>
                                 <Typography variant="h4">
-                                    {testResults.summary.execution_time_ms}ms
+                                    {resultsData.summary.execution_time_ms}ms
                                 </Typography>
                                 <Typography variant="body2">Execution Time</Typography>
                             </Grid>
                         </Grid>
 
-                        {testResults.summary.avg_comparison_score !== undefined && (
+                        {resultsData.summary.avg_comparison_score !== undefined && (
                             <Box sx={{ mt: 2 }}>
                                 <Typography variant="body2" gutterBottom>
-                                    Average Comparison Score: {(testResults.summary.avg_comparison_score * 100).toFixed(1)}%
+                                    Average Comparison Score: {(resultsData.summary.avg_comparison_score * 100).toFixed(1)}%
                                 </Typography>
                                 <LinearProgress
                                     variant="determinate"
-                                    value={testResults.summary.avg_comparison_score * 100}
+                                    value={resultsData.summary.avg_comparison_score * 100}
                                     sx={{ height: 8, borderRadius: 4 }}
                                 />
                             </Box>
@@ -442,7 +516,7 @@ const PromptManagerSimple: React.FC = () => {
                 </Card>
 
                 {/* Results Table */}
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ border: isHistorical ? '1px solid #e0e0e0' : 'none' }}>
                     <Table>
                         <TableHead>
                             <TableRow>
@@ -451,39 +525,53 @@ const PromptManagerSimple: React.FC = () => {
                                 <TableCell>LLM Response</TableCell>
                                 <TableCell>Score</TableCell>
                                 <TableCell>Time</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {testResults.results.map((result, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{result.test_case_name}</TableCell>
-                                    <TableCell>
-                                        {result.passed ? (
-                                            <Chip
-                                                icon={<CheckCircleIcon />}
-                                                label="Passed"
-                                                color="success"
+                            {resultsData.results
+                                .map((result, index) => ({ result, index }))
+                                .filter(({ index }) => !hiddenTestResults.has(`${isHistorical ? 'historical' : 'current'}-${index}`))
+                                .map(({ result, index }) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{result.test_case_name}</TableCell>
+                                        <TableCell>
+                                            {result.passed ? (
+                                                <Chip
+                                                    icon={<CheckCircleIcon />}
+                                                    label="Passed"
+                                                    color="success"
+                                                    size="small"
+                                                />
+                                            ) : (
+                                                <Chip
+                                                    icon={<ErrorIcon />}
+                                                    label="Failed"
+                                                    color="error"
+                                                    size="small"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell sx={{ maxWidth: 300 }}>
+                                            {result.llm_response?.content || result.actual_output || result.error || 'No response'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {result.comparison_score !== undefined ?
+                                                `${(result.comparison_score * 100).toFixed(1)}%` : '-'}
+                                        </TableCell>
+                                        <TableCell>{result.execution_time_ms}ms</TableCell>
+                                        <TableCell>
+                                            <IconButton
                                                 size="small"
-                                            />
-                                        ) : (
-                                            <Chip
-                                                icon={<ErrorIcon />}
-                                                label="Failed"
+                                                onClick={() => hideTestResult(index, isHistorical)}
                                                 color="error"
-                                                size="small"
-                                            />
-                                        )}
-                                    </TableCell>
-                                    <TableCell sx={{ maxWidth: 300 }}>
-                                        {result.llm_response?.content || result.actual_output || result.error || 'No response'}
-                                    </TableCell>
-                                    <TableCell>
-                                        {result.comparison_score !== undefined ?
-                                            `${(result.comparison_score * 100).toFixed(1)}%` : '-'}
-                                    </TableCell>
-                                    <TableCell>{result.execution_time_ms}ms</TableCell>
-                                </TableRow>
-                            ))}
+                                                title="Hide this test result"
+                                            >
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -516,6 +604,33 @@ const PromptManagerSimple: React.FC = () => {
                             </Alert>
                         )}
 
+                        {/* Historical Results Section */}
+                        {loadingHistorical && (
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>Loading Previous Results...</Typography>
+                                <LinearProgress />
+                            </Box>
+                        )}
+
+                        {historicalResults && !loadingHistorical && (
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="h6" gutterBottom color="primary">
+                                    📊 Previous Test Results
+                                </Typography>
+                                {renderTestResults(historicalResults, true)}
+                                <Divider sx={{ my: 2 }} />
+                            </Box>
+                        )}
+
+                        {!historicalResults && !loadingHistorical && (
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    ℹ️ No previous test results found
+                                </Typography>
+                                <Divider sx={{ my: 2 }} />
+                            </Box>
+                        )}
+
                         {testLoading && (
                             <Box display="flex" justifyContent="center" p={2}>
                                 <CircularProgress />
@@ -529,6 +644,16 @@ const PromptManagerSimple: React.FC = () => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={closeTestDialog}>Close</Button>
+                {(testResults || historicalResults) && (
+                    <Button
+                        onClick={clearAllTestResults}
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        disabled={testLoading}
+                    >
+                        Clear All Results
+                    </Button>
+                )}
                 <Button
                     onClick={runTest}
                     variant="contained"
