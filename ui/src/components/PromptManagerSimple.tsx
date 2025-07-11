@@ -570,9 +570,31 @@ const PromptManagerSimple: React.FC = () => {
     };
 
     // Test result management functions
-    const hideTestResult = (resultIndex: number, isHistorical: boolean) => {
-        const key = `${isHistorical ? 'historical' : 'current'}-${resultIndex}`;
-        setHiddenTestResults(prev => new Set(prev).add(key));
+    const deleteTestResult = async (testResult: any, resultIndex: number, isHistorical: boolean) => {
+        if (!testResult.id) {
+            // If no ID, fall back to hiding (for current test results that don't have IDs yet)
+            const key = `${isHistorical ? 'historical' : 'current'}-${resultIndex}`;
+            setHiddenTestResults(prev => new Set(prev).add(key));
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to delete this test result? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await promptService.deleteTestResult(testResult.id);
+
+            // Remove from UI by hiding it
+            const key = `${isHistorical ? 'historical' : 'current'}-${resultIndex}`;
+            setHiddenTestResults(prev => new Set(prev).add(key));
+
+            console.log('✅ Test result deleted successfully');
+        } catch (err) {
+            console.error('💥 Failed to delete test result:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to delete test result';
+            setError(errorMessage);
+        }
     };
 
     const clearAllTestResults = async () => {
@@ -1005,9 +1027,9 @@ const PromptManagerSimple: React.FC = () => {
                                         <TableCell>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => hideTestResult(index, isHistorical)}
+                                                onClick={() => deleteTestResult(result, index, isHistorical)}
                                                 color="error"
-                                                title="Hide this test result"
+                                                title="Delete this test result"
                                             >
                                                 <DeleteIcon />
                                             </IconButton>

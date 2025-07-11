@@ -144,6 +144,7 @@ export interface LLMResponse {
 }
 
 export interface TestResult {
+    id?: string; // ID for individual test result deletion
     test_case_id: string;
     test_case_name: string;
     passed: boolean;
@@ -358,6 +359,11 @@ export const promptService = {
     deleteTestResults: async (id: string, version?: number): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
         const params = version ? { version } : {};
         return promptApi.delete(`/prompts/${id}/test-results`, { params });
+    },
+
+    // Delete a specific test result
+    deleteTestResult: async (testResultId: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return promptApi.delete(`/test-results/${testResultId}`);
     },
 
     // Get all versions of a prompt
