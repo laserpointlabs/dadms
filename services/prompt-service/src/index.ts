@@ -1110,6 +1110,62 @@ app.delete('/prompts/:id/test-results', async (req, res) => {
 
 /**
  * @swagger
+ * /test-results/{testResultId}:
+ *   delete:
+ *     tags: [Test Results]
+ *     summary: Delete a specific test result
+ *     description: Delete an individual test result by its ID
+ *     parameters:
+ *       - in: path
+ *         name: testResultId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Test result ID to delete
+ *     responses:
+ *       200:
+ *         description: Test result deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Test result not found
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/test-results/:testResultId', async (req, res) => {
+    try {
+        const testResultId = req.params.testResultId;
+
+        const deleted = await db.deleteTestResult(testResultId);
+
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                error: 'Test result not found'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: 'Test result deleted successfully'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
  * /prompts/{id}/versions:
  *   get:
  *     summary: Get all versions of a prompt

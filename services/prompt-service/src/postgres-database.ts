@@ -379,20 +379,25 @@ export class PostgresPromptDatabase {
 
                 await client.query(`
                     INSERT INTO test_results (id, tenant_id, test_case_id, prompt_id, prompt_version,
-                                            execution_time, actual_output, score, passed, llm_config, error_message)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                            execution_time, execution_time_ms, actual_output, score, passed, llm_config, error_message,
+                                            llm_response, llm_provider, llm_model)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 `, [
                     uuidv4(),
                     tenantId,
                     result.test_case_id,
                     promptId,
                     promptVersion,
-                    now,
+                    now, // Keep timestamp for when the test was run
+                    result.execution_time_ms || 0, // Store the actual execution time in milliseconds
                     result.actual_output || '',
                     result.comparison_score,
                     result.passed,
                     JSON.stringify(llmConfig),
-                    result.error || null
+                    result.error || null,
+                    result.llm_response ? JSON.stringify(result.llm_response) : null,
+                    result.llm_response?.provider || 'unknown',
+                    result.llm_response?.model || 'unknown'
                 ]);
             }
 
@@ -509,6 +514,7 @@ export class PostgresPromptDatabase {
 
         // Transform rows to match the expected UI format
         const results = result.rows.map(row => ({
+            id: row.id, // Include test result ID for deletion
             test_case_id: row.test_case_id,
             test_case_name: row.test_case_name,
             passed: row.passed,
@@ -517,7 +523,11 @@ export class PostgresPromptDatabase {
             comparison_score: row.score,
             error: null, // Use error field for UI compatibility
             error_message: row.error_message, // Keep both for backwards compatibility
-            execution_time_ms: 0, // Historical results don't store execution time
+            execution_time_ms: row.execution_time_ms || 0, // Use the stored execution time in milliseconds
+            llm_response: row.llm_response ? JSON.parse(row.llm_response) : {
+                provider: row.llm_provider || 'unknown',
+                model: row.llm_model || 'unknown'
+            },
             llm_config: row.llm_config // Include LLM config for display
         }));
 
@@ -526,6 +536,7 @@ export class PostgresPromptDatabase {
         const passed = results.filter(r => r.passed).length;
         const failed = total - passed;
         const avgScore = results.reduce((sum, r) => sum + (r.comparison_score || 0), 0) / Math.max(1, total);
+        const totalExecutionTime = results.reduce((sum, r) => sum + (r.execution_time_ms || 0), 0);
 
         // Return in the same format as fresh test results
         return {
@@ -536,7 +547,7 @@ export class PostgresPromptDatabase {
                 total: total,
                 passed: passed,
                 failed: failed,
-                execution_time_ms: 0, // Historical results don't have execution time
+                execution_time_ms: totalExecutionTime,
                 avg_comparison_score: avgScore
             }
         };
@@ -689,6 +700,19 @@ export class PostgresPromptDatabase {
             return (result.rowCount ?? 0) > 0;
         } catch (error) {
             console.error('Error deleting test results:', error);
+            throw error;
+        }
+    }
+
+    async deleteTestResult(testResultId: string): Promise<boolean> {
+        try {
+            const result = await this.pool.query(
+                'DELETE FROM test_results WHERE id = $1::uuid',
+                [testResultId]
+            );
+            return (result.rowCount ?? 0) > 0;
+        } catch (error) {
+            console.error('Error deleting individual test result:', error);
             throw error;
         }
     }
