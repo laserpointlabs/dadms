@@ -20,10 +20,14 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    FormControl,
     Grid,
     IconButton,
+    InputLabel,
     LinearProgress,
+    MenuItem,
     Paper,
+    Select,
     Table,
     TableBody,
     TableCell,
@@ -266,12 +270,25 @@ const PromptManagerSimple: React.FC = () => {
     };
 
     const deletePrompt = async (promptId: string | number) => {
-        if (!window.confirm('Are you sure you want to delete this prompt?')) {
+        if (!window.confirm('Are you sure you want to delete this prompt? This will also delete all associated test results.')) {
             return;
         }
 
         try {
             setError(null);
+
+            // First, clear all test results for this prompt
+            console.log('🗑️ Clearing test results before deleting prompt:', promptId);
+            try {
+                await promptService.deleteTestResults(promptId.toString());
+                console.log('✅ Test results cleared successfully');
+            } catch (testResultsError) {
+                console.log('ℹ️ No test results to clear or already cleared:', testResultsError);
+                // Continue with prompt deletion even if test results clearing fails
+            }
+
+            // Now delete the prompt
+            console.log('🗑️ Deleting prompt:', promptId);
             const response = await fetch(`http://localhost:3001/prompts/${promptId}`, {
                 method: 'DELETE'
             });
@@ -419,7 +436,7 @@ const PromptManagerSimple: React.FC = () => {
             name: "Decision Making Prompt",
             text: "Analyze the situation: {{situation}}\n\nConsider the following options:\n{{options}}\n\nEvaluate each option based on:\n- Pros and cons\n- Risk assessment\n- Expected outcomes\n\nProvide a clear recommendation with reasoning.",
             description: "For making informed decisions between multiple options",
-            type: "decision",
+            type: "simple",
             test_cases: [
                 {
                     id: "decision-test-1",
@@ -437,7 +454,7 @@ const PromptManagerSimple: React.FC = () => {
             name: "Calculation Prompt",
             text: "Calculate the following: {{calculation}}\n\nShow your work step by step:\n1. Identify the problem\n2. List the given values\n3. Apply the appropriate formula\n4. Perform the calculation\n5. State the final answer with units\n\nProvide only the numerical result at the end: {{result}}",
             description: "For mathematical calculations and problem solving",
-            type: "calculation",
+            type: "simple",
             test_cases: [
                 {
                     id: "calc-test-1",
@@ -454,7 +471,7 @@ const PromptManagerSimple: React.FC = () => {
             name: "Focused Q&A Prompt",
             text: "Question: {{question}}\n\nContext: {{context}}\n\nProvide a focused, accurate answer that:\n- Directly addresses the question\n- Is based on the given context\n- Is concise but complete\n- Includes relevant details\n\nAnswer:",
             description: "For answering specific questions with focused responses",
-            type: "qa",
+            type: "simple",
             test_cases: [
                 {
                     id: "qa-test-1",
@@ -472,7 +489,7 @@ const PromptManagerSimple: React.FC = () => {
             name: "Analysis Prompt",
             text: "Analyze the following {{subject}}: {{content}}\n\nProvide a comprehensive analysis including:\n- Key findings\n- Patterns or trends\n- Strengths and weaknesses\n- Implications\n- Recommendations\n\nStructure your response clearly with headers for each section.",
             description: "For analyzing data, text, or situations",
-            type: "analysis",
+            type: "simple",
             test_cases: [
                 {
                     id: "analysis-test-1",
@@ -490,7 +507,7 @@ const PromptManagerSimple: React.FC = () => {
             name: "Classification Prompt",
             text: "Classify the following {{item}}: {{content}}\n\nAvailable categories: {{categories}}\n\nRules for classification:\n- Choose the most appropriate category\n- Provide confidence level (1-10)\n- Explain your reasoning briefly\n\nResponse format:\nCategory: [category name]\nConfidence: [1-10]\nReason: [brief explanation]",
             description: "For categorizing or classifying content",
-            type: "classification",
+            type: "simple",
             test_cases: [
                 {
                     id: "class-test-1",
@@ -501,6 +518,133 @@ const PromptManagerSimple: React.FC = () => {
                         categories: "urgent, normal, low-priority, spam"
                     },
                     expected_output: "Category: urgent\nConfidence: 9\nReason: Contains 'urgent' and describes critical issue",
+                    enabled: true
+                }
+            ]
+        },
+        workflow_yesno: {
+            name: "Workflow Yes/No Decision",
+            text: "Task: {{task}}\n\nContext: {{context}}\n\nEvaluate the situation and make a binary decision.\n\nDecision Rules:\n✅ Answer YES only if: {{yes_criteria}}\n❌ Answer NO if: {{no_criteria}}\n\nImportant: You must answer with EXACTLY one word: either 'YES' or 'NO'\n\nStep-by-step evaluation:\n1. Check if the situation meets the YES criteria\n2. If ALL YES criteria are met, answer YES\n3. If ANY NO criteria are met, answer NO\n4. If in doubt, answer NO (fail-safe)\n\nDecision:",
+            description: "Binary decision point for BPMN workflow routing",
+            type: "tool-aware",
+            test_cases: [
+                {
+                    id: "yesno-test-1",
+                    name: "Approval Decision - YES Case",
+                    input: {
+                        task: "Approve expense report",
+                        context: "Employee submitted $150 dinner expense with receipt. Amount is $150 which is under the $200 limit and receipt is provided.",
+                        yes_criteria: "Amount is under $200 AND receipt is provided",
+                        no_criteria: "Amount is $200 or more OR no receipt is provided"
+                    },
+                    expected_output: "YES",
+                    enabled: true
+                },
+                {
+                    id: "yesno-test-2",
+                    name: "Approval Decision - NO Case (Over Limit)",
+                    input: {
+                        task: "Approve expense report",
+                        context: "Employee submitted $250 dinner expense with receipt. Amount is $250 which exceeds the $200 limit.",
+                        yes_criteria: "Amount is under $200 AND receipt is provided",
+                        no_criteria: "Amount is $200 or more OR no receipt is provided"
+                    },
+                    expected_output: "NO",
+                    enabled: true
+                },
+                {
+                    id: "yesno-test-3",
+                    name: "Approval Decision - NO Case (No Receipt)",
+                    input: {
+                        task: "Approve expense report",
+                        context: "Employee submitted $120 dinner expense without receipt. Amount is under $200 but no receipt was provided.",
+                        yes_criteria: "Amount is under $200 AND receipt is provided",
+                        no_criteria: "Amount is $200 or more OR no receipt is provided"
+                    },
+                    expected_output: "NO",
+                    enabled: true
+                }
+            ]
+        },
+        workflow_multichoice: {
+            name: "Workflow Multi-Choice Router",
+            text: "Situation: {{situation}}\n\nContext: {{context}}\n\nAvailable options:\nA) {{option_a}}\nB) {{option_b}}\nC) {{option_c}}\nD) {{option_d}}\nREDO) {{redo_condition}}\nRETURN) {{return_condition}}\n\nInstructions:\n- Choose the most appropriate option (A, B, C, D, REDO, or RETURN)\n- If none fit perfectly, use REDO to retry with more information\n- Use RETURN to go back to previous workflow step\n\nRespond with only the letter/word (A, B, C, D, REDO, or RETURN):\n\nChoice:",
+            description: "Multi-choice decision with workflow control options",
+            type: "tool-aware",
+            test_cases: [
+                {
+                    id: "multi-test-1",
+                    name: "Document Processing Route",
+                    input: {
+                        situation: "Document needs processing",
+                        context: "PDF document with clear text and valid format",
+                        option_a: "Send to automatic OCR processing",
+                        option_b: "Send to manual review",
+                        option_c: "Archive document",
+                        option_d: "Request additional information",
+                        redo_condition: "Document format unclear",
+                        return_condition: "Document incomplete"
+                    },
+                    expected_output: "A",
+                    enabled: true
+                }
+            ]
+        },
+        workflow_confidence: {
+            name: "Confidence-Based Decision",
+            text: "Task: {{task}}\n\nData: {{data}}\n\nAnalyze the available information and provide:\n1. Your assessment\n2. Confidence level (0-100)\n3. Decision based on confidence threshold\n\nConfidence Threshold: {{threshold}}%\n\nResponse Format:\nAssessment: [your analysis]\nConfidence: [0-100]\nDecision: [YES if confidence >= threshold, NO if below]\n\nResponse:",
+            description: "Decision based on AI confidence level with threshold",
+            type: "tool-aware",
+            test_cases: [
+                {
+                    id: "confidence-test-1",
+                    name: "Data Quality Check",
+                    input: {
+                        task: "Verify data quality for processing",
+                        data: "Customer record: Name filled, Email valid, Phone number present, Address complete",
+                        threshold: "80"
+                    },
+                    expected_output: "Assessment: All required fields present and valid\nConfidence: 95\nDecision: YES",
+                    enabled: true
+                }
+            ]
+        },
+        workflow_priority: {
+            name: "Workflow Priority Router",
+            text: "Item: {{item}}\n\nContext: {{context}}\n\nEvaluate priority level based on:\n- Urgency: {{urgency_factors}}\n- Impact: {{impact_factors}}\n- Dependencies: {{dependencies}}\n\nPriority Levels:\nCRITICAL: Immediate action required, system-breaking\nHIGH: Action needed within 24 hours\nMEDIUM: Action needed within 1 week\nLOW: Can be handled in regular cycle\nDEFER: Can be postponed indefinitely\n\nRespond with only the priority level:\n\nPriority:",
+            description: "Routes items based on calculated priority levels",
+            type: "workflow-aware",
+            test_cases: [
+                {
+                    id: "priority-test-1",
+                    name: "Support Ticket Priority",
+                    input: {
+                        item: "Customer support ticket",
+                        context: "Production system error affecting 50+ users",
+                        urgency_factors: "Multiple users affected, production down",
+                        impact_factors: "Revenue loss, customer satisfaction impact",
+                        dependencies: "No workarounds available"
+                    },
+                    expected_output: "CRITICAL",
+                    enabled: true
+                }
+            ]
+        },
+        workflow_validation: {
+            name: "Workflow Data Validator",
+            text: "Validation Task: {{validation_task}}\n\nData to validate: {{data}}\n\nValidation Rules:\n{{validation_rules}}\n\nCheck each rule and provide:\n1. PASS/FAIL for each rule\n2. Overall validation result\n3. Required actions if failed\n\nResponse Format:\nRule Checks:\n- Rule 1: [PASS/FAIL] - [reason]\n- Rule 2: [PASS/FAIL] - [reason]\n\nOverall Result: [VALID/INVALID]\nAction Required: [CONTINUE/FIX/REJECT]\nDetails: [explanation if needed]\n\nValidation:",
+            description: "Validates data against rules for workflow progression",
+            type: "tool-aware",
+            test_cases: [
+                {
+                    id: "validation-test-1",
+                    name: "Form Data Validation",
+                    input: {
+                        validation_task: "Validate user registration form",
+                        data: "Email: user@example.com, Password: 12345, Age: 25",
+                        validation_rules: "Email must contain @ symbol, Password must be 8+ characters, Age must be 18+"
+                    },
+                    expected_output: "Rule Checks:\n- Rule 1: PASS - Email contains @ symbol\n- Rule 2: FAIL - Password only 5 characters\n- Rule 3: PASS - Age is 25\n\nOverall Result: INVALID\nAction Required: FIX\nDetails: Password too short",
                     enabled: true
                 }
             ]
@@ -875,8 +1019,59 @@ const PromptManagerSimple: React.FC = () => {
                                 </Button>
                             </Box>
 
+                            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }} color="primary">
+                                🔄 BPMN Workflow Templates
+                            </Typography>
+                            <Box display="flex" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('workflow_yesno')}
+                                    sx={{ mb: 1 }}
+                                    color="secondary"
+                                >
+                                    ✅ Yes/No Decision
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('workflow_multichoice')}
+                                    sx={{ mb: 1 }}
+                                    color="secondary"
+                                >
+                                    🔀 Multi-Choice Router
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('workflow_confidence')}
+                                    sx={{ mb: 1 }}
+                                    color="secondary"
+                                >
+                                    🎯 Confidence-Based
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('workflow_priority')}
+                                    sx={{ mb: 1 }}
+                                    color="secondary"
+                                >
+                                    ⚡ Priority Router
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => applyTemplate('workflow_validation')}
+                                    sx={{ mb: 1 }}
+                                    color="secondary"
+                                >
+                                    ✔️ Data Validator
+                                </Button>
+                            </Box>
+
                             <Typography variant="caption" color="text.secondary">
-                                💡 <strong>Tips:</strong> Use {'{'}{'{'} variable {'}'} {'}'} for dynamic content • Add test cases to validate your prompt • Consider edge cases in your testing
+                                💡 <strong>Tips:</strong> Use {'{'}{'{'} variable {'}'} {'}'} for dynamic content • Add test cases to validate your prompt • Consider edge cases in your testing • Workflow templates provide structured outputs for BPMN routing
                             </Typography>
                         </Box>
                     )}
@@ -913,13 +1108,33 @@ const PromptManagerSimple: React.FC = () => {
                             helperText="Use {{variable}} for dynamic content"
                         />
 
-                        <TextField
-                            label="Type"
-                            fullWidth
-                            margin="normal"
-                            value={editingPrompt?.type || 'general'}
-                            onChange={(e) => setEditingPrompt(prev => prev ? { ...prev, type: e.target.value } : null)}
-                        />
+                        <FormControl fullWidth margin="normal" required>
+                            <InputLabel>Type</InputLabel>
+                            <Select
+                                value={editingPrompt?.type || 'simple'}
+                                onChange={(e) => setEditingPrompt(prev => prev ? { ...prev, type: e.target.value } : null)}
+                                label="Type"
+                            >
+                                <MenuItem value="simple">
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Simple</Typography>
+                                        <Typography variant="caption" color="text.secondary">Basic prompts for straightforward tasks</Typography>
+                                    </Box>
+                                </MenuItem>
+                                <MenuItem value="tool-aware">
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Tool-Aware</Typography>
+                                        <Typography variant="caption" color="text.secondary">Prompts that can use tools and perform validations</Typography>
+                                    </Box>
+                                </MenuItem>
+                                <MenuItem value="workflow-aware">
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Workflow-Aware</Typography>
+                                        <Typography variant="caption" color="text.secondary">Complex prompts for orchestrating workflows and routing</Typography>
+                                    </Box>
+                                </MenuItem>
+                            </Select>
+                        </FormControl>
 
                         <Divider sx={{ my: 3 }} />
 
