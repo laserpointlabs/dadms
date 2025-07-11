@@ -58,6 +58,7 @@ import {
     AvailableLLMs,
     LLMConfig,
     LLMConfigStatus,
+    LLMProvider,
     Prompt,
     promptService,
     TestPromptRequest,
@@ -126,6 +127,13 @@ const PromptManager: React.FC = () => {
         failed_tests: number;
         avg_comparison_score?: number;
     }>>([]);
+    const [testProgress, setTestProgress] = useState<{
+        currentTestName: string;
+        currentTestIndex: number;
+        totalTests: number;
+        currentModel: string;
+        currentProvider: string;
+    } | null>(null);
 
     // Version management state
     const [selectedVersions, setSelectedVersions] = useState<{ [promptId: string]: number }>({});
@@ -149,6 +157,7 @@ const PromptManager: React.FC = () => {
         loadPrompts();
         loadAvailableLLMs();
         loadLLMConfigStatus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadPrompts = async () => {
@@ -187,23 +196,94 @@ const PromptManager: React.FC = () => {
     };
 
     const handleTest = async () => {
-        if (!selectedPrompt) return;
+        if (!selectedPrompt) {
+            console.error('No prompt selected for testing');
+            return;
+        }
+
+        if (selectedTestCases.length === 0) {
+            console.error('No test cases selected');
+            setError('Please select at least one test case');
+            return;
+        }
+
+        if (llmConfigs.length === 0) {
+            console.error('No LLM configurations');
+            setError('Please configure at least one LLM');
+            return;
+        }
+
+        console.log('Starting test with:', {
+            promptId: selectedPrompt.id,
+            testCases: selectedTestCases,
+            llmConfigs: llmConfigs
+        });
 
         try {
             setTestLoading(true);
+            setError(null);
+
+            // Calculate total number of tests
+            const totalTests = selectedTestCases.length * llmConfigs.length;
+            let currentTestIndex = 0;
+
+            // Simulate test progress (in production, this would come from backend SSE or WebSocket)
+            const simulateProgress = () => {
+                if (currentTestIndex < totalTests) {
+                    const testCaseIndex = Math.floor(currentTestIndex / llmConfigs.length);
+                    const llmConfigIndex = currentTestIndex % llmConfigs.length;
+
+                    const testCase = selectedPrompt.test_cases?.find(tc => tc.id === selectedTestCases[testCaseIndex]);
+                    const llmConfig = llmConfigs[llmConfigIndex];
+
+                    setTestProgress({
+                        currentTestName: testCase?.name || `Test ${testCaseIndex + 1}`,
+                        currentTestIndex: currentTestIndex + 1,
+                        totalTests: totalTests,
+                        currentModel: llmConfig.model,
+                        currentProvider: llmConfig.provider as string
+                    });
+
+                    currentTestIndex++;
+
+                    // Continue simulating progress every 500ms
+                    if (currentTestIndex < totalTests) {
+                        setTimeout(simulateProgress, 500);
+                    }
+                }
+            };
+
+            // Start progress simulation
+            simulateProgress();
 
             const testRequest: TestPromptRequest = {
-                test_case_ids: selectedTestCases.length > 0 ? selectedTestCases : undefined,
+                test_case_ids: selectedTestCases,
                 llm_configs: llmConfigs,
                 enable_comparison: enableComparison
             };
 
+            console.log('Sending test request:', testRequest);
             const response = await promptService.testPrompt(selectedPrompt.id, testRequest);
-            setTestResults(response.data.data);
+            console.log('Received test response:', response.data);
+
+            if (response.data.success && response.data.data) {
+                setTestResults(response.data.data);
+                console.log('Test Results set in state:', response.data.data);
+                // Switch to Results tab after results are set (with a small delay to ensure state update)
+                setTimeout(() => {
+                    setTabValue(2);
+                    console.log('Switched to Results tab');
+                }, 100);
+            } else {
+                console.error('Invalid response format:', response.data);
+                setError('Invalid response from server');
+            }
         } catch (err) {
+            console.error('Test execution error:', err);
             setError(err instanceof Error ? err.message : 'Failed to test prompt');
         } finally {
             setTestLoading(false);
+            setTestProgress(null);
         }
     };
 
@@ -212,6 +292,14 @@ const PromptManager: React.FC = () => {
         setSelectedPrompt(displayPrompt);
         setTabValue(0); // Reset to Configuration tab
         setIsTestDialogOpen(true);
+        // Clear any previous test results when opening the dialog
+        setTestResults(null);
+        setTestHistory([]);
+
+        // Ensure available LLMs are loaded
+        if (Object.keys(availableLLMs).length === 0) {
+            await loadAvailableLLMs();
+        }
 
         // Load saved test configuration
         try {
@@ -230,18 +318,23 @@ const PromptManager: React.FC = () => {
             setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
         }
 
-        // Load previous test results for the selected version
-        loadPreviousTestResults(displayPrompt.id);
+        // Load test history (but not previous results - those will be loaded on demand)
+        loadTestHistory(displayPrompt.id);
     };
 
-    const closeTestDialog = () => {
+    const closeTestDialog = async () => {
+        // Save configuration before closing
+        if (selectedPrompt) {
+            await saveTestConfiguration();
+        }
         setIsTestDialogOpen(false);
         setTabValue(0); // Reset to Configuration tab
-        setTestResults(null); // Clear test results
+        setTestResults(null); // Clear test results ONLY when dialog is closed
         setTestHistory([]); // Clear test history
         setSelectedPrompt(null); // Clear selected prompt
         setSelectedTestCases([]); // Clear selected test cases
         setTestLoading(false); // Reset loading state
+        setTestProgress(null); // Reset test progress
     };
 
     const loadPreviousTestResults = async (promptId: string) => {
@@ -830,11 +923,19 @@ const PromptManager: React.FC = () => {
     };
 
     const handleAddLLMConfig = () => {
+        // Get the first available provider and model
+        const providers = Object.keys(availableLLMs);
+        const defaultProvider = providers.includes('openai') && llmConfigStatus.openai?.configured ? 'openai' :
+            providers.includes('local') && llmConfigStatus.local?.configured ? 'local' :
+                providers.includes('mock') ? 'mock' :
+                    (providers[0] || 'mock');
+        const defaultModel = availableLLMs[defaultProvider]?.[0] || 'mock-gpt';
+
         setLLMConfigs([
             ...llmConfigs,
             {
-                provider: 'mock',
-                model: 'mock-gpt',
+                provider: defaultProvider as LLMProvider,
+                model: defaultModel,
                 temperature: 0.7,
                 maxTokens: 1000
             }
@@ -869,14 +970,31 @@ const PromptManager: React.FC = () => {
         }
     };
 
+    const handleClearTestResults = async () => {
+        try {
+            if (!selectedPrompt) return;
+
+            await promptService.deleteTestResults(selectedPrompt.id, selectedPrompt.version);
+
+            // Clear the UI state
+            setTestResults(null);
+            setTestHistory([]);
+
+            // Show success message
+            setError(null);
+        } catch (err) {
+            console.error('Failed to clear test results:', err);
+            setError('Failed to clear test results');
+        }
+    };
+
     const renderTestResults = () => {
-        if (!testResults) return null;
+        console.log('Rendering testResults:', testResults);
+        console.log('testResults type:', typeof testResults);
+        console.log('testResults.results exists:', !!testResults?.results);
+        console.log('testResults.results length:', testResults?.results?.length);
 
-        // Check if testResults is an array (from getTestResults) or has a summary (from testPrompt)
-        const isArrayResponse = Array.isArray(testResults);
-        const hasResults = isArrayResponse ? testResults.length > 0 : testResults.results && testResults.results.length > 0;
-
-        if (!hasResults) {
+        if (!testResults || !testResults.results || testResults.results.length === 0) {
             return (
                 <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" color="text.secondary">
@@ -886,85 +1004,6 @@ const PromptManager: React.FC = () => {
             );
         }
 
-        // Handle array response (from getTestResults endpoint)
-        if (isArrayResponse) {
-            return (
-                <Box sx={{ mt: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                        Previous Test Results
-                    </Typography>
-
-                    {/* Simple table for array results */}
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Test Case</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Score</TableCell>
-                                    <TableCell>Execution Time</TableCell>
-                                    <TableCell>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {testResults.map((result: any, index: number) => (
-                                    <TableRow key={result.id || index} hover>
-                                        <TableCell>{result.test_case_name || 'Unknown'}</TableCell>
-                                        <TableCell>
-                                            {result.passed ? (
-                                                <Chip
-                                                    icon={<CheckCircleIcon />}
-                                                    label="Passed"
-                                                    color="success"
-                                                    size="small"
-                                                />
-                                            ) : (
-                                                <Chip
-                                                    icon={<ErrorIcon />}
-                                                    label="Failed"
-                                                    color="error"
-                                                    size="small"
-                                                />
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {result.score !== null && result.score !== undefined ?
-                                                `${(result.score * 100).toFixed(1)}%` : '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(result.execution_time).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                onClick={() => {
-                                                    setSelectedTestResult({
-                                                        test_case_id: result.test_case_id,
-                                                        test_case_name: result.test_case_name,
-                                                        passed: result.passed,
-                                                        actual_output: result.actual_output,
-                                                        expected_output: {},
-                                                        comparison_score: result.score,
-                                                        execution_time_ms: 0,
-                                                        error: result.error_message
-                                                    });
-                                                    setTestResultDetailOpen(true);
-                                                }}
-                                            >
-                                                View Details
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </Box>
-            );
-        }
-
-        // Handle full response with summary (from testPrompt endpoint)
         return (
             <Box sx={{ mt: 2 }}>
                 <Typography variant="h6" gutterBottom>
@@ -1242,7 +1281,7 @@ const PromptManager: React.FC = () => {
     };
 
     const renderLLMConfigDialog = () => (
-        <Dialog open={isTestDialogOpen} onClose={() => setIsTestDialogOpen(false)} maxWidth="md" fullWidth>
+        <Dialog open={isTestDialogOpen} onClose={closeTestDialog} maxWidth="md" fullWidth>
             <DialogTitle>
                 <Box display="flex" alignItems="center">
                     <ScienceIcon sx={{ mr: 1 }} />
@@ -1271,14 +1310,6 @@ const PromptManager: React.FC = () => {
                                     </IconButton>
                                 </Box>
                                 <Box>
-                                    <Button
-                                        onClick={saveTestConfiguration}
-                                        variant="outlined"
-                                        size="small"
-                                        sx={{ mr: 1 }}
-                                    >
-                                        Save Config
-                                    </Button>
                                     <Button
                                         startIcon={<AddIcon />}
                                         onClick={handleAddLLMConfig}
@@ -1449,20 +1480,68 @@ const PromptManager: React.FC = () => {
                                                 <TextField
                                                     fullWidth
                                                     label="Temperature"
-                                                    type="number"
-                                                    inputProps={{ min: 0, max: 2, step: 0.1 }}
-                                                    value={config.temperature || 0.7}
-                                                    onChange={(e) => handleUpdateLLMConfig(index, 'temperature', parseFloat(e.target.value))}
+                                                    type="text"
+                                                    inputProps={{
+                                                        inputMode: 'decimal',
+                                                        pattern: '[0-9]*\\.?[0-9]*'
+                                                    }}
+                                                    value={config.temperature !== undefined ? config.temperature : 0.7}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Allow any input while typing
+                                                        handleUpdateLLMConfig(index, 'temperature', value);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const value = e.target.value;
+                                                        // Validate and clean up on blur
+                                                        if (value === '' || value === undefined) {
+                                                            handleUpdateLLMConfig(index, 'temperature', 0.7);
+                                                        } else {
+                                                            const numValue = parseFloat(value);
+                                                            if (!isNaN(numValue)) {
+                                                                // Clamp between 0 and 1
+                                                                const clampedValue = Math.max(0, Math.min(1, numValue));
+                                                                handleUpdateLLMConfig(index, 'temperature', clampedValue);
+                                                            } else {
+                                                                handleUpdateLLMConfig(index, 'temperature', 0.7);
+                                                            }
+                                                        }
+                                                    }}
+                                                    helperText="0.0 = deterministic, 1.0 = creative (0-1)"
                                                 />
                                             </Grid>
                                             <Grid item xs={6}>
                                                 <TextField
                                                     fullWidth
                                                     label="Max Tokens"
-                                                    type="number"
-                                                    inputProps={{ min: 1, max: 4000, step: 1 }}
-                                                    value={config.maxTokens || 1000}
-                                                    onChange={(e) => handleUpdateLLMConfig(index, 'maxTokens', parseInt(e.target.value))}
+                                                    type="text"
+                                                    inputProps={{
+                                                        inputMode: 'numeric',
+                                                        pattern: '[0-9]*'
+                                                    }}
+                                                    value={config.maxTokens !== undefined ? config.maxTokens : 1000}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Allow any input while typing
+                                                        handleUpdateLLMConfig(index, 'maxTokens', value);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const value = e.target.value;
+                                                        // Validate and clean up on blur
+                                                        if (value === '' || value === undefined) {
+                                                            handleUpdateLLMConfig(index, 'maxTokens', 1000);
+                                                        } else {
+                                                            const numValue = parseInt(value, 10);
+                                                            if (!isNaN(numValue)) {
+                                                                // Clamp between 1 and 128000 (GPT-4 max)
+                                                                const clampedValue = Math.max(1, Math.min(128000, numValue));
+                                                                handleUpdateLLMConfig(index, 'maxTokens', clampedValue);
+                                                            } else {
+                                                                handleUpdateLLMConfig(index, 'maxTokens', 1000);
+                                                            }
+                                                        }
+                                                    }}
+                                                    helperText="Maximum tokens in response (1-128000)"
                                                 />
                                             </Grid>
                                         </Grid>
@@ -1524,9 +1603,67 @@ const PromptManager: React.FC = () => {
 
                     <TabPanel value={tabValue} index={2}>
                         {testLoading && (
-                            <Box display="flex" justifyContent="center" p={3}>
-                                <CircularProgress />
-                                <Typography sx={{ ml: 2 }}>Testing prompt with LLMs...</Typography>
+                            <Box p={3}>
+                                <Box display="flex" justifyContent="center" alignItems="center" mb={2}>
+                                    <CircularProgress />
+                                    <Typography sx={{ ml: 2 }}>Testing prompt with LLMs...</Typography>
+                                </Box>
+                                {testProgress && (
+                                    <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+                                        <Paper elevation={1} sx={{ p: 2, backgroundColor: 'action.hover' }}>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12}>
+                                                    <Typography variant="subtitle2" color="primary">
+                                                        Test Progress: {testProgress.currentTestIndex} of {testProgress.totalTests}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Chip
+                                                            label={`Test: ${testProgress.currentTestName}`}
+                                                            size="small"
+                                                            color="info"
+                                                        />
+                                                        <Chip
+                                                            label={`Provider: ${testProgress.currentProvider}`}
+                                                            size="small"
+                                                            color="default"
+                                                        />
+                                                        <Chip
+                                                            label={`Model: ${testProgress.currentModel}`}
+                                                            size="small"
+                                                            color="success"
+                                                        />
+                                                    </Box>
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <LinearProgress
+                                                        variant="determinate"
+                                                        value={(testProgress.currentTestIndex / testProgress.totalTests) * 100}
+                                                        sx={{ height: 8, borderRadius: 4 }}
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </Paper>
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+                        {(testResults || testHistory.length > 0) && !testLoading && (
+                            <Box display="flex" justifyContent="flex-end" mb={2}>
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete all test results for this prompt? This action cannot be undone.')) {
+                                            handleClearTestResults();
+                                        }
+                                    }}
+                                    startIcon={<DeleteIcon />}
+                                    size="small"
+                                >
+                                    Clear Test Results
+                                </Button>
                             </Box>
                         )}
                         {renderTestResults()}

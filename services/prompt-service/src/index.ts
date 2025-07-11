@@ -1042,6 +1042,69 @@ app.get('/prompts/:id/test-history', async (req, res) => {
 
 /**
  * @swagger
+ * /prompts/{id}/test-results:
+ *   delete:
+ *     summary: Delete test results for a prompt
+ *     description: Delete all test results for a specific prompt, optionally filtered by version
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: query
+ *         name: version
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Specific prompt version to delete results for
+ *     responses:
+ *       200:
+ *         description: Test results deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: No test results found to delete
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/prompts/:id/test-results', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+        const version = req.query.version ? parseInt(req.query.version as string, 10) : undefined;
+
+        const deleted = await db.deleteTestResults(promptId, version);
+
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                error: 'No test results found to delete'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: `Test results deleted successfully${version ? ` for version ${version}` : ''}`
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
  * /prompts/{id}/versions:
  *   get:
  *     summary: Get all versions of a prompt
