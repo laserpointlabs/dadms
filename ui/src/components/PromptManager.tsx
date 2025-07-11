@@ -266,36 +266,89 @@ const PromptManager: React.FC = () => {
             };
 
             console.log('Sending test request:', testRequest);
+            console.log('🚀 Making API call to:', `${selectedPrompt.id}/test`);
+            console.log('🔍 EXACT REQUEST DETAILS:', {
+                promptId: selectedPrompt.id,
+                endpoint: `/prompts/${selectedPrompt.id}/test`,
+                method: 'POST',
+                requestBody: testRequest,
+                requestBodyStringified: JSON.stringify(testRequest, null, 2)
+            });
+
             const response = await promptService.testPrompt(selectedPrompt.id, testRequest);
-            console.log('Received test response:', response);
-            console.log('Response data:', response.data);
-            console.log('Response status:', response.status);
+
+            console.log('✅ Received test response:', response);
+            console.log('� RAW RESPONSE DATA INSPECTION:');
+            console.log('🔍 response.data:', response.data);
+            console.log('🔍 response.data.data:', response.data.data);
+            console.log('🔍 response.data.data.results:', response.data.data?.results);
+            console.log('🔍 FIRST RESULT DETAILED INSPECTION:');
+            if (response.data.data?.results?.[0]) {
+                const firstResult = response.data.data.results[0];
+                console.log('🔍 First result full object:', firstResult);
+                console.log('🔍 First result keys:', Object.keys(firstResult));
+                console.log('🔍 First result.error:', firstResult.error);
+                console.log('🔍 First result.llm_response:', firstResult.llm_response);
+                console.log('🔍 First result.actual_output:', firstResult.actual_output);
+                console.log('🔍 First result.passed:', firstResult.passed);
+            }
+            console.log('�📊 Response data structure:', {
+                hasResponse: !!response,
+                hasData: !!response?.data,
+                dataKeys: response?.data ? Object.keys(response.data) : [],
+                responseStatus: response?.status,
+                responseStatusText: response?.statusText
+            });
+            console.log('🔍 Full response.data:', response.data);
+            console.log('🎯 Response success flag:', response.data?.success);
+            console.log('📦 Response data content:', response.data?.data);
 
             // Validate response structure
             if (!response || !response.data) {
-                console.error('Invalid response: missing response or data');
+                console.error('❌ VALIDATION ERROR: Invalid response structure');
+                console.error('Response object:', response);
                 setError('Invalid response from server: missing data');
                 return;
             }
 
+            console.log('✅ Step 1: Response and response.data exist');
+
             if (!response.data.success) {
-                console.error('Response indicates failure:', response.data);
-                setError('Test failed');
+                console.error('❌ VALIDATION ERROR: API returned success=false');
+                console.error('Full response.data:', response.data);
+                const errorData = response.data as any;
+                console.error('Error in response:', errorData.error);
+                setError(`Test failed: ${errorData.error || 'Unknown API error'}`);
                 return;
             }
 
+            console.log('✅ Step 2: API returned success=true');
+
             if (!response.data.data) {
-                console.error('Response missing test data:', response.data);
+                console.error('❌ VALIDATION ERROR: Missing nested data object');
+                console.error('response.data structure:', {
+                    success: response.data.success,
+                    keys: Object.keys(response.data),
+                    dataValue: response.data.data,
+                    dataType: typeof response.data.data
+                });
                 setError('Invalid response: missing test results');
                 return;
             }
 
+            console.log('✅ Step 3: Nested data object exists');
+
             const testData = response.data.data;
-            console.log('Test data structure:', {
+            console.log('🎯 Extracted testData:', testData);
+            console.log('🔍 TestData structure analysis:', {
                 hasResults: !!testData.results,
                 resultsLength: testData.results?.length,
+                resultsType: typeof testData.results,
+                resultsIsArray: Array.isArray(testData.results),
                 hasSummary: !!testData.summary,
-                summaryKeys: testData.summary ? Object.keys(testData.summary) : []
+                summaryKeys: testData.summary ? Object.keys(testData.summary) : [],
+                promptId: testData.prompt_id,
+                promptText: testData.prompt_text
             });
 
             if (!testData.results || !Array.isArray(testData.results)) {
@@ -304,8 +357,25 @@ const PromptManager: React.FC = () => {
                 return;
             }
 
+            console.log('🎯 ABOUT TO SET TEST RESULTS - Pre-state-update check');
+            console.log('🎯 testData being set:', testData);
+            console.log('🎯 testData.results:', testData.results);
+            console.log('🎯 testData.summary:', testData.summary);
+
             setTestResults(testData);
             console.log('✅ Test Results successfully set in state:', testData);
+            console.log('🔄 State update - testResults type:', typeof testData);
+            console.log('🔄 State update - testResults.results length:', testData.results?.length);
+
+            // Verify state update took effect (this will show in next render)
+            setTimeout(() => {
+                console.log('🔍 State verification after update:', {
+                    testResultsExists: !!testResults,
+                    testResultsType: typeof testResults,
+                    testResultsResultsLength: testResults?.results?.length,
+                    stateUpdateSuccess: testResults === testData
+                });
+            }, 50);
 
             // Switch to Results tab after results are set (with a small delay to ensure state update)
             setTimeout(() => {
@@ -313,26 +383,57 @@ const PromptManager: React.FC = () => {
                 console.log('✅ Switched to Results tab');
             }, 100);
 
+            console.log('🏁 REACHED END OF SUCCESS PATH - About to exit handleTest success block');
+
         } catch (error) {
-            console.error('Test execution error:', error);
+            console.error('💥 CAUGHT EXCEPTION IN TRY-CATCH BLOCK');
+            console.error('💥 Test execution error:', error);
+            console.error('🔍 Error analysis:', {
+                errorType: typeof error,
+                errorConstructor: error?.constructor?.name,
+                isAxiosError: !!(error && typeof error === 'object' && 'response' in error),
+                isError: error instanceof Error,
+                errorKeys: error && typeof error === 'object' ? Object.keys(error) : []
+            });
 
             // Type-safe error handling
             let errorMessage = 'Failed to test prompt';
             if (error instanceof Error) {
                 errorMessage = error.message;
-                console.error('Error details:', {
+                console.error('🐛 Error details:', {
                     message: error.message,
-                    stack: error.stack
+                    stack: error.stack,
+                    name: error.name
                 });
             } else if (typeof error === 'object' && error !== null && 'response' in error) {
                 const axiosError = error as any;
-                console.error('Axios error details:', {
-                    response: axiosError.response?.data,
-                    status: axiosError.response?.status
+                console.error('🌐 Axios error details:', {
+                    responseData: axiosError.response?.data,
+                    responseStatus: axiosError.response?.status,
+                    responseStatusText: axiosError.response?.statusText,
+                    responseHeaders: axiosError.response?.headers,
+                    requestConfig: {
+                        url: axiosError.config?.url,
+                        method: axiosError.config?.method,
+                        headers: axiosError.config?.headers,
+                        data: axiosError.config?.data
+                    },
+                    code: axiosError.code,
+                    message: axiosError.message
                 });
-                errorMessage = axiosError.response?.data?.message || errorMessage;
+
+                if (axiosError.response?.data?.message) {
+                    errorMessage = axiosError.response.data.message;
+                } else if (axiosError.response?.data?.error) {
+                    errorMessage = axiosError.response.data.error;
+                } else if (axiosError.message) {
+                    errorMessage = axiosError.message;
+                }
+            } else {
+                console.error('🤷 Unknown error type:', error);
             }
 
+            console.error('📝 Final error message for user:', errorMessage);
             setError(errorMessage);
         } finally {
             setTestLoading(false);
@@ -1088,12 +1189,18 @@ const PromptManager: React.FC = () => {
     };
 
     const renderTestResults = () => {
-        console.log('Rendering testResults:', testResults);
-        console.log('testResults type:', typeof testResults);
-        console.log('testResults.results exists:', !!testResults?.results);
-        console.log('testResults.results length:', testResults?.results?.length);
+        console.log('🎨 renderTestResults called');
+        console.log('🎨 Current testResults state:', {
+            testResults,
+            testResultsType: typeof testResults,
+            testResultsExists: !!testResults,
+            hasResults: !!testResults?.results,
+            resultsLength: testResults?.results?.length,
+            resultsIsArray: Array.isArray(testResults?.results)
+        });
 
         if (!testResults || !testResults.results || testResults.results.length === 0) {
+            console.log('🎨 Rendering: No test results available');
             return (
                 <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" color="text.secondary">
@@ -1102,6 +1209,9 @@ const PromptManager: React.FC = () => {
                 </Box>
             );
         }
+
+        console.log('🎨 Rendering: Test results found, proceeding with full render');
+        console.log('🎨 Results data:', testResults.results);
 
         return (
             <Box sx={{ mt: 2 }}>
@@ -1192,16 +1302,21 @@ const PromptManager: React.FC = () => {
                                     </TableCell>
                                     <TableCell sx={{ maxWidth: 300 }}>
                                         {(() => {
-                                            console.log('Rendering result:', index, result);
-                                            console.log('Has llm_response:', !!result.llm_response);
-                                            console.log('LLM response content:', result.llm_response?.content);
-                                            console.log('Actual output:', result.actual_output);
-                                            console.log('Error:', result.error);
-                                            console.log('Error message:', result.error_message);
+                                            console.log('🔍 RENDERING RESULT:', index, result);
+                                            console.log('🔍 Result keys:', Object.keys(result));
+                                            console.log('🔍 Has llm_response:', !!result.llm_response);
+                                            console.log('🔍 LLM response object:', result.llm_response);
+                                            console.log('🔍 LLM response content:', result.llm_response?.content);
+                                            console.log('🔍 Actual output:', result.actual_output);
+                                            console.log('🔍 Error:', result.error);
+                                            console.log('🔍 Error message:', result.error_message);
+                                            console.log('🔍 Full result object:', JSON.stringify(result, null, 2));
 
                                             // Check for successful response (either fresh or historical)
                                             const hasValidResponse = (result.llm_response && result.llm_response.content) ||
                                                 (result.actual_output && result.actual_output.trim() !== '');
+
+                                            console.log('🔍 hasValidResponse:', hasValidResponse);
 
                                             if (hasValidResponse) {
                                                 const content = result.llm_response?.content || result.actual_output;
@@ -1231,6 +1346,10 @@ const PromptManager: React.FC = () => {
                                             } else {
                                                 // Handle error cases - check both error fields
                                                 const errorMsg = result.error || result.error_message;
+                                                console.log('🔍 GOING TO ERROR PATH');
+                                                console.log('🔍 errorMsg:', errorMsg);
+                                                console.log('🔍 result.error:', result.error);
+                                                console.log('🔍 result.error_message:', result.error_message);
                                                 return (
                                                     <Typography variant="body2" color="error">
                                                         {errorMsg || 'No response available'}
