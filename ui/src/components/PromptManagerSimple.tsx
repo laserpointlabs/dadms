@@ -71,6 +71,27 @@ interface Prompt {
     }>;
 }
 
+interface LLMConfig {
+    provider: LLMProvider;
+    model: string;
+    temperature: number;
+    maxTokens: number;
+}
+
+interface OllamaModel {
+    name: string;
+    size: number;
+    digest: string;
+    modified_at: string;
+}
+
+interface LLMStatus {
+    provider: string;
+    available: boolean;
+    models?: string[] | OllamaModel[];
+    error?: string;
+}
+
 // Remove the duplicate type definitions since we're importing from the API service
 
 const PromptManagerSimple: React.FC = () => {
@@ -92,10 +113,110 @@ const PromptManagerSimple: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
     const [saveLoading, setSaveLoading] = useState(false);
 
+    // LLM Configuration state
+    const [llmConfig, setLlmConfig] = useState<LLMConfig>({
+        provider: 'openai' as LLMProvider,
+        model: 'gpt-3.5-turbo',
+        temperature: 0.7,
+        maxTokens: 1000
+    });
+    const [llmStatus, setLlmStatus] = useState<Record<string, LLMStatus>>({});
+    const [loadingLlmStatus, setLoadingLlmStatus] = useState(false);
+
     // Load prompts on mount
     useEffect(() => {
         loadPrompts();
+        checkLlmStatus();
     }, []);
+
+    const checkLlmStatus = async () => {
+        setLoadingLlmStatus(true);
+        const status: Record<string, LLMStatus> = {};
+
+        try {
+            // Check OpenAI status
+            console.log('🔄 Checking OpenAI status...');
+            try {
+                const openaiResponse = await fetch('http://localhost:3002/health');
+                if (openaiResponse.ok) {
+                    status.openai = {
+                        provider: 'openai',
+                        available: true,
+                        models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']
+                    };
+                    console.log('✅ OpenAI service available');
+                } else {
+                    throw new Error('OpenAI service not responding');
+                }
+            } catch (err) {
+                console.log('❌ OpenAI service unavailable:', err);
+                status.openai = {
+                    provider: 'openai',
+                    available: false,
+                    error: 'Service unavailable'
+                };
+            }
+
+            // Check Ollama status and get models (direct connection to Ollama)
+            console.log('🔄 Checking Ollama status...');
+            try {
+                // Try direct connection to Ollama first
+                const ollamaHealthResponse = await fetch('http://localhost:11434/api/tags');
+                if (ollamaHealthResponse.ok) {
+                    const modelsData = await ollamaHealthResponse.json();
+                    status.ollama = {
+                        provider: 'ollama',
+                        available: true,
+                        models: modelsData.models.map((model: any) => `ollama/${model.name}`) || []
+                    };
+                    console.log('✅ Ollama service available with models:', modelsData.models.map((model: any) => `ollama/${model.name}`));
+                } else {
+                    // Fallback to microservice proxy
+                    console.log('🔄 Trying Ollama via microservice proxy...');
+                    const proxyHealthResponse = await fetch('http://localhost:3004/health');
+                    if (proxyHealthResponse.ok) {
+                        const modelsResponse = await fetch('http://localhost:3004/models');
+                        if (modelsResponse.ok) {
+                            const proxyModelsData = await modelsResponse.json();
+                            status.ollama = {
+                                provider: 'ollama',
+                                available: true,
+                                models: proxyModelsData.data?.models || []
+                            };
+                            console.log('✅ Ollama service available via proxy with models:', proxyModelsData.data?.models);
+                        } else {
+                            throw new Error('Could not fetch Ollama models via proxy');
+                        }
+                    } else {
+                        throw new Error('Ollama service not responding on port 11434 or 3004');
+                    }
+                }
+            } catch (err) {
+                console.log('❌ Ollama service unavailable:', err);
+                status.ollama = {
+                    provider: 'ollama',
+                    available: false,
+                    error: 'Service unavailable'
+                };
+            }
+
+        } catch (err) {
+            console.error('💥 Error checking LLM status:', err);
+        } finally {
+            setLlmStatus(status);
+            setLoadingLlmStatus(false);
+        }
+    };
+
+    const getAvailableModels = (): string[] => {
+        const currentStatus = llmStatus[llmConfig.provider];
+        if (!currentStatus?.available || !currentStatus.models) {
+            return [];
+        }
+
+        // All models are now returned as strings (Ollama models are prefixed with 'ollama/')
+        return currentStatus.models as string[];
+    };
 
     const loadPrompts = async () => {
         try {
@@ -168,19 +289,21 @@ const PromptManagerSimple: React.FC = () => {
             const testCaseIds = enabledTestCases.map(tc => tc.id);
             console.log('🎯 Testing with cases:', testCaseIds);
 
-            // Prepare request
+            // Prepare request - convert ollama provider to local for backend
+            const backendConfig = { ...llmConfig };
+            if (llmConfig.provider === 'ollama') {
+                backendConfig.provider = 'local' as LLMProvider;
+            }
+
             const testRequest: TestPromptRequest = {
                 test_case_ids: testCaseIds,
-                llm_configs: [{
-                    provider: 'openai' as LLMProvider,
-                    model: 'gpt-3.5-turbo',
-                    temperature: 0.7,
-                    maxTokens: 1000
-                }],
+                llm_configs: [backendConfig],
                 enable_comparison: false
             };
 
             console.log('📤 Sending request:', testRequest);
+            console.log('🔧 Original config:', llmConfig);
+            console.log('🔧 Backend config:', backendConfig);
 
             // Make API call with fresh timestamp to avoid caching
             const timestamp = Date.now();
@@ -312,7 +435,7 @@ const PromptManagerSimple: React.FC = () => {
     const copyPrompt = async (prompt: Prompt) => {
         try {
             setError(null);
-            
+
             // Create a copy with modified name and new test case IDs
             const copiedPrompt = {
                 ...prompt,
@@ -907,6 +1030,151 @@ const PromptManagerSimple: React.FC = () => {
                         <Typography variant="body2" sx={{ mb: 2 }}>
                             <strong>Test Cases:</strong> {selectedPrompt.test_cases.filter(tc => tc.enabled).length} enabled
                         </Typography>
+
+                        {/* LLM Configuration Section */}
+                        <Card sx={{ mb: 2, p: 2, bgcolor: 'background.paper' }}>
+                            <Typography variant="h6" gutterBottom color="primary">
+                                🤖 LLM Configuration
+                            </Typography>
+
+                            {loadingLlmStatus && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="body2">Checking LLM availability...</Typography>
+                                    <LinearProgress />
+                                </Box>
+                            )}
+
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Provider</InputLabel>
+                                        <Select
+                                            value={llmConfig.provider}
+                                            onChange={(e) => {
+                                                const newProvider = e.target.value as LLMProvider;
+                                                const availableModels = llmStatus[newProvider]?.models;
+                                                let defaultModel = '';
+
+                                                if (newProvider === 'openai') {
+                                                    defaultModel = 'gpt-3.5-turbo';
+                                                } else if (newProvider === ('ollama' as LLMProvider) && availableModels && availableModels.length > 0) {
+                                                    // For Ollama, models are already prefixed with 'ollama/'
+                                                    defaultModel = availableModels[0] as string;
+                                                }
+
+                                                setLlmConfig(prev => ({
+                                                    ...prev,
+                                                    provider: newProvider,
+                                                    model: defaultModel
+                                                }));
+                                            }}
+                                            label="Provider"
+                                        >
+                                            <MenuItem value="openai" disabled={!llmStatus.openai?.available}>
+                                                <Box display="flex" alignItems="center" gap={1}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 8,
+                                                            height: 8,
+                                                            borderRadius: '50%',
+                                                            bgcolor: llmStatus.openai?.available ? 'success.main' : 'error.main'
+                                                        }}
+                                                    />
+                                                    OpenAI {!llmStatus.openai?.available && '(unavailable)'}
+                                                </Box>
+                                            </MenuItem>
+                                            <MenuItem value="ollama" disabled={!llmStatus.ollama?.available}>
+                                                <Box display="flex" alignItems="center" gap={1}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 8,
+                                                            height: 8,
+                                                            borderRadius: '50%',
+                                                            bgcolor: llmStatus.ollama?.available ? 'success.main' : 'error.main'
+                                                        }}
+                                                    />
+                                                    Ollama {!llmStatus.ollama?.available && '(unavailable)'}
+                                                </Box>
+                                            </MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Model</InputLabel>
+                                        <Select
+                                            value={llmConfig.model}
+                                            onChange={(e) => setLlmConfig(prev => ({ ...prev, model: e.target.value }))}
+                                            label="Model"
+                                            disabled={!llmStatus[llmConfig.provider]?.available}
+                                        >
+                                            {getAvailableModels().map((model) => (
+                                                <MenuItem key={model} value={model}>
+                                                    {model}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={6}>
+                                    <TextField
+                                        label="Temperature"
+                                        type="number"
+                                        size="small"
+                                        fullWidth
+                                        value={llmConfig.temperature}
+                                        onChange={(e) => setLlmConfig(prev => ({
+                                            ...prev,
+                                            temperature: Math.max(0, Math.min(2, parseFloat(e.target.value) || 0))
+                                        }))}
+                                        inputProps={{ min: 0, max: 2, step: 0.1 }}
+                                        helperText="0.0 = deterministic, 2.0 = very creative"
+                                    />
+                                </Grid>
+
+                                <Grid item xs={6}>
+                                    <TextField
+                                        label="Max Tokens"
+                                        type="number"
+                                        size="small"
+                                        fullWidth
+                                        value={llmConfig.maxTokens}
+                                        onChange={(e) => setLlmConfig(prev => ({
+                                            ...prev,
+                                            maxTokens: Math.max(1, parseInt(e.target.value) || 1000)
+                                        }))}
+                                        inputProps={{ min: 1, max: 8000 }}
+                                        helperText="Maximum response length"
+                                    />
+                                </Grid>
+                            </Grid>
+
+                            {/* Status indicators */}
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Provider Status:
+                                </Typography>
+                                {Object.entries(llmStatus).map(([provider, status]) => (
+                                    <Chip
+                                        key={provider}
+                                        label={`${provider}: ${status.available ? 'Available' : 'Unavailable'}`}
+                                        color={status.available ? 'success' : 'error'}
+                                        size="small"
+                                        sx={{ ml: 1, mb: 1 }}
+                                    />
+                                ))}
+                                <Button
+                                    size="small"
+                                    onClick={checkLlmStatus}
+                                    sx={{ ml: 1 }}
+                                    disabled={loadingLlmStatus}
+                                >
+                                    Refresh Status
+                                </Button>
+                            </Box>
+                        </Card>
 
                         {error && (
                             <Alert severity="error" sx={{ mb: 2 }}>
