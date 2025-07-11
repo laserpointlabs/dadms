@@ -131,7 +131,7 @@ const swaggerOptions = {
                             items: {
                                 type: 'object',
                                 properties: {
-                                    provider: { type: 'string', enum: ['openai', 'anthropic', 'local', 'mock'] },
+                                    provider: { type: 'string', enum: ['openai', 'anthropic', 'local'] },
                                     model: { type: 'string' },
                                     apiKey: { type: 'string' },
                                     temperature: { type: 'number' },
@@ -741,8 +741,8 @@ app.post('/prompts/:id/test', async (req, res) => {
         // Default LLM configs if none provided
         const defaultLLMConfigs: LLMConfig[] = [
             {
-                provider: 'mock',
-                model: 'mock-gpt',
+                provider: 'openai',
+                model: 'gpt-3.5-turbo',
                 temperature: 0.7,
                 maxTokens: 1000
             }
@@ -954,6 +954,11 @@ app.get('/prompts/:id/test-results', async (req, res) => {
                 error: 'No test results found for this prompt' + (version ? ` version ${version}` : '')
             });
         }
+
+        // Debug logging
+        console.log('DEBUG: testResults type:', typeof testResults);
+        console.log('DEBUG: testResults is array:', Array.isArray(testResults));
+        console.log('DEBUG: testResults keys:', Object.keys(testResults || {}));
 
         return res.json({
             success: true,
@@ -1389,11 +1394,6 @@ app.get('/llms/config-status', (req, res) => {
             configured: true, // Local models don't need API keys
             source: 'local',
             models: AVAILABLE_LLMS.local
-        },
-        mock: {
-            configured: true, // Mock doesn't need real API keys
-            source: 'mock',
-            models: AVAILABLE_LLMS.mock
         }
     };
 

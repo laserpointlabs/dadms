@@ -82,7 +82,7 @@ export interface CreatePromptRequest {
 }
 
 // LLM Types
-export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'mock';
+export type LLMProvider = 'openai' | 'anthropic' | 'local';
 
 export interface LLMConfig {
     provider: LLMProvider;
@@ -116,7 +116,14 @@ export interface TestResult {
     expected_output?: any;
     comparison_score?: number;
     error?: string;
+    error_message?: string; // Historical results use this field
     execution_time_ms: number;
+    llm_config?: {
+        provider: string;
+        model: string;
+        temperature?: string | number;
+        maxTokens?: number;
+    }; // Historical results include this
 }
 
 export interface TestSummary {

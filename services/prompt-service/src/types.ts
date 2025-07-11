@@ -46,7 +46,7 @@ export interface UpdatePromptRequest {
 }
 
 // LLM Provider Types
-export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'mock';
+export type LLMProvider = 'openai' | 'anthropic' | 'local';
 
 export interface LLMConfig {
     provider: LLMProvider;
@@ -113,6 +113,5 @@ export interface TestPromptResponse {
 export const AVAILABLE_LLMS: Record<LLMProvider, string[]> = {
     openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
     anthropic: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-    local: ['ollama/llama2', 'ollama/mistral', 'ollama/codellama'],
-    mock: ['mock-gpt', 'mock-claude']
+    local: ['ollama/mistral']
 }; 

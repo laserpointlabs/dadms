@@ -39,8 +39,6 @@ export class LLMService {
                     return await this.callAnthropic(processedPrompt, effectiveConfig, startTime);
                 case 'local':
                     return await this.callLocal(processedPrompt, effectiveConfig, startTime);
-                case 'mock':
-                    return await this.callMock(processedPrompt, effectiveConfig, startTime);
                 default:
                     throw new Error(`Unsupported LLM provider: ${config.provider}`);
             }
@@ -68,9 +66,6 @@ export class LLMService {
             case 'local':
                 // For local models like Ollama, no API key typically needed
                 return undefined;
-            case 'mock':
-                // Mock doesn't need real API keys
-                return undefined;
             default:
                 return undefined;
         }
@@ -88,8 +83,7 @@ export class LLMService {
             case 'anthropic':
                 return !!(envApiKey || configApiKey);
             case 'local':
-            case 'mock':
-                // These don't require API keys
+                // Local models don't require API keys
                 return true;
             default:
                 return false;
@@ -213,39 +207,6 @@ export class LLMService {
                 total_tokens: (response.data.prompt_eval_count || 0) + (response.data.eval_count || 0)
             },
             response_time_ms: responseTime
-        };
-    }
-
-    private async callMock(prompt: string, config: LLMConfig, startTime: number): Promise<LLMResponse> {
-        // Mock implementation for testing
-        const responseTime = Date.now() - startTime;
-
-        // Simulate some processing time
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-
-        // Generate a mock response based on the prompt
-        let mockContent = '';
-        if (prompt.toLowerCase().includes('analyze')) {
-            mockContent = 'Mock Analysis: Based on the provided data, I have identified several key trends and patterns. The analysis shows positive indicators in the main metrics.';
-        } else if (prompt.toLowerCase().includes('code')) {
-            mockContent = 'Mock Code Review: The code appears to follow good practices. Consider adding more error handling and documentation.';
-        } else if (prompt.toLowerCase().includes('summary')) {
-            mockContent = 'Mock Summary: Key points include important decisions, action items for team members, and next steps for project completion.';
-        } else {
-            mockContent = `Mock Response: This is a simulated response from ${config.model}. The prompt was processed and a relevant answer has been generated based on the input context.`;
-        }
-
-        return {
-            provider: 'mock',
-            model: config.model,
-            content: mockContent,
-            usage: {
-                prompt_tokens: Math.floor(prompt.length / 4),
-                completion_tokens: Math.floor(mockContent.length / 4),
-                total_tokens: Math.floor((prompt.length + mockContent.length) / 4)
-            },
-            finish_reason: 'stop',
-            response_time_ms: Date.now() - startTime
         };
     }
 
