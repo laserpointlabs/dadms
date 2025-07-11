@@ -17,21 +17,57 @@ const createServiceApi = (port: string) => {
         },
     });
 
-    // Request interceptor to add user ID
+    // Request interceptor to add user ID and logging
     api.interceptors.request.use(
         (config) => {
             const userId = localStorage.getItem('user_id') || 'default-user';
             config.headers['x-user-id'] = userId;
+
+            console.log(`🚀 API Request (${port}):`, {
+                method: config.method?.toUpperCase(),
+                url: config.url,
+                fullUrl: `${config.baseURL}${config.url}`,
+                headers: config.headers,
+                data: config.data,
+                params: config.params
+            });
+
             return config;
         },
-        (error) => Promise.reject(error)
+        (error) => {
+            console.error(`❌ Request Error (${port}):`, error);
+            return Promise.reject(error);
+        }
     );
 
-    // Response interceptor for error handling
+    // Response interceptor for logging and error handling
     api.interceptors.response.use(
-        (response) => response,
+        (response) => {
+            console.log(`✅ API Response (${port}):`, {
+                status: response.status,
+                statusText: response.statusText,
+                url: response.config.url,
+                data: response.data,
+                headers: response.headers
+            });
+            return response;
+        },
         (error) => {
-            console.error(`API Error (${port}):`, error);
+            console.error(`💥 API Error (${port}):`, {
+                message: error.message,
+                code: error.code,
+                response: error.response ? {
+                    status: error.response.status,
+                    statusText: error.response.statusText,
+                    data: error.response.data,
+                    headers: error.response.headers
+                } : 'No response',
+                config: error.config ? {
+                    method: error.config.method,
+                    url: error.config.url,
+                    data: error.config.data
+                } : 'No config'
+            });
             return Promise.reject(error);
         }
     );
