@@ -39,8 +39,6 @@ export class LLMService {
                     return await this.callAnthropic(processedPrompt, effectiveConfig, startTime);
                 case 'local':
                     return await this.callLocal(processedPrompt, effectiveConfig, startTime);
-                case 'mock':
-                    return await this.callMock(processedPrompt, effectiveConfig, startTime);
                 default:
                     throw new Error(`Unsupported LLM provider: ${config.provider}`);
             }
@@ -68,9 +66,6 @@ export class LLMService {
             case 'local':
                 // For local models like Ollama, no API key typically needed
                 return undefined;
-            case 'mock':
-                // Mock doesn't need real API keys
-                return undefined;
             default:
                 return undefined;
         }
@@ -88,8 +83,7 @@ export class LLMService {
             case 'anthropic':
                 return !!(envApiKey || configApiKey);
             case 'local':
-            case 'mock':
-                // These don't require API keys
+                // Local models don't require API keys
                 return true;
             default:
                 return false;
@@ -216,44 +210,34 @@ export class LLMService {
         };
     }
 
-    private async callMock(prompt: string, config: LLMConfig, startTime: number): Promise<LLMResponse> {
-        // Mock implementation for testing
-        const responseTime = Date.now() - startTime;
-
-        // Simulate some processing time
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-
-        // Generate a mock response based on the prompt
-        let mockContent = '';
-        if (prompt.toLowerCase().includes('analyze')) {
-            mockContent = 'Mock Analysis: Based on the provided data, I have identified several key trends and patterns. The analysis shows positive indicators in the main metrics.';
-        } else if (prompt.toLowerCase().includes('code')) {
-            mockContent = 'Mock Code Review: The code appears to follow good practices. Consider adding more error handling and documentation.';
-        } else if (prompt.toLowerCase().includes('summary')) {
-            mockContent = 'Mock Summary: Key points include important decisions, action items for team members, and next steps for project completion.';
-        } else {
-            mockContent = `Mock Response: This is a simulated response from ${config.model}. The prompt was processed and a relevant answer has been generated based on the input context.`;
-        }
-
-        return {
-            provider: 'mock',
-            model: config.model,
-            content: mockContent,
-            usage: {
-                prompt_tokens: Math.floor(prompt.length / 4),
-                completion_tokens: Math.floor(mockContent.length / 4),
-                total_tokens: Math.floor((prompt.length + mockContent.length) / 4)
-            },
-            finish_reason: 'stop',
-            response_time_ms: Date.now() - startTime
-        };
-    }
-
     // Helper method to compare LLM responses
     compareResponses(expected: any, actual: string): number {
         if (typeof expected === 'string') {
-            // Simple string similarity
-            const similarity = this.calculateStringSimilarity(expected.toLowerCase(), actual.toLowerCase());
+            // Normalize both strings by trimming whitespace
+            const normalizedExpected = expected.trim().toLowerCase();
+            const normalizedActual = actual.trim().toLowerCase();
+
+            // Check for exact match first
+            if (normalizedExpected === normalizedActual) {
+                return 1.0;
+            }
+
+            // For numeric answers, extract numbers and compare
+            const expectedNumber = this.extractNumber(normalizedExpected);
+            const actualNumber = this.extractNumber(normalizedActual);
+
+            if (expectedNumber !== null && actualNumber !== null) {
+                // If both are numbers, check if they match
+                return expectedNumber === actualNumber ? 1.0 : 0.0;
+            }
+
+            // Check if actual contains the expected answer
+            if (normalizedActual.includes(normalizedExpected)) {
+                return 0.9; // High score for containing the expected answer
+            }
+
+            // Fall back to string similarity
+            const similarity = this.calculateStringSimilarity(normalizedExpected, normalizedActual);
             return similarity;
         } else if (typeof expected === 'object' && expected !== null) {
             // For structured responses, check if actual contains expected keywords
@@ -264,6 +248,12 @@ export class LLMService {
             return matches.length / keywords.length;
         }
         return 0;
+    }
+
+    private extractNumber(text: string): number | null {
+        // Extract first number from text
+        const match = text.match(/-?\d+\.?\d*/);
+        return match ? parseFloat(match[0]) : null;
     }
 
     private calculateStringSimilarity(str1: string, str2: string): number {

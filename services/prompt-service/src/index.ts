@@ -7,8 +7,8 @@ import swaggerUi from 'swagger-ui-express';
 import { v4 as uuidv4 } from 'uuid';
 // TODO: Refactor event-bus to be a node module for proper import. Temporarily disabling event bus integration for build compatibility.
 // import { EventBus } from '../../shared/event-bus/src/event-bus';
-import { PromptDatabase } from './database';
 import { LLMService } from './llm-service';
+import { PostgresPromptDatabase as PromptDatabase } from './postgres-database';
 import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, TestPromptRequest, UpdatePromptRequest } from './types';
 
 const app = express();
@@ -131,7 +131,7 @@ const swaggerOptions = {
                             items: {
                                 type: 'object',
                                 properties: {
-                                    provider: { type: 'string', enum: ['openai', 'anthropic', 'local', 'mock'] },
+                                    provider: { type: 'string', enum: ['openai', 'anthropic', 'local'] },
                                     model: { type: 'string' },
                                     apiKey: { type: 'string' },
                                     temperature: { type: 'number' },
@@ -457,6 +457,228 @@ app.delete('/prompts/:id', async (req, res) => {
 
 /**
  * @swagger
+ * /prompts/{id}/version/{version}:
+ *   delete:
+ *     summary: Delete a specific version of a prompt
+ *     description: Delete a specific version of a prompt. If it's the only version, the entire prompt will be deleted.
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: path
+ *         name: version
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The version number to delete
+ *     responses:
+ *       204:
+ *         description: Version deleted successfully
+ *       404:
+ *         description: Prompt version not found
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/prompts/:id/version/:version', async (req, res) => {
+    try {
+        const { id, version } = req.params;
+
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(id)) {
+            return res.status(400).json({ success: false, error: 'Invalid prompt ID format' });
+        }
+
+        // Validate version is a number
+        const versionNum = parseInt(version);
+        if (isNaN(versionNum)) {
+            return res.status(400).json({ success: false, error: 'Invalid version number' });
+        }
+
+        const deleted = await db.deletePromptVersion(id, versionNum);
+        if (!deleted) {
+            return res.status(404).json({ success: false, error: 'Prompt version not found' });
+        }
+
+        // TODO: Publish event to event bus after refactor
+
+        return res.status(204).send();
+    } catch (error) {
+        console.error('Error deleting prompt version:', error);
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/all-versions:
+ *   delete:
+ *     summary: Delete all versions of a prompt
+ *     description: Delete all versions of a prompt and the prompt itself
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *     responses:
+ *       204:
+ *         description: All versions deleted successfully
+ *       404:
+ *         description: Prompt not found
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/prompts/:id/all-versions', async (req, res) => {
+    try {
+        const deleted = await db.deleteAllPromptVersions(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ success: false, error: 'Prompt not found' });
+        }
+
+        // TODO: Publish event to event bus after refactor
+
+        return res.status(204).send();
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/test-config:
+ *   post:
+ *     summary: Save test configuration for a prompt
+ *     description: Save LLM configurations and test case selections for a prompt version
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               version:
+ *                 type: number
+ *               llm_configs:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *               test_case_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Configuration saved successfully
+ *       500:
+ *         description: Internal server error
+ */
+app.post('/prompts/:id/test-config', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { version, llm_configs, test_case_ids } = req.body;
+
+        // Save LLM configurations
+        if (llm_configs) {
+            await db.savePromptLLMConfigs(id, version, llm_configs);
+        }
+
+        // Save test case selections
+        if (test_case_ids) {
+            await db.savePromptTestSelections(id, version, test_case_ids);
+        }
+
+        res.json({ status: 'success', message: 'Test configuration saved' });
+    } catch (error) {
+        console.error('Failed to save test configuration:', error);
+        res.status(500).json({ error: 'Failed to save test configuration' });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/test-config:
+ *   get:
+ *     summary: Get test configuration for a prompt
+ *     description: Retrieve saved LLM configurations and test case selections for a prompt version
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: query
+ *         name: version
+ *         schema:
+ *           type: number
+ *         description: The prompt version
+ *     responses:
+ *       200:
+ *         description: Configuration retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     llm_configs:
+ *                       type: array
+ *                     test_case_ids:
+ *                       type: array
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/prompts/:id/test-config', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const version = parseInt(req.query.version as string) || 1;
+
+        const [llmConfigs, testSelections] = await Promise.all([
+            db.getPromptLLMConfigs(id, version),
+            db.getPromptTestSelections(id, version)
+        ]);
+
+        res.json({
+            status: 'success',
+            data: {
+                llm_configs: llmConfigs,
+                test_case_ids: testSelections
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load test configuration:', error);
+        res.status(500).json({ error: 'Failed to load test configuration' });
+    }
+});
+
+/**
+ * @swagger
  * /prompts/{id}/test:
  *   post:
  *     summary: Test a prompt with real LLMs
@@ -519,8 +741,8 @@ app.post('/prompts/:id/test', async (req, res) => {
         // Default LLM configs if none provided
         const defaultLLMConfigs: LLMConfig[] = [
             {
-                provider: 'mock',
-                model: 'mock-gpt',
+                provider: 'openai',
+                model: 'gpt-3.5-turbo',
                 temperature: 0.7,
                 maxTokens: 1000
             }
@@ -645,9 +867,11 @@ app.post('/prompts/:id/test', async (req, res) => {
         // Save test results to database
         try {
             await db.saveTestResults(
-                testResponse,
+                prompt.id,
                 prompt.version,
+                results,
                 llmConfigs,
+                request.enable_comparison || false,
                 req.headers['x-user-id'] as string || 'anonymous'
             );
         } catch (saveError) {
@@ -731,6 +955,11 @@ app.get('/prompts/:id/test-results', async (req, res) => {
             });
         }
 
+        // Debug logging
+        console.log('DEBUG: testResults type:', typeof testResults);
+        console.log('DEBUG: testResults is array:', Array.isArray(testResults));
+        console.log('DEBUG: testResults keys:', Object.keys(testResults || {}));
+
         return res.json({
             success: true,
             data: testResults
@@ -807,6 +1036,125 @@ app.get('/prompts/:id/test-history', async (req, res) => {
         return res.json({
             success: true,
             data: testHistory
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /prompts/{id}/test-results:
+ *   delete:
+ *     summary: Delete test results for a prompt
+ *     description: Delete all test results for a specific prompt, optionally filtered by version
+ *     tags: [Prompts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The prompt ID
+ *       - in: query
+ *         name: version
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Specific prompt version to delete results for
+ *     responses:
+ *       200:
+ *         description: Test results deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: No test results found to delete
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/prompts/:id/test-results', async (req, res) => {
+    try {
+        const promptId = req.params.id;
+        const version = req.query.version ? parseInt(req.query.version as string, 10) : undefined;
+
+        const deleted = await db.deleteTestResults(promptId, version);
+
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                error: 'No test results found to delete'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: `Test results deleted successfully${version ? ` for version ${version}` : ''}`
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Internal server error'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /test-results/{testResultId}:
+ *   delete:
+ *     tags: [Test Results]
+ *     summary: Delete a specific test result
+ *     description: Delete an individual test result by its ID
+ *     parameters:
+ *       - in: path
+ *         name: testResultId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Test result ID to delete
+ *     responses:
+ *       200:
+ *         description: Test result deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Test result not found
+ *       500:
+ *         description: Internal server error
+ */
+app.delete('/test-results/:testResultId', async (req, res) => {
+    try {
+        const testResultId = req.params.testResultId;
+
+        const deleted = await db.deleteTestResult(testResultId);
+
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                error: 'Test result not found'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: 'Test result deleted successfully'
         });
     } catch (error) {
         return res.status(500).json({
@@ -1102,11 +1450,6 @@ app.get('/llms/config-status', (req, res) => {
             configured: true, // Local models don't need API keys
             source: 'local',
             models: AVAILABLE_LLMS.local
-        },
-        mock: {
-            configured: true, // Mock doesn't need real API keys
-            source: 'mock',
-            models: AVAILABLE_LLMS.mock
         }
     };
 

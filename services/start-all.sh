@@ -121,11 +121,11 @@ build_service() {
 }
 
 # Service directories
-PROMPT_SERVICE_DIR="services/prompt-service"
-TOOL_SERVICE_DIR="services/tool-service"
-WORKFLOW_SERVICE_DIR="services/workflow-service"
-AI_OVERSIGHT_SERVICE_DIR="services/ai-oversight-service"
-EVENT_BUS_DIR="services/shared/event-bus"
+PROMPT_SERVICE_DIR="prompt-service"
+TOOL_SERVICE_DIR="tool-service"
+WORKFLOW_SERVICE_DIR="workflow-service"
+AI_OVERSIGHT_SERVICE_DIR="ai-oversight-service"
+EVENT_BUS_DIR="shared/event-bus"
 
 # Install dependencies for all services
 print_status "Installing dependencies for all services..."
@@ -146,17 +146,17 @@ build_service "$AI_OVERSIGHT_SERVICE_DIR"
 # Start all services
 print_status "Starting services..."
 start_service "$EVENT_BUS_DIR" 3005
-start_service "$PROMPT_SERVICE_DIR" 3010
-start_service "$TOOL_SERVICE_DIR" 3011
-start_service "$WORKFLOW_SERVICE_DIR" 3012
-start_service "$AI_OVERSIGHT_SERVICE_DIR" 3013
+start_service "$PROMPT_SERVICE_DIR" 3001
+start_service "$TOOL_SERVICE_DIR" 3002
+start_service "$WORKFLOW_SERVICE_DIR" 3003
+start_service "$AI_OVERSIGHT_SERVICE_DIR" 3004
 
 print_success "All services started!"
 print_status "Service URLs:"
-echo "  - Prompt Service: http://localhost:3010"
-echo "  - Tool Service: http://localhost:3011"
-echo "  - Workflow Service: http://localhost:3012"
-echo "  - AI Oversight Service: http://localhost:3013"
+echo "  - Prompt Service: http://localhost:3001"
+echo "  - Tool Service: http://localhost:3002"
+echo "  - Workflow Service: http://localhost:3003"
+echo "  - AI Oversight Service: http://localhost:3004"
 echo "  - Event Bus: http://localhost:3005"
 
 print_status "Logs are available in the logs/ directory"

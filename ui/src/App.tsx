@@ -16,7 +16,9 @@ import ThreadContextViewer from './components/ThreadContextViewer';
 
 // Import new microservices components
 import AIOverview from './components/AIOverview';
+import APITester from './components/APITester';
 import PromptManager from './components/PromptManager';
+import PromptManagerSimple from './components/PromptManagerSimple';
 import ToolManager from './components/ToolManager';
 
 const drawerWidth = 240;
@@ -25,8 +27,10 @@ const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'BPMN AI Workspace', icon: <AccountTree />, path: '/bpmn' },
     { text: 'Prompt Manager', icon: <TextSnippet />, path: '/prompts' },
+    { text: 'Simple Prompt Manager', icon: <TextSnippet />, path: '/prompts-simple' },
     { text: 'Tool Manager', icon: <Build />, path: '/tools' },
     { text: 'AI Oversight', icon: <SmartToy />, path: '/ai-oversight' },
+    { text: 'API Tester', icon: <Monitor />, path: '/api-tester' },
     { text: 'System Management', icon: <Settings />, path: '/system' },
     { text: 'Process Management', icon: <PlayArrow />, path: '/processes' },
     { text: 'CLI Manager', icon: <Terminal />, path: '/cli' },
@@ -124,8 +128,10 @@ function AppContent({ selectedPath, setSelectedPath }: { selectedPath: string; s
                     <Route path="/" element={<DashboardOverview />} />
                     <Route path="/bpmn" element={<BPMNWorkspace />} />
                     <Route path="/prompts" element={<PromptManager />} />
+                    <Route path="/prompts-simple" element={<PromptManagerSimple />} />
                     <Route path="/tools" element={<ToolManager />} />
                     <Route path="/ai-oversight" element={<AIOverview />} />
+                    <Route path="/api-tester" element={<APITester />} />
                     <Route path="/system" element={<SystemManager />} />
                     <Route path="/processes" element={<ProcessManager />} />
                     <Route path="/cli" element={<CLIManager />} />

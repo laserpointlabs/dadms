@@ -5,7 +5,7 @@ Main package for the DADM application.
 """
 
 # Define version directly
-__version__ = "0.12.1"
+__version__ = "0.13.3"
 
 # Export main components
 from .service_orchestrator import ServiceOrchestrator
