@@ -216,26 +216,26 @@ export class LLMService {
             // Normalize both strings by trimming whitespace
             const normalizedExpected = expected.trim().toLowerCase();
             const normalizedActual = actual.trim().toLowerCase();
-            
+
             // Check for exact match first
             if (normalizedExpected === normalizedActual) {
                 return 1.0;
             }
-            
+
             // For numeric answers, extract numbers and compare
             const expectedNumber = this.extractNumber(normalizedExpected);
             const actualNumber = this.extractNumber(normalizedActual);
-            
+
             if (expectedNumber !== null && actualNumber !== null) {
                 // If both are numbers, check if they match
                 return expectedNumber === actualNumber ? 1.0 : 0.0;
             }
-            
+
             // Check if actual contains the expected answer
             if (normalizedActual.includes(normalizedExpected)) {
                 return 0.9; // High score for containing the expected answer
             }
-            
+
             // Fall back to string similarity
             const similarity = this.calculateStringSimilarity(normalizedExpected, normalizedActual);
             return similarity;
