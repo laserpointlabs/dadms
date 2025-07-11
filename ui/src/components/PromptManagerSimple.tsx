@@ -286,7 +286,7 @@ const PromptManagerSimple: React.FC = () => {
         const newTestCase = {
             id: Date.now().toString(), // Temporary ID for new test cases
             name: `Test Case ${(editingPrompt.test_cases || []).length + 1}`,
-            input: '',
+            input: {},
             expected_output: '',
             enabled: true
         };
@@ -659,13 +659,25 @@ const PromptManagerSimple: React.FC = () => {
                                 </Box>
 
                                 <TextField
-                                    label="Input"
+                                    label="Input (JSON)"
                                     fullWidth
                                     margin="normal"
                                     size="small"
-                                    value={testCase.input}
-                                    onChange={(e) => updateTestCase(index, 'input', e.target.value)}
+                                    multiline
+                                    rows={3}
+                                    value={typeof testCase.input === 'string' ? testCase.input : JSON.stringify(testCase.input, null, 2)}
+                                    onChange={(e) => {
+                                        try {
+                                            // Try to parse as JSON, if it fails keep as string
+                                            const parsed = JSON.parse(e.target.value);
+                                            updateTestCase(index, 'input', parsed);
+                                        } catch {
+                                            // If not valid JSON, store as string (user might still be typing)
+                                            updateTestCase(index, 'input', e.target.value);
+                                        }
+                                    }}
                                     required
+                                    helperText='Enter JSON object, e.g., {"item": "apple"}'
                                 />
 
                                 <TextField
@@ -675,7 +687,7 @@ const PromptManagerSimple: React.FC = () => {
                                     size="small"
                                     multiline
                                     rows={2}
-                                    value={testCase.expected_output}
+                                    value={typeof testCase.expected_output === 'string' ? testCase.expected_output : JSON.stringify(testCase.expected_output, null, 2)}
                                     onChange={(e) => updateTestCase(index, 'expected_output', e.target.value)}
                                     required
                                 />
