@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.3] - 2025-07-11
+
+### Added
+- **Comprehensive Documentation Framework**: Complete documentation system for prompt management development
+  - Detailed work summary documentation capturing achievements, challenges, and learning outcomes
+  - Technical specification documentation with functional requirements and architecture details
+  - Issues and successes analysis with detailed resolution strategies and impact assessment
+- **Enhanced Test Result Management**: Advanced individual test result deletion functionality
+  - Individual test result deletion with complete backend API integration
+  - Real-time UI updates for improved user experience during test management
+  - Enhanced test result display with comprehensive LLM response metadata
+- **Improved LLM Response Storage**: Complete LLM response tracking and persistence
+  - Enhanced database schema with llm_response, llm_provider, llm_model, and execution_time_ms columns
+  - Complete LLM response storage and retrieval pipeline implementation
+  - Execution time tracking in milliseconds for performance analysis and latency monitoring
+
+### Enhanced
+- Database schema extended from 11 to 15 columns supporting comprehensive LLM metadata tracking
+- Test result comparison logic with improved accuracy for numeric and text responses
+- Service management procedures with proper directory context handling
+- Documentation organization with structured summaries and technical specifications
+
+### Fixed
+- Execution time tracking displaying 0ms instead of actual latency measurements
+- Test results not persisting between dialog sessions due to service state issues
+- Database schema mismatches between timestamp and duration storage requirements
+- Service restart procedures and directory navigation context preservation
+
 ## [0.13.2] - 2025-07-10
 
 ### Added

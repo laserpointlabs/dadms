@@ -1,0 +1,28 @@
+{
+    "name": "UI Test - Color Question",
+    "text": "What color is {item}? Answer with just the color name.",
+    "type": "simple",
+    "tags": [
+        "ui-test",
+        "simple",
+        "color"
+    ],
+    "test_cases": [
+        {
+            "name": "Red Apple Test",
+            "input": {
+                "item": "a ripe apple"
+            },
+            "expected_output": "red",
+            "enabled": true
+        },
+        {
+            "name": "Blue Sky Test",
+            "input": {
+                "item": "the sky on a clear day"
+            },
+            "expected_output": "blue",
+            "enabled": true
+        }
+    ]
+}

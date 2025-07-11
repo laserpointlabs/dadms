@@ -17,21 +17,57 @@ const createServiceApi = (port: string) => {
         },
     });
 
-    // Request interceptor to add user ID
+    // Request interceptor to add user ID and logging
     api.interceptors.request.use(
         (config) => {
             const userId = localStorage.getItem('user_id') || 'default-user';
             config.headers['x-user-id'] = userId;
+
+            console.log(`🚀 API Request (${port}):`, {
+                method: config.method?.toUpperCase(),
+                url: config.url,
+                fullUrl: `${config.baseURL}${config.url}`,
+                headers: config.headers,
+                data: config.data,
+                params: config.params
+            });
+
             return config;
         },
-        (error) => Promise.reject(error)
+        (error) => {
+            console.error(`❌ Request Error (${port}):`, error);
+            return Promise.reject(error);
+        }
     );
 
-    // Response interceptor for error handling
+    // Response interceptor for logging and error handling
     api.interceptors.response.use(
-        (response) => response,
+        (response) => {
+            console.log(`✅ API Response (${port}):`, {
+                status: response.status,
+                statusText: response.statusText,
+                url: response.config.url,
+                data: response.data,
+                headers: response.headers
+            });
+            return response;
+        },
         (error) => {
-            console.error(`API Error (${port}):`, error);
+            console.error(`💥 API Error (${port}):`, {
+                message: error.message,
+                code: error.code,
+                response: error.response ? {
+                    status: error.response.status,
+                    statusText: error.response.statusText,
+                    data: error.response.data,
+                    headers: error.response.headers
+                } : 'No response',
+                config: error.config ? {
+                    method: error.config.method,
+                    url: error.config.url,
+                    data: error.config.data
+                } : 'No config'
+            });
             return Promise.reject(error);
         }
     );
@@ -82,7 +118,7 @@ export interface CreatePromptRequest {
 }
 
 // LLM Types
-export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'mock';
+export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'ollama';
 
 export interface LLMConfig {
     provider: LLMProvider;
@@ -108,6 +144,7 @@ export interface LLMResponse {
 }
 
 export interface TestResult {
+    id?: string; // ID for individual test result deletion
     test_case_id: string;
     test_case_name: string;
     passed: boolean;
@@ -116,7 +153,14 @@ export interface TestResult {
     expected_output?: any;
     comparison_score?: number;
     error?: string;
+    error_message?: string; // Historical results use this field
     execution_time_ms: number;
+    llm_config?: {
+        provider: string;
+        model: string;
+        temperature?: string | number;
+        maxTokens?: number;
+    }; // Historical results include this
 }
 
 export interface TestSummary {
@@ -275,6 +319,16 @@ export const promptService = {
         return promptApi.delete(`/prompts/${id}`);
     },
 
+    // Delete specific version of a prompt
+    deletePromptVersion: async (id: string, version: number): Promise<AxiosResponse<void>> => {
+        return promptApi.delete(`/prompts/${id}/version/${version}`);
+    },
+
+    // Delete all versions of a prompt
+    deleteAllPromptVersions: async (id: string): Promise<AxiosResponse<void>> => {
+        return promptApi.delete(`/prompts/${id}/all-versions`);
+    },
+
     // Test prompt with LLM
     testPrompt: async (id: string, testData?: TestPromptRequest): Promise<AxiosResponse<{ success: boolean; data: TestPromptResponse }>> => {
         return promptApi.post(`/prompts/${id}/test`, testData || {});
@@ -299,6 +353,17 @@ export const promptService = {
         }>
     }>> => {
         return promptApi.get(`/prompts/${id}/test-history`);
+    },
+
+    // Delete test results for a prompt
+    deleteTestResults: async (id: string, version?: number): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        const params = version ? { version } : {};
+        return promptApi.delete(`/prompts/${id}/test-results`, { params });
+    },
+
+    // Delete a specific test result
+    deleteTestResult: async (testResultId: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
+        return promptApi.delete(`/test-results/${testResultId}`);
     },
 
     // Get all versions of a prompt
@@ -333,6 +398,20 @@ export const promptService = {
     // Get LLM configuration status
     getLLMConfigStatus: async (): Promise<AxiosResponse<{ success: boolean; data: LLMConfigStatus }>> => {
         return promptApi.get('/llms/config-status');
+    },
+
+    // Save test configuration (LLM configs and test case selections)
+    saveTestConfig: async (promptId: string, version: number, llmConfigs: LLMConfig[], testCaseIds: string[]): Promise<AxiosResponse<{ status: string; message: string }>> => {
+        return promptApi.post(`/prompts/${promptId}/test-config`, {
+            version,
+            llm_configs: llmConfigs,
+            test_case_ids: testCaseIds
+        });
+    },
+
+    // Get test configuration (LLM configs and test case selections)
+    getTestConfig: async (promptId: string, version: number): Promise<AxiosResponse<{ status: string; data: { llm_configs: LLMConfig[]; test_case_ids: string[] } }>> => {
+        return promptApi.get(`/prompts/${promptId}/test-config`, { params: { version } });
     },
 };
 

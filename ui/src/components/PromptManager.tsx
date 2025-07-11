@@ -31,6 +31,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
     FormControl,
     FormControlLabel,
     Grid,
@@ -57,6 +58,7 @@ import {
     AvailableLLMs,
     LLMConfig,
     LLMConfigStatus,
+    LLMProvider,
     Prompt,
     promptService,
     TestPromptRequest,
@@ -107,8 +109,8 @@ const PromptManager: React.FC = () => {
     const [llmConfigStatus, setLLMConfigStatus] = useState<LLMConfigStatus>({});
     const [llmConfigs, setLLMConfigs] = useState<LLMConfig[]>([
         {
-            provider: 'mock',
-            model: 'mock-gpt',
+            provider: 'openai',
+            model: 'gpt-3.5-turbo',
             temperature: 0.7,
             maxTokens: 1000
         }
@@ -125,6 +127,13 @@ const PromptManager: React.FC = () => {
         failed_tests: number;
         avg_comparison_score?: number;
     }>>([]);
+    const [testProgress, setTestProgress] = useState<{
+        currentTestName: string;
+        currentTestIndex: number;
+        totalTests: number;
+        currentModel: string;
+        currentProvider: string;
+    } | null>(null);
 
     // Version management state
     const [selectedVersions, setSelectedVersions] = useState<{ [promptId: string]: number }>({});
@@ -148,6 +157,7 @@ const PromptManager: React.FC = () => {
         loadPrompts();
         loadAvailableLLMs();
         loadLLMConfigStatus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadPrompts = async () => {
@@ -186,49 +196,310 @@ const PromptManager: React.FC = () => {
     };
 
     const handleTest = async () => {
-        if (!selectedPrompt) return;
+        if (!selectedPrompt) {
+            console.error('No prompt selected for testing');
+            return;
+        }
+
+        if (selectedTestCases.length === 0) {
+            console.error('No test cases selected');
+            setError('Please select at least one test case');
+            return;
+        }
+
+        if (llmConfigs.length === 0) {
+            console.error('No LLM configurations');
+            setError('Please configure at least one LLM');
+            return;
+        }
+
+        console.log('Starting test with:', {
+            promptId: selectedPrompt.id,
+            testCases: selectedTestCases,
+            llmConfigs: llmConfigs
+        });
 
         try {
+            // Clear any previous state before starting new test
+            setTestResults(null);
             setTestLoading(true);
+            setTestProgress(null);
+            setError(null);
+
+            // Calculate total number of tests
+            const totalTests = selectedTestCases.length * llmConfigs.length;
+            let currentTestIndex = 0;
+
+            // Simulate test progress (in production, this would come from backend SSE or WebSocket)
+            const simulateProgress = () => {
+                if (currentTestIndex < totalTests) {
+                    const testCaseIndex = Math.floor(currentTestIndex / llmConfigs.length);
+                    const llmConfigIndex = currentTestIndex % llmConfigs.length;
+
+                    const testCase = selectedPrompt.test_cases?.find(tc => tc.id === selectedTestCases[testCaseIndex]);
+                    const llmConfig = llmConfigs[llmConfigIndex];
+
+                    setTestProgress({
+                        currentTestName: testCase?.name || `Test ${testCaseIndex + 1}`,
+                        currentTestIndex: currentTestIndex + 1,
+                        totalTests: totalTests,
+                        currentModel: llmConfig.model,
+                        currentProvider: llmConfig.provider as string
+                    });
+
+                    currentTestIndex++;
+
+                    // Continue simulating progress every 500ms
+                    if (currentTestIndex < totalTests) {
+                        setTimeout(simulateProgress, 500);
+                    }
+                }
+            };
+
+            // Start progress simulation
+            simulateProgress();
 
             const testRequest: TestPromptRequest = {
-                test_case_ids: selectedTestCases.length > 0 ? selectedTestCases : undefined,
+                test_case_ids: selectedTestCases,
                 llm_configs: llmConfigs,
                 enable_comparison: enableComparison
             };
 
+            console.log('Sending test request:', testRequest);
+            console.log('🚀 Making API call to:', `${selectedPrompt.id}/test`);
+            console.log('🔍 EXACT REQUEST DETAILS:', {
+                promptId: selectedPrompt.id,
+                endpoint: `/prompts/${selectedPrompt.id}/test`,
+                method: 'POST',
+                requestBody: testRequest,
+                requestBodyStringified: JSON.stringify(testRequest, null, 2)
+            });
+
             const response = await promptService.testPrompt(selectedPrompt.id, testRequest);
-            setTestResults(response.data.data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to test prompt');
+
+            console.log('✅ Received test response:', response);
+            console.log('� RAW RESPONSE DATA INSPECTION:');
+            console.log('🔍 response.data:', response.data);
+            console.log('🔍 response.data.data:', response.data.data);
+            console.log('🔍 response.data.data.results:', response.data.data?.results);
+            console.log('🔍 FIRST RESULT DETAILED INSPECTION:');
+            if (response.data.data?.results?.[0]) {
+                const firstResult = response.data.data.results[0];
+                console.log('🔍 First result full object:', firstResult);
+                console.log('🔍 First result keys:', Object.keys(firstResult));
+                console.log('🔍 First result.error:', firstResult.error);
+                console.log('🔍 First result.llm_response:', firstResult.llm_response);
+                console.log('🔍 First result.actual_output:', firstResult.actual_output);
+                console.log('🔍 First result.passed:', firstResult.passed);
+            }
+            console.log('�📊 Response data structure:', {
+                hasResponse: !!response,
+                hasData: !!response?.data,
+                dataKeys: response?.data ? Object.keys(response.data) : [],
+                responseStatus: response?.status,
+                responseStatusText: response?.statusText
+            });
+            console.log('🔍 Full response.data:', response.data);
+            console.log('🎯 Response success flag:', response.data?.success);
+            console.log('📦 Response data content:', response.data?.data);
+
+            // Validate response structure
+            if (!response || !response.data) {
+                console.error('❌ VALIDATION ERROR: Invalid response structure');
+                console.error('Response object:', response);
+                setError('Invalid response from server: missing data');
+                return;
+            }
+
+            console.log('✅ Step 1: Response and response.data exist');
+
+            if (!response.data.success) {
+                console.error('❌ VALIDATION ERROR: API returned success=false');
+                console.error('Full response.data:', response.data);
+                const errorData = response.data as any;
+                console.error('Error in response:', errorData.error);
+                setError(`Test failed: ${errorData.error || 'Unknown API error'}`);
+                return;
+            }
+
+            console.log('✅ Step 2: API returned success=true');
+
+            if (!response.data.data) {
+                console.error('❌ VALIDATION ERROR: Missing nested data object');
+                console.error('response.data structure:', {
+                    success: response.data.success,
+                    keys: Object.keys(response.data),
+                    dataValue: response.data.data,
+                    dataType: typeof response.data.data
+                });
+                setError('Invalid response: missing test results');
+                return;
+            }
+
+            console.log('✅ Step 3: Nested data object exists');
+
+            const testData = response.data.data;
+            console.log('🎯 Extracted testData:', testData);
+            console.log('🔍 TestData structure analysis:', {
+                hasResults: !!testData.results,
+                resultsLength: testData.results?.length,
+                resultsType: typeof testData.results,
+                resultsIsArray: Array.isArray(testData.results),
+                hasSummary: !!testData.summary,
+                summaryKeys: testData.summary ? Object.keys(testData.summary) : [],
+                promptId: testData.prompt_id,
+                promptText: testData.prompt_text
+            });
+
+            if (!testData.results || !Array.isArray(testData.results)) {
+                console.error('Invalid test data: missing or invalid results array', testData);
+                setError('Invalid test results format');
+                return;
+            }
+
+            console.log('🎯 ABOUT TO SET TEST RESULTS - Pre-state-update check');
+            console.log('🎯 testData being set:', testData);
+            console.log('🎯 testData.results:', testData.results);
+            console.log('🎯 testData.summary:', testData.summary);
+
+            setTestResults(testData);
+            console.log('✅ Test Results successfully set in state:', testData);
+            console.log('🔄 State update - testResults type:', typeof testData);
+            console.log('🔄 State update - testResults.results length:', testData.results?.length);
+
+            // Verify state update took effect (this will show in next render)
+            setTimeout(() => {
+                console.log('🔍 State verification after update:', {
+                    testResultsExists: !!testResults,
+                    testResultsType: typeof testResults,
+                    testResultsResultsLength: testResults?.results?.length,
+                    stateUpdateSuccess: testResults === testData
+                });
+            }, 50);
+
+            // Switch to Results tab after results are set (with a small delay to ensure state update)
+            setTimeout(() => {
+                setTabValue(2);
+                console.log('✅ Switched to Results tab');
+            }, 100);
+
+            console.log('🏁 REACHED END OF SUCCESS PATH - About to exit handleTest success block');
+
+        } catch (error) {
+            console.error('💥 CAUGHT EXCEPTION IN TRY-CATCH BLOCK');
+            console.error('💥 Test execution error:', error);
+            console.error('🔍 Error analysis:', {
+                errorType: typeof error,
+                errorConstructor: error?.constructor?.name,
+                isAxiosError: !!(error && typeof error === 'object' && 'response' in error),
+                isError: error instanceof Error,
+                errorKeys: error && typeof error === 'object' ? Object.keys(error) : []
+            });
+
+            // Type-safe error handling
+            let errorMessage = 'Failed to test prompt';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+                console.error('🐛 Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+            } else if (typeof error === 'object' && error !== null && 'response' in error) {
+                const axiosError = error as any;
+                console.error('🌐 Axios error details:', {
+                    responseData: axiosError.response?.data,
+                    responseStatus: axiosError.response?.status,
+                    responseStatusText: axiosError.response?.statusText,
+                    responseHeaders: axiosError.response?.headers,
+                    requestConfig: {
+                        url: axiosError.config?.url,
+                        method: axiosError.config?.method,
+                        headers: axiosError.config?.headers,
+                        data: axiosError.config?.data
+                    },
+                    code: axiosError.code,
+                    message: axiosError.message
+                });
+
+                if (axiosError.response?.data?.message) {
+                    errorMessage = axiosError.response.data.message;
+                } else if (axiosError.response?.data?.error) {
+                    errorMessage = axiosError.response.data.error;
+                } else if (axiosError.message) {
+                    errorMessage = axiosError.message;
+                }
+            } else {
+                console.error('🤷 Unknown error type:', error);
+            }
+
+            console.error('📝 Final error message for user:', errorMessage);
+            setError(errorMessage);
         } finally {
             setTestLoading(false);
+            setTestProgress(null);
         }
     };
 
-    const openTestDialog = (prompt: Prompt) => {
+    const openTestDialog = async (prompt: Prompt) => {
         const displayPrompt = getDisplayPrompt(prompt);
         setSelectedPrompt(displayPrompt);
-        setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+        setTabValue(0); // Reset to Configuration tab
         setIsTestDialogOpen(true);
+        // Clear any previous test results when opening the dialog
+        setTestResults(null);
+        setTestHistory([]);
 
-        // Load previous test results for the selected version
-        loadPreviousTestResults(displayPrompt.id);
-    };
-
-    const loadPreviousTestResults = async (promptId: string) => {
-        try {
-            const response = await promptService.getTestResults(promptId);
-            setTestResults(response.data.data);
-        } catch (err) {
-            // If no previous results found, that's okay - just leave testResults as null
-            console.log('No previous test results found for prompt:', promptId);
-            setTestResults(null);
+        // Ensure available LLMs are loaded
+        if (Object.keys(availableLLMs).length === 0) {
+            await loadAvailableLLMs();
         }
 
-        // Also load test history
-        loadTestHistory(promptId);
+        // Always use current test case IDs from the prompt to avoid stale IDs
+        const currentTestCaseIds = displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || [];
+        setSelectedTestCases(currentTestCaseIds);
+
+        // Initialize with a default LLM configuration if none exists
+        if (llmConfigs.length === 0) {
+            setLLMConfigs([{
+                provider: 'openai',
+                model: 'gpt-3.5-turbo',
+                temperature: 0.7,
+                maxTokens: 1000
+            }]);
+        }
+
+        // Try to load saved LLM configuration (but don't fail if it doesn't exist)
+        try {
+            const configResponse = await promptService.getTestConfig(displayPrompt.id, displayPrompt.version);
+            if (configResponse.data.data.llm_configs && configResponse.data.data.llm_configs.length > 0) {
+                setLLMConfigs(configResponse.data.data.llm_configs);
+            }
+        } catch (err) {
+            // If no saved config, that's fine - we'll use the default we set above
+            console.log('No saved LLM config found, using defaults');
+        }
+
+        // Load test history (but not previous results - those will be loaded on demand)
+        loadTestHistory(displayPrompt.id);
     };
+
+    const closeTestDialog = async () => {
+        // Save configuration before closing
+        if (selectedPrompt) {
+            await saveTestConfiguration();
+        }
+        setIsTestDialogOpen(false);
+        setTabValue(0); // Reset to Configuration tab
+        setTestResults(null); // Clear test results ONLY when dialog is closed
+        setTestHistory([]); // Clear test history
+        setSelectedPrompt(null); // Clear selected prompt
+        setSelectedTestCases([]); // Clear selected test cases
+        setTestLoading(false); // Reset loading state
+        setTestProgress(null); // Reset test progress
+    };
+
+
 
     const loadTestHistory = async (promptId: string) => {
         try {
@@ -245,6 +516,8 @@ const PromptManager: React.FC = () => {
             setTestLoading(true);
             const response = await promptService.getTestResults(promptId, version);
             setTestResults(response.data.data);
+            // Switch to Results tab to show the loaded results
+            setTabValue(2);
         } catch (err) {
             console.error(`Failed to load test results for version ${version}:`, err);
             setError('Failed to load test results for selected version');
@@ -496,6 +769,121 @@ const PromptManager: React.FC = () => {
         }
     };
 
+    const handleDeletePromptVersion = async (promptId: string, version: number) => {
+        const versions = promptVersions[promptId] || [];
+        const versionCount = versions.length;
+
+        const message = versionCount <= 1
+            ? 'This is the only version. Deleting it will delete the entire prompt. Are you sure?'
+            : `Are you sure you want to delete version ${version}?`;
+
+        if (!window.confirm(message)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await promptService.deletePromptVersion(promptId, version);
+
+            if (versionCount <= 1) {
+                // The entire prompt was deleted
+                setPrompts(prompts.filter(p => p.id !== promptId));
+
+                // Clean up version-related state
+                setSelectedVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[promptId];
+                    return updated;
+                });
+
+                setPromptVersions(prev => {
+                    const updated = { ...prev };
+                    delete updated[promptId];
+                    return updated;
+                });
+
+                setVersionedPrompts(prev => {
+                    const updated = { ...prev };
+                    Object.keys(updated).forEach(key => {
+                        if (key.startsWith(`${promptId}-`)) {
+                            delete updated[key];
+                        }
+                    });
+                    return updated;
+                });
+            } else {
+                // Only the version was deleted, reload versions
+                await loadPromptVersions(promptId);
+
+                // If we deleted the selected version, select the latest version
+                if (selectedVersions[promptId] === version) {
+                    const remainingVersions = promptVersions[promptId]?.filter(v => v.version !== version) || [];
+                    if (remainingVersions.length > 0) {
+                        const latestVersion = Math.max(...remainingVersions.map(v => v.version));
+                        setSelectedVersions(prev => ({ ...prev, [promptId]: latestVersion }));
+                    }
+                }
+
+                // Remove the specific version from versionedPrompts
+                setVersionedPrompts(prev => {
+                    const updated = { ...prev };
+                    delete updated[`${promptId}-${version}`];
+                    return updated;
+                });
+
+                // Reload prompts to get updated version info
+                await loadPrompts();
+            }
+
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete prompt version');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAllVersions = async (promptId: string) => {
+        if (!window.confirm('Are you sure you want to delete ALL versions of this prompt? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await promptService.deleteAllPromptVersions(promptId);
+            setPrompts(prompts.filter(p => p.id !== promptId));
+
+            // Clean up version-related state for deleted prompt
+            setSelectedVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setPromptVersions(prev => {
+                const updated = { ...prev };
+                delete updated[promptId];
+                return updated;
+            });
+
+            setVersionedPrompts(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(key => {
+                    if (key.startsWith(`${promptId}-`)) {
+                        delete updated[key];
+                    }
+                });
+                return updated;
+            });
+
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete all prompt versions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateEditingPrompt = (field: keyof Prompt, value: any) => {
         console.log('Updating field:', field, 'with value:', value, 'current editingPrompt:', editingPrompt);
         if (!editingPrompt) {
@@ -685,15 +1073,45 @@ const PromptManager: React.FC = () => {
     };
 
     const handleAddLLMConfig = () => {
-        setLLMConfigs([
-            ...llmConfigs,
-            {
-                provider: 'mock',
-                model: 'mock-gpt',
-                temperature: 0.7,
-                maxTokens: 1000
+        // Always provide a working default configuration
+        const defaultConfig = {
+            provider: 'openai' as LLMProvider,
+            model: 'gpt-3.5-turbo',
+            temperature: 0.7,
+            maxTokens: 1000
+        };
+
+        // Try to get a better default based on available LLMs and configuration status
+        const providers = Object.keys(availableLLMs);
+        if (providers.length > 0) {
+            // Prefer OpenAI if configured
+            if (providers.includes('openai') && llmConfigStatus.openai?.configured) {
+                const openaiModels = availableLLMs['openai'] || [];
+                if (openaiModels.length > 0) {
+                    defaultConfig.provider = 'openai';
+                    defaultConfig.model = openaiModels[0];
+                }
             }
-        ]);
+            // Fallback to local if configured
+            else if (providers.includes('local') && llmConfigStatus.local?.configured) {
+                const localModels = availableLLMs['local'] || [];
+                if (localModels.length > 0) {
+                    defaultConfig.provider = 'local';
+                    defaultConfig.model = localModels[0];
+                }
+            }
+            // Fallback to first available provider
+            else if (providers.length > 0) {
+                const firstProvider = providers[0];
+                const firstProviderModels = availableLLMs[firstProvider] || [];
+                if (firstProviderModels.length > 0) {
+                    defaultConfig.provider = firstProvider as LLMProvider;
+                    defaultConfig.model = firstProviderModels[0];
+                }
+            }
+        }
+
+        setLLMConfigs([...llmConfigs, defaultConfig]);
     };
 
     const handleUpdateLLMConfig = (index: number, field: keyof LLMConfig, value: any) => {
@@ -709,8 +1127,91 @@ const PromptManager: React.FC = () => {
         setLLMConfigs(llmConfigs.filter((_: LLMConfig, i: number) => i !== index));
     };
 
+    const saveTestConfiguration = async () => {
+        if (!selectedPrompt) return;
+
+        try {
+            await promptService.saveTestConfig(
+                selectedPrompt.id,
+                selectedPrompt.version,
+                llmConfigs,
+                selectedTestCases
+            );
+        } catch (err) {
+            console.error('Failed to save test configuration:', err);
+        }
+    };
+
+    const handleClearTestResults = async () => {
+        try {
+            if (!selectedPrompt) {
+                console.error('No selected prompt for clearing test results');
+                setError('No prompt selected');
+                return;
+            }
+
+            console.log('Clearing test results for prompt:', selectedPrompt.id, 'version:', selectedPrompt.version);
+
+            // Clear the backend test results
+            await promptService.deleteTestResults(selectedPrompt.id, selectedPrompt.version);
+
+            // Clear the UI state completely
+            setTestResults(null);
+            setTestHistory([]);
+            setTestLoading(false);
+            setTestProgress(null);
+            setError(null);
+
+            // Reload test history to refresh the UI
+            await loadTestHistory(selectedPrompt.id);
+
+            // Switch back to Configuration tab to prepare for new test
+            setTabValue(0);
+
+            console.log('Test results cleared successfully');
+        } catch (err) {
+            console.error('Failed to clear test results:', err);
+            // Check if it's a 404 error (no results to clear)
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as any;
+                if (axiosError.response?.status === 404) {
+                    // No results to clear - that's fine, just clear the UI
+                    setTestResults(null);
+                    setTestHistory([]);
+                    setError(null);
+                    setTabValue(0);
+                    console.log('No test results found to clear (404) - cleared UI state');
+                    return;
+                }
+            }
+            setError('Failed to clear test results');
+        }
+    };
+
     const renderTestResults = () => {
-        if (!testResults) return null;
+        console.log('🎨 renderTestResults called');
+        console.log('🎨 Current testResults state:', {
+            testResults,
+            testResultsType: typeof testResults,
+            testResultsExists: !!testResults,
+            hasResults: !!testResults?.results,
+            resultsLength: testResults?.results?.length,
+            resultsIsArray: Array.isArray(testResults?.results)
+        });
+
+        if (!testResults || !testResults.results || testResults.results.length === 0) {
+            console.log('🎨 Rendering: No test results available');
+            return (
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        No test results available
+                    </Typography>
+                </Box>
+            );
+        }
+
+        console.log('🎨 Rendering: Test results found, proceeding with full render');
+        console.log('🎨 Results data:', testResults.results);
 
         return (
             <Box sx={{ mt: 2 }}>
@@ -719,49 +1220,51 @@ const PromptManager: React.FC = () => {
                 </Typography>
 
                 {/* Summary Card */}
-                <Card sx={{ mb: 2 }}>
-                    <CardContent>
-                        <Grid container spacing={2}>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="primary">
-                                    {testResults.summary.total}
-                                </Typography>
-                                <Typography variant="body2">Total Tests</Typography>
+                {testResults.summary && (
+                    <Card sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Grid container spacing={2}>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="primary">
+                                        {testResults.summary.total}
+                                    </Typography>
+                                    <Typography variant="body2">Total Tests</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="success.main">
+                                        {testResults.summary.passed}
+                                    </Typography>
+                                    <Typography variant="body2">Passed</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4" color="error.main">
+                                        {testResults.summary.failed}
+                                    </Typography>
+                                    <Typography variant="body2">Failed</Typography>
+                                </Grid>
+                                <Grid item xs={3}>
+                                    <Typography variant="h4">
+                                        {testResults.summary.execution_time_ms}ms
+                                    </Typography>
+                                    <Typography variant="body2">Execution Time</Typography>
+                                </Grid>
                             </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="success.main">
-                                    {testResults.summary.passed}
-                                </Typography>
-                                <Typography variant="body2">Passed</Typography>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4" color="error.main">
-                                    {testResults.summary.failed}
-                                </Typography>
-                                <Typography variant="body2">Failed</Typography>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Typography variant="h4">
-                                    {testResults.summary.execution_time_ms}ms
-                                </Typography>
-                                <Typography variant="body2">Execution Time</Typography>
-                            </Grid>
-                        </Grid>
 
-                        {testResults.summary.avg_comparison_score !== undefined && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="body2" gutterBottom>
-                                    Average Comparison Score: {(testResults.summary.avg_comparison_score * 100).toFixed(1)}%
-                                </Typography>
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={testResults.summary.avg_comparison_score * 100}
-                                    sx={{ height: 8, borderRadius: 4 }}
-                                />
-                            </Box>
-                        )}
-                    </CardContent>
-                </Card>
+                            {testResults.summary.avg_comparison_score !== undefined && (
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" gutterBottom>
+                                        Average Comparison Score: {(testResults.summary.avg_comparison_score * 100).toFixed(1)}%
+                                    </Typography>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={testResults.summary.avg_comparison_score * 100}
+                                        sx={{ height: 8, borderRadius: 4 }}
+                                    />
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Detailed Results */}
                 <TableContainer component={Paper}>
@@ -798,30 +1301,62 @@ const PromptManager: React.FC = () => {
                                         )}
                                     </TableCell>
                                     <TableCell sx={{ maxWidth: 300 }}>
-                                        {result.llm_response ? (
-                                            <Box>
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 3,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        wordBreak: 'break-word'
-                                                    }}
-                                                >
-                                                    {result.llm_response.content}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {result.llm_response.provider}-{result.llm_response.model}
-                                                </Typography>
-                                            </Box>
-                                        ) : (
-                                            <Typography variant="body2" color="error">
-                                                {result.error}
-                                            </Typography>
-                                        )}
+                                        {(() => {
+                                            console.log('🔍 RENDERING RESULT:', index, result);
+                                            console.log('🔍 Result keys:', Object.keys(result));
+                                            console.log('🔍 Has llm_response:', !!result.llm_response);
+                                            console.log('🔍 LLM response object:', result.llm_response);
+                                            console.log('🔍 LLM response content:', result.llm_response?.content);
+                                            console.log('🔍 Actual output:', result.actual_output);
+                                            console.log('🔍 Error:', result.error);
+                                            console.log('🔍 Error message:', result.error_message);
+                                            console.log('🔍 Full result object:', JSON.stringify(result, null, 2));
+
+                                            // Check for successful response (either fresh or historical)
+                                            const hasValidResponse = (result.llm_response && result.llm_response.content) ||
+                                                (result.actual_output && result.actual_output.trim() !== '');
+
+                                            console.log('🔍 hasValidResponse:', hasValidResponse);
+
+                                            if (hasValidResponse) {
+                                                const content = result.llm_response?.content || result.actual_output;
+                                                const provider = result.llm_response?.provider || result.llm_config?.provider || 'unknown';
+                                                const model = result.llm_response?.model || result.llm_config?.model || 'unknown';
+
+                                                return (
+                                                    <Box>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 3,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                wordBreak: 'break-word'
+                                                            }}
+                                                        >
+                                                            {content}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {provider}-{model}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            } else {
+                                                // Handle error cases - check both error fields
+                                                const errorMsg = result.error || result.error_message;
+                                                console.log('🔍 GOING TO ERROR PATH');
+                                                console.log('🔍 errorMsg:', errorMsg);
+                                                console.log('🔍 result.error:', result.error);
+                                                console.log('🔍 result.error_message:', result.error_message);
+                                                return (
+                                                    <Typography variant="body2" color="error">
+                                                        {errorMsg || 'No response available'}
+                                                    </Typography>
+                                                );
+                                            }
+                                        })()}
                                     </TableCell>
                                     <TableCell>
                                         {result.comparison_score !== undefined ? (
@@ -891,146 +1426,6 @@ const PromptManager: React.FC = () => {
                     </Box>
                 )}
 
-                {/* Test Result Detail Dialog */}
-                <Dialog
-                    open={testResultDetailOpen}
-                    onClose={() => setTestResultDetailOpen(false)}
-                    maxWidth="md"
-                    fullWidth
-                    PaperProps={{
-                        sx: { maxHeight: '80vh' }
-                    }}
-                >
-                    <DialogTitle>
-                        Test Result Details: {selectedTestResult?.test_case_name}
-                    </DialogTitle>
-                    <DialogContent>
-                        {selectedTestResult && (
-                            <Box>
-                                {/* Status */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Status
-                                    </Typography>
-                                    <Chip
-                                        icon={selectedTestResult.passed ? <CheckCircleIcon /> : <ErrorIcon />}
-                                        label={selectedTestResult.passed ? "Passed" : "Failed"}
-                                        color={selectedTestResult.passed ? "success" : "error"}
-                                        size="small"
-                                    />
-                                </Box>
-
-                                {/* LLM Response */}
-                                {selectedTestResult.llm_response && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            LLM Response
-                                        </Typography>
-                                        <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                {selectedTestResult.llm_response.content}
-                                            </Typography>
-                                        </Paper>
-                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                            Provider: {selectedTestResult.llm_response.provider} |
-                                            Model: {selectedTestResult.llm_response.model} |
-                                            Tokens: {selectedTestResult.llm_response.usage?.total_tokens || 0} |
-                                            Time: {selectedTestResult.llm_response.response_time_ms}ms
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {/* Test Input */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Test Input
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        {selectedTestResult.test_input ? (
-                                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                {JSON.stringify(selectedTestResult.test_input, null, 2)}
-                                            </pre>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">
-                                                Test input data not available
-                                            </Typography>
-                                        )}
-                                    </Paper>
-                                </Box>
-
-                                {/* Expected Output */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Expected Output
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                            {JSON.stringify(selectedTestResult.expected_output, null, 2)}
-                                        </pre>
-                                    </Paper>
-                                </Box>
-
-                                {/* Actual Output */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Actual Output
-                                    </Typography>
-                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                            {selectedTestResult.actual_output}
-                                        </Typography>
-                                    </Paper>
-                                </Box>
-
-                                {/* Comparison Score */}
-                                {selectedTestResult.comparison_score !== undefined && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Comparison Score
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Typography variant="h4" color="primary">
-                                                {(selectedTestResult.comparison_score * 100).toFixed(1)}%
-                                            </Typography>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={selectedTestResult.comparison_score * 100}
-                                                sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
-                                            />
-                                        </Box>
-                                    </Box>
-                                )}
-
-                                {/* Error (if any) */}
-                                {selectedTestResult.error && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Error
-                                        </Typography>
-                                        <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-                                            <Typography variant="body2">
-                                                {selectedTestResult.error}
-                                            </Typography>
-                                        </Paper>
-                                    </Box>
-                                )}
-
-                                {/* Execution Time */}
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        Execution Time
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        {selectedTestResult.execution_time_ms}ms
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setTestResultDetailOpen(false)}>Close</Button>
-                    </DialogActions>
-                </Dialog>
             </Box>
         );
     };
@@ -1057,55 +1452,68 @@ const PromptManager: React.FC = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {testHistory.map((execution) => (
-                                <TableRow key={execution.execution_id} hover>
-                                    <TableCell>
-                                        <Chip
-                                            label={`v${execution.prompt_version}`}
-                                            size="small"
-                                            color="primary"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {new Date(execution.created_at).toLocaleDateString()}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {new Date(execution.created_at).toLocaleTimeString()}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>{execution.total_tests}</TableCell>
-                                    <TableCell>
-                                        <Typography color="success.main">
-                                            {execution.passed_tests}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography color="error.main">
-                                            {execution.failed_tests}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        {execution.avg_comparison_score ? (
-                                            <Typography variant="body2">
-                                                {(execution.avg_comparison_score * 100).toFixed(1)}%
+                            {testHistory.map((execution) => {
+                                const executionDate = new Date(execution.created_at);
+                                const isValidDate = !isNaN(executionDate.getTime());
+
+                                return (
+                                    <TableRow key={execution.execution_id} hover>
+                                        <TableCell>
+                                            <Chip
+                                                label={`v${execution.prompt_version}`}
+                                                size="small"
+                                                color="primary"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {isValidDate ? (
+                                                <>
+                                                    <Typography variant="body2">
+                                                        {executionDate.toLocaleDateString()}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {executionDate.toLocaleTimeString()}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Invalid date
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>{execution.total_tests}</TableCell>
+                                        <TableCell>
+                                            <Typography color="success.main">
+                                                {execution.passed_tests}
                                             </Typography>
-                                        ) : (
-                                            '-'
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => selectedPrompt && loadTestResultsForVersion(selectedPrompt.id, execution.prompt_version)}
-                                            disabled={testLoading}
-                                        >
-                                            View Results
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography color="error.main">
+                                                {execution.failed_tests}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            {execution.avg_comparison_score !== null && execution.avg_comparison_score !== undefined ? (
+                                                <Typography variant="body2">
+                                                    {(execution.avg_comparison_score * 100).toFixed(1)}%
+                                                </Typography>
+                                            ) : (
+                                                '-'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => selectedPrompt && loadTestResultsForVersion(selectedPrompt.id, execution.prompt_version)}
+                                                disabled={testLoading}
+                                            >
+                                                View Results
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -1114,7 +1522,7 @@ const PromptManager: React.FC = () => {
     };
 
     const renderLLMConfigDialog = () => (
-        <Dialog open={isTestDialogOpen} onClose={() => setIsTestDialogOpen(false)} maxWidth="md" fullWidth>
+        <Dialog open={isTestDialogOpen} onClose={closeTestDialog} maxWidth="md" fullWidth>
             <DialogTitle>
                 <Box display="flex" alignItems="center">
                     <ScienceIcon sx={{ mr: 1 }} />
@@ -1142,14 +1550,16 @@ const PromptManager: React.FC = () => {
                                         <ScienceIcon sx={{ fontSize: 16 }} />
                                     </IconButton>
                                 </Box>
-                                <Button
-                                    startIcon={<AddIcon />}
-                                    onClick={handleAddLLMConfig}
-                                    variant="outlined"
-                                    size="small"
-                                >
-                                    Add LLM
-                                </Button>
+                                <Box>
+                                    <Button
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddLLMConfig}
+                                        variant="outlined"
+                                        size="small"
+                                    >
+                                        Add LLM
+                                    </Button>
+                                </Box>
                             </Box>
 
                             {/* API Key Configuration Status */}
@@ -1177,7 +1587,6 @@ const PromptManager: React.FC = () => {
                                                             {provider === 'openai' && <ApiIcon sx={{ mr: 1 }} />}
                                                             {provider === 'anthropic' && <PsychologyIcon sx={{ mr: 1 }} />}
                                                             {provider === 'local' && <ComputerIcon sx={{ mr: 1 }} />}
-                                                            {provider === 'mock' && <ScienceIcon sx={{ mr: 1 }} />}
                                                             <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
                                                                 {provider}
                                                             </Typography>
@@ -1263,13 +1672,6 @@ const PromptManager: React.FC = () => {
                                                                 <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
                                                             </Box>
                                                         </MenuItem>
-                                                        <MenuItem value="mock">
-                                                            <Box display="flex" alignItems="center">
-                                                                <ScienceIcon sx={{ mr: 1 }} />
-                                                                Mock
-                                                                <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
-                                                            </Box>
-                                                        </MenuItem>
                                                     </Select>
                                                 </FormControl>
                                             </Grid>
@@ -1311,20 +1713,68 @@ const PromptManager: React.FC = () => {
                                                 <TextField
                                                     fullWidth
                                                     label="Temperature"
-                                                    type="number"
-                                                    inputProps={{ min: 0, max: 2, step: 0.1 }}
-                                                    value={config.temperature || 0.7}
-                                                    onChange={(e) => handleUpdateLLMConfig(index, 'temperature', parseFloat(e.target.value))}
+                                                    type="text"
+                                                    inputProps={{
+                                                        inputMode: 'decimal',
+                                                        pattern: '[0-9]*\\.?[0-9]*'
+                                                    }}
+                                                    value={config.temperature !== undefined ? config.temperature : 0.7}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Allow any input while typing
+                                                        handleUpdateLLMConfig(index, 'temperature', value);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const value = e.target.value;
+                                                        // Validate and clean up on blur
+                                                        if (value === '' || value === undefined) {
+                                                            handleUpdateLLMConfig(index, 'temperature', 0.7);
+                                                        } else {
+                                                            const numValue = parseFloat(value);
+                                                            if (!isNaN(numValue)) {
+                                                                // Clamp between 0 and 1
+                                                                const clampedValue = Math.max(0, Math.min(1, numValue));
+                                                                handleUpdateLLMConfig(index, 'temperature', clampedValue);
+                                                            } else {
+                                                                handleUpdateLLMConfig(index, 'temperature', 0.7);
+                                                            }
+                                                        }
+                                                    }}
+                                                    helperText="0.0 = deterministic, 1.0 = creative (0-1)"
                                                 />
                                             </Grid>
                                             <Grid item xs={6}>
                                                 <TextField
                                                     fullWidth
                                                     label="Max Tokens"
-                                                    type="number"
-                                                    inputProps={{ min: 1, max: 4000, step: 1 }}
-                                                    value={config.maxTokens || 1000}
-                                                    onChange={(e) => handleUpdateLLMConfig(index, 'maxTokens', parseInt(e.target.value))}
+                                                    type="text"
+                                                    inputProps={{
+                                                        inputMode: 'numeric',
+                                                        pattern: '[0-9]*'
+                                                    }}
+                                                    value={config.maxTokens !== undefined ? config.maxTokens : 1000}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Allow any input while typing
+                                                        handleUpdateLLMConfig(index, 'maxTokens', value);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const value = e.target.value;
+                                                        // Validate and clean up on blur
+                                                        if (value === '' || value === undefined) {
+                                                            handleUpdateLLMConfig(index, 'maxTokens', 1000);
+                                                        } else {
+                                                            const numValue = parseInt(value, 10);
+                                                            if (!isNaN(numValue)) {
+                                                                // Clamp between 1 and 128000 (GPT-4 max)
+                                                                const clampedValue = Math.max(1, Math.min(128000, numValue));
+                                                                handleUpdateLLMConfig(index, 'maxTokens', clampedValue);
+                                                            } else {
+                                                                handleUpdateLLMConfig(index, 'maxTokens', 1000);
+                                                            }
+                                                        }
+                                                    }}
+                                                    helperText="Maximum tokens in response (1-128000)"
                                                 />
                                             </Grid>
                                         </Grid>
@@ -1386,9 +1836,67 @@ const PromptManager: React.FC = () => {
 
                     <TabPanel value={tabValue} index={2}>
                         {testLoading && (
-                            <Box display="flex" justifyContent="center" p={3}>
-                                <CircularProgress />
-                                <Typography sx={{ ml: 2 }}>Testing prompt with LLMs...</Typography>
+                            <Box p={3}>
+                                <Box display="flex" justifyContent="center" alignItems="center" mb={2}>
+                                    <CircularProgress />
+                                    <Typography sx={{ ml: 2 }}>Testing prompt with LLMs...</Typography>
+                                </Box>
+                                {testProgress && (
+                                    <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+                                        <Paper elevation={1} sx={{ p: 2, backgroundColor: 'action.hover' }}>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12}>
+                                                    <Typography variant="subtitle2" color="primary">
+                                                        Test Progress: {testProgress.currentTestIndex} of {testProgress.totalTests}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Chip
+                                                            label={`Test: ${testProgress.currentTestName}`}
+                                                            size="small"
+                                                            color="info"
+                                                        />
+                                                        <Chip
+                                                            label={`Provider: ${testProgress.currentProvider}`}
+                                                            size="small"
+                                                            color="default"
+                                                        />
+                                                        <Chip
+                                                            label={`Model: ${testProgress.currentModel}`}
+                                                            size="small"
+                                                            color="success"
+                                                        />
+                                                    </Box>
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <LinearProgress
+                                                        variant="determinate"
+                                                        value={(testProgress.currentTestIndex / testProgress.totalTests) * 100}
+                                                        sx={{ height: 8, borderRadius: 4 }}
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </Paper>
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+                        {(testResults || testHistory.length > 0) && !testLoading && (
+                            <Box display="flex" justifyContent="flex-end" mb={2}>
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete all test results for this prompt? This action cannot be undone.')) {
+                                            handleClearTestResults();
+                                        }
+                                    }}
+                                    startIcon={<DeleteIcon />}
+                                    size="small"
+                                >
+                                    Clear Test Results
+                                </Button>
                             </Box>
                         )}
                         {renderTestResults()}
@@ -1397,7 +1905,7 @@ const PromptManager: React.FC = () => {
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setIsTestDialogOpen(false)}>Close</Button>
+                <Button onClick={closeTestDialog}>Close</Button>
                 <Button
                     onClick={handleTest}
                     variant="contained"
@@ -2248,6 +2756,52 @@ const PromptManager: React.FC = () => {
         </Dialog>
     );
 
+    const handleCopyPrompt = async (promptToCopy: any) => {
+        try {
+            setLoading(true);
+
+            // Create a copy of the prompt with modified name and new metadata
+            const copyRequest = {
+                name: `Copy of ${promptToCopy.name}`,
+                text: promptToCopy.text,
+                type: promptToCopy.type,
+                tags: [...(promptToCopy.tags || []), 'copy'], // Add 'copy' tag to distinguish
+                test_cases: promptToCopy.test_cases.map((tc: any) => ({
+                    name: tc.name,
+                    input: tc.input,
+                    expected_output: tc.expected_output,
+                    enabled: tc.enabled
+                })),
+                tool_dependencies: promptToCopy.tool_dependencies || [],
+                workflow_dependencies: promptToCopy.workflow_dependencies || [],
+                metadata: {
+                    ...promptToCopy.metadata,
+                    copied_from: promptToCopy.id,
+                    copied_at: new Date().toISOString()
+                }
+            };
+
+            const response = await promptService.createPrompt(copyRequest);
+            const newPrompt = response.data.data;
+
+            // Add the new prompt to the beginning of the prompts list
+            setPrompts([newPrompt, ...prompts]);
+
+            // Load versions for the new prompt (will be version 1)
+            await loadPromptVersions(newPrompt.id);
+
+            setError(null);
+
+            // Show success feedback
+            console.log(`Successfully created copy of prompt: ${newPrompt.name}`);
+        } catch (err) {
+            console.error('Error copying prompt:', err);
+            setError(err instanceof Error ? err.message : 'Failed to copy prompt');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -2371,37 +2925,80 @@ const PromptManager: React.FC = () => {
 
                                                 {/* Version selector */}
                                                 {versions.length > 1 && (
-                                                    <FormControl size="small" sx={{ minWidth: 80 }}>
-                                                        <Select
-                                                            value={selectedVersion}
-                                                            onChange={(e) => handleVersionChange(prompt.id, e.target.value as number)}
-                                                            displayEmpty
+                                                    <>
+                                                        <FormControl size="small" sx={{ minWidth: 80 }}>
+                                                            <Select
+                                                                value={selectedVersion}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === 'delete-all') {
+                                                                        handleDeleteAllVersions(prompt.id);
+                                                                    } else {
+                                                                        handleVersionChange(prompt.id, value as number);
+                                                                    }
+                                                                }}
+                                                                displayEmpty
+                                                                sx={{
+                                                                    height: 24,
+                                                                    fontSize: '0.75rem',
+                                                                    '& .MuiSelect-select': {
+                                                                        py: 0.5,
+                                                                        px: 1
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {versions.map((version) => (
+                                                                    <MenuItem key={version.version} value={version.version}>
+                                                                        v{version.version}
+                                                                    </MenuItem>
+                                                                ))}
+                                                                <Divider />
+                                                                <MenuItem value="delete-all" sx={{ color: 'error.main' }}>
+                                                                    🗑️ Delete All Versions
+                                                                </MenuItem>
+                                                            </Select>
+                                                        </FormControl>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDeletePromptVersion(prompt.id, selectedVersion)}
+                                                            title={`Delete version ${selectedVersion}`}
                                                             sx={{
-                                                                height: 24,
-                                                                fontSize: '0.75rem',
-                                                                '& .MuiSelect-select': {
-                                                                    py: 0.5,
-                                                                    px: 1
+                                                                ml: 0.5,
+                                                                p: 0.5,
+                                                                '&:hover': {
+                                                                    color: 'error.main'
                                                                 }
                                                             }}
                                                         >
-                                                            {versions.map((version) => (
-                                                                <MenuItem key={version.version} value={version.version}>
-                                                                    v{version.version}
-                                                                </MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </FormControl>
+                                                            <DeleteIcon sx={{ fontSize: 16 }} />
+                                                        </IconButton>
+                                                    </>
                                                 )}
 
                                                 {/* Current version indicator if only one version */}
                                                 {versions.length <= 1 && (
-                                                    <Chip
-                                                        label={`v${displayPrompt.version}`}
-                                                        size="small"
-                                                        variant="outlined"
-                                                        color="primary"
-                                                    />
+                                                    <>
+                                                        <Chip
+                                                            label={`v${displayPrompt.version}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="primary"
+                                                        />
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDeletePromptVersion(prompt.id, displayPrompt.version)}
+                                                            title="Delete this version (will delete entire prompt)"
+                                                            sx={{
+                                                                ml: 0.5,
+                                                                p: 0.5,
+                                                                '&:hover': {
+                                                                    color: 'error.main'
+                                                                }
+                                                            }}
+                                                        >
+                                                            <DeleteIcon sx={{ fontSize: 16 }} />
+                                                        </IconButton>
+                                                    </>
                                                 )}
                                             </Box>
 
@@ -2413,6 +3010,14 @@ const PromptManager: React.FC = () => {
 
                                         {/* Action buttons */}
                                         <Box>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleCopyPrompt(displayPrompt)}
+                                                title="Copy prompt"
+                                                sx={{ mr: 0.5 }}
+                                            >
+                                                <CopyIcon />
+                                            </IconButton>
                                             <IconButton size="small" onClick={() => openEditDialog(prompt)}>
                                                 <EditIcon />
                                             </IconButton>
@@ -2494,8 +3099,149 @@ const PromptManager: React.FC = () => {
             {renderEditDialog()}
             {renderCreateDialog()}
             {renderHelpDialog()}
+
+            {/* Test Result Detail Dialog */}
+            <Dialog
+                open={testResultDetailOpen}
+                onClose={() => setTestResultDetailOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { maxHeight: '80vh' }
+                }}
+            >
+                <DialogTitle>
+                    Test Result Details: {selectedTestResult?.test_case_name}
+                </DialogTitle>
+                <DialogContent>
+                    {selectedTestResult && (
+                        <Box>
+                            {/* Status */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Status
+                                </Typography>
+                                <Chip
+                                    icon={selectedTestResult.passed ? <CheckCircleIcon /> : <ErrorIcon />}
+                                    label={selectedTestResult.passed ? "Passed" : "Failed"}
+                                    color={selectedTestResult.passed ? "success" : "error"}
+                                    size="small"
+                                />
+                            </Box>
+
+                            {/* LLM Response */}
+                            {selectedTestResult.llm_response && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        LLM Response
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {selectedTestResult.llm_response.content}
+                                        </Typography>
+                                    </Paper>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                        Provider: {selectedTestResult.llm_response.provider} |
+                                        Model: {selectedTestResult.llm_response.model} |
+                                        Tokens: {selectedTestResult.llm_response.usage?.total_tokens || 0} |
+                                        Time: {selectedTestResult.llm_response.response_time_ms}ms
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {/* Test Input */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Test Input
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    {selectedTestResult.test_input ? (
+                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {JSON.stringify(selectedTestResult.test_input, null, 2)}
+                                        </pre>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Test input data not available
+                                        </Typography>
+                                    )}
+                                </Paper>
+                            </Box>
+
+                            {/* Expected Output */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Expected Output
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        {JSON.stringify(selectedTestResult.expected_output, null, 2)}
+                                    </pre>
+                                </Paper>
+                            </Box>
+
+                            {/* Actual Output */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Actual Output
+                                </Typography>
+                                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        {selectedTestResult.actual_output}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+
+                            {/* Comparison Score */}
+                            {selectedTestResult.comparison_score !== undefined && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Comparison Score
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Typography variant="h4" color="primary">
+                                            {(selectedTestResult.comparison_score * 100).toFixed(1)}%
+                                        </Typography>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={selectedTestResult.comparison_score * 100}
+                                            sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
+                                        />
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* Error (if any) */}
+                            {(selectedTestResult.error || selectedTestResult.error_message) && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Error
+                                    </Typography>
+                                    <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+                                        <Typography variant="body2">
+                                            {selectedTestResult.error || selectedTestResult.error_message}
+                                        </Typography>
+                                    </Paper>
+                                </Box>
+                            )}
+
+                            {/* Execution Time */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Execution Time
+                                </Typography>
+                                <Typography variant="body1">
+                                    {selectedTestResult.execution_time_ms}ms
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setTestResultDetailOpen(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
 
-export default PromptManager; 
+export default PromptManager;
