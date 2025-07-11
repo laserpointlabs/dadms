@@ -956,6 +956,7 @@ const PromptManagerSimple: React.FC = () => {
                                 <TableCell>Test Case</TableCell>
                                 <TableCell>Status</TableCell>
                                 <TableCell>LLM Response</TableCell>
+                                <TableCell>Model</TableCell>
                                 <TableCell>Score</TableCell>
                                 <TableCell>Time</TableCell>
                                 <TableCell>Actions</TableCell>
@@ -987,6 +988,14 @@ const PromptManagerSimple: React.FC = () => {
                                         </TableCell>
                                         <TableCell sx={{ maxWidth: 300 }}>
                                             {result.llm_response?.content || result.actual_output || result.error || 'No response'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={`${result.llm_response?.provider || 'unknown'}/${result.llm_response?.model || 'unknown'}`}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.75rem' }}
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             {result.comparison_score !== undefined ?
