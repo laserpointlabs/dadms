@@ -118,7 +118,7 @@ export interface CreatePromptRequest {
 }
 
 // LLM Types
-export type LLMProvider = 'openai' | 'anthropic' | 'local';
+export type LLMProvider = 'openai' | 'anthropic' | 'local' | 'ollama';
 
 export interface LLMConfig {
     provider: LLMProvider;
