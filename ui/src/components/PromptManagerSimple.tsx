@@ -1,6 +1,7 @@
 import {
     Add as AddIcon,
     CheckCircle as CheckCircleIcon,
+    ContentCopy as ContentCopyIcon,
     Delete as DeleteIcon,
     Edit as EditIcon,
     Error as ErrorIcon,
@@ -304,6 +305,53 @@ const PromptManagerSimple: React.FC = () => {
         } catch (err) {
             console.error('💥 Delete failed:', err);
             const errorMessage = err instanceof Error ? err.message : 'Failed to delete prompt';
+            setError(errorMessage);
+        }
+    };
+
+    const copyPrompt = async (prompt: Prompt) => {
+        try {
+            setError(null);
+            
+            // Create a copy with modified name and new test case IDs
+            const copiedPrompt = {
+                ...prompt,
+                name: `${prompt.name} (Copy)`,
+                id: '', // Will be assigned by backend
+                version: 1, // Reset version for new prompt
+                test_cases: prompt.test_cases.map((testCase, index) => ({
+                    ...testCase,
+                    id: `copy-${Date.now()}-${index}`, // Generate new unique IDs
+                    name: testCase.name || `Test Case ${index + 1}`
+                }))
+            };
+
+            console.log('📋 Creating copy of prompt:', prompt.id);
+
+            const response = await fetch('http://localhost:3001/prompts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: copiedPrompt.name,
+                    text: copiedPrompt.text,
+                    description: copiedPrompt.description || '',
+                    type: copiedPrompt.type || 'simple',
+                    tags: copiedPrompt.tags || [],
+                    test_cases: copiedPrompt.test_cases || []
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`Failed to copy prompt: ${errorData}`);
+            }
+
+            console.log('✅ Prompt copied successfully');
+            await loadPrompts();
+
+        } catch (err) {
+            console.error('💥 Copy failed:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to copy prompt';
             setError(errorMessage);
         }
     };
@@ -682,8 +730,17 @@ const PromptManagerSimple: React.FC = () => {
                     <Box display="flex" gap={1}>
                         <IconButton
                             size="small"
+                            onClick={() => copyPrompt(prompt)}
+                            color="info"
+                            title="Copy prompt"
+                        >
+                            <ContentCopyIcon />
+                        </IconButton>
+                        <IconButton
+                            size="small"
                             onClick={() => openEditDialog(prompt)}
                             color="primary"
+                            title="Edit prompt"
                         >
                             <EditIcon />
                         </IconButton>
@@ -691,6 +748,7 @@ const PromptManagerSimple: React.FC = () => {
                             size="small"
                             onClick={() => deletePrompt(prompt.id)}
                             color="error"
+                            title="Delete prompt"
                         >
                             <DeleteIcon />
                         </IconButton>
