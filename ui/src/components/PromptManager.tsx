@@ -109,8 +109,8 @@ const PromptManager: React.FC = () => {
     const [llmConfigStatus, setLLMConfigStatus] = useState<LLMConfigStatus>({});
     const [llmConfigs, setLLMConfigs] = useState<LLMConfig[]>([
         {
-            provider: 'mock',
-            model: 'mock-gpt',
+            provider: 'openai',
+            model: 'gpt-3.5-turbo',
             temperature: 0.7,
             maxTokens: 1000
         }
@@ -220,7 +220,10 @@ const PromptManager: React.FC = () => {
         });
 
         try {
+            // Clear any previous state before starting new test
+            setTestResults(null);
             setTestLoading(true);
+            setTestProgress(null);
             setError(null);
 
             // Calculate total number of tests
@@ -264,23 +267,73 @@ const PromptManager: React.FC = () => {
 
             console.log('Sending test request:', testRequest);
             const response = await promptService.testPrompt(selectedPrompt.id, testRequest);
-            console.log('Received test response:', response.data);
+            console.log('Received test response:', response);
+            console.log('Response data:', response.data);
+            console.log('Response status:', response.status);
 
-            if (response.data.success && response.data.data) {
-                setTestResults(response.data.data);
-                console.log('Test Results set in state:', response.data.data);
-                // Switch to Results tab after results are set (with a small delay to ensure state update)
-                setTimeout(() => {
-                    setTabValue(2);
-                    console.log('Switched to Results tab');
-                }, 100);
-            } else {
-                console.error('Invalid response format:', response.data);
-                setError('Invalid response from server');
+            // Validate response structure
+            if (!response || !response.data) {
+                console.error('Invalid response: missing response or data');
+                setError('Invalid response from server: missing data');
+                return;
             }
-        } catch (err) {
-            console.error('Test execution error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to test prompt');
+
+            if (!response.data.success) {
+                console.error('Response indicates failure:', response.data);
+                setError('Test failed');
+                return;
+            }
+
+            if (!response.data.data) {
+                console.error('Response missing test data:', response.data);
+                setError('Invalid response: missing test results');
+                return;
+            }
+
+            const testData = response.data.data;
+            console.log('Test data structure:', {
+                hasResults: !!testData.results,
+                resultsLength: testData.results?.length,
+                hasSummary: !!testData.summary,
+                summaryKeys: testData.summary ? Object.keys(testData.summary) : []
+            });
+
+            if (!testData.results || !Array.isArray(testData.results)) {
+                console.error('Invalid test data: missing or invalid results array', testData);
+                setError('Invalid test results format');
+                return;
+            }
+
+            setTestResults(testData);
+            console.log('✅ Test Results successfully set in state:', testData);
+
+            // Switch to Results tab after results are set (with a small delay to ensure state update)
+            setTimeout(() => {
+                setTabValue(2);
+                console.log('✅ Switched to Results tab');
+            }, 100);
+
+        } catch (error) {
+            console.error('Test execution error:', error);
+
+            // Type-safe error handling
+            let errorMessage = 'Failed to test prompt';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+            } else if (typeof error === 'object' && error !== null && 'response' in error) {
+                const axiosError = error as any;
+                console.error('Axios error details:', {
+                    response: axiosError.response?.data,
+                    status: axiosError.response?.status
+                });
+                errorMessage = axiosError.response?.data?.message || errorMessage;
+            }
+
+            setError(errorMessage);
         } finally {
             setTestLoading(false);
             setTestProgress(null);
@@ -301,21 +354,29 @@ const PromptManager: React.FC = () => {
             await loadAvailableLLMs();
         }
 
-        // Load saved test configuration
+        // Always use current test case IDs from the prompt to avoid stale IDs
+        const currentTestCaseIds = displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || [];
+        setSelectedTestCases(currentTestCaseIds);
+
+        // Initialize with a default LLM configuration if none exists
+        if (llmConfigs.length === 0) {
+            setLLMConfigs([{
+                provider: 'openai',
+                model: 'gpt-3.5-turbo',
+                temperature: 0.7,
+                maxTokens: 1000
+            }]);
+        }
+
+        // Try to load saved LLM configuration (but don't fail if it doesn't exist)
         try {
             const configResponse = await promptService.getTestConfig(displayPrompt.id, displayPrompt.version);
             if (configResponse.data.data.llm_configs && configResponse.data.data.llm_configs.length > 0) {
                 setLLMConfigs(configResponse.data.data.llm_configs);
             }
-            if (configResponse.data.data.test_case_ids && configResponse.data.data.test_case_ids.length > 0) {
-                setSelectedTestCases(configResponse.data.data.test_case_ids);
-            } else {
-                // Default to enabled test cases if no saved selection
-                setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
-            }
         } catch (err) {
-            // If no saved config, use defaults
-            setSelectedTestCases(displayPrompt.test_cases?.filter(tc => tc.enabled).map(tc => tc.id) || []);
+            // If no saved config, that's fine - we'll use the default we set above
+            console.log('No saved LLM config found, using defaults');
         }
 
         // Load test history (but not previous results - those will be loaded on demand)
@@ -337,19 +398,7 @@ const PromptManager: React.FC = () => {
         setTestProgress(null); // Reset test progress
     };
 
-    const loadPreviousTestResults = async (promptId: string) => {
-        try {
-            const response = await promptService.getTestResults(promptId);
-            setTestResults(response.data.data);
-        } catch (err) {
-            // If no previous results found, that's okay - just leave testResults as null
-            console.log('No previous test results found for prompt:', promptId);
-            setTestResults(null);
-        }
 
-        // Also load test history
-        loadTestHistory(promptId);
-    };
 
     const loadTestHistory = async (promptId: string) => {
         try {
@@ -923,23 +972,45 @@ const PromptManager: React.FC = () => {
     };
 
     const handleAddLLMConfig = () => {
-        // Get the first available provider and model
-        const providers = Object.keys(availableLLMs);
-        const defaultProvider = providers.includes('openai') && llmConfigStatus.openai?.configured ? 'openai' :
-            providers.includes('local') && llmConfigStatus.local?.configured ? 'local' :
-                providers.includes('mock') ? 'mock' :
-                    (providers[0] || 'mock');
-        const defaultModel = availableLLMs[defaultProvider]?.[0] || 'mock-gpt';
+        // Always provide a working default configuration
+        const defaultConfig = {
+            provider: 'openai' as LLMProvider,
+            model: 'gpt-3.5-turbo',
+            temperature: 0.7,
+            maxTokens: 1000
+        };
 
-        setLLMConfigs([
-            ...llmConfigs,
-            {
-                provider: defaultProvider as LLMProvider,
-                model: defaultModel,
-                temperature: 0.7,
-                maxTokens: 1000
+        // Try to get a better default based on available LLMs and configuration status
+        const providers = Object.keys(availableLLMs);
+        if (providers.length > 0) {
+            // Prefer OpenAI if configured
+            if (providers.includes('openai') && llmConfigStatus.openai?.configured) {
+                const openaiModels = availableLLMs['openai'] || [];
+                if (openaiModels.length > 0) {
+                    defaultConfig.provider = 'openai';
+                    defaultConfig.model = openaiModels[0];
+                }
             }
-        ]);
+            // Fallback to local if configured
+            else if (providers.includes('local') && llmConfigStatus.local?.configured) {
+                const localModels = availableLLMs['local'] || [];
+                if (localModels.length > 0) {
+                    defaultConfig.provider = 'local';
+                    defaultConfig.model = localModels[0];
+                }
+            }
+            // Fallback to first available provider
+            else if (providers.length > 0) {
+                const firstProvider = providers[0];
+                const firstProviderModels = availableLLMs[firstProvider] || [];
+                if (firstProviderModels.length > 0) {
+                    defaultConfig.provider = firstProvider as LLMProvider;
+                    defaultConfig.model = firstProviderModels[0];
+                }
+            }
+        }
+
+        setLLMConfigs([...llmConfigs, defaultConfig]);
     };
 
     const handleUpdateLLMConfig = (index: number, field: keyof LLMConfig, value: any) => {
@@ -972,18 +1043,46 @@ const PromptManager: React.FC = () => {
 
     const handleClearTestResults = async () => {
         try {
-            if (!selectedPrompt) return;
+            if (!selectedPrompt) {
+                console.error('No selected prompt for clearing test results');
+                setError('No prompt selected');
+                return;
+            }
 
+            console.log('Clearing test results for prompt:', selectedPrompt.id, 'version:', selectedPrompt.version);
+
+            // Clear the backend test results
             await promptService.deleteTestResults(selectedPrompt.id, selectedPrompt.version);
 
-            // Clear the UI state
+            // Clear the UI state completely
             setTestResults(null);
             setTestHistory([]);
-
-            // Show success message
+            setTestLoading(false);
+            setTestProgress(null);
             setError(null);
+
+            // Reload test history to refresh the UI
+            await loadTestHistory(selectedPrompt.id);
+
+            // Switch back to Configuration tab to prepare for new test
+            setTabValue(0);
+
+            console.log('Test results cleared successfully');
         } catch (err) {
             console.error('Failed to clear test results:', err);
+            // Check if it's a 404 error (no results to clear)
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as any;
+                if (axiosError.response?.status === 404) {
+                    // No results to clear - that's fine, just clear the UI
+                    setTestResults(null);
+                    setTestHistory([]);
+                    setError(null);
+                    setTabValue(0);
+                    console.log('No test results found to clear (404) - cleared UI state');
+                    return;
+                }
+            }
             setError('Failed to clear test results');
         }
     };
@@ -1092,30 +1191,53 @@ const PromptManager: React.FC = () => {
                                         )}
                                     </TableCell>
                                     <TableCell sx={{ maxWidth: 300 }}>
-                                        {result.llm_response ? (
-                                            <Box>
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 3,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        wordBreak: 'break-word'
-                                                    }}
-                                                >
-                                                    {result.llm_response.content}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {result.llm_response.provider}-{result.llm_response.model}
-                                                </Typography>
-                                            </Box>
-                                        ) : (
-                                            <Typography variant="body2" color="error">
-                                                {result.error}
-                                            </Typography>
-                                        )}
+                                        {(() => {
+                                            console.log('Rendering result:', index, result);
+                                            console.log('Has llm_response:', !!result.llm_response);
+                                            console.log('LLM response content:', result.llm_response?.content);
+                                            console.log('Actual output:', result.actual_output);
+                                            console.log('Error:', result.error);
+                                            console.log('Error message:', result.error_message);
+
+                                            // Check for successful response (either fresh or historical)
+                                            const hasValidResponse = (result.llm_response && result.llm_response.content) ||
+                                                (result.actual_output && result.actual_output.trim() !== '');
+
+                                            if (hasValidResponse) {
+                                                const content = result.llm_response?.content || result.actual_output;
+                                                const provider = result.llm_response?.provider || result.llm_config?.provider || 'unknown';
+                                                const model = result.llm_response?.model || result.llm_config?.model || 'unknown';
+
+                                                return (
+                                                    <Box>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 3,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                wordBreak: 'break-word'
+                                                            }}
+                                                        >
+                                                            {content}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {provider}-{model}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            } else {
+                                                // Handle error cases - check both error fields
+                                                const errorMsg = result.error || result.error_message;
+                                                return (
+                                                    <Typography variant="body2" color="error">
+                                                        {errorMsg || 'No response available'}
+                                                    </Typography>
+                                                );
+                                            }
+                                        })()}
                                     </TableCell>
                                     <TableCell>
                                         {result.comparison_score !== undefined ? (
@@ -1346,7 +1468,6 @@ const PromptManager: React.FC = () => {
                                                             {provider === 'openai' && <ApiIcon sx={{ mr: 1 }} />}
                                                             {provider === 'anthropic' && <PsychologyIcon sx={{ mr: 1 }} />}
                                                             {provider === 'local' && <ComputerIcon sx={{ mr: 1 }} />}
-                                                            {provider === 'mock' && <ScienceIcon sx={{ mr: 1 }} />}
                                                             <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
                                                                 {provider}
                                                             </Typography>
@@ -1429,13 +1550,6 @@ const PromptManager: React.FC = () => {
                                                             <Box display="flex" alignItems="center">
                                                                 <ComputerIcon sx={{ mr: 1 }} />
                                                                 Local
-                                                                <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
-                                                            </Box>
-                                                        </MenuItem>
-                                                        <MenuItem value="mock">
-                                                            <Box display="flex" alignItems="center">
-                                                                <ScienceIcon sx={{ mr: 1 }} />
-                                                                Mock
                                                                 <Chip label="✓" size="small" color="success" sx={{ ml: 1 }} />
                                                             </Box>
                                                         </MenuItem>
@@ -2924,14 +3038,14 @@ const PromptManager: React.FC = () => {
                             )}
 
                             {/* Error (if any) */}
-                            {selectedTestResult.error && (
+                            {(selectedTestResult.error || selectedTestResult.error_message) && (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="h6" gutterBottom>
                                         Error
                                     </Typography>
                                     <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
                                         <Typography variant="body2">
-                                            {selectedTestResult.error}
+                                            {selectedTestResult.error || selectedTestResult.error_message}
                                         </Typography>
                                     </Paper>
                                 </Box>

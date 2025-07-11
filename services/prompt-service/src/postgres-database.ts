@@ -391,7 +391,7 @@ export class PostgresPromptDatabase {
                     result.actual_output || '',
                     result.comparison_score,
                     result.passed,
-                    llmConfig,
+                    JSON.stringify(llmConfig),
                     result.error || null
                 ]);
             }
@@ -477,11 +477,13 @@ export class PostgresPromptDatabase {
         return this.getPromptVersions(id);
     }
 
-    async getTestResults(promptId: string, version?: number): Promise<any[]> {
+    async getTestResults(promptId: string, version?: number): Promise<any> {
         let query = `
-            SELECT tr.*, tc.name as test_case_name
+            SELECT 
+                tr.*,
+                COALESCE(tc.name, tr.test_case_name, 'Unknown Test Case') as test_case_name
             FROM test_results tr
-            JOIN test_cases tc ON tr.test_case_id = tc.id
+            LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
             WHERE tr.prompt_id = $1
         `;
         const params: any[] = [promptId];
@@ -495,17 +497,49 @@ export class PostgresPromptDatabase {
 
         const result = await this.pool.query(query, params);
 
-        return result.rows.map(row => ({
-            id: row.id,
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        // Get the prompt to include prompt text in response
+        const prompt = await this.getPromptById(promptId);
+        if (!prompt) {
+            return null;
+        }
+
+        // Transform rows to match the expected UI format
+        const results = result.rows.map(row => ({
             test_case_id: row.test_case_id,
             test_case_name: row.test_case_name,
-            execution_time: row.execution_time,
-            actual_output: row.actual_output,
-            score: row.score,
             passed: row.passed,
-            llm_config: row.llm_config,
-            error_message: row.error_message
+            actual_output: row.actual_output,
+            expected_output: null, // Historical results don't store expected output
+            comparison_score: row.score,
+            error: null, // Use error field for UI compatibility
+            error_message: row.error_message, // Keep both for backwards compatibility
+            execution_time_ms: 0, // Historical results don't store execution time
+            llm_config: row.llm_config // Include LLM config for display
         }));
+
+        // Calculate summary from results
+        const total = results.length;
+        const passed = results.filter(r => r.passed).length;
+        const failed = total - passed;
+        const avgScore = results.reduce((sum, r) => sum + (r.comparison_score || 0), 0) / Math.max(1, total);
+
+        // Return in the same format as fresh test results
+        return {
+            prompt_id: promptId,
+            prompt_text: prompt.text,
+            results: results,
+            summary: {
+                total: total,
+                passed: passed,
+                failed: failed,
+                execution_time_ms: 0, // Historical results don't have execution time
+                avg_comparison_score: avgScore
+            }
+        };
     }
 
     async getTestHistory(promptId: string): Promise<any[]> {
