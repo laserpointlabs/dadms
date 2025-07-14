@@ -19,5 +19,8 @@ huggingface_hub==0.30.0
 # Additional dependencies for enhanced BPMN AI service
 pyyaml==6.0.1
 
+# Database connectivity
+psycopg2-binary==2.9.10
+
 # Add other dependencies like pinecone-client, or faiss-cpu as needed
 flask_cors

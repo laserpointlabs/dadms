@@ -73,10 +73,9 @@ install_deps() {
 start_service() {
     local service=$1
     local port=$2
-    print_status "Starting $service on port $port..."
     
     if [ ! -d "$service" ]; then
-        print_error "Service directory $service not found!"
+        print_error "Service directory $service not found"
         exit 1
     fi
     
@@ -89,8 +88,16 @@ start_service() {
     # Extract service name for log files
     local service_name=$(basename "$service")
     
-    # Start service in background
-    nohup npm run dev > "$START_DIR/logs/$service_name.log" 2>&1 &
+    # Start service in background with correct environment variables
+    if [ "$service_name" = "prompt-service" ]; then
+        # Set correct PostgreSQL variables for prompt service
+        print_status "Starting $service with PostgreSQL configuration..."
+        POSTGRES_DB=dadm_db POSTGRES_USER=dadm_user POSTGRES_PASSWORD=dadm_password nohup npm run dev > "$START_DIR/logs/$service_name.log" 2>&1 &
+    else
+        # Start other services normally
+        nohup npm run dev > "$START_DIR/logs/$service_name.log" 2>&1 &
+    fi
+    
     local pid=$!
     echo $pid > "$START_DIR/logs/$service_name.pid"
     
@@ -100,10 +107,11 @@ start_service() {
     sleep 2
     
     # Check if service is running
-    if curl -s "http://localhost:$port/health" > /dev/null 2>&1; then
-        print_success "$service started successfully on port $port"
+    if kill -0 $pid 2>/dev/null; then
+        print_success "$service started successfully on port $port (PID: $pid)"
     else
-        print_warning "$service may not be fully started yet. Check logs at logs/$service_name.log"
+        print_error "Failed to start $service"
+        exit 1
     fi
 }
 

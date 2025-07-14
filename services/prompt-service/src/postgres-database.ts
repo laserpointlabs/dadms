@@ -390,7 +390,7 @@ export class PostgresPromptDatabase {
                     promptVersion,
                     now, // Keep timestamp for when the test was run
                     result.execution_time_ms || 0, // Store the actual execution time in milliseconds
-                    result.actual_output || '',
+                    result.actual_output ? JSON.stringify(result.actual_output) : null,
                     result.comparison_score,
                     result.passed,
                     JSON.stringify(llmConfig),
@@ -404,7 +404,6 @@ export class PostgresPromptDatabase {
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Failed to save test results:', error);
             throw error;
         } finally {
             client.release();
@@ -518,7 +517,7 @@ export class PostgresPromptDatabase {
             test_case_id: row.test_case_id,
             test_case_name: row.test_case_name,
             passed: row.passed,
-            actual_output: row.actual_output,
+            actual_output: row.actual_output ? JSON.parse(row.actual_output) : null,
             expected_output: null, // Historical results don't store expected output
             comparison_score: row.score,
             error: null, // Use error field for UI compatibility
