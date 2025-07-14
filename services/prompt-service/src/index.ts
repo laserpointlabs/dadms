@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 // import { EventBus } from '../../shared/event-bus/src/event-bus';
 import { LLMServiceEnhanced } from './llm-service-enhanced';
 import { PostgresPromptDatabase as PromptDatabase } from './postgres-database';
-import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, LLMProvider, TestPromptRequest, UpdatePromptRequest } from './types';
+import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, TestPromptRequest, UpdatePromptRequest } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -387,6 +387,7 @@ app.post('/prompts', async (req, res) => {
         })) || [];
 
         const prompt = await db.createPrompt({
+            tenant_id: request.tenant_id || '00000000-0000-0000-0000-000000000002', // Default to system tenant
             name: request.name,
             version: 1,
             text: request.text,
@@ -1508,33 +1509,22 @@ app.get('/llms/available', (req, res) => {
  */
 app.get('/llms/config-status', async (req, res) => {
     try {
-        // Get provider capabilities from LLM service
-        const capabilities = await llmService.getProviderCapabilities();
+        // Get provider models from LLM service
+        const modelsData = await llmService.getProviderModels();
 
-        if (capabilities.source === 'llm-service' && capabilities.providers) {
+        if (modelsData.providers) {
             // Use LLM service data with proper status mapping
             const configStatus: any = {};
 
-            capabilities.providers.forEach((provider: any) => {
-                configStatus[provider.name] = {
-                    configured: provider.available,
-                    available: provider.available,
+            Object.entries(modelsData.providers).forEach(([providerName, providerData]: [string, any]) => {
+                configStatus[providerName] = {
+                    configured: providerData.available,
+                    available: providerData.available,
                     source: 'llm-service',
-                    status: provider.available ? 'available' : 'unavailable',
-                    models: provider.models || (AVAILABLE_LLMS[provider.name as LLMProvider] || [])
+                    status: providerData.available ? 'available' : 'unavailable',
+                    models: providerData.models || []
                 };
             });
-
-            // Ensure local is always included and available
-            if (!configStatus.local) {
-                configStatus.local = {
-                    configured: true,
-                    available: true,
-                    source: 'local',
-                    status: 'available',
-                    models: AVAILABLE_LLMS.local
-                };
-            }
 
             return res.json({
                 success: true,
@@ -1542,7 +1532,7 @@ app.get('/llms/config-status', async (req, res) => {
             });
         }
     } catch (error) {
-        console.warn('Failed to get LLM service capabilities, falling back to environment check:', error);
+        console.warn('Failed to get LLM service models, falling back to environment check:', error);
     }
 
     // Fallback to environment variable checks

@@ -177,6 +177,24 @@ export class ModelRouter {
         return results;
     }
 
+    async getAvailableProvidersWithModels(): Promise<Record<string, { available: boolean; models: string[] }>> {
+        const results: Record<string, { available: boolean; models: string[] }> = {};
+
+        for (const [name, provider] of this.providers) {
+            try {
+                const available = await provider.isAvailable();
+                const modelObjects = available ? await provider.getSupportedModels() : [];
+                const models = modelObjects.map(model => model.id);
+                results[name] = { available, models };
+            } catch (error) {
+                console.warn(`Error getting models for ${name}:`, error);
+                results[name] = { available: false, models: [] };
+            }
+        }
+
+        return results;
+    }
+
     async routeRequest(request: LLMRequest): Promise<{ provider: LLMProvider; model: string; providerRequest: ProviderRequest }> {
         const { provider, model } = await this.selectProvider(request.model_preference);
 

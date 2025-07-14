@@ -110,48 +110,45 @@ get_service_info() {
 # Function to install dependencies
 install_deps() {
     local service_dir=$1
+    local service_path="$service_dir"
     
-    if [ ! -d "$service_dir" ]; then
-        print_warning "Directory $service_dir not found, skipping..."
+    if [ ! -d "$service_path" ]; then
+        print_warning "Directory $service_path not found, skipping..."
         return 0
     fi
     
-    if [ ! -f "$service_dir/package.json" ]; then
-        print_warning "No package.json found in $service_dir, skipping..."
+    if [ ! -f "$service_path/package.json" ]; then
+        print_warning "No package.json found in $service_path, skipping..."
         return 0
     fi
     
     print_status "Installing dependencies for $service_dir..."
-    cd "$service_dir"
-    npm install --silent
-    cd "$START_DIR"
+    (cd "$service_path" && npm install --silent)
 }
 
 # Function to build service
 build_service() {
     local service_dir=$1
+    local service_path="$service_dir"
     
-    if [ ! -d "$service_dir" ]; then
-        print_warning "Directory $service_dir not found, skipping..."
+    if [ ! -d "$service_path" ]; then
+        print_warning "Directory $service_path not found, skipping..."
         return 0
     fi
     
-    if [ ! -f "$service_dir/package.json" ]; then
-        print_warning "No package.json found in $service_dir, skipping..."
+    if [ ! -f "$service_path/package.json" ]; then
+        print_warning "No package.json found in $service_path, skipping..."
         return 0
     fi
     
     print_status "Building $service_dir..."
-    cd "$service_dir"
     
     # Check if build script exists
-    if npm run | grep -q "build"; then
-        npm run build --silent
+    if (cd "$service_path" && npm run | grep -q "build"); then
+        (cd "$service_path" && npm run build --silent)
     else
         print_warning "No build script found for $service_dir"
     fi
-    
-    cd "$START_DIR"
 }
 
 # Function to start service
@@ -176,33 +173,39 @@ start_service() {
     # Create logs directory if it doesn't exist
     mkdir -p logs
     
-    cd "$service_dir"
+    # Use absolute path to avoid directory issues
+    local service_path="$START_DIR/$service_dir"
     
     # Start service in background and save PID
-    if [ -f "dist/index.js" ]; then
+    if [ -f "$service_path/dist/index.js" ]; then
         # Use built version if available
-        nohup node dist/index.js > "../logs/$service_name.log" 2>&1 &
-    elif npm run | grep -q "start"; then
+        cd "$service_path"
+        nohup node dist/index.js > "$START_DIR/logs/$service_name.log" 2>&1 &
+        local pid=$!
+        cd "$START_DIR"
+    elif (cd "$service_path" && npm run | grep -q "start"); then
         # Use npm start if available
-        nohup npm start > "../logs/$service_name.log" 2>&1 &
-    elif npm run | grep -q "dev"; then
+        cd "$service_path"
+        nohup npm start > "$START_DIR/logs/$service_name.log" 2>&1 &
+        local pid=$!
+        cd "$START_DIR"
+    elif (cd "$service_path" && npm run | grep -q "dev"); then
         # Use npm run dev as fallback
-        nohup npm run dev > "../logs/$service_name.log" 2>&1 &
+        cd "$service_path"
+        nohup npm run dev > "$START_DIR/logs/$service_name.log" 2>&1 &
+        local pid=$!
+        cd "$START_DIR"
     else
         print_error "No start method found for $service_name"
-        cd "$START_DIR"
         return 1
     fi
     
-    local pid=$!
-    echo $pid > "../logs/$service_name.pid"
-    
-    cd "$START_DIR"
+    echo $pid > "logs/$service_name.pid"
     
     # Wait a moment and check if service started successfully
     sleep 2
     if ps -p $pid > /dev/null 2>&1; then
-        print_success "$service_name started successfully on port $port"
+        print_success "$service_name started successfully on port $port (PID: $pid)"
     else
         print_error "$service_name failed to start"
         return 1
@@ -653,18 +656,16 @@ cmd_clean() {
     for service_entry in "${SERVICES[@]}"; do
         local service_dir=$(echo "$service_entry" | cut -d':' -f1)
         local service_name=$(basename "$service_dir")
+        local service_path="services/$service_dir"
         
-        if [ -d "$service_dir" ]; then
+        if [ -d "$service_path" ]; then
             print_status "Cleaning $service_name..."
-            cd "$service_dir"
             
             # Remove build artifacts
-            rm -rf dist/ build/ .next/
+            (cd "$service_path" && rm -rf dist/ build/ .next/)
             
             # Remove dependencies (optional - commented out by default)
-            # rm -rf node_modules/
-            
-            cd "$START_DIR"
+            # (cd "$service_path" && rm -rf node_modules/)
         fi
     done
     

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { ProviderConfig } from '../config/providers';
-import { LLMProvider, LLMServiceError, Model, ProviderRequest, ProviderResponse } from '../types';
+import { LLMProvider, Model, ProviderError, ProviderRequest, ProviderResponse } from '../types';
 
 export class AnthropicProvider implements LLMProvider {
     public readonly name = 'anthropic';
@@ -96,20 +96,60 @@ export class AnthropicProvider implements LLMProvider {
             };
         } catch (error: any) {
             if (error.response) {
-                throw new LLMServiceError(
-                    `Anthropic API error: ${error.response.status} - ${error.response.data?.error?.message || error.response.statusText}`,
-                    'ANTHROPIC_API_ERROR',
-                    error.response.status
-                );
+                // Enhanced error handling with user-friendly messages
+                let userMessage: string;
+                let isRetryable: boolean = false;
+                const status = error.response.status;
+
+                switch (status) {
+                    case 429:
+                        const errorMsg = error.response.data?.error?.message || '';
+                        userMessage = errorMsg.includes('quota') || errorMsg.includes('billing')
+                            ? 'Anthropic API quota exceeded. Please check your billing and usage limits at https://console.anthropic.com/account/billing'
+                            : 'Anthropic API rate limit exceeded. Please try again in a moment.';
+                        isRetryable = !errorMsg.includes('quota') && !errorMsg.includes('billing');
+                        break;
+                    case 401:
+                        userMessage = 'Anthropic API authentication failed. Please check your API key configuration.';
+                        isRetryable = false;
+                        break;
+                    case 402:
+                        userMessage = 'Anthropic API payment required. Please update your billing information at https://console.anthropic.com/account/billing';
+                        isRetryable = false;
+                        break;
+                    case 403:
+                        userMessage = 'Anthropic API access forbidden. This may be due to geographic restrictions or account limitations.';
+                        isRetryable = false;
+                        break;
+                    case 404:
+                        userMessage = 'Requested Anthropic model not found or not accessible with your current plan.';
+                        isRetryable = false;
+                        break;
+                    case 500:
+                    case 502:
+                    case 503:
+                    case 504:
+                        userMessage = 'Anthropic service is temporarily unavailable. Please try again in a few moments.';
+                        isRetryable = true;
+                        break;
+                    default:
+                        userMessage = `Anthropic API error: ${status} - ${error.response.data?.error?.message || error.response.statusText}`;
+                        isRetryable = status >= 500;
+                        break;
+                }
+
+                throw new ProviderError(userMessage, 'anthropic', isRetryable);
             } else if (error.request) {
-                throw new LLMServiceError(
-                    'Anthropic API unavailable - no response received',
-                    'ANTHROPIC_UNAVAILABLE'
+                throw new ProviderError(
+                    'Anthropic API unavailable - no response received. Please check your internet connection.',
+                    'anthropic',
+                    true
                 );
             } else {
-                throw new LLMServiceError(
+                throw new ProviderError(
                     `Anthropic client error: ${error.message}`,
-                    'ANTHROPIC_CLIENT_ERROR'
+                    'anthropic',
+                    false
                 );
             }
         }

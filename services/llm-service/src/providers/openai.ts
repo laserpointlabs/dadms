@@ -102,11 +102,47 @@ export class OpenAIProvider implements LLMProvider {
 
         } catch (error: any) {
             if (error instanceof OpenAI.APIError) {
-                throw new ProviderError(
-                    `OpenAI API error: ${error.message}`,
-                    'openai',
-                    error.status === 429 || error.status >= 500
-                );
+                // Enhanced error handling with user-friendly messages
+                let userMessage: string;
+                let isRetryable: boolean = false;
+
+                switch (error.status) {
+                    case 429:
+                        userMessage = error.message.includes('quota')
+                            ? 'OpenAI API quota exceeded. Please check your billing and usage limits at https://platform.openai.com/account/billing'
+                            : 'OpenAI API rate limit exceeded. Please try again in a moment.';
+                        isRetryable = !error.message.includes('quota'); // Quota errors are not retryable until billing is resolved
+                        break;
+                    case 401:
+                        userMessage = 'OpenAI API authentication failed. Please check your API key configuration.';
+                        isRetryable = false;
+                        break;
+                    case 402:
+                        userMessage = 'OpenAI API payment required. Please update your billing information at https://platform.openai.com/account/billing';
+                        isRetryable = false;
+                        break;
+                    case 403:
+                        userMessage = 'OpenAI API access forbidden. This may be due to geographic restrictions or account limitations.';
+                        isRetryable = false;
+                        break;
+                    case 404:
+                        userMessage = 'Requested OpenAI model not found or not accessible with your current plan.';
+                        isRetryable = false;
+                        break;
+                    case 500:
+                    case 502:
+                    case 503:
+                    case 504:
+                        userMessage = 'OpenAI service is temporarily unavailable. Please try again in a few moments.';
+                        isRetryable = true;
+                        break;
+                    default:
+                        userMessage = `OpenAI API error: ${error.message}`;
+                        isRetryable = error.status >= 500;
+                        break;
+                }
+
+                throw new ProviderError(userMessage, 'openai', isRetryable);
             }
             throw new ProviderError(`OpenAI request failed: ${error.message}`, 'openai');
         }

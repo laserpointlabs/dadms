@@ -109,6 +109,7 @@ export class PostgresPromptDatabase {
 
         return {
             id: promptRow.id,
+            tenant_id: promptRow.tenant_id,
             name: promptRow.name,
             version: promptRow.version,
             text: promptRow.text,
@@ -131,10 +132,8 @@ export class PostgresPromptDatabase {
             test_cases: testCasesResult.rows.map((tc: any) => ({
                 id: tc.id,
                 name: tc.name,
-                input: typeof tc.input === 'string' ? JSON.parse(tc.input) : tc.input,
-                expected_output: typeof tc.expected_output === 'string'
-                    ? JSON.parse(tc.expected_output)
-                    : tc.expected_output,
+                input: tc.input, // jsonb field, already parsed by PostgreSQL
+                expected_output: tc.expected_output, // jsonb field, already parsed by PostgreSQL
                 scoring_logic: tc.scoring_logic,
                 enabled: tc.enabled
             }))
@@ -162,32 +161,39 @@ export class PostgresPromptDatabase {
 
             prompts.push({
                 id: promptRow.id,
+                tenant_id: promptRow.tenant_id,
                 name: promptRow.name,
                 version: promptRow.version,
                 text: promptRow.text,
                 type: promptRow.type,
-                tool_dependencies: typeof promptRow.tool_dependencies === 'string'
-                    ? JSON.parse(promptRow.tool_dependencies)
-                    : promptRow.tool_dependencies,
-                workflow_dependencies: typeof promptRow.workflow_dependencies === 'string'
-                    ? JSON.parse(promptRow.workflow_dependencies)
-                    : promptRow.workflow_dependencies,
-                tags: typeof promptRow.tags === 'string'
-                    ? JSON.parse(promptRow.tags)
-                    : promptRow.tags,
+                tool_dependencies: Array.isArray(promptRow.tool_dependencies)
+                    ? promptRow.tool_dependencies
+                    : (typeof promptRow.tool_dependencies === 'string'
+                        ? JSON.parse(promptRow.tool_dependencies)
+                        : promptRow.tool_dependencies),
+                workflow_dependencies: Array.isArray(promptRow.workflow_dependencies)
+                    ? promptRow.workflow_dependencies
+                    : (typeof promptRow.workflow_dependencies === 'string'
+                        ? JSON.parse(promptRow.workflow_dependencies)
+                        : promptRow.workflow_dependencies),
+                tags: Array.isArray(promptRow.tags)
+                    ? promptRow.tags
+                    : (typeof promptRow.tags === 'string'
+                        ? JSON.parse(promptRow.tags)
+                        : promptRow.tags),
                 created_by: promptRow.created_by,
                 created_at: promptRow.created_at,
                 updated_at: promptRow.updated_at,
-                metadata: typeof promptRow.metadata === 'string'
-                    ? JSON.parse(promptRow.metadata)
-                    : promptRow.metadata,
+                metadata: typeof promptRow.metadata === 'object' && promptRow.metadata !== null
+                    ? promptRow.metadata
+                    : (typeof promptRow.metadata === 'string'
+                        ? JSON.parse(promptRow.metadata)
+                        : promptRow.metadata),
                 test_cases: testCasesResult.rows.map(tc => ({
                     id: tc.id,
                     name: tc.name,
-                    input: typeof tc.input === 'string' ? JSON.parse(tc.input) : tc.input,
-                    expected_output: typeof tc.expected_output === 'string'
-                        ? JSON.parse(tc.expected_output)
-                        : tc.expected_output,
+                    input: tc.input, // jsonb field, already parsed by PostgreSQL
+                    expected_output: tc.expected_output, // jsonb field, already parsed by PostgreSQL
                     scoring_logic: tc.scoring_logic,
                     enabled: tc.enabled
                 }))
@@ -379,9 +385,8 @@ export class PostgresPromptDatabase {
 
                 await client.query(`
                     INSERT INTO test_results (id, tenant_id, test_case_id, prompt_id, prompt_version,
-                                            execution_time, execution_time_ms, actual_output, score, passed, llm_config, error_message,
-                                            llm_response, llm_provider, llm_model)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                                            execution_time, actual_output, score, passed, llm_config, error_message)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 `, [
                     uuidv4(),
                     tenantId,
@@ -389,15 +394,17 @@ export class PostgresPromptDatabase {
                     promptId,
                     promptVersion,
                     now, // Keep timestamp for when the test was run
-                    result.execution_time_ms || 0, // Store the actual execution time in milliseconds
                     result.actual_output || '',
                     result.comparison_score,
                     result.passed,
-                    JSON.stringify(llmConfig),
-                    result.error || null,
-                    result.llm_response ? JSON.stringify(result.llm_response) : null,
-                    result.llm_response?.provider || 'unknown',
-                    result.llm_response?.model || 'unknown'
+                    JSON.stringify({
+                        ...llmConfig,
+                        execution_time_ms: result.execution_time_ms || 0,
+                        llm_response: result.llm_response,
+                        provider: result.llm_response?.provider || 'unknown',
+                        model: result.llm_response?.model || 'unknown'
+                    }),
+                    result.error || null
                 ]);
             }
 
@@ -445,32 +452,39 @@ export class PostgresPromptDatabase {
 
         return {
             id: promptRow.id,
+            tenant_id: promptRow.tenant_id,
             name: promptRow.name,
             version: promptRow.version,
             text: promptRow.text,
             type: promptRow.type,
-            tool_dependencies: typeof promptRow.tool_dependencies === 'string'
-                ? JSON.parse(promptRow.tool_dependencies)
-                : promptRow.tool_dependencies,
-            workflow_dependencies: typeof promptRow.workflow_dependencies === 'string'
-                ? JSON.parse(promptRow.workflow_dependencies)
-                : promptRow.workflow_dependencies,
-            tags: typeof promptRow.tags === 'string'
-                ? JSON.parse(promptRow.tags)
-                : promptRow.tags,
+            tool_dependencies: Array.isArray(promptRow.tool_dependencies)
+                ? promptRow.tool_dependencies
+                : (typeof promptRow.tool_dependencies === 'string'
+                    ? JSON.parse(promptRow.tool_dependencies)
+                    : promptRow.tool_dependencies),
+            workflow_dependencies: Array.isArray(promptRow.workflow_dependencies)
+                ? promptRow.workflow_dependencies
+                : (typeof promptRow.workflow_dependencies === 'string'
+                    ? JSON.parse(promptRow.workflow_dependencies)
+                    : promptRow.workflow_dependencies),
+            tags: Array.isArray(promptRow.tags)
+                ? promptRow.tags
+                : (typeof promptRow.tags === 'string'
+                    ? JSON.parse(promptRow.tags)
+                    : promptRow.tags),
             created_by: promptRow.created_by,
             created_at: promptRow.created_at,
             updated_at: promptRow.updated_at,
-            metadata: typeof promptRow.metadata === 'string'
-                ? JSON.parse(promptRow.metadata)
-                : promptRow.metadata,
+            metadata: typeof promptRow.metadata === 'object' && promptRow.metadata !== null
+                ? promptRow.metadata
+                : (typeof promptRow.metadata === 'string'
+                    ? JSON.parse(promptRow.metadata)
+                    : promptRow.metadata),
             test_cases: testCasesResult.rows.map(tc => ({
                 id: tc.id,
                 name: tc.name,
-                input: typeof tc.input === 'string' ? JSON.parse(tc.input) : tc.input,
-                expected_output: typeof tc.expected_output === 'string'
-                    ? JSON.parse(tc.expected_output)
-                    : tc.expected_output,
+                input: tc.input, // jsonb field, already parsed by PostgreSQL
+                expected_output: tc.expected_output, // jsonb field, already parsed by PostgreSQL
                 scoring_logic: tc.scoring_logic,
                 enabled: tc.enabled
             }))
@@ -513,23 +527,26 @@ export class PostgresPromptDatabase {
         }
 
         // Transform rows to match the expected UI format
-        const results = result.rows.map(row => ({
-            id: row.id, // Include test result ID for deletion
-            test_case_id: row.test_case_id,
-            test_case_name: row.test_case_name,
-            passed: row.passed,
-            actual_output: row.actual_output,
-            expected_output: null, // Historical results don't store expected output
-            comparison_score: row.score,
-            error: null, // Use error field for UI compatibility
-            error_message: row.error_message, // Keep both for backwards compatibility
-            execution_time_ms: row.execution_time_ms || 0, // Use the stored execution time in milliseconds
-            llm_response: row.llm_response ? JSON.parse(row.llm_response) : {
-                provider: row.llm_provider || 'unknown',
-                model: row.llm_model || 'unknown'
-            },
-            llm_config: row.llm_config // Include LLM config for display
-        }));
+        const results = result.rows.map(row => {
+            const llmConfig = row.llm_config || {};
+            return {
+                id: row.id, // Include test result ID for deletion
+                test_case_id: row.test_case_id,
+                test_case_name: row.test_case_name,
+                passed: row.passed,
+                actual_output: row.actual_output,
+                expected_output: null, // Historical results don't store expected output
+                comparison_score: row.score,
+                error: null, // Use error field for UI compatibility
+                error_message: row.error_message, // Keep both for backwards compatibility
+                execution_time_ms: llmConfig.execution_time_ms || 0, // Extract from llm_config
+                llm_response: llmConfig.llm_response || {
+                    provider: llmConfig.provider || 'unknown',
+                    model: llmConfig.model || 'unknown'
+                },
+                llm_config: row.llm_config // Include LLM config for display
+            };
+        });
 
         // Calculate summary from results
         const total = results.length;

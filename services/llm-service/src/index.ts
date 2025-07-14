@@ -414,6 +414,58 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /models:
+ *   get:
+ *     summary: Get available models from all providers
+ *     description: Returns detailed model information from all available providers
+ *     tags: [Models]
+ *     responses:
+ *       200:
+ *         description: Models retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 providers:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: object
+ *                     properties:
+ *                       available:
+ *                         type: boolean
+ *                       models:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                 timestamp:
+ *                   type: string
+ *       500:
+ *         description: Error getting models
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+// Models endpoint
+app.get('/models', async (req, res) => {
+    try {
+        const providers = await modelRouter.getAvailableProvidersWithModels();
+        res.json({
+            providers,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error getting models:', error);
+        res.status(500).json({
+            error: 'Failed to get models',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
 // Error handling middleware
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Unhandled error:', error);

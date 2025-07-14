@@ -197,6 +197,7 @@ export class PromptDatabase {
 
         return {
             id: promptRow.id,
+            tenant_id: promptRow.tenant_id || '00000000-0000-0000-0000-000000000001', // Default tenant
             name: promptRow.name,
             version: promptRow.version,
             text: promptRow.text,
@@ -241,6 +242,7 @@ export class PromptDatabase {
 
             result.push({
                 id: promptRow.id,
+                tenant_id: promptRow.tenant_id || '00000000-0000-0000-0000-000000000001', // Default tenant
                 name: promptRow.name,
                 version: promptRow.version,
                 text: promptRow.text,
@@ -614,6 +616,7 @@ export class PromptDatabase {
 
         return {
             id: promptRow.id,
+            tenant_id: promptRow.tenant_id || '00000000-0000-0000-0000-000000000001', // Default tenant
             name: promptRow.name,
             version: promptRow.version,
             text: promptRow.text,

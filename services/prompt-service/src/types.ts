@@ -1,5 +1,6 @@
 export interface Prompt {
     id: string;
+    tenant_id: string;
     name: string;
     version: number;
     text: string;
@@ -24,6 +25,7 @@ export interface TestCase {
 }
 
 export interface CreatePromptRequest {
+    tenant_id?: string; // Optional, defaults to system tenant
     name: string;
     text: string;
     type: 'simple' | 'tool-aware' | 'workflow-aware';

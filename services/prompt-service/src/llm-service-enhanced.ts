@@ -129,7 +129,7 @@ export class LLMServiceEnhanced {
 
         // Map prompt service provider names to LLM service provider names
         const providerMapping: Record<string, string> = {
-            'local': 'ollama',  // Map 'local' to 'ollama' in LLM service
+            'local': 'local',  // Keep 'local' as 'local' for LLM service
             'openai': 'openai',
             'anthropic': 'anthropic'
         };
@@ -384,6 +384,29 @@ export class LLMServiceEnhanced {
                 anthropic: { available: !!process.env.ANTHROPIC_API_KEY, models: ['claude-3-sonnet'] },
                 ollama: { available: false, models: ['llama2', 'mistral'] }
             }
+        };
+    }
+
+    // Method to get detailed models from LLM service
+    async getProviderModels(): Promise<any> {
+        if (this.useLLMService && this.llmServiceClient.getBaseURL) {
+            try {
+                const baseURL = this.llmServiceClient.getBaseURL();
+                const response = await axios.get(`${baseURL}/models`);
+                return response.data;
+            } catch (error) {
+                console.warn('Failed to get provider models from LLM Service:', error);
+            }
+        }
+
+        // Fallback to static models
+        return {
+            providers: {
+                openai: { available: !!process.env.OPENAI_API_KEY, models: ['gpt-4', 'gpt-3.5-turbo', 'gpt-4o'] },
+                anthropic: { available: !!process.env.ANTHROPIC_API_KEY, models: ['claude-3-sonnet-20240229', 'claude-3-haiku-20240307'] },
+                local: { available: true, models: ['llama2', 'mistral', 'codellama'] }
+            },
+            timestamp: new Date().toISOString()
         };
     }
 
