@@ -56,6 +56,7 @@ stop_service "ai-oversight-service"
 stop_service "workflow-service"
 stop_service "tool-service"
 stop_service "prompt-service"
+stop_service "llm-service"
 stop_service "shared/event-bus"
 
 print_success "All services stopped!"
@@ -63,7 +64,7 @@ print_success "All services stopped!"
 # Clean up any remaining processes on the ports
 print_status "Cleaning up any remaining processes on service ports..."
 
-for port in 3001 3002 3003 3004 3005; do
+for port in 3001 3002 3003 3004 3005 3006; do
     pid=$(lsof -ti:$port 2>/dev/null || true)
     if [ ! -z "$pid" ]; then
         print_warning "Found process $pid on port $port, stopping..."

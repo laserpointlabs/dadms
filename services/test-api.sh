@@ -178,21 +178,65 @@ test_ai_oversight_service() {
     fi
 }
 
+# Function to test LLM service
+test_llm_service() {
+    print_status "Testing LLM Service..."
+    
+    # Test provider status
+    local providers_response=$(curl -s "http://localhost:3006/providers/status")
+    
+    if echo "$providers_response" | grep -q "providers"; then
+        print_success "Provider status retrieved successfully"
+        
+        # Test completion endpoint with a simple request
+        local completion_response=$(curl -s -X POST http://localhost:3006/v1/complete \
+            -H "Content-Type: application/json" \
+            -d '{
+                "prompt": "What is 2+2?",
+                "temperature": 0.3,
+                "max_tokens": 50,
+                "model_preference": {
+                    "primary": "auto",
+                    "cost_priority": "balanced"
+                }
+            }')
+        
+        if echo "$completion_response" | grep -q "content"; then
+            print_success "LLM completion successful"
+            
+            # Test Swagger documentation
+            if curl -s "http://localhost:3006/docs" > /dev/null 2>&1; then
+                print_success "Swagger documentation is accessible"
+            else
+                print_warning "Swagger documentation not accessible"
+            fi
+        else
+            print_warning "LLM completion failed (this is expected if no API keys are configured)"
+            echo "Response: $completion_response"
+        fi
+    else
+        print_error "Failed to get provider status"
+        echo "Response: $providers_response"
+    fi
+}
+
 # Main test execution
 main() {
     print_status "Starting API tests..."
     
     # Test health endpoints
+    test_health "Event Bus" 3005
+    test_health "LLM Service" 3006
     test_health "Prompt Service" 3001
     test_health "Tool Service" 3002
     test_health "Workflow Service" 3003
     test_health "AI Oversight Service" 3004
-    test_health "Event Bus" 3005
     
     # Wait a moment for services to be fully ready
     sleep 2
     
     # Test service functionality
+    test_llm_service
     test_prompt_service
     test_tool_service
     test_workflow_service

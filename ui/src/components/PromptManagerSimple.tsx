@@ -90,6 +90,7 @@ interface LLMStatus {
     available: boolean;
     models?: string[] | OllamaModel[];
     error?: string;
+    source?: string;
 }
 
 // Remove the duplicate type definitions since we're importing from the API service
@@ -134,74 +135,103 @@ const PromptManagerSimple: React.FC = () => {
         const status: Record<string, LLMStatus> = {};
 
         try {
-            // Check OpenAI status
-            console.log('🔄 Checking OpenAI status...');
+            // Use the prompt service's unified config-status endpoint
+            console.log('🔄 Checking LLM status via prompt service...');
+            const configResponse = await fetch('http://localhost:3001/llms/config-status');
+            if (configResponse.ok) {
+                const configData = await configResponse.json();
+                if (configData.success && configData.data) {
+                    // Convert prompt service response to UI format
+                    Object.entries(configData.data).forEach(([provider, info]: [string, any]) => {
+                        status[provider] = {
+                            provider: provider,
+                            available: info.available === true,
+                            models: info.models || [],
+                            source: info.source
+                        };
+                        console.log(`${info.available ? '✅' : '❌'} ${provider}: ${info.status} (${info.source})`);
+                    });
+                } else {
+                    throw new Error('Invalid response from config-status endpoint');
+                }
+            } else {
+                throw new Error('Config-status endpoint not available');
+            }
+        } catch (err) {
+            console.error('💥 Error checking LLM status via prompt service:', err);
+            console.log('🔄 Falling back to individual service checks...');
+
+            // Fallback to individual checks
             try {
-                const openaiResponse = await fetch('http://localhost:3002/health');
-                if (openaiResponse.ok) {
+                // Check OpenAI status
+                console.log('🔄 Checking OpenAI status...');
+                try {
+                    const openaiResponse = await fetch('http://localhost:3002/health');
+                    if (openaiResponse.ok) {
+                        status.openai = {
+                            provider: 'openai',
+                            available: true,
+                            models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']
+                        };
+                        console.log('✅ OpenAI service available');
+                    } else {
+                        throw new Error('OpenAI service not responding');
+                    }
+                } catch (err) {
+                    console.log('❌ OpenAI service unavailable:', err);
                     status.openai = {
                         provider: 'openai',
-                        available: true,
-                        models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo']
+                        available: false,
+                        error: 'Service unavailable'
                     };
-                    console.log('✅ OpenAI service available');
-                } else {
-                    throw new Error('OpenAI service not responding');
                 }
-            } catch (err) {
-                console.log('❌ OpenAI service unavailable:', err);
-                status.openai = {
-                    provider: 'openai',
-                    available: false,
-                    error: 'Service unavailable'
-                };
-            }
 
-            // Check Ollama status and get models (direct connection to Ollama)
-            console.log('🔄 Checking Ollama status...');
-            try {
-                // Try direct connection to Ollama first
-                const ollamaHealthResponse = await fetch('http://localhost:11434/api/tags');
-                if (ollamaHealthResponse.ok) {
-                    const modelsData = await ollamaHealthResponse.json();
+                // Check Ollama status and get models (direct connection to Ollama)
+                console.log('🔄 Checking Ollama status...');
+                try {
+                    // Try direct connection to Ollama first
+                    const ollamaHealthResponse = await fetch('http://localhost:11434/api/tags');
+                    if (ollamaHealthResponse.ok) {
+                        const modelsData = await ollamaHealthResponse.json();
+                        status.ollama = {
+                            provider: 'ollama',
+                            available: true,
+                            models: modelsData.models.map((model: any) => `ollama/${model.name}`) || []
+                        };
+                        console.log('✅ Ollama service available with models:', modelsData.models.map((model: any) => `ollama/${model.name}`));
+                    } else {
+                        // Fallback to microservice proxy
+                        console.log('🔄 Trying Ollama via microservice proxy...');
+                        const proxyHealthResponse = await fetch('http://localhost:3004/health');
+                        if (proxyHealthResponse.ok) {
+                            const modelsResponse = await fetch('http://localhost:3004/models');
+                            if (modelsResponse.ok) {
+                                const proxyModelsData = await modelsResponse.json();
+                                status.ollama = {
+                                    provider: 'ollama',
+                                    available: true,
+                                    models: proxyModelsData.data?.models || []
+                                };
+                                console.log('✅ Ollama service available via proxy with models:', proxyModelsData.data?.models);
+                            } else {
+                                throw new Error('Could not fetch Ollama models via proxy');
+                            }
+                        } else {
+                            throw new Error('Ollama service not responding on port 11434 or 3004');
+                        }
+                    }
+                } catch (err) {
+                    console.log('❌ Ollama service unavailable:', err);
                     status.ollama = {
                         provider: 'ollama',
-                        available: true,
-                        models: modelsData.models.map((model: any) => `ollama/${model.name}`) || []
+                        available: false,
+                        error: 'Service unavailable'
                     };
-                    console.log('✅ Ollama service available with models:', modelsData.models.map((model: any) => `ollama/${model.name}`));
-                } else {
-                    // Fallback to microservice proxy
-                    console.log('🔄 Trying Ollama via microservice proxy...');
-                    const proxyHealthResponse = await fetch('http://localhost:3004/health');
-                    if (proxyHealthResponse.ok) {
-                        const modelsResponse = await fetch('http://localhost:3004/models');
-                        if (modelsResponse.ok) {
-                            const proxyModelsData = await modelsResponse.json();
-                            status.ollama = {
-                                provider: 'ollama',
-                                available: true,
-                                models: proxyModelsData.data?.models || []
-                            };
-                            console.log('✅ Ollama service available via proxy with models:', proxyModelsData.data?.models);
-                        } else {
-                            throw new Error('Could not fetch Ollama models via proxy');
-                        }
-                    } else {
-                        throw new Error('Ollama service not responding on port 11434 or 3004');
-                    }
                 }
-            } catch (err) {
-                console.log('❌ Ollama service unavailable:', err);
-                status.ollama = {
-                    provider: 'ollama',
-                    available: false,
-                    error: 'Service unavailable'
-                };
-            }
 
-        } catch (err) {
-            console.error('💥 Error checking LLM status:', err);
+            } catch (err) {
+                console.error('💥 Error checking LLM status:', err);
+            }
         } finally {
             setLlmStatus(status);
             setLoadingLlmStatus(false);
@@ -289,11 +319,9 @@ const PromptManagerSimple: React.FC = () => {
             const testCaseIds = enabledTestCases.map(tc => tc.id);
             console.log('🎯 Testing with cases:', testCaseIds);
 
-            // Prepare request - convert ollama provider to local for backend
+            // Prepare request - backend providers should match exactly
             const backendConfig = { ...llmConfig };
-            if (llmConfig.provider === 'ollama') {
-                backendConfig.provider = 'local' as LLMProvider;
-            }
+            // No provider mapping needed - backend now supports all providers directly
 
             const testRequest: TestPromptRequest = {
                 test_case_ids: testCaseIds,
@@ -1086,11 +1114,20 @@ const PromptManagerSimple: React.FC = () => {
                                                 const availableModels = llmStatus[newProvider]?.models;
                                                 let defaultModel = '';
 
-                                                if (newProvider === 'openai') {
-                                                    defaultModel = 'gpt-3.5-turbo';
-                                                } else if (newProvider === ('ollama' as LLMProvider) && availableModels && availableModels.length > 0) {
-                                                    // For Ollama, models are already prefixed with 'ollama/'
-                                                    defaultModel = availableModels[0] as string;
+                                                // Set default model based on provider and available models
+                                                if (availableModels && availableModels.length > 0) {
+                                                    if (newProvider === 'openai') {
+                                                        // Prefer gpt-3.5-turbo if available, otherwise use first model
+                                                        const models = availableModels as string[];
+                                                        defaultModel = models.includes('gpt-3.5-turbo') ? 'gpt-3.5-turbo' : models[0];
+                                                    } else if (newProvider === 'anthropic') {
+                                                        // Prefer claude-3-haiku if available, otherwise use first model
+                                                        const models = availableModels as string[];
+                                                        defaultModel = models.includes('claude-3-haiku-20240307') ? 'claude-3-haiku-20240307' : models[0];
+                                                    } else {
+                                                        // For ollama, local, and other providers, use first available model
+                                                        defaultModel = availableModels[0] as string;
+                                                    }
                                                 }
 
                                                 setLlmConfig(prev => ({
@@ -1101,32 +1138,21 @@ const PromptManagerSimple: React.FC = () => {
                                             }}
                                             label="Provider"
                                         >
-                                            <MenuItem value="openai" disabled={!llmStatus.openai?.available}>
-                                                <Box display="flex" alignItems="center" gap={1}>
-                                                    <Box
-                                                        sx={{
-                                                            width: 8,
-                                                            height: 8,
-                                                            borderRadius: '50%',
-                                                            bgcolor: llmStatus.openai?.available ? 'success.main' : 'error.main'
-                                                        }}
-                                                    />
-                                                    OpenAI {!llmStatus.openai?.available && '(unavailable)'}
-                                                </Box>
-                                            </MenuItem>
-                                            <MenuItem value="ollama" disabled={!llmStatus.ollama?.available}>
-                                                <Box display="flex" alignItems="center" gap={1}>
-                                                    <Box
-                                                        sx={{
-                                                            width: 8,
-                                                            height: 8,
-                                                            borderRadius: '50%',
-                                                            bgcolor: llmStatus.ollama?.available ? 'success.main' : 'error.main'
-                                                        }}
-                                                    />
-                                                    Ollama {!llmStatus.ollama?.available && '(unavailable)'}
-                                                </Box>
-                                            </MenuItem>
+                                            {Object.keys(llmStatus).map((provider) => (
+                                                <MenuItem key={provider} value={provider} disabled={!llmStatus[provider]?.available}>
+                                                    <Box display="flex" alignItems="center" gap={1}>
+                                                        <Box
+                                                            sx={{
+                                                                width: 8,
+                                                                height: 8,
+                                                                borderRadius: '50%',
+                                                                bgcolor: llmStatus[provider]?.available ? 'success.main' : 'error.main'
+                                                            }}
+                                                        />
+                                                        {provider.charAt(0).toUpperCase() + provider.slice(1)} {!llmStatus[provider]?.available && '(unavailable)'}
+                                                    </Box>
+                                                </MenuItem>
+                                            ))}
                                         </Select>
                                     </FormControl>
                                 </Grid>

@@ -7,16 +7,16 @@ import swaggerUi from 'swagger-ui-express';
 import { v4 as uuidv4 } from 'uuid';
 // TODO: Refactor event-bus to be a node module for proper import. Temporarily disabling event bus integration for build compatibility.
 // import { EventBus } from '../../shared/event-bus/src/event-bus';
-import { LLMService } from './llm-service';
+import { LLMServiceEnhanced } from './llm-service-enhanced';
 import { PostgresPromptDatabase as PromptDatabase } from './postgres-database';
-import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, TestPromptRequest, UpdatePromptRequest } from './types';
+import { AVAILABLE_LLMS, CreatePromptRequest, LLMConfig, LLMProvider, TestPromptRequest, UpdatePromptRequest } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialize database and LLM service
 const db = new PromptDatabase();
-const llmService = LLMService.getInstance();
+const llmService = LLMServiceEnhanced.getInstance();
 
 // // Initialize event bus
 // const eventBus = new EventBus({
@@ -178,8 +178,80 @@ app.use(express.json());
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', service: 'prompt-service', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+    const llmServiceStatus = llmService.getLLMServiceStatus();
+
+    res.json({
+        status: 'healthy',
+        service: 'prompt-service',
+        timestamp: new Date().toISOString(),
+        llm_service: {
+            available: llmServiceStatus.available,
+            preferred: llmServiceStatus.preferred,
+            fallback_enabled: true,
+            endpoint: llmServiceStatus.endpoint
+        }
+    });
+});
+
+// Refresh LLM service status
+app.post('/llm-service/refresh', async (req, res) => {
+    try {
+        const available = await llmService.refreshLLMServiceStatus();
+        res.json({
+            message: 'LLM service status refreshed',
+            available,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to refresh LLM service status',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// Get LLM provider capabilities
+app.get('/llm-service/providers', async (req, res) => {
+    try {
+        const capabilities = await llmService.getProviderCapabilities();
+        res.json({
+            ...capabilities,
+            timestamp: new Date().toISOString(),
+            source: llmService.getLLMServiceStatus().available ? 'llm-service' : 'fallback'
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to get provider capabilities',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// Configure LLM service preferences
+app.post('/llm-service/configure', async (req, res) => {
+    try {
+        const { preferred } = req.body;
+
+        if (typeof preferred === 'boolean') {
+            llmService.setLLMServicePreferred(preferred);
+            res.json({
+                message: 'LLM service preference updated',
+                configuration: llmService.getLLMServiceStatus(),
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(400).json({
+                error: 'Invalid configuration',
+                message: 'preferred must be a boolean value'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to configure LLM service',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
 });
 
 // API Routes
@@ -1434,26 +1506,71 @@ app.get('/llms/available', (req, res) => {
  *                 data:
  *                   type: object
  */
-app.get('/llms/config-status', (req, res) => {
+app.get('/llms/config-status', async (req, res) => {
+    try {
+        // Get provider capabilities from LLM service
+        const capabilities = await llmService.getProviderCapabilities();
+
+        if (capabilities.source === 'llm-service' && capabilities.providers) {
+            // Use LLM service data with proper status mapping
+            const configStatus: any = {};
+
+            capabilities.providers.forEach((provider: any) => {
+                configStatus[provider.name] = {
+                    configured: provider.available,
+                    available: provider.available,
+                    source: 'llm-service',
+                    status: provider.available ? 'available' : 'unavailable',
+                    models: provider.models || (AVAILABLE_LLMS[provider.name as LLMProvider] || [])
+                };
+            });
+
+            // Ensure local is always included and available
+            if (!configStatus.local) {
+                configStatus.local = {
+                    configured: true,
+                    available: true,
+                    source: 'local',
+                    status: 'available',
+                    models: AVAILABLE_LLMS.local
+                };
+            }
+
+            return res.json({
+                success: true,
+                data: configStatus
+            });
+        }
+    } catch (error) {
+        console.warn('Failed to get LLM service capabilities, falling back to environment check:', error);
+    }
+
+    // Fallback to environment variable checks
     const configStatus = {
         openai: {
             configured: !!process.env.OPENAI_API_KEY,
+            available: !!process.env.OPENAI_API_KEY,
             source: process.env.OPENAI_API_KEY ? 'environment' : 'none',
+            status: process.env.OPENAI_API_KEY ? 'available' : 'unavailable',
             models: AVAILABLE_LLMS.openai
         },
         anthropic: {
             configured: !!process.env.ANTHROPIC_API_KEY,
+            available: !!process.env.ANTHROPIC_API_KEY,
             source: process.env.ANTHROPIC_API_KEY ? 'environment' : 'none',
+            status: process.env.ANTHROPIC_API_KEY ? 'available' : 'unavailable',
             models: AVAILABLE_LLMS.anthropic
         },
         local: {
-            configured: true, // Local models don't need API keys
+            configured: true,
+            available: true,
             source: 'local',
+            status: 'available',
             models: AVAILABLE_LLMS.local
         }
     };
 
-    res.json({
+    return res.json({
         success: true,
         data: configStatus
     });
@@ -1482,4 +1599,4 @@ process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
     await db.close();
     process.exit(0);
-}); 
+});

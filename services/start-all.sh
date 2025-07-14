@@ -126,10 +126,12 @@ TOOL_SERVICE_DIR="tool-service"
 WORKFLOW_SERVICE_DIR="workflow-service"
 AI_OVERSIGHT_SERVICE_DIR="ai-oversight-service"
 EVENT_BUS_DIR="shared/event-bus"
+LLM_SERVICE_DIR="llm-service"
 
 # Install dependencies for all services
 print_status "Installing dependencies for all services..."
 install_deps "$EVENT_BUS_DIR"
+install_deps "$LLM_SERVICE_DIR"
 install_deps "$PROMPT_SERVICE_DIR"
 install_deps "$TOOL_SERVICE_DIR"
 install_deps "$WORKFLOW_SERVICE_DIR"
@@ -138,6 +140,7 @@ install_deps "$AI_OVERSIGHT_SERVICE_DIR"
 # Build all services
 print_status "Building all services..."
 build_service "$EVENT_BUS_DIR"
+build_service "$LLM_SERVICE_DIR"
 build_service "$PROMPT_SERVICE_DIR"
 build_service "$TOOL_SERVICE_DIR"
 build_service "$WORKFLOW_SERVICE_DIR"
@@ -146,6 +149,7 @@ build_service "$AI_OVERSIGHT_SERVICE_DIR"
 # Start all services
 print_status "Starting services..."
 start_service "$EVENT_BUS_DIR" 3005
+start_service "$LLM_SERVICE_DIR" 3006
 start_service "$PROMPT_SERVICE_DIR" 3001
 start_service "$TOOL_SERVICE_DIR" 3002
 start_service "$WORKFLOW_SERVICE_DIR" 3003
@@ -153,11 +157,12 @@ start_service "$AI_OVERSIGHT_SERVICE_DIR" 3004
 
 print_success "All services started!"
 print_status "Service URLs:"
+echo "  - Event Bus: http://localhost:3005"
+echo "  - LLM Service: http://localhost:3006"
 echo "  - Prompt Service: http://localhost:3001"
 echo "  - Tool Service: http://localhost:3002"
 echo "  - Workflow Service: http://localhost:3003"
 echo "  - AI Oversight Service: http://localhost:3004"
-echo "  - Event Bus: http://localhost:3005"
 
 print_status "Logs are available in the logs/ directory"
 print_status "To stop all services, run: ./stop-all.sh"
