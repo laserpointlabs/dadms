@@ -19,11 +19,16 @@
 
 const express = require('express');
 const cors = require('cors');
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs').promises;
+const fsSync = require('fs');
+const WebSocket = require('ws');
+const axios = require('axios');
+const { Client } = require('pg');
 const { Server } = require('socket.io');
 const http = require('http');
 const https = require('https');
-const { spawn } = require('child_process');
-const path = require('path');
 
 // Configuration - Use environment variables with fallbacks
 // This makes the server portable and not tied to specific user directories
@@ -573,42 +578,101 @@ app.get('/api/analysis/list', async (req, res) => {
     }
 });
 
-/*
-// This route moved below to avoid conflicts with /api/analysis/threads
-app.get('/api/analysis/:id', async (req, res) => {
+// Direct PostgreSQL analysis endpoint
+app.get('/api/analysis/direct', async (req, res) => {
+    const client = new Client({
+        host: 'localhost',  // Docker container is exposed on localhost
+        port: 5432,
+        database: 'dadm_db',
+        user: 'dadm_user',
+        password: 'dadm_password'
+    });
+
     try {
-        const { id } = req.params;
-        console.log(`Fetching analysis details for ID: ${id}`);
+        await client.connect();
+        console.log('Connected to PostgreSQL for direct analysis query');
 
-        // Use DADM CLI to get specific analysis data
-        const result = await executeCommand('dadm', ['analysis', 'list', '--detailed'], CONFIG.DADM_ROOT);
+        const { limit = 50, offset = 0, status, service, thread_id, process_id } = req.query;
 
-        // Parse and find the specific analysis
-        const analyses = await parseAnalysisListOutput(result.output);
-        const enrichedAnalyses = await enrichAnalysisWithProcessDefinitions(analyses);
-        const analysis = enrichedAnalyses.find(a => a.analysis_id === id);
+        // Build the query
+        let query = `
+            SELECT 
+                am.analysis_id,
+                am.thread_id,
+                am.session_id,
+                am.process_instance_id,
+                am.task_name,
+                am.source_service,
+                am.status,
+                am.created_at,
+                am.updated_at,
+                am.tags,
+                ad.input_data,
+                ad.output_data
+            FROM analysis_metadata am
+            LEFT JOIN analysis_data ad ON am.analysis_id = ad.analysis_id
+            WHERE 1=1
+        `;
 
-        if (!analysis) {
-            return res.status(404).json({
-                success: false,
-                error: 'Analysis not found'
-            });
+        const params = [];
+        let paramIndex = 1;
+
+        // Add filters
+        if (status) {
+            query += ` AND am.status = $${paramIndex}`;
+            params.push(status);
+            paramIndex++;
         }
+
+        if (service) {
+            query += ` AND am.source_service = $${paramIndex}`;
+            params.push(service);
+            paramIndex++;
+        }
+
+        if (thread_id) {
+            query += ` AND am.thread_id = $${paramIndex}`;
+            params.push(thread_id);
+            paramIndex++;
+        }
+
+        if (process_id) {
+            query += ` AND am.process_instance_id = $${paramIndex}`;
+            params.push(process_id);
+            paramIndex++;
+        }
+
+        // Add ordering and pagination
+        query += ` ORDER BY am.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(parseInt(limit), parseInt(offset));
+
+        const result = await client.query(query, params);
+
+        await client.end();
 
         res.json({
             success: true,
-            data: analysis
+            data: result.rows,
+            total: result.rowCount,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
         });
 
     } catch (error) {
-        console.error('Failed to fetch analysis details:', error);
+        console.error('PostgreSQL direct query error:', error);
+        if (client) {
+            try {
+                await client.end();
+            } catch (closeError) {
+                console.error('Error closing PostgreSQL client:', closeError);
+            }
+        }
         res.status(500).json({
             success: false,
             error: error.message
         });
     }
 });
-*/
 
 // Get unique OpenAI thread combinations for Thread Context Viewer
 app.get('/api/analysis/threads', async (req, res) => {
@@ -2221,4 +2285,5 @@ server.listen(PORT, async () => {
     console.log(`  POST   http://localhost:${PORT}/api/openai/chat/standalone`);
     console.log(`  GET    http://localhost:${PORT}/api/process/instances`);
     console.log(`  GET    http://localhost:${PORT}/api/process/definitions/list`);
+    console.log(`  GET    http://localhost:${PORT}/api/analysis/direct`);
 });

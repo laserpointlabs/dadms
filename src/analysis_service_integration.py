@@ -13,7 +13,14 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 import uuid
 
-from .analysis_data_manager import AnalysisDataManager, AnalysisStatus
+# Import database configuration
+from config.database_config import ENABLE_POSTGRESQL
+
+# Import the appropriate data manager based on configuration
+if ENABLE_POSTGRESQL:
+    from .postgres_analysis_data_manager import PostgresAnalysisDataManager as AnalysisDataManager, AnalysisStatus
+else:
+    from .analysis_data_manager import AnalysisDataManager, AnalysisStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +40,8 @@ class AnalysisServiceIntegration:
         qdrant_port: int = None,
         neo4j_uri: str = None,
         neo4j_user: str = None,
-        neo4j_password: str = None
+        neo4j_password: str = None,
+        tenant_id: str = None
     ):
         """
         Initialize the service integration
@@ -48,6 +56,7 @@ class AnalysisServiceIntegration:
             neo4j_uri: Neo4j URI (default: from env or bolt://localhost:7687)
             neo4j_user: Neo4j user (default: from env or neo4j)
             neo4j_password: Neo4j password (default: from env or password)
+            tenant_id: Tenant ID for multi-tenant support
         """
         # Use environment variables as defaults
         self.qdrant_host = qdrant_host or os.environ.get('QDRANT_HOST', 'localhost')
@@ -58,17 +67,31 @@ class AnalysisServiceIntegration:
         
         self.auto_process = auto_process
         
-        # Initialize the analysis data manager
-        self.data_manager = AnalysisDataManager(
-            storage_dir=storage_dir,
-            enable_vector_store=enable_vector_store,
-            enable_graph_db=enable_graph_db,
-            qdrant_host=self.qdrant_host,
-            qdrant_port=self.qdrant_port,
-            neo4j_uri=self.neo4j_uri,
-            neo4j_user=self.neo4j_user,
-            neo4j_password=self.neo4j_password
-        )
+        # Initialize the appropriate data manager
+        if ENABLE_POSTGRESQL:
+            logger.info("Using PostgreSQL Analysis Data Manager")
+            self.data_manager = AnalysisDataManager(
+                tenant_id=tenant_id,
+                enable_vector_store=enable_vector_store,
+                enable_graph_db=enable_graph_db,
+                qdrant_host=self.qdrant_host,
+                qdrant_port=self.qdrant_port,
+                neo4j_uri=self.neo4j_uri,
+                neo4j_user=self.neo4j_user,
+                neo4j_password=self.neo4j_password
+            )
+        else:
+            logger.info("Using SQLite Analysis Data Manager")
+            self.data_manager = AnalysisDataManager(
+                storage_dir=storage_dir,
+                enable_vector_store=enable_vector_store,
+                enable_graph_db=enable_graph_db,
+                qdrant_host=self.qdrant_host,
+                qdrant_port=self.qdrant_port,
+                neo4j_uri=self.neo4j_uri,
+                neo4j_user=self.neo4j_user,
+                neo4j_password=self.neo4j_password
+            )
         
         logger.info("Analysis service integration initialized")
     

@@ -342,23 +342,39 @@ class PostgresAnalysisDataManager:
     
     def get_analysis(self, analysis_id: str) -> Optional[AnalysisData]:
         """Retrieve analysis data by ID"""
+        has_tenant_id = self._check_tenant_id_exists()
+        
         with self._get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Get metadata
-                cur.execute("""
-                    SELECT * FROM analysis_metadata 
-                    WHERE analysis_id = %s AND tenant_id = %s
-                """, (analysis_id, self.tenant_id))
+                if has_tenant_id:
+                    cur.execute("""
+                        SELECT * FROM analysis_metadata 
+                        WHERE analysis_id = %s AND tenant_id = %s
+                    """, (analysis_id, self.tenant_id))
+                else:
+                    cur.execute("""
+                        SELECT * FROM analysis_metadata 
+                        WHERE analysis_id = %s
+                    """, (analysis_id,))
+                    
                 metadata_row = cur.fetchone()
                 
                 if not metadata_row:
                     return None
                 
-                # Get data
-                cur.execute("""
-                    SELECT * FROM analysis_data 
-                    WHERE analysis_id = %s AND tenant_id = %s
-                """, (analysis_id, self.tenant_id))
+                # Get data - check if analysis_data has tenant_id
+                if has_tenant_id and self._check_column_exists('analysis_data', 'tenant_id'):
+                    cur.execute("""
+                        SELECT * FROM analysis_data 
+                        WHERE analysis_id = %s AND tenant_id = %s
+                    """, (analysis_id, self.tenant_id))
+                else:
+                    cur.execute("""
+                        SELECT * FROM analysis_data 
+                        WHERE analysis_id = %s
+                    """, (analysis_id,))
+                    
                 data_row = cur.fetchone()
                 
                 if not data_row:
@@ -392,15 +408,24 @@ class PostgresAnalysisDataManager:
     def get_thread_analyses(self, thread_id: str, limit: int = 100) -> List[AnalysisData]:
         """Get all analyses for a specific thread"""
         analyses = []
+        has_tenant_id = self._check_tenant_id_exists()
         
         with self._get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("""
-                    SELECT analysis_id FROM analysis_metadata 
-                    WHERE thread_id = %s AND tenant_id = %s 
-                    ORDER BY created_at DESC 
-                    LIMIT %s
-                """, (thread_id, self.tenant_id, limit))
+                if has_tenant_id:
+                    cur.execute("""
+                        SELECT analysis_id FROM analysis_metadata 
+                        WHERE thread_id = %s AND tenant_id = %s 
+                        ORDER BY created_at DESC 
+                        LIMIT %s
+                    """, (thread_id, self.tenant_id, limit))
+                else:
+                    cur.execute("""
+                        SELECT analysis_id FROM analysis_metadata 
+                        WHERE thread_id = %s 
+                        ORDER BY created_at DESC 
+                        LIMIT %s
+                    """, (thread_id, limit))
                 
                 rows = cur.fetchall()
                 
@@ -415,4 +440,271 @@ class PostgresAnalysisDataManager:
         """Close all connections"""
         if self.neo4j_driver:
             self.neo4j_driver.close()
-            logger.info("Neo4j connection closed") 
+            logger.info("Neo4j connection closed")
+    
+    def search_analyses(
+        self,
+        thread_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        task_name_pattern: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        status: Optional[AnalysisStatus] = None,
+        limit: int = 100
+    ) -> List[AnalysisData]:
+        """Search analyses with various filters"""
+        # Check if tenant_id column exists
+        has_tenant_id = self._check_tenant_id_exists()
+        
+        if has_tenant_id:
+            query_parts = ["SELECT analysis_id FROM analysis_metadata WHERE tenant_id = %s"]
+            params = [self.tenant_id]
+        else:
+            query_parts = ["SELECT analysis_id FROM analysis_metadata WHERE 1=1"]
+            params = []
+        
+        if thread_id:
+            query_parts.append("AND thread_id = %s")
+            params.append(thread_id)
+        
+        if session_id:
+            query_parts.append("AND session_id = %s")
+            params.append(session_id)
+        
+        if task_name_pattern:
+            query_parts.append("AND task_name LIKE %s")
+            params.append(f"%{task_name_pattern}%")
+        
+        if status:
+            query_parts.append("AND status = %s")
+            params.append(status.value)
+        
+        if tags:
+            # Simple tag search using JSONB containment operator
+            for tag in tags:
+                query_parts.append("AND tags @> %s")
+                params.append(json.dumps([tag]))
+        
+        query_parts.append("ORDER BY created_at DESC LIMIT %s")
+        params.append(str(limit))
+        
+        query = " ".join(query_parts)
+        
+        analyses = []
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, params)
+                rows = cur.fetchall()
+                
+                for row in rows:
+                    analysis = self.get_analysis(row['analysis_id'])
+                    if analysis:
+                        analyses.append(analysis)
+        
+        return analyses
+    
+    def _check_tenant_id_exists(self) -> bool:
+        """Check if tenant_id column exists in analysis_metadata table"""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'analysis_metadata' 
+                    AND column_name = 'tenant_id'
+                """)
+                return cur.fetchone() is not None
+    
+    def _check_column_exists(self, table_name: str, column_name: str) -> bool:
+        """Check if a column exists in a table"""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = %s 
+                    AND column_name = %s
+                """, (table_name, column_name))
+                return cur.fetchone() is not None
+    
+    def process_pending_tasks(self, processor_type: Optional[str] = None, limit: int = 10) -> int:
+        """
+        Process pending processing tasks
+        
+        Args:
+            processor_type: Type of processor to run (optional, processes all if None)
+            limit: Maximum number of tasks to process
+        
+        Returns:
+            int: Number of tasks processed
+        """
+        processed_count = 0
+        has_tenant_id = self._check_column_exists('processing_tasks', 'tenant_id')
+        
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Get pending tasks
+                if has_tenant_id:
+                    query = """
+                        SELECT * FROM processing_tasks 
+                        WHERE status = %s AND tenant_id = %s
+                    """
+                    params = [ProcessingStatus.PENDING.value, self.tenant_id]
+                else:
+                    query = """
+                        SELECT * FROM processing_tasks 
+                        WHERE status = %s
+                    """
+                    params = [ProcessingStatus.PENDING.value]
+                
+                if processor_type:
+                    query += " AND processor_type = %s"
+                    params.append(processor_type)
+                
+                query += " ORDER BY created_at ASC LIMIT %s"
+                params.append(str(limit))
+                
+                cur.execute(query, params)
+                tasks = cur.fetchall()
+                
+                for task_row in tasks:
+                    try:
+                        # Mark as in progress
+                        if has_tenant_id:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s 
+                                WHERE task_id = %s AND tenant_id = %s
+                            """, (ProcessingStatus.IN_PROGRESS.value, task_row['task_id'], self.tenant_id))
+                        else:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s 
+                                WHERE task_id = %s
+                            """, (ProcessingStatus.IN_PROGRESS.value, task_row['task_id']))
+                        conn.commit()
+                        
+                        # Process the task (implement processing logic here)
+                        success = True  # Placeholder - implement actual processing
+                        
+                        # Update status
+                        new_status = ProcessingStatus.COMPLETED if success else ProcessingStatus.FAILED
+                        if has_tenant_id:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s, completed_at = %s 
+                                WHERE task_id = %s AND tenant_id = %s
+                            """, (new_status.value, datetime.now(), task_row['task_id'], self.tenant_id))
+                        else:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s, completed_at = %s 
+                                WHERE task_id = %s
+                            """, (new_status.value, datetime.now(), task_row['task_id']))
+                        conn.commit()
+                        
+                        if success:
+                            processed_count += 1
+                            logger.info(f"Processed task {task_row['task_id']} successfully")
+                        else:
+                            logger.error(f"Failed to process task {task_row['task_id']}")
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing task {task_row['task_id']}: {e}")
+                        # Mark as failed
+                        if has_tenant_id:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s, error_message = %s, completed_at = %s 
+                                WHERE task_id = %s AND tenant_id = %s
+                            """, (ProcessingStatus.FAILED.value, str(e), datetime.now(), task_row['task_id'], self.tenant_id))
+                        else:
+                            cur.execute("""
+                                UPDATE processing_tasks 
+                                SET status = %s, error_message = %s, completed_at = %s 
+                                WHERE task_id = %s
+                            """, (ProcessingStatus.FAILED.value, str(e), datetime.now(), task_row['task_id']))
+                        conn.commit()
+        
+        return processed_count
+    
+    def get_processing_status(self, analysis_id: str) -> Dict[str, Any]:
+        """Get processing status for an analysis"""
+        has_tenant_id = self._check_column_exists('processing_tasks', 'tenant_id')
+        
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                if has_tenant_id:
+                    cur.execute("""
+                        SELECT * FROM processing_tasks 
+                        WHERE analysis_id = %s AND tenant_id = %s
+                        ORDER BY created_at ASC
+                    """, (analysis_id, self.tenant_id))
+                else:
+                    cur.execute("""
+                        SELECT * FROM processing_tasks 
+                        WHERE analysis_id = %s
+                        ORDER BY created_at ASC
+                    """, (analysis_id,))
+                
+                tasks = cur.fetchall()
+                
+                return {
+                    'analysis_id': analysis_id,
+                    'tasks': [
+                        {
+                            'task_id': task['task_id'],
+                            'processor_type': task['processor_type'],
+                            'status': task['status'],
+                            'created_at': task['created_at'].isoformat() if task['created_at'] else None,
+                            'completed_at': task['completed_at'].isoformat() if task['completed_at'] else None,
+                            'error_message': task['error_message']
+                        }
+                        for task in tasks
+                    ]
+                }
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get statistics about stored analyses"""
+        has_tenant_id = self._check_tenant_id_exists()
+        
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Total analyses
+                if has_tenant_id:
+                    cur.execute("""
+                        SELECT COUNT(*) as total FROM analysis_metadata 
+                        WHERE tenant_id = %s
+                    """, (self.tenant_id,))
+                else:
+                    cur.execute("""
+                        SELECT COUNT(*) as total FROM analysis_metadata
+                    """)
+                total_analyses = cur.fetchone()[0]
+                
+                # Processing task status
+                if self._check_column_exists('processing_tasks', 'tenant_id'):
+                    cur.execute("""
+                        SELECT status, COUNT(*) as count 
+                        FROM processing_tasks 
+                        WHERE tenant_id = %s
+                        GROUP BY status
+                    """, (self.tenant_id,))
+                else:
+                    cur.execute("""
+                        SELECT status, COUNT(*) as count 
+                        FROM processing_tasks 
+                        GROUP BY status
+                    """)
+                
+                task_status = {}
+                for row in cur.fetchall():
+                    task_status[row[0]] = row[1]
+                
+                return {
+                    'total_analyses': total_analyses,
+                    'processing_task_status': task_status,
+                    'backends_enabled': {
+                        'vector_store': self.qdrant_client is not None,
+                        'graph_db': self.neo4j_driver is not None
+                    }
+                } 

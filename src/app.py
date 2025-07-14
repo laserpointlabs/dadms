@@ -1328,10 +1328,19 @@ def handle_analysis_command(args):
             project_root = Path(__file__).parent.parent
             sys.path.insert(0, str(project_root))
             
-            from src.analysis_data_manager import AnalysisDataManager
+            # Import database config to check if PostgreSQL is enabled
+            from config.database_config import ENABLE_POSTGRESQL
             
-            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
-              # Build filters
+            if ENABLE_POSTGRESQL:
+                from src.postgres_analysis_data_manager import PostgresAnalysisDataManager as AnalysisDataManager
+                print(f"{Fore.GREEN}Using PostgreSQL for analysis data{Style.RESET_ALL}")
+                data_manager = AnalysisDataManager()
+            else:
+                from src.analysis_data_manager import AnalysisDataManager
+                print(f"{Fore.YELLOW}Using SQLite for analysis data{Style.RESET_ALL}")
+                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            
+            # Build filters
             filters = {}
             if args.thread_id:
                 filters['thread_id'] = args.thread_id
@@ -1344,7 +1353,8 @@ def handle_analysis_command(args):
             if args.process_id:
                 # We'll filter by process_instance_id after getting results
                 pass
-              # Search analyses
+            
+            # Search analyses
             analyses = data_manager.search_analyses(
                 limit=args.limit * 2 if args.process_id else args.limit,  # Get more if we need to filter by process_id
                 **filters
@@ -1355,7 +1365,8 @@ def handle_analysis_command(args):
                 analyses = [a for a in analyses if a.metadata.process_instance_id == args.process_id]
                 # Limit to requested number after filtering
                 analyses = analyses[:args.limit]
-              # Filter by service if specified
+            
+            # Filter by service if specified
             if args.service:
                 analyses = [a for a in analyses if a.metadata.source_service == args.service]
             
@@ -1377,6 +1388,11 @@ def handle_analysis_command(args):
                 
                 if not openai_analysis:
                     print(f"{Fore.RED}No OpenAI thread information found for process {args.process_id}{Style.RESET_ALL}")
+                    data_manager.close()
+                    return 1
+                
+                if openai_analysis.output_data is None:
+                    print(f"{Fore.RED}No output data found for OpenAI analysis{Style.RESET_ALL}")
                     data_manager.close()
                     return 1
                 
@@ -1510,9 +1526,14 @@ def handle_analysis_command(args):
             project_root = Path(__file__).parent.parent
             sys.path.insert(0, str(project_root))
             
-            from src.analysis_data_manager import AnalysisDataManager
+            from config.database_config import ENABLE_POSTGRESQL
             
-            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            if ENABLE_POSTGRESQL:
+                from src.postgres_analysis_data_manager import PostgresAnalysisDataManager as AnalysisDataManager
+                data_manager = AnalysisDataManager()
+            else:
+                from src.analysis_data_manager import AnalysisDataManager
+                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
             stats = data_manager.get_stats()
             
             print(f"\n{Fore.GREEN}Storage Statistics:{Style.RESET_ALL}")
@@ -1538,9 +1559,14 @@ def handle_analysis_command(args):
             project_root = Path(__file__).parent.parent
             sys.path.insert(0, str(project_root))
             
-            from src.analysis_data_manager import AnalysisDataManager
+            from config.database_config import ENABLE_POSTGRESQL
             
-            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            if ENABLE_POSTGRESQL:
+                from src.postgres_analysis_data_manager import PostgresAnalysisDataManager as AnalysisDataManager
+                data_manager = AnalysisDataManager()
+            else:
+                from src.analysis_data_manager import AnalysisDataManager
+                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
             
             if args.once:
                 # Process once

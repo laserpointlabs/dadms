@@ -263,62 +263,47 @@ const AnalysisDataViewer: React.FC = () => {
     // const [page, setPage] = useState(0);
     // const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const fetchAnalysisData = async () => {
         setLoading(true);
         try {
-            console.log('Fetching real analysis data from DADM...');
+            console.log('Fetching analysis data directly from PostgreSQL...');
 
-            // Fetch real data from our analysis API
-            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}/api/analysis/list?limit=50&detailed=true`);
+            // Fetch data from our direct PostgreSQL endpoint
+            const response = await fetch(`/api/analysis/direct?limit=50`);
             const result = await response.json();
 
             if (result.success && result.data) {
-                // Transform DADM data to match our interface
+                // Transform the data to match our interface
                 const transformedAnalyses: AnalysisData[] = result.data.map((item: any) => ({
                     metadata: {
                         analysis_id: item.analysis_id,
                         thread_id: item.thread_id,
                         session_id: item.session_id || '',
-                        process_instance_id: item.process_id,
-                        process_name: item.process_definition?.name || 'Unknown Process',
-                        process_version: item.process_definition?.version || 1,
-                        task_name: item.task,
+                        process_instance_id: item.process_instance_id || '',
+                        task_name: item.task_name || '',
                         created_at: item.created_at,
-                        updated_at: item.created_at,
+                        updated_at: item.updated_at,
                         status: item.status,
-                        tags: Array.isArray(item.tags) ? item.tags : [],
-                        source_service: item.service
+                        tags: item.tags || [],
+                        source_service: item.source_service || ''
                     },
-                    input_data: {
-                        openai_thread: item.openai_thread || '',
-                        openai_assistant: item.openai_assistant || ''
-                    },
-                    output_data: {
-                        thread_id: item.thread_id,
-                        assistant_id: item.openai_assistant
-                    },
-                    raw_response: `Analysis ID: ${item.analysis_id}\nTask: ${item.task}\nStatus: ${item.status}`,
-                    processing_log: [
-                        {
-                            timestamp: item.created_at,
-                            level: 'INFO',
-                            message: `Analysis created: ${item.task}`
-                        }
-                    ]
+                    input_data: item.input_data || {},
+                    output_data: item.output_data || {}
                 }));
 
                 setAnalyses(transformedAnalyses);
-                console.log(`Loaded ${transformedAnalyses.length} real analyses from DADM`);
+                console.log(`Successfully loaded ${transformedAnalyses.length} analyses from PostgreSQL`);
             } else {
-                console.error('Failed to fetch analysis data:', result.error);
-                setAnalyses([]);
+                throw new Error(result.error || 'Failed to fetch analysis data');
             }
         } catch (error) {
             console.error('Error fetching analysis data:', error);
-            setAnalyses([]);
+            setError(error instanceof Error ? error.message : 'Failed to fetch analysis data');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => {
@@ -453,6 +438,8 @@ const AnalysisDataViewer: React.FC = () => {
             </Box>
 
             {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
             {/* Filters */}
             <Paper sx={{ p: 2, mb: 3 }}>
