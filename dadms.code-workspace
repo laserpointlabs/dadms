@@ -1,0 +1,78 @@
+{
+    "folders": [
+        {
+            "name": "DADMS 2.0",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "typescript.preferences.includePackageJsonAutoImports": "auto",
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "files.exclude": {
+            "**/node_modules": true,
+            "**/dist": true,
+            "**/build": true,
+            "**/.git": false
+        },
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/dist": true,
+            "**/build": true
+        },
+        "eslint.workingDirectories": [
+            ".",
+            "./dadms-services/shared",
+            "./dadms-services/user-project",
+            "./dadms-services/knowledge",
+            "./dadms-services/llm",
+            "./dadms-ui"
+        ],
+        "turbo.useLocalTurbo": true
+    },
+    "extensions": {
+        "recommendations": [
+            "esbenp.prettier-vscode",
+            "dbaeumer.vscode-eslint",
+            "ms-vscode.vscode-typescript-next",
+            "bradlc.vscode-tailwindcss",
+            "ms-vscode.vscode-json",
+            "redhat.vscode-yaml",
+            "ms-vscode.vscode-docker"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Build All Services",
+                "type": "shell",
+                "command": "turbo",
+                "args": ["build"],
+                "group": "build",
+                "problemMatcher": ["$tsc"]
+            },
+            {
+                "label": "Start All Services",
+                "type": "shell",
+                "command": "turbo",
+                "args": ["dev"],
+                "group": "build",
+                "isBackground": true
+            },
+            {
+                "label": "Test All Services",
+                "type": "shell",
+                "command": "turbo",
+                "args": ["test"],
+                "group": "test",
+                "problemMatcher": ["$tsc"]
+            }
+        ]
+    }
+}
