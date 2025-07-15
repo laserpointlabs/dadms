@@ -65,10 +65,22 @@ npm run build     # Build for production
 - [ ] Day 5: Testing and documentation
 
 ## Available Specifications
-- **DADMS_MVP_SPECIFICATION.md**: Complete MVP architecture and service definitions
-- **DADMS_DEMONSTRATOR_SPECIFICATION.md**: Full system specification with 15 core services
-- **DADMS_WEEK1_IMPLEMENTATION_PLAN.md**: Detailed day-by-day implementation guide
-- **DADMS_CONTEXT_MIGRATION_GUIDE.md**: Context preservation and AI tool integration
+📁 **All documentation is now organized in [docs/](docs/README.md)**
+
+### Core Documentation
+- **[MVP Specification](docs/specifications/DADMS_MVP_SPECIFICATION.md)**: Complete MVP architecture and service definitions
+- **[Demonstrator Specification](docs/specifications/DADMS_DEMONSTRATOR_SPECIFICATION.md)**: Full system specification with 15 core services
+
+### Development Guides  
+- **[Week 1 Implementation Plan](docs/development/DADMS_WEEK1_IMPLEMENTATION_PLAN.md)**: Detailed day-by-day implementation guide
+- **[Setup Guide](docs/development/SETUP_GUIDE.md)**: Complete development environment setup
+- **[AI Development Guidelines](docs/development/.ai-dev-guidelines.md)**: AI assistant development guidance
+
+### Process Documentation
+- **[Release Process](docs/deployment/RELEASE_PROCESS.md)**: CI/CD, testing, and release management
+- **[Context Migration Guide](docs/development/DADMS_CONTEXT_MIGRATION_GUIDE.md)**: Context preservation and AI tool integration
+
+📖 **See [docs/README.md](docs/README.md) for complete documentation index**
 
 ## Contributing
 This is a clean rebuild following modern development practices:
