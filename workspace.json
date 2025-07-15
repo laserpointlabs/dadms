@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "$schema": "./node_modules/nx/schemas/workspace-schema.json",
+  "projects": {
+    "dadms-ui": {
+      "root": "dadms-ui",
+      "sourceRoot": "dadms-ui/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "@nx/webpack:webpack",
+          "options": {
+            "outputPath": "dist/dadms-ui"
+          }
+        },
+        "serve": {
+          "executor": "@nx/webpack:dev-server",
+          "options": {
+            "port": 3000
+          }
+        },
+        "test": {
+          "executor": "@nx/jest:jest"
+        }
+      }
+    },
+    "user-project-service": {
+      "root": "dadms-services/user-project",
+      "sourceRoot": "dadms-services/user-project/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "@nx/node:build"
+        },
+        "serve": {
+          "executor": "@nx/node:execute",
+          "options": {
+            "port": 3001
+          }
+        }
+      }
+    },
+    "knowledge-service": {
+      "root": "dadms-services/knowledge",
+      "sourceRoot": "dadms-services/knowledge/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "@nx/node:build"
+        },
+        "serve": {
+          "executor": "@nx/node:execute",
+          "options": {
+            "port": 3003
+          }
+        }
+      }
+    },
+    "llm-service": {
+      "root": "dadms-services/llm",
+      "sourceRoot": "dadms-services/llm/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "@nx/node:build"
+        },
+        "serve": {
+          "executor": "@nx/node:execute",
+          "options": {
+            "port": 3002
+          }
+        }
+      }
+    },
+    "shared": {
+      "root": "dadms-services/shared",
+      "sourceRoot": "dadms-services/shared/src",
+      "projectType": "library"
+    }
+  }
+}
