@@ -48,14 +48,27 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Development Services (will be added during Week 1)
-  # user-project-service:
-  #   build: ./dadms-services/user-project
-  #   ports:
-  #     - "3001:3001"
-  #   depends_on:
-  #     - postgres
-  #     - redis
+  # Development Services
+  user-project-service:
+    build: 
+      context: ..
+      dockerfile: dadms-services/user-project/Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=dadms
+      - DB_USER=dadms_user
+      - DB_PASSWORD=dadms_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - default
 
   # knowledge-service:
   #   build: ./dadms-services/knowledge

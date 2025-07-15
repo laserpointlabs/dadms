@@ -1,5 +1,3 @@
--- DADMS Database Initialization Script
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -64,19 +62,12 @@ CREATE TRIGGER update_projects_updated_at
 
 -- Insert sample users for development
 INSERT INTO users (email, name, password_hash) VALUES 
-    ('admin@dadms.com', 'DADMS Administrator', '$2b$10$placeholder_hash'),
-    ('user@dadms.com', 'Demo User', '$2b$10$placeholder_hash')
+    ('admin@dadms.com', 'DADMS Administrator', '$2b$10$placeholder_hash')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample project for development
 INSERT INTO projects (name, description, owner_id, knowledge_domain) VALUES 
     ('Sample Decision Project', 'Example project for testing DADMS functionality', 
      (SELECT id FROM users WHERE email = 'admin@dadms.com'), 
-     'business_strategy'),
-    ('AI Implementation Strategy', 'Decision analysis for AI tool adoption', 
-     (SELECT id FROM users WHERE email = 'user@dadms.com'), 
-     'technology')
-ON CONFLICT DO NOTHING;
-
--- Verify installation
-SELECT 'DADMS Database initialized successfully' as status;
+     'business_strategy')
+ON CONFLICT DO NOTHING; 
