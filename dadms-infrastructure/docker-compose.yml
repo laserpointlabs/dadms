@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Primary Database
+  postgres:
+    image: postgres:15
+    container_name: dadms-postgres
+    environment:
+      POSTGRES_DB: dadms
+      POSTGRES_USER: dadms_user
+      POSTGRES_PASSWORD: dadms_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U dadms_user -d dadms" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Qdrant - Vector Database for RAG
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: dadms-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:6333/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis - Caching and Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: dadms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Development Services (will be added during Week 1)
+  # user-project-service:
+  #   build: ./dadms-services/user-project
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+
+  # knowledge-service:
+  #   build: ./dadms-services/knowledge
+  #   ports:
+  #     - "3006:3006"
+  #   depends_on:
+  #     - postgres
+  #     - qdrant
+
+  # llm-service:
+  #   build: ./dadms-services/llm
+  #   ports:
+  #     - "3008:3008"
+  #   depends_on:
+  #     - redis
+
+  # dadms-ui:
+  #   build: ./dadms-ui
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - user-project-service
+  #     - knowledge-service
+  #     - llm-service
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  redis_data:
+
+
+networks:
+  default:
+    name: dadms-network

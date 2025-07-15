@@ -1,5 +1,43 @@
 {
-  "dependencies": {
-    "axios": "^1.10.0"
-  }
+    "name": "dadms-2.0",
+    "version": "2.0.0-alpha.1",
+    "description": "Decision Analysis and Decision Management System - Clean Architecture Rebuild",
+    "main": "index.js",
+    "scripts": {
+        "dev": "echo 'DADMS 2.0 Development Environment' && echo 'Services will be added during Week 1 implementation'",
+        "build": "echo 'Building DADMS 2.0...'",
+        "test": "echo 'Running DADMS 2.0 tests...'",
+        "clean": "rm -rf node_modules dist build",
+        "week1:day1": "echo 'Starting Day 1: User/Project Service implementation'",
+        "week1:day2": "echo 'Starting Day 2: Knowledge Service implementation'",
+        "week1:day3": "echo 'Starting Day 3: LLM Service implementation'",
+        "week1:day4": "echo 'Starting Day 4: UI implementation'",
+        "week1:day5": "echo 'Starting Day 5: Integration and testing'"
+    },
+    "keywords": [
+        "decision-intelligence",
+        "microservices",
+        "ai",
+        "decision-analysis",
+        "clean-architecture"
+    ],
+    "author": "Laser Point Labs",
+    "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=8.0.0"
+    },
+    "workspaces": [
+        "dadms-services/*",
+        "dadms-ui"
+    ],
+    "dependencies": {
+        "axios": "^1.10.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "jest": "^29.0.0",
+        "eslint": "^8.0.0",
+        "prettier": "^3.0.0"
+    }
 }
