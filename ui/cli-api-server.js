@@ -650,9 +650,48 @@ app.get('/api/analysis/direct', async (req, res) => {
 
         await client.end();
 
+        // Enrich results with process names from Camunda
+        const enrichedData = await Promise.all(result.rows.map(async (row) => {
+            if (row.process_instance_id) {
+                try {
+                    // Fetch process instance details from Camunda
+                    const processResponse = await fetch(`http://localhost:8080/engine-rest/process-instance/${row.process_instance_id}`);
+                    if (processResponse.ok) {
+                        const processData = await processResponse.json();
+
+                        // Try to get process definition details for the name
+                        const processDefResponse = await fetch(`http://localhost:8080/engine-rest/process-definition/${processData.definitionId}`);
+                        if (processDefResponse.ok) {
+                            const processDefData = await processDefResponse.json();
+                            row.process_name = processDefData.name || processDefData.key || 'Unknown Process';
+                            row.process_key = processDefData.key;
+                        } else {
+                            row.process_name = 'Unknown Process';
+                        }
+                    } else {
+                        // Try to get from history if active instance not found
+                        const historyResponse = await fetch(`http://localhost:8080/engine-rest/history/process-instance/${row.process_instance_id}`);
+                        if (historyResponse.ok) {
+                            const historyData = await historyResponse.json();
+                            row.process_name = historyData.processDefinitionName || historyData.processDefinitionKey || 'Unknown Process';
+                            row.process_key = historyData.processDefinitionKey;
+                        } else {
+                            row.process_name = 'Unknown Process';
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error fetching process info for ${row.process_instance_id}:`, error);
+                    row.process_name = 'Unknown Process';
+                }
+            } else {
+                row.process_name = 'No Process';
+            }
+            return row;
+        }));
+
         res.json({
             success: true,
-            data: result.rows,
+            data: enrichedData,
             total: result.rowCount,
             limit: parseInt(limit),
             offset: parseInt(offset)

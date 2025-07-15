@@ -153,6 +153,9 @@ class PostgresAnalysisDataManager:
         # Test connection
         self._test_connection()
         
+        # Create tables if they don't exist
+        self._create_tables_if_not_exist()
+        
         # Initialize optional backends
         self.qdrant_client = None
         self.neo4j_driver = None
@@ -181,6 +184,79 @@ class PostgresAnalysisDataManager:
                     logger.info("PostgreSQL connection successful")
         except Exception as e:
             logger.error(f"Failed to connect to PostgreSQL: {e}")
+            raise
+    
+    def _create_tables_if_not_exist(self):
+        """Create analysis tables if they don't exist"""
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cur:
+                    # Enable UUID extension
+                    cur.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
+                    
+                    # Create analysis_metadata table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS analysis_metadata (
+                            analysis_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                            tenant_id UUID DEFAULT NULL,
+                            thread_id VARCHAR(255) NOT NULL,
+                            session_id VARCHAR(255),
+                            process_instance_id VARCHAR(255),
+                            task_name VARCHAR(255),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status VARCHAR(50) DEFAULT 'created',
+                            tags JSONB DEFAULT '[]'::jsonb,
+                            source_service VARCHAR(255)
+                        );
+                    """)
+                    
+                    # Create analysis_data table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS analysis_data (
+                            analysis_id UUID PRIMARY KEY REFERENCES analysis_metadata(analysis_id) ON DELETE CASCADE,
+                            input_data JSONB,
+                            output_data JSONB,
+                            raw_response TEXT,
+                            processing_log JSONB DEFAULT '[]'::jsonb,
+                            tenant_id UUID DEFAULT NULL
+                        );
+                    """)
+                    
+                    # Create processing_tasks table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS processing_tasks (
+                            task_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                            analysis_id UUID REFERENCES analysis_metadata(analysis_id) ON DELETE CASCADE,
+                            processor_type VARCHAR(100),
+                            status VARCHAR(50),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            error_message TEXT,
+                            metadata JSONB DEFAULT '{}'::jsonb,
+                            tenant_id UUID DEFAULT NULL
+                        );
+                    """)
+                    
+                    # Create indexes for better performance
+                    indexes = [
+                        "CREATE INDEX IF NOT EXISTS idx_analysis_metadata_created_at ON analysis_metadata(created_at);",
+                        "CREATE INDEX IF NOT EXISTS idx_analysis_metadata_process_instance_id ON analysis_metadata(process_instance_id);",
+                        "CREATE INDEX IF NOT EXISTS idx_analysis_metadata_thread_id ON analysis_metadata(thread_id);",
+                        "CREATE INDEX IF NOT EXISTS idx_analysis_metadata_source_service ON analysis_metadata(source_service);",
+                        "CREATE INDEX IF NOT EXISTS idx_analysis_metadata_status ON analysis_metadata(status);",
+                        "CREATE INDEX IF NOT EXISTS idx_processing_tasks_analysis_id ON processing_tasks(analysis_id);",
+                        "CREATE INDEX IF NOT EXISTS idx_processing_tasks_status ON processing_tasks(status);"
+                    ]
+                    
+                    for index_sql in indexes:
+                        cur.execute(index_sql)
+                    
+                    conn.commit()
+                    logger.info("Analysis tables created/verified successfully")
+                    
+        except Exception as e:
+            logger.error(f"Failed to create analysis tables: {e}")
             raise
     
     def _get_connection(self):

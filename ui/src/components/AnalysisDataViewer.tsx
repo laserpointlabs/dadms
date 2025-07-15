@@ -33,6 +33,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TableSortLabel,
     TextField,
     Tooltip,
     Typography
@@ -45,6 +46,7 @@ interface AnalysisMetadata {
     session_id?: string;
     process_instance_id?: string;
     process_name?: string;
+    process_key?: string;
     process_version?: number;
     task_name: string;
     created_at: string;
@@ -79,6 +81,9 @@ interface GroupedAnalysisDisplayProps {
     onDeleteProcess: (processInstanceId: string) => void;
     getStatusColor: (status: string) => string;
     groupAnalysesByProcess: (analyses: AnalysisData[]) => Record<string, AnalysisData[]>;
+    sortField: string;
+    sortDirection: 'asc' | 'desc';
+    handleSort: (field: string) => void;
 }
 
 const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
@@ -87,7 +92,10 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
     onExportAnalysis,
     onDeleteProcess,
     getStatusColor,
-    groupAnalysesByProcess
+    groupAnalysesByProcess,
+    sortField,
+    sortDirection,
+    handleSort
 }) => {
     const groupedAnalyses = groupAnalysesByProcess(analyses);
     const processIds = Object.keys(groupedAnalyses);
@@ -164,9 +172,33 @@ const GroupedAnalysisDisplay: React.FC<GroupedAnalysisDisplayProps> = ({
                                     <TableHead>
                                         <TableRow>
                                             <TableCell>Analysis ID</TableCell>
-                                            <TableCell>Task</TableCell>
-                                            <TableCell>Status</TableCell>
-                                            <TableCell>Created</TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortField === 'task_name'}
+                                                    direction={sortField === 'task_name' ? sortDirection : 'asc'}
+                                                    onClick={() => handleSort('task_name')}
+                                                >
+                                                    Task
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortField === 'status'}
+                                                    direction={sortField === 'status' ? sortDirection : 'asc'}
+                                                    onClick={() => handleSort('status')}
+                                                >
+                                                    Status
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortField === 'created_at'}
+                                                    direction={sortField === 'created_at' ? sortDirection : 'asc'}
+                                                    onClick={() => handleSort('created_at')}
+                                                >
+                                                    Created
+                                                </TableSortLabel>
+                                            </TableCell>
                                             <TableCell>Tags</TableCell>
                                             <TableCell>Actions</TableCell>
                                         </TableRow>
@@ -264,6 +296,8 @@ const AnalysisDataViewer: React.FC = () => {
     // const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [sortField, setSortField] = useState<string>('created_at');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     const fetchAnalysisData = async () => {
         setLoading(true);
@@ -282,6 +316,8 @@ const AnalysisDataViewer: React.FC = () => {
                         thread_id: item.thread_id,
                         session_id: item.session_id || '',
                         process_instance_id: item.process_instance_id || '',
+                        process_name: item.process_name || 'Unknown Process',
+                        process_key: item.process_key || '',
                         task_name: item.task_name || '',
                         created_at: item.created_at,
                         updated_at: item.updated_at,
@@ -310,9 +346,55 @@ const AnalysisDataViewer: React.FC = () => {
         fetchAnalysisData();
     }, []);
 
+    // Sort analyses based on current sort field and direction
+    const sortAnalyses = (analysisData: AnalysisData[]) => {
+        return [...analysisData].sort((a, b) => {
+            let aValue: any, bValue: any;
+
+            switch (sortField) {
+                case 'created_at':
+                    aValue = new Date(a.metadata.created_at).getTime();
+                    bValue = new Date(b.metadata.created_at).getTime();
+                    break;
+                case 'updated_at':
+                    aValue = new Date(a.metadata.updated_at || a.metadata.created_at).getTime();
+                    bValue = new Date(b.metadata.updated_at || b.metadata.created_at).getTime();
+                    break;
+                case 'process_name':
+                    aValue = a.metadata.process_name || 'Unknown Process';
+                    bValue = b.metadata.process_name || 'Unknown Process';
+                    break;
+                case 'task_name':
+                    aValue = a.metadata.task_name || '';
+                    bValue = b.metadata.task_name || '';
+                    break;
+                case 'status':
+                    aValue = a.metadata.status || '';
+                    bValue = b.metadata.status || '';
+                    break;
+                case 'source_service':
+                    aValue = a.metadata.source_service || '';
+                    bValue = b.metadata.source_service || '';
+                    break;
+                default:
+                    aValue = a.metadata.created_at;
+                    bValue = b.metadata.created_at;
+            }
+
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            } else {
+                return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+            }
+        });
+    };
+
     // Group analyses by process ID
     const groupAnalysesByProcess = (analysisData: AnalysisData[]) => {
-        const grouped = analysisData.reduce((acc, analysis) => {
+        // First sort the analyses
+        const sortedAnalyses = sortAnalyses(analysisData);
+
+        const grouped = sortedAnalyses.reduce((acc, analysis) => {
             const processId = analysis.metadata.process_instance_id || 'unknown';
             if (!acc[processId]) {
                 acc[processId] = [];
@@ -321,14 +403,17 @@ const AnalysisDataViewer: React.FC = () => {
             return acc;
         }, {} as Record<string, AnalysisData[]>);
 
-        // Sort each group by creation date (newest first)
-        Object.keys(grouped).forEach(processId => {
-            grouped[processId].sort((a, b) =>
-                new Date(b.metadata.created_at).getTime() - new Date(a.metadata.created_at).getTime()
-            );
-        });
-
         return grouped;
+    };
+
+    // Handle sorting column click
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('desc');
+        }
     };
 
     useEffect(() => {
@@ -531,6 +616,9 @@ const AnalysisDataViewer: React.FC = () => {
                         onDeleteProcess={handleDeleteProcess}
                         getStatusColor={getStatusColor}
                         groupAnalysesByProcess={groupAnalysesByProcess}
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        handleSort={handleSort}
                     />
                 )}
             </Paper>

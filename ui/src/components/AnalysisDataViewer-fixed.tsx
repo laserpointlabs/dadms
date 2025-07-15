@@ -44,6 +44,8 @@ interface AnalysisMetadata {
     thread_id: string;
     session_id?: string;
     process_instance_id?: string;
+    process_name?: string;
+    process_key?: string;
     task_name: string;
     created_at: string;
     updated_at?: string;
@@ -103,6 +105,8 @@ const AnalysisDataViewer: React.FC = () => {
                         thread_id: item.thread_id,
                         session_id: item.session_id || '',
                         process_instance_id: item.process_instance_id || '',
+                        process_name: item.process_name || 'Unknown Process',
+                        process_key: item.process_key || '',
                         task_name: item.task_name || '',
                         created_at: item.created_at,
                         updated_at: item.updated_at,
