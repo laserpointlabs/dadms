@@ -27,9 +27,10 @@ dadms-infrastructure/   # Docker and deployment
 
 ## Development Status
 🚀 **Current Phase**: Week 1 Foundation Development
-- Building core services from scratch
-- Clean architecture implementation
-- Modern tooling and best practices
+- ✅ Clean slate workspace with essential context restored
+- ✅ MVP specification and implementation plan available
+- ✅ Week 1 Day-by-day development guide ready
+- 🔄 Ready to begin Day 1: Project Service implementation
 
 ## Getting Started
 This is a clean rebuild - no legacy dependencies.
@@ -56,11 +57,18 @@ npm run build     # Build for production
 
 ## Week 1 Implementation Plan
 - [x] Clean branch and project structure
-- [ ] Day 1: User/Project Service
+- [x] Restore essential context and specifications
+- [ ] Day 1: User/Project Service foundation
 - [ ] Day 2: Knowledge Service with RAG
 - [ ] Day 3: LLM Service with tool calling
 - [ ] Day 4: UI foundation and integration
 - [ ] Day 5: Testing and documentation
+
+## Available Specifications
+- **DADMS_MVP_SPECIFICATION.md**: Complete MVP architecture and service definitions
+- **DADMS_DEMONSTRATOR_SPECIFICATION.md**: Full system specification with 15 core services
+- **DADMS_WEEK1_IMPLEMENTATION_PLAN.md**: Detailed day-by-day implementation guide
+- **DADMS_CONTEXT_MIGRATION_GUIDE.md**: Context preservation and AI tool integration
 
 ## Contributing
 This is a clean rebuild following modern development practices:
