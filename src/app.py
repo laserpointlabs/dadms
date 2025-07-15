@@ -1338,9 +1338,9 @@ def handle_analysis_command(args):
             else:
                 from src.analysis_data_manager import AnalysisDataManager
                 print(f"{Fore.YELLOW}Using SQLite for analysis data{Style.RESET_ALL}")
-                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
             
-            # Build filters
+              # Build filters
             filters = {}
             if args.thread_id:
                 filters['thread_id'] = args.thread_id
@@ -1354,7 +1354,7 @@ def handle_analysis_command(args):
                 # We'll filter by process_instance_id after getting results
                 pass
             
-            # Search analyses
+              # Search analyses
             analyses = data_manager.search_analyses(
                 limit=args.limit * 2 if args.process_id else args.limit,  # Get more if we need to filter by process_id
                 **filters
@@ -1366,7 +1366,7 @@ def handle_analysis_command(args):
                 # Limit to requested number after filtering
                 analyses = analyses[:args.limit]
             
-            # Filter by service if specified
+              # Filter by service if specified
             if args.service:
                 analyses = [a for a in analyses if a.metadata.source_service == args.service]
             
@@ -1533,7 +1533,7 @@ def handle_analysis_command(args):
                 data_manager = AnalysisDataManager()
             else:
                 from src.analysis_data_manager import AnalysisDataManager
-                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
             stats = data_manager.get_stats()
             
             print(f"\n{Fore.GREEN}Storage Statistics:{Style.RESET_ALL}")
@@ -1566,7 +1566,7 @@ def handle_analysis_command(args):
                 data_manager = AnalysisDataManager()
             else:
                 from src.analysis_data_manager import AnalysisDataManager
-                data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
+            data_manager = AnalysisDataManager(storage_dir=args.storage_dir)
             
             if args.once:
                 # Process once

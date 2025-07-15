@@ -1,6 +1,6 @@
 # Universal Time Tracker Configuration
 project:
-  name: "DADM Development"
+  name: "DADM Initial Development"
   id: "dadm-development"
   type: "development"
   language: "python"
