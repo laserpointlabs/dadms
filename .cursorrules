@@ -1,0 +1,38 @@
+# DADMS 2.0 Clean Development Context
+
+## Project Overview
+Building DADMS (Decision Analysis and Decision Management System) 2.0 from clean architecture.
+This is a complete rewrite leveraging existing knowledge but starting with fresh, production-ready code.
+
+## Architecture
+- **Microservices**: Clean service-oriented architecture
+- **Databases**: PostgreSQL (primary), Neo4j (graph), Qdrant (vector)
+- **UI**: Modern React with TypeScript
+- **Infrastructure**: Docker containers with proper orchestration
+
+## Development Approach
+- **Clean slate**: No legacy code dependencies
+- **Best practices**: Industry-standard patterns and tools
+- **MVP focus**: Core decision intelligence capabilities first
+- **Documentation-driven**: Clear specifications guide implementation
+
+## Week 1 Goals
+1. **Project Service**: Clean user/project management
+2. **Knowledge Service**: Document upload and RAG search
+3. **LLM Service**: Multi-provider with tool calling
+4. **UI Foundation**: Project dashboard and navigation
+5. **Integration**: End-to-end workflow testing
+
+## Key Principles
+- Clean architecture with clear boundaries
+- Comprehensive testing at all levels
+- API-first design with OpenAPI specs
+- Cloud-native deployment patterns
+- Security and governance built-in
+
+## Success Metrics
+- Project creation < 30 seconds
+- Document search < 5 seconds
+- Clean, maintainable codebase
+- Full API documentation
+- Comprehensive test coverage

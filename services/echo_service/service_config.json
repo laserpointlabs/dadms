@@ -1,9 +1,0 @@
-{
-  "service": {
-    "name": "dadm-echo-service",
-    "type": "test",
-    "port": 5100,
-    "health_endpoint": "/health",
-    "description": "DADM Echo Test Service for demonstration and testing"
-  }
-}

@@ -1,3 +1,0 @@
-"""
-OpenAI Assistant Service Package
-"""
