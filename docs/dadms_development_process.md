@@ -86,6 +86,30 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Thread Manager Page Addition
+
+- Added a new `/thread` page featuring a `ThreadManager` component with a tabbed interface for future extensibility (e.g., process threads, user conversation threads).
+- The first tab, **Process Threads**, provides a comprehensive view of process definition runs and their associated threads.
+- **Thread Structure:**
+  - Each process run creates a top-level thread (with a unique thread_id and process metadata).
+  - Each service task within the process is represented as a nested thread item (child of the top-level thread), storing input context, injected context (tools/persona), and output context.
+- **Human/SMe-in-the-Loop Feedback:**
+  - **Thread-level feedback:** Users can view and add overall feedback/comments about the entire process run, supporting summary, meta, and cross-task comments.
+  - **Task-level feedback:** Each service task has its own feedback section for granular, actionable review. Users can view all previous comments/reviews for that task and add new feedback.
+  - All feedback is currently managed in local state, ready for backend integration.
+- **UI/UX:**
+  - Left pane: Tree view of process threads and their service task children, with search and expand/collapse.
+  - Right pane: Context view (entire thread or individual task, depending on selection), with feedback sections at both the thread and task level.
+  - Material-UI components ensure consistency and extensibility.
+- **Rationale & Benefits:**
+  - Enables full traceability and auditability of process runs and their tasks.
+  - Supports progressive process improvement by capturing human and subject-matter expert (SME) feedback at both the thread and task level.
+  - Lays the foundation for future features such as feedback-driven process optimization, semantic search of historical runs, and advanced reporting.
+- Scaffolded with mock data and placeholder fetches, ready for real API integration.
+- Designed for extensibility to support additional thread types and advanced review workflows.
+
+---
+
 ## Next Steps
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.
