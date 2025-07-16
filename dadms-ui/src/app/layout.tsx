@@ -65,6 +65,11 @@ export default function RootLayout({
                                     Process Manager
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/thread" className="block px-3 py-2 rounded hover:bg-blue-100 text-gray-800 font-medium">
+                                    Thread Manager
+                                </Link>
+                            </li>
                             {/* Add more navigation links here as new pages are added */}
                         </ul>
                         <div className="mt-auto pt-8 text-xs text-gray-400">
