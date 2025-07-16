@@ -16,9 +16,9 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U dadms_user -d dadms" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   # Qdrant - Vector Database for RAG
   qdrant:
@@ -31,9 +31,9 @@ services:
       - qdrant_data:/qdrant/storage
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:6333/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   # Redis - Caching and Session Storage
   redis:
@@ -45,9 +45,9 @@ services:
       - redis_data:/data
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   # Camunda BPM Platform - Process Engine (7.15.0 does not work)
   camunda:
@@ -66,13 +66,13 @@ services:
     networks:
       - default
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/engine-rest/engine" ]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 3
+      start_period: 60s
 
   # Ollama - Local LLM Server
   ollama:
@@ -82,9 +82,9 @@ services:
       - "11434:11434"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 20
     networks:
       - default
     volumes:
