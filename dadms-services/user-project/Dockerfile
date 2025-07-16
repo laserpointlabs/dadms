@@ -5,7 +5,8 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files from the root of the monorepo
+COPY ../../package-lock.json ./
 COPY package*.json ./
 COPY tsconfig.json ./
 

@@ -48,27 +48,53 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Development Services
-  user-project-service:
-    build: 
-      context: ..
-      dockerfile: dadms-services/user-project/Dockerfile
+
+  # Camunda BPM Platform - Process Engine (7.15.0 does not work)
+  camunda:
+    image: docker.io/camunda/camunda-bpm-platform:7.18.0
+    container_name: camunda
     ports:
-      - "3006:3006"
+      - "8080:8080"
     environment:
-      - NODE_ENV=development
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=dadms
-      - DB_USER=dadms_user
+      - DB_DRIVER=org.postgresql.Driver
+      - DB_URL=jdbc:postgresql://postgres:5432/dadms
+      - DB_USERNAME=dadms_user
       - DB_PASSWORD=dadms_password
+      - TZ=UTC
+    volumes:
+      - camunda_data:/camunda/data
+    networks:
+      - default
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/engine-rest/engine" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # # Development Services
+  # user-project-service:
+  #   build: 
+  #     context: ../dadms-services/user-project
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3006:3006"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DB_HOST=postgres
+  #     - DB_PORT=5432
+  #     - DB_NAME=dadms
+  #     - DB_USER=dadms_user
+  #     - DB_PASSWORD=dadms_password
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - default
 
   # knowledge-service:
   #   build: ./dadms-services/knowledge
@@ -98,6 +124,7 @@ volumes:
   postgres_data:
   qdrant_data:
   redis_data:
+  camunda_data:
 
 
 networks:
