@@ -110,6 +110,46 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Decision Context, Similarity, and Impact Analysis
+
+- **Decision Context Storage:**
+  - Every process task (across all process runs and definitions) is stored in a vector store, encoding its context (input, injected, output, metadata, etc.).
+  - This enables semantic similarity search across all tasks, regardless of which process or project they originated from.
+
+- **Similarity Search & Graph Relationships:**
+  - A backend tool (initially) performs similarity search for any given task against all stored tasks, surfacing related or similar tasks even across different process models or domains.
+  - Results of similarity search are used to populate a graph database (e.g., Neo4j) with nodes representing thread tasks and edges representing similarity relationships (with a score/weight).
+  - Over time, clusters of similar tasks/processes emerge, potentially spanning domains. This supports the discovery of reusable patterns, best practices, and meta-processes.
+
+- **Meta-Process Discovery & Impact Analysis:**
+  - Emergent clusters and graph relationships enable the creation of "meta-processes" that generalize or consolidate similar workflows, supporting cross-domain knowledge and process optimization.
+  - When a process definition changes (or a new one is introduced), the system can perform impact analysis by searching for similar or dependent historical tasks/processes, surfacing those that may be affected by the change.
+  - This supports governance, compliance, and continuous improvement by informing users of potential downstream effects and risks.
+
+- **UI/UX Scaffolding:**
+  - **Similarity Explorer:** When viewing a process task, users can see a list of semantically similar tasks from other process runs, with process name, task name, similarity score, and context snippet. This prepares the UI for future backend integration with vector similarity search and graph-based features.
+  - **Thread Impact Analysis Tab:** A dedicated tab in the Thread Manager provides a mock impact report listing historical tasks potentially affected by a process change, including process name, task name, impact score, and explanation. Future versions will support interactive graph visualizations, what-if simulations, and detailed impact drill-downs.
+
+- **Rationale & Benefits:**
+  - Enables proactive risk/governance and safer process evolution by making the impact of changes visible and actionable.
+  - Supports continuous improvement, cross-domain insight, and the emergence of reusable best practices and meta-processes.
+  - Lays the foundation for advanced features such as automated recommendations, anomaly detection, and compliance reporting.
+
+### Example: Air Refueling Process Impact Analysis
+
+Suppose the organization is evaluating a new air refueling process, where the decision is to use refueling process X and probe Y. Before approving and implementing this new design, DADMS can:
+
+- **Store the new process and decision context** in the vector store, encoding all relevant parameters, choices, and metadata.
+- **Run impact analysis** using the Thread Impact Analysis tool:
+  - The system performs a similarity and dependency search against all historical process tasks and decisions.
+  - It identifies other processes, such as previous refueling operations, maintenance workflows, or related mission profiles, that are semantically or operationally similar to the new design.
+  - The impact report highlights which historical decisions or process runs may be affected by the adoption of process X and probe Y (e.g., “Switching to probe Y may impact compatibility with tanker fleet Z, as seen in historical process runs A, B, and C”).
+- **Enable risk management and informed decision-making** by surfacing these potential impacts before approval, allowing stakeholders to review, simulate, and mitigate risks proactively.
+
+This example demonstrates how DADMS supports safer, more transparent process evolution and cross-domain insight, especially in complex, high-stakes environments like air refueling operations.
+
+---
+
 ## Next Steps
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.

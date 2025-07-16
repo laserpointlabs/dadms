@@ -45,6 +45,17 @@ interface ProcessThread {
     feedback?: TaskFeedback[];
 }
 
+// Add mock similar tasks for the Similarity Explorer
+interface SimilarTask {
+    thread_id: string;
+    process_name: string;
+    process_version: number;
+    task_id: string;
+    task_name: string;
+    similarity: number;
+    context_snippet: string;
+}
+
 const MOCK_PROCESS_THREADS: ProcessThread[] = [
     {
         thread_id: 'thread-1',
@@ -99,6 +110,27 @@ const MOCK_PROCESS_THREADS: ProcessThread[] = [
             },
         ],
     },
+];
+
+const MOCK_SIMILAR_TASKS: SimilarTask[] = [
+    {
+        thread_id: 'thread-2',
+        process_name: 'Purchase Request',
+        process_version: 1,
+        task_id: 'task-3',
+        task_name: 'Review Request',
+        similarity: 0.87,
+        context_snippet: 'Reviewed purchase request for item 456. Comments: Looks good.'
+    },
+    {
+        thread_id: 'thread-3',
+        process_name: 'Expense Approval',
+        process_version: 1,
+        task_id: 'task-7',
+        task_name: 'Approve Expense',
+        similarity: 0.81,
+        context_snippet: 'Expense of $1000 approved by manager.'
+    }
 ];
 
 const getStatusColor = (status: string) => {
@@ -362,6 +394,25 @@ const ProcessThreadManager: React.FC = () => {
                                         <Typography variant="button">Submit</Typography>
                                     </IconButton>
                                 </Box>
+                            </Box>
+                            {/* Similarity Explorer Placeholder */}
+                            <Box sx={{ p: 2, mt: 2 }}>
+                                <Typography variant="h6" gutterBottom>Similarity Explorer <span style={{ color: '#888', fontSize: '0.85em' }}>(Preview)</span></Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    This section will show tasks from other process runs that are semantically similar to this task, enabling cross-process insights and meta-process discovery.
+                                </Typography>
+                                <List>
+                                    {MOCK_SIMILAR_TASKS.map((sim, idx) => (
+                                        <React.Fragment key={idx}>
+                                            <ListItemText
+                                                primary={<><b>{sim.process_name} (v{sim.process_version})</b> &mdash; Task: <b>{sim.task_name}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>[Similarity: {(sim.similarity * 100).toFixed(1)}%]</span></>}
+                                                secondary={<span style={{ color: '#555' }}>{sim.context_snippet}</span>}
+                                                sx={{ mb: 1 }}
+                                            />
+                                            <Divider />
+                                        </React.Fragment>
+                                    ))}
+                                </List>
                             </Box>
                         </Paper>
                     ) : (
