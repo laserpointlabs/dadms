@@ -70,6 +70,30 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Decision Context Field Addition – Full Stack Propagation
+
+- **Motivation:** To support richer project metadata and enable context-aware decision analysis, a `decision_context` field was added to the project model.
+- **Scope of Change:**
+  - Updated the database schema to add a `decision_context TEXT` column to the `projects` table.
+  - Updated backend TypeScript types, service, controller, and validation logic to support the new field for create, update, and fetch operations.
+  - Updated the frontend types, project creation form, and project card display to include and show the `decision_context` field.
+  - Ensured OpenAPI/Swagger documentation and API responses include the new field.
+- **Database Migration:**
+  - Verified the running database schema and applied an `ALTER TABLE` if the column was missing.
+  - Inserted a demo project with a populated `decision_context` to ensure end-to-end functionality and provide a visible example in the UI.
+  - Used a SQL file and `podman cp`/`podman exec` to reliably insert demo data, avoiding shell/SQL quoting issues with JSONB fields.
+- **Troubleshooting:**
+  - Encountered and resolved issues with shell/SQL escaping for JSONB fields during direct insertion; documented the use of SQL files for complex inserts.
+  - Confirmed that all backend and frontend layers must be updated in lockstep for new model fields to avoid runtime errors and ensure a seamless user experience.
+- **Best Practice Established:**
+  - Any future model or schema change must be propagated through: database schema, backend types/services/controllers, frontend types/forms/displays, API docs, and demo/seed data.
+  - Always verify the running database schema and seed demo data after such changes.
+  - Document the change and troubleshooting steps in the development process for future reference.
+- **Outcome:**
+  - The project page now displays the `decision_context` for all projects, and the backend/frontend are fully aligned. This workflow is now standard for all future schema/model changes.
+
+---
+
 ## Process Manager Page Addition
 
 - Added a new `/process` page featuring a `ProcessManager` component for BPMN process management.
