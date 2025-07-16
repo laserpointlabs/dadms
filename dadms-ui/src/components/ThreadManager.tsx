@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 import ProcessThreadManager from './ProcessThreadManager';
+import ThreadImpactAnalysis from './ThreadImpactAnalysis';
 
 // Mock types
 interface ThreadData {
@@ -107,9 +108,11 @@ const ThreadManager: React.FC = () => {
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Process Threads" />
                 <Tab label="User Conversation Threads" disabled />
+                <Tab label="Thread Impact Analysis" />
             </Tabs>
             {tab === 0 && <ProcessThreadManager />}
             {/* Future: {tab === 1 && <UserConversationThreadManager />} */}
+            {tab === 2 && <ThreadImpactAnalysis />}
         </Box>
     );
 };
