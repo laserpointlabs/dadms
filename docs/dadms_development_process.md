@@ -70,6 +70,22 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Process Manager Page Addition
+
+- Added a new `/process` page featuring a `ProcessManager` component for BPMN process management.
+- Sidebar navigation link included for direct access from the main app navigation.
+- Features:
+  - Lists process definitions (grouped by key, version selection)
+  - Lists process instances with status, start time, duration, business key
+  - Dialogs for starting, viewing, and deleting processes
+  - Summary cards for active, total, and available definitions
+  - Auto-refresh toggle and error handling
+  - Material-UI layout for consistency
+- Scaffolded with mock data and placeholder fetches, ready for real API integration.
+- UI and workflow closely match the legacy DADMS process management tool for user familiarity and smooth transition.
+
+---
+
 ## Next Steps
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.
