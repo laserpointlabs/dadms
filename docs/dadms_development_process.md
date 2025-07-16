@@ -94,6 +94,55 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Agent Assistance & Documentation Service (AASD)
+
+**Purpose:**
+AASD is a post-process tool that enables users to finalize decisions with the help of an AI assistant or team, generate formal documentation (white paper), and route the decision through an approval workflow managed by the BPMN server.
+
+### Workflow
+1. **Decision Review:**
+   - After completing a process, users review the outcome, context, and supporting data.
+   - The review section summarizes the process, decision, and key evidence.
+2. **Assistant/Team Collaboration:**
+   - Users interact with an AI assistant or team via chat/comments for feedback, risk identification, and improvement suggestions.
+   - Supports collaborative editing and discussion before finalization.
+3. **White Paper/Documentation Generation:**
+   - Users draft a formal decision document (white paper) using a rich text/markdown editor.
+   - LLMs can assist in drafting sections, summarizing context, or generating executive summaries.
+   - The document includes executive summary, context, alternatives, rationale, supporting data, and final decision.
+4. **Approval Submission:**
+   - Once finalized, the document is submitted to an approval workflow managed by the BPMN server (Camunda).
+   - The approval process supports multi-step, multi-approver flows, with status tracking and audit trail.
+   - Approvers can review, comment, request changes, or approve/reject the decision.
+5. **Audit & Traceability:**
+   - All actions, edits, and approvals are logged for compliance and governance.
+   - Finalized documents are stored and linked to the originating project/process for future reference.
+
+### UI/UX
+- A dedicated AASD page is accessible from the sidebar (last item: "AASD (Finalize Decision)").
+- The page is divided into four main sections:
+  1. **Decision Review**: Summary of process, outcome, and key data.
+  2. **Assistant/Team Collaboration**: Chat/comment interface for feedback and discussion.
+  3. **White Paper Editor**: Rich text/markdown editor for drafting the decision document, with LLM assistance.
+  4. **Approval Submission**: Button to submit for approval, with status display and BPMN workflow integration.
+- Designed for extensibility and future integration with backend APIs and BPMN status updates.
+
+### Backend & BPMN Integration
+- New backend endpoints will support:
+  - Drafting, saving, and retrieving decision documents.
+  - Integrating with LLMs for document generation and review assistance.
+  - Submitting documents to the BPMN approval process and tracking status.
+- The BPMN server manages the approval workflow, with endpoints for starting and monitoring approval processes.
+- All finalized documents and approval history are stored for audit and compliance.
+
+### Rationale & Benefits
+- Ensures decisions are thoroughly reviewed, documented, and approved before implementation.
+- Leverages AI and team collaboration for higher-quality, auditable decision records.
+- Integrates seamlessly with DADMS’s process-centric architecture and BPMN-driven governance.
+- Provides a clear, extensible workflow for decision finalization, documentation, and approval.
+
+---
+
 ## Process Manager Page Addition
 
 - Added a new `/process` page featuring a `ProcessManager` component for BPMN process management.
