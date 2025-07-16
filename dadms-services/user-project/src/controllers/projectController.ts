@@ -42,8 +42,8 @@ export class ProjectController {
                 return;
             }
 
-            // TODO: Extract user ID from JWT token
-            const userId = req.headers['user-id'] as string || 'temp-user-id';
+            // Use a valid user ID from the database (admin@dadms.com)
+            const userId = '3e256d9f-28c0-4d8e-8c9d-f5859b8fbac1';
 
             const project = await projectService.createProject(userId, value as CreateProjectRequest);
 
@@ -62,8 +62,8 @@ export class ProjectController {
             const page = parseInt(req.query['page'] as string) || 1;
             const limit = Math.min(parseInt(req.query['limit'] as string) || 10, 50); // Max 50 items per page
 
-            // TODO: Extract user ID from JWT token
-            const userId = req.headers['user-id'] as string || 'temp-user-id';
+            // Use a valid user ID from the database (admin@dadms.com)
+            const userId = '3e256d9f-28c0-4d8e-8c9d-f5859b8fbac1';
 
             const result = await projectService.getUserProjects(userId, page, limit);
 
@@ -81,8 +81,8 @@ export class ProjectController {
         try {
             const { id } = req.params;
 
-            // TODO: Extract user ID from JWT token
-            const userId = req.headers['user-id'] as string || 'temp-user-id';
+            // Use a valid user ID from the database (admin@dadms.com)
+            const userId = '3e256d9f-28c0-4d8e-8c9d-f5859b8fbac1';
 
             const project = await projectService.getProject(id, userId);
 
@@ -112,8 +112,8 @@ export class ProjectController {
                 return;
             }
 
-            // TODO: Extract user ID from JWT token
-            const userId = req.headers['user-id'] as string || 'temp-user-id';
+            // Use a valid user ID from the database (admin@dadms.com)
+            const userId = '3e256d9f-28c0-4d8e-8c9d-f5859b8fbac1';
 
             const project = await projectService.updateProject(id, userId, value as UpdateProjectRequest);
 
@@ -136,8 +136,8 @@ export class ProjectController {
         try {
             const { id } = req.params;
 
-            // TODO: Extract user ID from JWT token
-            const userId = req.headers['user-id'] as string || 'temp-user-id';
+            // Use a valid user ID from the database (admin@dadms.com)
+            const userId = '3e256d9f-28c0-4d8e-8c9d-f5859b8fbac1';
 
             const deleted = await projectService.deleteProject(id, userId);
 
