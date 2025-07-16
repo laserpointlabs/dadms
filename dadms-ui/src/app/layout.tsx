@@ -50,6 +50,16 @@ export default function RootLayout({
                                     LLM Playground
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/context" className="block px-3 py-2 rounded hover:bg-blue-100 text-gray-800 font-medium">
+                                    Context Manager
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/bpmn" className="block px-3 py-2 rounded hover:bg-blue-100 text-gray-800 font-medium">
+                                    BPMN Workspace
+                                </Link>
+                            </li>
                             {/* Add more navigation links here as new pages are added */}
                         </ul>
                         <div className="mt-auto pt-8 text-xs text-gray-400">

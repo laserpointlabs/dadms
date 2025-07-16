@@ -25,6 +25,7 @@ This document captures the ongoing development process, key decisions, rationale
 - **Day 1:** Project CRUD UI and backend complete.
 - **Day 2:** Knowledge page scaffolded; Domain and Tag management UIs scaffolded with local state.
 - **Next:** Document upload and RAG search UI scaffolding; backend API integration for knowledge entities.
+- **Day X:** BPMN Workspace scaffolded with iframe integration of comprehensive_bpmn_modeler.html and localStorage-based model state management.
 
 ---
 
@@ -79,3 +80,87 @@ This document captures the ongoing development process, key decisions, rationale
 - **Parameter Sweep:** Enable automated testing across a range of model parameters (e.g., temperature, top_p) to find optimal settings for reliability.
 - **Batch/Matrix Testing:** Allow batch testing of multiple prompts, personas, and tools across all available models for comprehensive compatibility and reliability analysis.
 - **Approval Thresholds:** Support configurable thresholds for prompt approval (e.g., "must pass ≥95% of runs"), with visual feedback in the UI. 
+
+## LLM + Tool Orchestration Patterns for BPMN Workflows
+
+### Recommended Pattern: LLM as Orchestrator (Tool-Calling)
+- **Description:**
+  - The LLM is called as a service task with a prompt, persona, and a schema describing available tools (from the persona's access list).
+  - The LLM can request tool executions as needed (using function-calling or a structured output format).
+  - The Task Execution Manager acts as a tool router: it executes tool calls requested by the LLM, returns results, and continues the LLM conversation until a final output is produced.
+- **Benefits:**
+  - Maximum flexibility: LLM can decide which tools to use, in what order, and how many times.
+  - BPMN remains simple: only one service task is needed for the LLM+tool orchestration.
+  - Tool access and definitions are managed in the Context Manager/persona, not hardcoded in BPMN.
+  - Extensible and future-proof: easy to add new tools, personas, or prompt patterns.
+- **Implementation Notes:**
+  - Use OpenAPI/JSON schema to describe tool APIs to the LLM.
+  - Use standard function-calling or a custom JSON block for tool requests.
+  - Log all tool calls/results for auditability.
+
+### Alternative Pattern: Pre-Execution (Static Tool Injection)
+- **Description:**
+  - Before calling the LLM, the Task Execution Manager executes all tools associated with the persona (or specified in the prompt), collects their results, and injects them into the LLM context as part of the prompt.
+  - The LLM receives a prompt with tool results already included, but cannot request additional tool calls during execution.
+- **Benefits:**
+  - Simpler for deterministic, single-step tool usage.
+  - Useful when tool results must be available before the LLM call, or when tool execution must be tightly controlled.
+- **When to Use:**
+  - For tasks where all required tool results are known in advance and do not depend on LLM reasoning.
+  - For compliance, audit, or performance reasons where dynamic tool-calling is not desired.
+
+### Summary Table
+| Pattern                | Flexibility | BPMN Simplicity | LLM Autonomy | Best for DADMS? |
+|------------------------|-------------|-----------------|--------------|-----------------|
+| LLM as Orchestrator    | High        | High            | High         | ✅ Yes          |
+| Pre-Execution (Static) | Medium      | High            | Low          | Sometimes       |
+| BPMN Multi-Task        | Low         | Low             | Low          | Not preferred   |
+
+**Note:** While Option A (LLM as Orchestrator) is the primary pattern for DADMS, Option B (Pre-Execution) may be needed in special cases. The architecture supports both, allowing for flexibility as requirements evolve. 
+
+### LLM + Tool Orchestration Patterns – Visual Diagram
+
+Below is a visual representation of both the LLM as Orchestrator (tool-calling) and Pre-Execution (static tool injection) patterns for tool context injection in BPMN workflows:
+
+```mermaid
+flowchart TD
+    A[Start BPMN Workflow]
+    B[Service Task: LLM Call]
+    C[Task Execution Manager]
+    D[Fetch Prompt, Persona, Tool List]
+    E{Pattern?}
+    F[LLM receives prompt, persona, tool schemas]
+    G[LLM requests tool execution]
+    H[Task Execution Manager executes tool]
+    I[Return tool result to LLM]
+    J{More tool calls?}
+    K[LLM produces final output]
+    L[Output returned to BPMN]
+    M[Task Execution Manager executes all tools]
+    N[Inject tool results into LLM context]
+    O[LLM receives prompt + tool results]
+
+    A --> B --> C --> D --> E
+    E -- "LLM as Orchestrator (A)" --> F --> G --> H --> I --> J
+    J -- "Yes" --> G
+    J -- "No" --> K --> L
+    E -- "Pre-Execution (B)" --> M --> N --> O --> K
+    K --> L
+```
+
+*This diagram illustrates the two supported patterns for tool context injection in DADMS BPMN workflows, showing the flow of data and execution between BPMN, the Task Execution Manager, the LLM, and tools.* 
+
+## BPMN Workspace – Future Enhancements
+
+The initial BPMN Workspace uses an iframe to embed the comprehensive_bpmn_modeler.html and localStorage for model state. Planned future enhancements include:
+
+1. **Backend Persistence:** Save/load BPMN XML to/from the backend, supporting project-scoped models and multi-user access.
+2. **Project-Scoped Models:** Associate BPMN models with specific projects, enabling multiple workflows per project and seamless integration with the Project Service.
+3. **Advanced Modeler Integration:** Replace the iframe with a React-wrapped modeler for deeper UI integration, custom controls, and real-time collaboration features.
+4. **Collaborative Editing:** Support real-time multi-user editing of BPMN models using WebSockets or similar technology.
+5. **Model Versioning:** Track changes and support version history/rollback for BPMN models.
+6. **AI Assistance:** Integrate AI-powered suggestions for process design, node completion, and error correction directly in the workspace.
+7. **Process Deployment:** Enable direct deployment of BPMN models to the process engine (e.g., Camunda) from the workspace UI.
+8. **Audit & Export:** Provide audit trails, export options (PDF, SVG), and integration with the Document Generator service.
+
+These enhancements will be prioritized based on user feedback and MVP progress, with a focus on delivering a robust, extensible BPMN workflow design experience. 

@@ -1,0 +1,3433 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive BPMN Modeler</title>
+
+    <!-- BPMN.js CSS - must be loaded first -->
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css" />
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn.css" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Menu Bar Styles */
+        .menu-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            min-height: 32px;
+            flex-shrink: 0;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .menu-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: #495057;
+            font-size: 13px;
+            transition: background-color 0.2s ease;
+            border-radius: 0;
+        }
+
+        .menu-button:hover,
+        .menu-button.active {
+            background: #e9ecef;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-dropdown-item {
+            display: block;
+            padding: 8px 16px;
+            color: #495057;
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-dropdown-item:hover:not(.disabled) {
+            background: #f8f9fa;
+        }
+
+        .menu-dropdown-item.disabled {
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .menu-dropdown-item .shortcut {
+            float: right;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: #dee2e6;
+            margin: 4px 0;
+        }
+
+        /* File status indicator */
+        .file-status {
+            margin-left: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-status.modified {
+            color: #dc3545;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-properties-container {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .canvas-main-area {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            position: relative;
+            flex: 1;
+        }
+
+        .canvas-container {
+            background: white;
+            overflow: hidden;
+            position: relative;
+            flex: 1;
+        }
+
+        .canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .xml-editor {
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            border: none;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            box-sizing: border-box;
+            resize: none;
+            background: #f8f9fa;
+            color: #333;
+            border-radius: 4px;
+            outline: none;
+            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .xml-editor:focus {
+            background: #ffffff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .xml-editor:disabled {
+            background: #f5f5f5;
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        /* Properties splitter styles */
+        .properties-splitter {
+            width: 4px;
+            background-color: #dee2e6;
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .properties-splitter:hover {
+            background-color: #007bff;
+        }
+
+        .properties-splitter.dragging {
+            background-color: #007bff;
+        }
+
+        /* Properties panel */
+        .properties {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-left: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 25%;
+            min-width: 250px;
+            max-width: 50%;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+
+        .properties.collapsed {
+            width: 32px;
+            min-width: 32px;
+        }
+
+        .properties-header {
+            background: #e9ecef;
+            border-bottom: 1px solid #ddd;
+            padding: 8px 12px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .properties-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            color: #495057;
+            padding: 2px;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            line-height: 1;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .properties-toggle-btn:hover {
+            background: #dee2e6;
+            color: #212529;
+        }
+
+        .properties.collapsed .properties-content {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header h3 {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header {
+            justify-content: center;
+            padding: 8px 2px;
+        }
+
+        .properties-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .properties-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* Property Groups */
+        .property-group {
+            margin-bottom: 1px;
+            border: 1px solid #cccccc;
+            border-radius: 0;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .property-group-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #cccccc;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            user-select: none;
+        }
+
+        .property-group-header:hover {
+            background: #e9ecef;
+        }
+
+        .collapse-icon {
+            font-size: 10px;
+            color: #333333;
+            transition: transform 0.2s ease;
+            width: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .property-group-header h4 {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #222222;
+        }
+
+        .property-group-content {
+            padding: 0;
+            margin: 0;
+            background: #ffffff;
+        }
+
+        .property-group-content.collapsed {
+            display: none;
+        }
+
+        .property-field {
+            margin: 0 0 1px 0;
+            padding: 8px 12px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 4px;
+            padding: 0;
+            font-weight: 600;
+            color: #333333;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            margin: 0;
+            padding: 6px 8px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            background: #ffffff;
+            color: #111827;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .property-field input:focus,
+        .property-field select:focus,
+        .property-field textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .property-field textarea {
+            min-height: 60px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        .property-field select {
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        /* Element Info */
+        .element-info {
+            margin-bottom: 1px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 0;
+            border-left: 4px solid #007bff;
+        }
+
+        .element-info h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #222222;
+        }
+
+        .element-info p {
+            margin: 0;
+            font-size: 12px;
+            color: #555555;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        /* Bottom Toolbar */
+        .bottom-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 0;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            min-height: 36px;
+            flex-shrink: 0;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 12px;
+        }
+
+        .toolbar-btn {
+            padding: 0 16px;
+            border: none;
+            background: #f8f9fa;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            height: 36px;
+            position: relative;
+        }
+
+        .toolbar-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .toolbar-btn.active {
+            background: #d6d8db;
+            color: #495057;
+        }
+
+        .toolbar-btn.active:hover {
+            background: #d6d8db;
+        }
+
+        .status-message {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-message.success {
+            color: #28a745;
+        }
+
+        .status-message.error {
+            color: #dc3545;
+        }
+
+        .status-message.info {
+            color: #17a2b8;
+        }
+
+        /* XML Edit Toggle Switch */
+        .xml-edit-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #007bff;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        /* BPMN.js Palette Styling */
+        .djs-palette {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            left: 20px !important;
+            top: 20px !important;
+            position: absolute;
+            z-index: 100;
+        }
+
+        .djs-palette .entry {
+            border-radius: 3px;
+        }
+
+        .djs-palette .entry:hover {
+            background: #e9ecef;
+        }
+
+        .djs-palette .entry div {
+            color: #333;
+        }
+
+        /* Context pad styling */
+        .djs-context-pad .entry {
+            background: white !important;
+            border: 1px solid #ccc !important;
+        }
+
+        .djs-context-pad .entry:hover {
+            background: #f0f0f0 !important;
+        }
+
+        .djs-context-pad .entry div {
+            color: #333 !important;
+            opacity: 1 !important;
+        }
+
+        /* Popup menu fixes */
+        .djs-popup,
+        .djs-popup-body,
+        .djs-popup-content {
+            background: white !important;
+            color: #333 !important;
+        }
+
+        .djs-popup * {
+            color: #333 !important;
+        }
+
+        /* Responsive behavior */
+        @media (max-width: 1024px) {
+            .properties {
+                width: 30%;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .canvas-properties-container {
+                flex-direction: column;
+            }
+
+            .properties {
+                width: 100%;
+                height: 40%;
+                border-left: 1px solid #ddd;
+                border-top: none;
+            }
+
+            .properties-splitter {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="workspace-container">
+        <!-- Menu Bar -->
+        <div class="menu-bar">
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('file-menu')">File</button>
+                <div class="menu-dropdown" id="file-menu">
+                    <button class="menu-dropdown-item" onclick="newModel()">
+                        New Model <span class="shortcut">Ctrl+N</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="openFromFolder()">
+                        Open... <span class="shortcut">Ctrl+O</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="saveFile()">
+                        Save <span class="shortcut">Ctrl+S</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="saveToFolder()">
+                        Save As... <span class="shortcut">Ctrl+Shift+S</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="importXMLDialog()">
+                        Import XML...
+                    </button>
+                    <button class="menu-dropdown-item" onclick="exportXMLToClipboard()">
+                        Export XML to Clipboard
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('edit-menu')">Edit</button>
+                <div class="menu-dropdown" id="edit-menu">
+                    <button class="menu-dropdown-item" onclick="undoAction()">
+                        Undo <span class="shortcut">Ctrl+Z</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="redoAction()">
+                        Redo <span class="shortcut">Ctrl+Y</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="deleteSelectedElement()">
+                        Delete Selected <span class="shortcut">Delete</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="selectAllElements()">
+                        Select All <span class="shortcut">Ctrl+A</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="clearCanvas()">
+                        Clear Canvas <span class="shortcut">Ctrl+Shift+R</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('view-menu')">View</button>
+                <div class="menu-dropdown" id="view-menu">
+                    <button class="menu-dropdown-item" onclick="toggleView()">
+                        Toggle XML View <span class="shortcut">Space</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="togglePropertiesPanel()">
+                        Toggle Properties Panel <span class="shortcut">Ctrl+P</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="zoomToFit()">
+                        Zoom to Fit <span class="shortcut">Ctrl+0</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="resetZoom()">
+                        Reset Zoom <span class="shortcut">Ctrl+1</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="toggleFullscreen()">
+                        Toggle Fullscreen <span class="shortcut">F11</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('help-menu')">Help</button>
+                <div class="menu-dropdown" id="help-menu">
+                    <button class="menu-dropdown-item" onclick="showKeyboardShortcuts()">
+                        Keyboard Shortcuts <span class="shortcut">F1</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="showAbout()">
+                        About
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Fullscreen Button to the top toolbar -->
+            <div class="menu-item">
+                <button class="menu-button" id="fullscreen-btn" title="Toggle Fullscreen" onclick="toggleFullscreen()">⛶
+                </button>
+            </div>
+
+            <div class="file-status" id="file-status">
+                Untitled
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="canvas-properties-container">
+                <!-- Canvas Area -->
+                <div class="canvas-main-area">
+                    <div class="canvas-container">
+                        <div id="canvas" class="canvas"></div>
+                        <textarea id="xml-editor" class="xml-editor hidden" disabled></textarea>
+                    </div>
+                </div>
+
+                <!-- Draggable Splitter -->
+                <div class="properties-splitter" id="properties-splitter"></div>
+
+                <!-- Properties Panel -->
+                <div class="properties" id="properties-panel">
+                    <div class="properties-header">
+                        <h3>Properties Panel</h3>
+                        <button class="properties-toggle-btn" id="properties-toggle" onclick="togglePropertiesPanel()"
+                            title="Toggle Properties Panel">
+                            ◀
+                        </button>
+                    </div>
+                    <div class="properties-content">
+                        <!-- Element info section -->
+                        <div id="element-info-section" class="element-info hidden">
+                            <h4 id="element-type">No Element Selected</h4>
+                            <p id="element-id">Select a BPMN element to edit its properties</p>
+                        </div>
+
+                        <!-- Properties groups will be dynamically inserted here -->
+                        <div id="properties-content">
+                        </div>
+
+                        <!-- Keyboard shortcuts as a collapsible group -->
+                        <div class="property-group">
+                            <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                                <span class="collapse-icon">▼</span>
+                                <h4>Keyboard Shortcuts</h4>
+                            </div>
+                            <div class="property-group-content">
+                                <div style="padding: 12px; font-size: 11px; line-height: 1.4;">
+                                    <div style="margin-bottom: 6px;"><strong>Delete</strong> - Delete selected element
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Z</strong> - Undo</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Y</strong> - Redo</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+S</strong> - Export diagram</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+S</strong> - Manual save to
+                                        cache</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+R</strong> - Refresh canvas</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+R</strong> - Reset/Clear all
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+P</strong> - Toggle properties panel
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Space</strong> - Toggle XML/Diagram view
+                                    </div>
+                                    <div><strong>XML Edit Toggle</strong> - Enable/disable XML editing</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Toolbar -->
+        <div class="bottom-toolbar">
+            <div class="toolbar-left">
+                <button class="toolbar-btn" id="view-toggle-btn" onclick="toggleView()">
+                    XML
+                </button>
+            </div>
+
+            <div class="toolbar-right">
+                <div class="status-message" id="status-message">
+                    Initializing BPMN modeler...
+                </div>
+                <div class="xml-edit-toggle">
+                    <span class="toggle-label">XML Edit</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="xml-edit-toggle" onchange="toggleXMLEditing()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for opening files -->
+    <input type="file" id="file-input" accept=".bpmn,.xml" style="display: none;">
+
+    <!-- BPMN.js -->
+    <script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js"></script>
+
+    <script>
+        let modeler;
+        let selectedElement = null;
+        let currentView = 'diagram';
+
+        // Property cache to store extension properties extracted from XML
+        let propertyCache = {};
+
+        // Empty BPMN XML to start from scratch
+        const emptyXML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    xmlns:service="http://example.com/service"
+    xmlns:script="http://example.com/script"
+    xmlns:call="http://example.com/call"
+    xmlns:data="http://example.com/data"
+    id="Definitions_1"
+    targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="Process_1" name="New Process" isExecutable="true">
+    </bpmn:process>
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+        // Function to properly format XML with consistent indentation
+        function formatXML(xml) {
+            // First, let's clean up any existing formatting issues
+            let formatted = xml;
+
+            // Remove extra blank lines between elements
+            formatted = formatted.replace(/\n\s*\n/g, '\n');
+
+            // Fix the specific issue with extension elements closing tag
+            formatted = formatted.replace(/(<\/bpmn:extensionElements>)(<\/bpmn:serviceTask>)/g, '$1\n    $2');
+
+            // Ensure proper indentation for service task content
+            formatted = formatted.replace(/(<bpmn:serviceTask[^>]*>)\n\s*(<bpmn:documentation>)/g, '$1\n    $2');
+            formatted = formatted.replace(/(<\/bpmn:documentation>)\n\s*(<bpmn:extensionElements>)/g, '$1\n    $2');
+
+            // Fix indentation for extension elements
+            formatted = formatted.replace(/(<bpmn:extensionElements>)\n\s*/g, '$1\n    ');
+            formatted = formatted.replace(/\n\s*(<\/bpmn:extensionElements>)/g, '\n    $1');
+
+            // Fix indentation for camunda properties
+            formatted = formatted.replace(/(<camunda:property[^>]*\/>)/g, '      $1');
+
+            // Clean up any remaining extra spaces
+            formatted = formatted.replace(/\n\s+\n/g, '\n');
+
+            // Ensure consistent indentation for service task children
+            formatted = formatted.replace(/(<bpmn:serviceTask[^>]*>)\n\s*(<bpmn:documentation>)/g, '$1\n    $2');
+            formatted = formatted.replace(/(<\/bpmn:documentation>)\n\s*(<bpmn:extensionElements>)/g, '$1\n    $2');
+
+            // Fix the specific issue with extension elements having extra spaces
+            formatted = formatted.replace(/\n\s{6,}(<bpmn:extensionElements>)/g, '\n    $1');
+            formatted = formatted.replace(/\n\s{6,}(<\/bpmn:extensionElements>)/g, '\n    $1');
+
+            // Comprehensive XML formatting with proper indentation
+            const lines = formatted.split('\n');
+            const formattedLines = [];
+            let indentLevel = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // XML declaration should not be indented
+                if (line.startsWith('<?xml')) {
+                    formattedLines.push(line);
+                    continue;
+                }
+
+                // Check if this is a closing tag
+                if (line.startsWith('</')) {
+                    indentLevel = Math.max(0, indentLevel - 1);
+                }
+
+                // Add the line with proper indentation
+                const indent = '  '.repeat(indentLevel);
+                formattedLines.push(indent + line);
+
+                // Check if this is an opening tag (not self-closing)
+                if (line.startsWith('<') && !line.startsWith('</') && !line.endsWith('/>')) {
+                    indentLevel++;
+                }
+            }
+
+            return formattedLines.join('\n');
+        }
+
+        // Function to inject service task extensions
+        function injectServiceTaskExtensions(xml, elementId, attrs) {
+            console.log('Injecting extensions for element:', elementId);
+            console.log('Attributes to inject:', attrs);
+
+            // Check for service extension properties
+            const serviceType = attrs['service.type'];
+            const serviceName = attrs['service.name'];
+            const serviceVersion = attrs['service.version'];
+
+            console.log('Service properties:', { serviceType, serviceName, serviceVersion });
+
+            if (!serviceType && !serviceName && !serviceVersion) {
+                console.log('No service properties to inject');
+                return xml;
+            }
+
+            // Build extension elements
+            let extensionElements = '';
+            extensionElements += '\n      <bpmn:extensionElements>';
+            extensionElements += '\n        <camunda:properties>';
+            if (serviceType) {
+                extensionElements += `\n          <camunda:property name="service.type" value="${serviceType}" />`;
+            }
+            if (serviceName) {
+                extensionElements += `\n          <camunda:property name="service.name" value="${serviceName}" />`;
+            }
+            if (serviceVersion) {
+                extensionElements += `\n          <camunda:property name="service.version" value="${serviceVersion}" />`;
+            }
+            extensionElements += '\n        </camunda:properties>';
+            extensionElements += '\n      </bpmn:extensionElements>';
+
+            console.log('Extension elements to add:', extensionElements);
+
+            // Handle self-closing service tasks: <bpmn:serviceTask id="..." />
+            const selfClosingRegex = new RegExp(
+                `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*)(\\s*/>)`,
+                'g'
+            );
+
+            let result = xml.replace(selfClosingRegex, (match, startTag, selfClosing) => {
+                console.log('Found self-closing service task in XML:', elementId);
+                console.log('Start tag:', startTag);
+
+                // Convert self-closing to opening tag + content + closing tag
+                const newContent = startTag + '>' + extensionElements + '\n    </bpmn:serviceTask>';
+                console.log('New content:', newContent);
+                return newContent;
+            });
+
+            // Handle regular service tasks with opening/closing tags
+            const regularRegex = new RegExp(
+                `(<bpmn:serviceTask[^>]*id="${elementId}"[^>]*>)([\\s\\S]*?)(</bpmn:serviceTask>)`,
+                'g'
+            );
+
+            result = result.replace(regularRegex, (match, startTag, content, endTag) => {
+                console.log('Found regular service task in XML:', elementId);
+                console.log('Start tag:', startTag);
+                console.log('Content:', content);
+                console.log('End tag:', endTag);
+
+                // Check if extension elements already exist in content
+                if (content.includes('<bpmn:extensionElements>')) {
+                    console.log('Extension elements already exist, removing old ones');
+                    // Remove existing extension elements
+                    content = content.replace(/<bpmn:extensionElements>[\s\S]*?<\/bpmn:extensionElements>/g, '');
+                }
+
+                const newContent = startTag + content + extensionElements + '\n    ' + endTag;
+                console.log('New content:', newContent);
+                return newContent;
+            });
+
+            console.log('XML injection result length:', result.length);
+            return formatXML(result);
+        }
+
+        function updateXMLView() {
+            if (!modeler) return;
+
+            // Store current scroll position if in XML view
+            const xmlEditor = document.getElementById('xml-editor');
+            let scrollTop = 0;
+            let scrollLeft = 0;
+            let selectionStart = 0;
+            let selectionEnd = 0;
+
+            if (currentView === 'xml' && xmlEditor) {
+                scrollTop = xmlEditor.scrollTop;
+                scrollLeft = xmlEditor.scrollLeft;
+                selectionStart = xmlEditor.selectionStart;
+                selectionEnd = xmlEditor.selectionEnd;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                console.log('Original XML from modeler:', result.xml.substring(0, 500) + '...');
+
+                // Inject extension properties into XML
+                let xml = injectExtensionProperties(result.xml);
+
+                console.log('Final XML after injection:', xml.substring(0, 500) + '...');
+
+                if (currentView === 'xml') {
+                    xmlEditor.value = xml;
+
+                    // Restore scroll and cursor position
+                    setTimeout(() => {
+                        xmlEditor.scrollTop = scrollTop;
+                        xmlEditor.scrollLeft = scrollLeft;
+                        xmlEditor.setSelectionRange(selectionStart, selectionEnd);
+                    }, 10);
+                }
+            }).catch(error => {
+                console.error('Error generating XML:', error);
+                updateStatus('Error generating XML: ' + error.message, 'error');
+            });
+        }
+
+        function toggleView() {
+            const newView = currentView === 'diagram' ? 'xml' : 'diagram';
+            switchView(newView);
+            closeAllMenus();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const canvas = document.getElementById('canvas');
+            const xmlEditor = document.getElementById('xml-editor');
+            const toggleBtn = document.getElementById('view-toggle-btn');
+
+            if (view === 'diagram') {
+                canvas.classList.remove('hidden');
+                xmlEditor.classList.add('hidden');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = 'XML';
+
+                // Clean up XML overlay when switching to diagram view
+                const overlay = xmlEditor.parentElement.querySelector('.xml-highlight-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+
+                // Just update the properties panel if an element is selected
+                // Don't re-extract properties as they should already be in the cache
+                if (selectedElement) {
+                    updatePropertiesPanel();
+                }
+
+                updateStatus('Diagram View', 'success');
+            } else if (view === 'xml') {
+                canvas.classList.add('hidden');
+                xmlEditor.classList.remove('hidden');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = 'XML';
+
+                // Sync current XML to editor with extension properties injected
+                if (modeler) {
+                    modeler.saveXML({ format: true }).then(result => {
+                        // Inject extension properties into XML
+                        let xml = injectExtensionProperties(result.xml);
+                        xmlEditor.value = xml;
+
+                        // Extract and cache extension properties from the current XML
+                        extractAndCacheExtensionProperties();
+
+                        // Apply styling to the XML editor
+                        highlightXML(xmlEditor);
+
+                        updateStatus('XML View', 'success');
+                    }).catch(error => {
+                        updateStatus('Error loading XML: ' + error.message, 'error');
+                        // Fallback - show empty XML template
+                        xmlEditor.value = emptyXML;
+                    });
+                } else {
+                    // Fallback if modeler not ready
+                    xmlEditor.value = emptyXML;
+                    updateStatus('XML View - Empty template loaded', 'info');
+                }
+            }
+        }
+
+        // Function to refresh canvas
+        function refreshCanvas() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                const elementRegistry = modeler.get('elementRegistry');
+
+                // Force a complete redraw
+                canvas.zoom('fit-viewport');
+
+                // Trigger a resize event to force redraw
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                    canvas.zoom('fit-viewport');
+
+                    // Force redraw of all elements
+                    elementRegistry.forEach(element => {
+                        if (element.graphics) {
+                            element.graphics.style.display = 'block';
+                        }
+                    });
+
+                    // Additional redraw trigger
+                    canvas.zoom('fit-viewport');
+                }, 100);
+            }
+        }
+
+        function getExtensionProperty(element, propertyName) {
+            if (!element || !element.businessObject) {
+                console.log('getExtensionProperty: No element or business object');
+                return '';
+            }
+
+            const elementId = element.businessObject.id;
+            console.log(`getExtensionProperty: Getting ${propertyName} for element ${elementId}`);
+            console.log('Current property cache:', propertyCache);
+            console.log('Cache keys:', Object.keys(propertyCache));
+            console.log('Cache for this element ID:', propertyCache[elementId]);
+
+            if (propertyCache[elementId]) {
+                console.log('Properties for this element:', Object.keys(propertyCache[elementId]));
+                console.log('Full element cache:', propertyCache[elementId]);
+            }
+
+            // Get value from cache
+            if (propertyCache[elementId] && propertyCache[elementId][propertyName]) {
+                const value = propertyCache[elementId][propertyName];
+                console.log(`getExtensionProperty: Found cached value: ${value}`);
+                return value;
+            }
+
+            console.log(`getExtensionProperty: No cached value found for ${elementId}.${propertyName}`);
+            return '';
+        }
+
+        function updateExtensionProperty(element, propertyName, value) {
+            if (!element || !element.businessObject) return;
+
+            console.log('Updating extension property:', propertyName, '=', value);
+            console.log('Element:', element.businessObject.id);
+
+            const elementId = element.businessObject.id;
+
+            // Update the property cache
+            if (!propertyCache[elementId]) {
+                propertyCache[elementId] = {};
+            }
+
+            if (value && value.trim() !== '') {
+                propertyCache[elementId][propertyName] = value;
+            } else {
+                delete propertyCache[elementId][propertyName];
+                // If no properties left, remove the element from cache
+                if (Object.keys(propertyCache[elementId]).length === 0) {
+                    delete propertyCache[elementId];
+                }
+            }
+
+            console.log('Updated property cache:', propertyCache);
+
+            // Mark as modified
+            markAsModified();
+
+            // Trigger XML update to reflect changes
+            updateXMLView();
+
+            // Save to cache since extension properties don't trigger element.changed event
+            saveModelToCache();
+        }
+
+        function updateImplementationProperty(element, propertyName, value) {
+            if (!element || !element.businessObject) return;
+
+            console.log('Updating implementation property:', propertyName, '=', value);
+            console.log('Element:', element.businessObject.id);
+
+            const modeling = modeler.get('modeling');
+
+            // Implementation properties should be set as attributes on the business object
+            const properties = {};
+
+            // Clean the value - empty strings should be undefined to remove the property
+            const cleanValue = (value && value.trim() !== '') ? value.trim() : undefined;
+            properties[propertyName] = cleanValue;
+
+            // Update the business object properties
+            modeling.updateProperties(element, properties);
+
+            console.log('Updated business object with implementation property');
+            console.log('Business object after update:', element.businessObject);
+            console.log('Property value after update:', element.businessObject[propertyName] || element.businessObject.$attrs[propertyName]);
+
+            // Force update the properties panel to reflect the change
+            if (selectedElement && selectedElement.businessObject.id === element.businessObject.id) {
+                updatePropertiesPanel();
+            }
+
+            // Trigger XML update to reflect changes
+            updateXMLView();
+        } function getImplementationProperty(element, propertyName) {
+            if (!element || !element.businessObject) return '';
+
+            // Get the property from the business object's attributes
+            const businessObject = element.businessObject;
+
+            // Try multiple ways to get the property value
+            let value = '';
+
+            // Method 1: Direct property access
+            if (businessObject[propertyName]) {
+                value = businessObject[propertyName];
+            }
+            // Method 2: Using the get method if available
+            else if (businessObject.get && typeof businessObject.get === 'function') {
+                try {
+                    value = businessObject.get(propertyName);
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+            // Method 3: From $attrs object
+            else if (businessObject.$attrs && businessObject.$attrs[propertyName]) {
+                value = businessObject.$attrs[propertyName];
+            }
+
+            console.log('Getting implementation property:', propertyName, '=', value, 'from element:', element.businessObject.id);
+            return value || '';
+        }
+
+        function updateBasicProperty(propertyName, value) {
+            if (!selectedElement) return;
+
+            const modeling = modeler.get('modeling');
+
+            // Handle documentation as a special case
+            if (propertyName === 'documentation') {
+                const documentation = selectedElement.businessObject.documentation;
+                if (!documentation) {
+                    // Create new documentation element
+                    const bpmnFactory = modeler.get('bpmnFactory');
+                    const newDoc = bpmnFactory.create('bpmn:Documentation', {
+                        text: value
+                    });
+                    modeling.updateProperties(selectedElement, {
+                        documentation: [newDoc]
+                    });
+                } else {
+                    // Update existing documentation
+                    documentation[0].text = value;
+                }
+            } else {
+                // Handle other basic properties
+                const properties = {};
+                properties[propertyName] = value;
+                modeling.updateProperties(selectedElement, properties);
+            }
+
+            // Mark as modified
+            markAsModified();
+
+            updateXMLView();
+        }
+
+        function updatePropertiesPanel() {
+            if (!selectedElement) {
+                // Show element info section as hidden and clear properties
+                const elementInfoSection = document.getElementById('element-info-section');
+                elementInfoSection.classList.add('hidden');
+
+                document.getElementById('properties-content').innerHTML =
+                    '<div style="padding: 12px; color: #666; text-align: center;">Select a BPMN element to edit its properties</div>';
+                return;
+            }
+
+            const businessObject = selectedElement.businessObject;
+            const elementType = businessObject.$type;
+            const elementId = businessObject.id;
+            const elementName = businessObject.name || '';
+
+            // Update element info section
+            const elementInfoSection = document.getElementById('element-info-section');
+            elementInfoSection.classList.remove('hidden');
+            document.getElementById('element-type').textContent = elementType.replace('bpmn:', '');
+            document.getElementById('element-id').textContent = `ID: ${elementId}`;
+
+            // Helper function to create collapsible property groups
+            function createPropertyGroup(title, content, collapsed = false) {
+                const collapseIcon = collapsed ? '▶' : '▼';
+                const contentClass = collapsed ? 'property-group-content collapsed' : 'property-group-content';
+
+                return `
+                    <div class="property-group">
+                        <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                            <span class="collapse-icon${collapsed ? ' collapsed' : ''}">${collapseIcon}</span>
+                            <h4>${title}</h4>
+                        </div>
+                        <div class="${contentClass}">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Helper function to create property fields
+            function createPropertyField(label, inputHtml) {
+                return `
+                    <div class="property-field">
+                        <label>${label}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            }
+
+            // Determine element category
+            const isServiceTask = elementType === 'bpmn:ServiceTask';
+            const isScriptTask = elementType === 'bpmn:ScriptTask';
+            const isCallActivity = elementType === 'bpmn:CallActivity';
+            const isDataStore = elementType === 'bpmn:DataStoreReference';
+            const isDataObject = elementType === 'bpmn:DataObjectReference';
+            const isGateway = elementType && elementType.includes('Gateway');
+            const isStartEvent = elementType === 'bpmn:StartEvent';
+            const isEndEvent = elementType === 'bpmn:EndEvent';
+            const isUserTask = elementType === 'bpmn:UserTask';
+            const isTask = elementType === 'bpmn:Task';
+
+            let html = '';
+
+            // Service Task specific properties
+            if (isServiceTask) {
+                console.log('updatePropertiesPanel: Processing service task:', elementId);
+                console.log('updatePropertiesPanel: Property cache for this element:', propertyCache[elementId]);
+
+                // Get documentation text properly
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
+                // General properties group
+                const generalContent =
+                    createPropertyField('Name',
+                        `<input type="text" id="service-name" 
+                               value="${businessObject.name || ''}" 
+                               onchange="updateBasicProperty('name', this.value)"
+                               placeholder="Service Task Name">`) +
+                    createPropertyField('ID',
+                        `<input type="text" id="service-id" 
+                               value="${businessObject.id || ''}" 
+                               onchange="updateBasicProperty('id', this.value)"
+                               placeholder="ServiceTask_1">`);
+
+                html += createPropertyGroup('General', generalContent);
+
+                // Documentation group
+                const docContent =
+                    createPropertyField('Description',
+                        `<textarea id="service-documentation" 
+                                  onchange="updateBasicProperty('documentation', this.value)"
+                                  placeholder="Enter service task documentation...">${documentationText}</textarea>`);
+
+                html += createPropertyGroup('Documentation', docContent, true);
+
+                // Implementation group
+                const implContent =
+                    createPropertyField('Type',
+                        `<select id="service-type" onchange="updateImplementationProperty(selectedElement, 'camunda:type', this.value)">
+                            <option value="">Select Type</option>
+                            <option value="external" ${getImplementationProperty(selectedElement, 'camunda:type') === 'external' ? 'selected' : ''}>External</option>
+                            <option value="expression" ${getImplementationProperty(selectedElement, 'camunda:type') === 'expression' ? 'selected' : ''}>Expression</option>
+                            <option value="connector" ${getImplementationProperty(selectedElement, 'camunda:type') === 'connector' ? 'selected' : ''}>Connector</option>
+                        </select>`) +
+                    createPropertyField('Topic',
+                        `<input type="text" id="service-topic" 
+                               value="${getImplementationProperty(selectedElement, 'camunda:topic')}" 
+                               onchange="updateImplementationProperty(selectedElement, 'camunda:topic', this.value)"
+                               placeholder="service-topic">`);
+
+                html += createPropertyGroup('Implementation', implContent, true);
+
+                // Extension Properties group
+                const serviceTypeValue = getExtensionProperty(selectedElement, 'service.type');
+                const serviceNameValue = getExtensionProperty(selectedElement, 'service.name');
+                const serviceVersionValue = getExtensionProperty(selectedElement, 'service.version');
+
+                console.log('Extension property values for element:', selectedElement.businessObject.id);
+                console.log('- service.type:', serviceTypeValue);
+                console.log('- service.name:', serviceNameValue);
+                console.log('- service.version:', serviceVersionValue);
+                console.log('- Property cache for element:', propertyCache[selectedElement.businessObject.id]);
+
+                const extContent =
+                    createPropertyField('Service Type',
+                        `<input type="text" id="service-ext-type" 
+                               value="${serviceTypeValue}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.type', this.value)"
+                               placeholder="ai-service">`) +
+                    createPropertyField('Service Name',
+                        `<input type="text" id="service-ext-name" 
+                               value="${serviceNameValue}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.name', this.value)"
+                               placeholder="OpenAI GPT Service">`) +
+                    createPropertyField('Service Version',
+                        `<input type="text" id="service-ext-version" 
+                               value="${serviceVersionValue}" 
+                               onchange="updateExtensionProperty(selectedElement, 'service.version', this.value)"
+                               placeholder="1.0">`);
+
+                html += createPropertyGroup('Extension Properties', extContent, true);
+            } else {
+                // For other element types, show basic properties
+
+                // Get documentation text properly for all element types
+                let documentationText = '';
+                if (businessObject.documentation && businessObject.documentation.length > 0) {
+                    documentationText = businessObject.documentation[0].text || '';
+                }
+
+                const basicContent =
+                    createPropertyField('Name',
+                        `<input type="text" value="${elementName}" 
+                               onchange="updateBasicProperty('name', this.value)"
+                               placeholder="Element Name">`) +
+                    createPropertyField('ID',
+                        `<input type="text" value="${elementId}" 
+                               onchange="updateBasicProperty('id', this.value)"
+                               placeholder="Element_1">`) +
+                    createPropertyField('Element Type',
+                        `<input type="text" value="${elementType}" readonly style="background:#f5f5f5;">`);
+
+                html += createPropertyGroup('Basic Properties', basicContent);
+
+                // Documentation group for all elements
+                const docContent =
+                    createPropertyField('Description',
+                        `<textarea id="element-documentation" 
+                                  onchange="updateBasicProperty('documentation', this.value)"
+                                  placeholder="Enter element documentation...">${documentationText}</textarea>`);
+
+                html += createPropertyGroup('Documentation', docContent, true);
+            }
+
+            document.getElementById('properties-content').innerHTML = html;
+        }
+
+        function selectElement(element) {
+            selectedElement = element;
+            const businessObject = element.businessObject;
+            updateStatus(`Selected: ${businessObject.$type} (${businessObject.id})`, 'info');
+            updatePropertiesPanel();
+        }
+
+        async function initModeler() {
+            try {
+                updateStatus('Initializing BPMN modeler...', 'info');
+
+                // Check if BPMN.js loaded
+                if (typeof BpmnJS === 'undefined') {
+                    throw new Error('BPMN.js library not loaded');
+                }
+
+                modeler = new BpmnJS({
+                    container: '#canvas'
+                });
+
+                // Try to load from cache first
+                const cachedXML = loadModelFromCache();
+                let xmlToLoad = emptyXML;
+                let loadMessage = 'Importing empty BPMN diagram...';
+
+                if (cachedXML) {
+                    xmlToLoad = cachedXML;
+                    loadMessage = 'Loading cached BPMN diagram...';
+                }
+
+                updateStatus(loadMessage, 'info');
+
+                await modeler.importXML(xmlToLoad);
+
+                if (cachedXML) {
+                    updateStatus('BPMN modeler ready! Cached model loaded. Use the palette on the left to add elements.', 'success');
+                } else {
+                    updateStatus('BPMN modeler ready! Use the palette on the left to add elements.', 'success');
+                }
+
+                // Initialize property cache - use the new direct extraction method
+                if (cachedXML) {
+                    extractExtensionPropertiesFromInputXML(cachedXML);
+                    setTimeout(() => {
+                        updatePropertiesPanel();
+                        console.log('Extension properties extracted from cached model');
+                    }, 200);
+                } else {
+                    setTimeout(() => {
+                        extractAndCacheExtensionProperties();
+                        console.log('Extension properties extracted from empty model');
+                    }, 100);
+                }
+
+                // Add event listeners
+                modeler.on('element.click', (event) => {
+                    selectElement(event.element);
+                });
+
+                modeler.on('selection.changed', (event) => {
+                    if (event.newSelection && event.newSelection.length > 0) {
+                        selectElement(event.newSelection[0]);
+                    } else {
+                        selectedElement = null;
+                        updatePropertiesPanel();
+                    }
+                });
+
+                modeler.on('element.changed', () => {
+                    updateXMLView();
+                    // Auto-save to cache
+                    saveModelToCache();
+                });
+
+                // Setup change tracking for unsaved changes indicator
+                setupChangeTracking();
+
+                updateXMLView();
+                updateWindowTitle();
+
+                // Ensure we start in diagram view
+                switchView('diagram');
+
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                console.error('Modeler initialization error:', error);
+                console.error('Error details:', error.stack);
+            }
+        }
+
+        // XML Syntax Highlighter - Simplified and Reliable
+        function highlightXML(editor) {
+            // Remove any existing overlay
+            const existingOverlay = editor.parentElement.querySelector('.xml-highlight-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            // Reset editor styling
+            editor.style.background = '#f8f9fa';
+            editor.style.color = '#333';
+            editor.style.zIndex = 'auto';
+            editor.style.position = 'static';
+
+            // For now, let's use a simpler approach without overlay
+            // Just ensure the editor is properly styled and functional
+            editor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
+            editor.style.fontSize = '12px';
+            editor.style.lineHeight = '1.4';
+            editor.style.padding = '15px';
+            editor.style.border = '1px solid #ddd';
+            editor.style.borderRadius = '4px';
+            editor.style.outline = 'none';
+            editor.style.overflow = 'auto';
+            editor.style.overflowX = 'hidden';
+            editor.style.overflowY = 'auto';
+            editor.style.resize = 'none';
+            editor.style.boxSizing = 'border-box';
+        }
+
+        // Simplified XML content highlighting (for display purposes only)
+        function highlightXMLContent(text) {
+            return text
+                // XML Declaration
+                .replace(/(<\?xml[^?]*\?>)/g, '<span style="color: #0066cc;">$1</span>')
+                // Opening tags
+                .replace(/(<\/?)([a-zA-Z0-9_:]+)([^>]*?)(>)/g, function (match, open, tagName, attributes, close) {
+                    const tagColor = getTagColor(tagName);
+                    const attrHighlighted = attributes.replace(/([a-zA-Z0-9_:]+)=["']([^"']*)["']/g,
+                        '<span style="color: #cc6600;">$1</span>=<span style="color: #009900;">"$2"</span>');
+                    return '<span style="color: #cc0000;">' + open + '</span>' +
+                        '<span style="color: ' + tagColor + ';">' + tagName + '</span>' +
+                        attrHighlighted +
+                        '<span style="color: #cc0000;">' + close + '</span>';
+                })
+                // Self-closing tags
+                .replace(/(<)([a-zA-Z0-9_:]+)([^>]*?)(\/>)/g, function (match, open, tagName, attributes, close) {
+                    const tagColor = getTagColor(tagName);
+                    const attrHighlighted = attributes.replace(/([a-zA-Z0-9_:]+)=["']([^"']*)["']/g,
+                        '<span style="color: #cc6600;">$1</span>=<span style="color: #009900;">"$2"</span>');
+                    return '<span style="color: #cc0000;">' + open + '</span>' +
+                        '<span style="color: ' + tagColor + ';">' + tagName + '</span>' +
+                        attrHighlighted +
+                        '<span style="color: #cc0000;">' + close + '</span>';
+                });
+        }
+
+        // Get color for different tag types
+        function getTagColor(tagName) {
+            const colors = {
+                'bpmn:definitions': '#0066cc',
+                'bpmn:process': '#0066cc',
+                'bpmn:startEvent': '#009900',
+                'bpmn:endEvent': '#cc0000',
+                'bpmn:serviceTask': '#cc6600',
+                'bpmn:scriptTask': '#cc6600',
+                'bpmn:userTask': '#cc6600',
+                'bpmn:callActivity': '#cc6600',
+                'bpmn:task': '#cc6600',
+                'bpmn:sequenceFlow': '#666666',
+                'bpmn:exclusiveGateway': '#9933cc',
+                'bpmn:parallelGateway': '#9933cc',
+                'bpmn:inclusiveGateway': '#9933cc',
+                'bpmn:dataStoreReference': '#0099cc',
+                'bpmn:dataObjectReference': '#0099cc',
+                'bpmndi:BPMNDiagram': '#0066cc',
+                'bpmndi:BPMNPlane': '#0066cc',
+                'bpmndi:BPMNShape': '#666666',
+                'bpmndi:BPMNEdge': '#666666',
+                'dc:Bounds': '#666666',
+                'di:waypoint': '#666666'
+            };
+
+            return colors[tagName] || '#333333';
+        }
+
+        // Enhanced XML editor with real-time sync
+        function setupXMLEditor() {
+            const xmlEditor = document.getElementById('xml-editor');
+
+            // Add event listeners for real-time editing only when enabled
+            const toggle = document.getElementById('xml-edit-toggle');
+
+            // Function to setup event listeners
+            function setupEventListeners() {
+                if (toggle.checked) {
+                    xmlEditor.addEventListener('input', debounce(syncXMLFromEditor, 500));
+                } else {
+                    // Remove event listeners when disabled
+                    xmlEditor.removeEventListener('input', debounce(syncXMLFromEditor, 500));
+                }
+            }
+
+            // Add syntax highlighting and better editing experience
+            xmlEditor.style.fontFamily = 'Monaco, Menlo, "Ubuntu Mono", monospace';
+            xmlEditor.style.fontSize = '12px';
+            xmlEditor.style.lineHeight = '1.4';
+            xmlEditor.style.tabSize = '2';
+            xmlEditor.style.overflow = 'auto';
+            xmlEditor.style.overflowX = 'hidden';
+            xmlEditor.style.overflowY = 'auto';
+
+            // Enable tab key for indentation only when editing is enabled
+            xmlEditor.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab' && toggle.checked && !xmlEditor.disabled) {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+
+                    // Insert tab at cursor position
+                    this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 2;
+                }
+            });
+
+            // Apply initial styling
+            highlightXML(xmlEditor);
+
+            // Setup initial event listeners
+            setupEventListeners();
+        }
+
+        // Function to force refresh XML highlighting
+        function forceRefreshXMLHighlighting() {
+            const xmlEditor = document.getElementById('xml-editor');
+            if (xmlEditor && currentView === 'xml') {
+                highlightXML(xmlEditor);
+            }
+        }
+
+        // Handle XML editor changes with real-time sync
+        function syncXMLFromEditor() {
+            const xmlEditor = document.getElementById('xml-editor');
+            const toggle = document.getElementById('xml-edit-toggle');
+
+            // Only sync if we're in XML view, editing is enabled, and the editor is not disabled
+            if (currentView === 'xml' && modeler && toggle.checked && !xmlEditor.disabled) {
+                const xmlContent = xmlEditor.value;
+
+                // Store current scroll position and cursor position
+                const scrollTop = xmlEditor.scrollTop;
+                const scrollLeft = xmlEditor.scrollLeft;
+                const selectionStart = xmlEditor.selectionStart;
+                const selectionEnd = xmlEditor.selectionEnd;
+
+                // Store the ID of the currently selected element
+                const selectedElementId = selectedElement ? selectedElement.businessObject.id : null;
+
+                modeler.importXML(xmlContent).then(() => {
+                    updateStatus('XML updated successfully', 'success');
+
+                    // Extract and cache extension properties from XML without clearing existing cache
+                    extractAndCacheExtensionProperties(false);
+
+                    // Update modeler elements with the new properties from cache
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const modeling = modeler.get('modeling');
+
+                        Object.keys(propertyCache).forEach(elementId => {
+                            const element = elementRegistry.get(elementId);
+                            if (element && Object.keys(propertyCache[elementId]).length > 0) {
+                                console.log('Updating modeler element with cached properties:', elementId, propertyCache[elementId]);
+                                modeling.updateProperties(element, propertyCache[elementId]);
+                            }
+                        });
+                    }
+
+                    // Reselect the previously selected element if it still exists
+                    if (selectedElementId) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(selectedElementId);
+                        if (element) {
+                            selectedElement = element;
+                            // Update the selection in the modeler
+                            const selection = modeler.get('selection');
+                            selection.select(element);
+                            // Update the properties panel
+                            updatePropertiesPanel();
+                        } else {
+                            // Element no longer exists, clear selection
+                            selectedElement = null;
+                            updatePropertiesPanel();
+                        }
+                    }
+
+                    updateXMLView();
+                    // Auto-save to cache when XML is edited
+                    saveModelToCache();
+
+                    // Restore scroll and cursor position after a short delay
+                    setTimeout(() => {
+                        xmlEditor.scrollTop = scrollTop;
+                        xmlEditor.scrollLeft = scrollLeft;
+                        xmlEditor.setSelectionRange(selectionStart, selectionEnd);
+                    }, 10);
+                }).catch(error => {
+                    updateStatus('XML import error: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // Debounce function for XML sync
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initModeler);
+
+        // Setup XML editor when page loads
+        document.addEventListener('DOMContentLoaded', setupXMLEditor);
+
+        // Initialize draggable splitter when page loads
+        document.addEventListener('DOMContentLoaded', initializeSplitter);
+
+        // Check File System Access API availability
+        document.addEventListener('DOMContentLoaded', function () {
+            const hasFileSystemAccess = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
+            if (hasFileSystemAccess) {
+                console.log('File System Access API is available');
+                // You could add a subtle indicator here if desired
+            } else {
+                console.log('File System Access API not available - using fallback methods');
+            }
+        });
+
+        // Add global debug function
+        window.debugModeler = function () {
+            console.log('Modeler:', modeler);
+            console.log('Selected element:', selectedElement);
+            console.log('Property cache:', propertyCache);
+            console.log('Current view:', currentView);
+            console.log('Has unsaved changes:', hasUnsavedChanges);
+            console.log('Current filename:', currentFileName);
+
+            if (selectedElement) {
+                console.log('Selected element business object:', selectedElement.businessObject);
+                console.log('Selected element type:', selectedElement.businessObject.$type);
+                console.log('Selected element ID:', selectedElement.businessObject.id);
+                console.log('Business object attributes:', selectedElement.businessObject.$attrs);
+                console.log('Documentation:', selectedElement.businessObject.documentation);
+
+                // Show cached properties for this element
+                const elementId = selectedElement.businessObject.id;
+                if (propertyCache[elementId]) {
+                    console.log('Cached properties for selected element:', propertyCache[elementId]);
+                } else {
+                    console.log('No cached properties for selected element');
+                }
+            }
+        };
+
+        // Add debug function for extension properties
+        window.debugExtensionProperties = function () {
+            console.log('=== EXTENSION PROPERTIES DEBUG ===');
+            console.log('Property cache:', propertyCache);
+
+            if (modeler) {
+                modeler.saveXML({ format: true }).then(result => {
+                    console.log('Current XML:', result.xml);
+
+                    // Parse and show what's actually in the XML
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(result.xml, 'text/xml');
+                    const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                    console.log('Service tasks found in XML:', serviceTasks.length);
+                    serviceTasks.forEach(serviceTask => {
+                        const taskId = serviceTask.getAttribute('id');
+                        console.log('Service task ID:', taskId);
+
+                        const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                        if (extensionElements) {
+                            console.log('Extension elements found for', taskId);
+                            const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                            console.log('Properties found:', properties.length);
+                            properties.forEach(prop => {
+                                console.log('- Property:', prop.getAttribute('name'), '=', prop.getAttribute('value'));
+                            });
+                        } else {
+                            console.log('No extension elements found for', taskId);
+                        }
+                    });
+                });
+            }
+        };
+
+        // Add function to debug loaded XML content
+        window.debugLoadedXML = function () {
+            const cachedXML = localStorage.getItem('bpmn_model_cache');
+            if (cachedXML) {
+                console.log('=== CACHED XML DEBUG ===');
+                console.log('Cached XML content:');
+                console.log(cachedXML);
+
+                // Parse the cached XML and show structure
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(cachedXML, 'text/xml');
+
+                // Show all service tasks and their structure
+                const serviceTasks = xmlDoc.querySelectorAll('serviceTask, bpmn\\:serviceTask');
+                console.log('Service tasks in cached XML:', serviceTasks.length);
+
+                serviceTasks.forEach((task, index) => {
+                    console.log(`Service Task ${index + 1}:`);
+                    console.log('- ID:', task.getAttribute('id'));
+                    console.log('- Name:', task.getAttribute('name'));
+                    console.log('- Tag name:', task.tagName);
+                    console.log('- Namespace URI:', task.namespaceURI);
+                    console.log('- Children count:', task.children.length);
+
+                    // Show all children
+                    for (let i = 0; i < task.children.length; i++) {
+                        const child = task.children[i];
+                        console.log(`  Child ${i}: ${child.tagName} (${child.namespaceURI})`);
+
+                        // If it's extension elements, show its children too
+                        if (child.tagName.includes('extensionElements')) {
+                            console.log(`    Extension elements children: ${child.children.length}`);
+                            for (let j = 0; j < child.children.length; j++) {
+                                const grandchild = child.children[j];
+                                console.log(`      ${j}: ${grandchild.tagName} (${grandchild.namespaceURI})`);
+
+                                // If it's properties, show the property children
+                                if (grandchild.tagName.includes('properties')) {
+                                    console.log(`        Properties children: ${grandchild.children.length}`);
+                                    for (let k = 0; k < grandchild.children.length; k++) {
+                                        const prop = grandchild.children[k];
+                                        console.log(`          ${k}: ${prop.tagName} name="${prop.getAttribute('name')}" value="${prop.getAttribute('value')}"`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    console.log('---');
+                });
+            } else {
+                console.log('No cached XML found');
+            }
+        };
+
+        // Add global delete function
+        window.deleteElement = function () {
+            deleteSelectedElement();
+        };
+
+        // Add global save function
+        window.saveModel = function () {
+            saveModelToCache();
+            updateStatus('Model manually saved to cache', 'success');
+        };
+
+        // Add global clear cache function
+        window.clearCache = function () {
+            clearModelCache();
+            updateStatus('Cache cleared', 'success');
+        };
+
+        // Add global refresh canvas function
+        window.refreshCanvas = function () {
+            refreshCanvas();
+            updateStatus('Canvas refreshed', 'success');
+        };
+
+        // Add global function to force refresh XML highlighting
+        window.refreshXMLHighlighting = function () {
+            forceRefreshXMLHighlighting();
+            updateStatus('XML highlighting refreshed', 'success');
+        };
+
+        // Add global function to extract extension properties from current XML
+        window.extractPropertiesFromXML = function () {
+            if (currentView === 'xml') {
+                const xmlEditor = document.getElementById('xml-editor');
+                const xmlContent = xmlEditor.value;
+                extractExtensionPropertiesFromXML(xmlContent);
+                updateStatus('Extension properties extracted from XML', 'success');
+            } else {
+                updateStatus('Switch to XML view first', 'error');
+            }
+        };
+
+        // Add global function to refresh property cache
+        window.refreshPropertyCache = function () {
+            console.log('Manually refreshing property cache...');
+
+            // Extract properties from current modeler state
+            extractAndCacheExtensionProperties(true);
+
+            // Also try to extract from current XML if available
+            if (modeler) {
+                modeler.saveXML({ format: true }).then(result => {
+                    extractExtensionPropertiesFromInputXML(result.xml);
+
+                    // Update properties panel if element is selected
+                    if (selectedElement) {
+                        updatePropertiesPanel();
+                    }
+
+                    updateStatus('Property cache refreshed from current model', 'success');
+                    console.log('Property cache after refresh:', propertyCache);
+                }).catch(error => {
+                    console.error('Error refreshing property cache:', error);
+                    updateStatus('Error refreshing property cache', 'error');
+                });
+            } else {
+                updateStatus('No modeler available to refresh cache', 'error');
+            }
+        };
+
+        // Add global function to force refresh properties panel
+        window.refreshPropertiesPanel = function () {
+            if (selectedElement) {
+                updatePropertiesPanel();
+                updateStatus('Properties panel refreshed', 'success');
+            } else {
+                updateStatus('No element selected', 'info');
+            }
+        };
+
+        // Add function to export diagram
+        window.exportDiagram = function () {
+            if (!modeler) return;
+
+            modeler.saveXML({ format: true }).then(result => {
+                // Inject extension properties into XML before exporting
+                let xml = injectExtensionProperties(result.xml);
+
+                const blob = new Blob([xml], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'bpmn-diagram.bpmn';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                updateStatus('Diagram exported successfully', 'success');
+            }).catch(error => {
+                updateStatus('Export error: ' + error.message, 'error');
+            });
+        };
+
+        // Delete selected element
+        function deleteSelectedElement() {
+            if (!selectedElement || !modeler) return;
+
+            try {
+                const modeling = modeler.get('modeling');
+                modeling.removeElements([selectedElement]);
+
+                selectedElement = null;
+                updatePropertiesPanel();
+                updateXMLView();
+            } catch (error) {
+                console.error('Delete error:', error);
+            }
+        }
+
+        // Keyboard event handling
+        function handleKeyboardEvents(event) {
+            if (!modeler) return;
+
+            // Check if we're in an input field
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+                return; // Don't handle keyboard shortcuts when typing
+            }
+
+            const command = modeler.get('commandStack');
+
+            switch (event.key) {
+                case 'Delete':
+                case 'Backspace':
+                    event.preventDefault();
+                    if (selectedElement) {
+                        deleteSelectedElement();
+                    }
+                    break;
+                case 'z':
+                case 'Z':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        if (event.shiftKey) {
+                            // Ctrl+Shift+Z or Cmd+Shift+Z = Redo
+                            if (command.canRedo()) {
+                                command.redo();
+                                updateStatus('Redo performed', 'success');
+                            } else {
+                                updateStatus('Nothing to redo', 'info');
+                            }
+                        } else {
+                            // Ctrl+Z or Cmd+Z = Undo
+                            if (command.canUndo()) {
+                                command.undo();
+                                updateStatus('Undo performed', 'success');
+                            } else {
+                                updateStatus('Nothing to undo', 'info');
+                            }
+                        }
+                        updateXMLView();
+                    }
+                    break;
+                case 'y':
+                case 'Y':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        // Ctrl+Y or Cmd+Y = Redo
+                        if (command.canRedo()) {
+                            command.redo();
+                            updateStatus('Redo performed', 'success');
+                        } else {
+                            updateStatus('Nothing to redo', 'info');
+                        }
+                        updateXMLView();
+                    }
+                    break;
+                case 's':
+                case 'S':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        saveFile(); // Always call saveFile, let it decide
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        if (event.shiftKey) {
+                            // Ctrl+Shift+R or Cmd+Shift+R = Reset/Clear all
+                            clearModel();
+                        } else {
+                            // Ctrl+R or Cmd+R = Refresh canvas
+                            refreshCanvas();
+                            updateStatus('Canvas refreshed', 'success');
+                        }
+                    }
+                    break;
+                case ' ':
+                    // Spacebar = Toggle view
+                    event.preventDefault();
+                    toggleView();
+                    break;
+                case 'h':
+                case 'H':
+                    if (event.ctrlKey || event.metaKey && event.shiftKey) {
+                        event.preventDefault();
+                        if (currentView === 'xml') {
+                            forceRefreshXMLHighlighting();
+                            updateStatus('XML highlighting refreshed', 'success');
+                        }
+                    }
+                    break;
+                case 'p':
+                case 'P':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        togglePropertiesPanel();
+                        updateStatus('Properties panel toggled', 'success');
+                    }
+                    break;
+                case 'F11':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+            }
+        }
+
+        // Add keyboard event listener
+        document.addEventListener('keydown', handleKeyboardEvents);
+
+        // Enhanced clear model function
+        function clearModel() {
+            if (confirm('Are you sure you want to clear the entire model? This cannot be undone.')) {
+                if (modeler) {
+                    modeler.destroy();
+                }
+
+                // Clear cache
+                clearModelCache();
+
+                // Reset variables
+                modeler = null;
+                selectedElement = null;
+                currentView = 'diagram';
+
+                // Clear properties panel
+                updatePropertiesPanel();
+
+                // Reinitialize with empty model
+                initModeler();
+
+                updateStatus('Model cleared and cache removed', 'success');
+            }
+        }
+
+        // Browser caching functions
+        function saveModelToCache() {
+            if (!modeler) return;
+
+
+
+            modeler.saveXML({ format: true }).then(result => {
+                // Inject extension properties into XML before saving to cache
+                let xml = injectExtensionProperties(result.xml);
+
+                localStorage.setItem('bpmn_model_cache', xml);
+                localStorage.setItem('bpmn_model_timestamp', Date.now());
+                console.log('Model saved to cache');
+            }).catch(error => {
+                console.error('Error saving model to cache:', error);
+            });
+        }
+
+        function loadModelFromCache() {
+            const cachedXML = localStorage.getItem('bpmn_model_cache');
+
+
+
+            const timestamp = localStorage.getItem('bpmn_model_timestamp');
+
+            if (cachedXML && timestamp) {
+                const age = Date.now() - parseInt(timestamp);
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+                if (age < maxAge) {
+                    return cachedXML;
+                } else {
+                    // Clear expired cache
+                    localStorage.removeItem('bpmn_model_cache');
+                    localStorage.removeItem('bpmn_model_timestamp');
+                }
+            }
+
+            return null;
+        }
+
+        function clearModelCache() {
+            localStorage.removeItem('bpmn_model_cache');
+            localStorage.removeItem('bpmn_model_timestamp');
+            console.log('Model cache cleared');
+        }
+
+        // Test function to create a service task for testing
+        window.createTestTask = function () {
+            if (!modeler) return;
+
+            const modeling = modeler.get('modeling');
+            const elementFactory = modeler.get('elementFactory');
+            const elementRegistry = modeler.get('elementRegistry');
+
+            // Get the process
+            const process = elementRegistry.get('Process_1');
+            if (!process) {
+                console.log('Process not found');
+                return;
+            }
+
+            // Create a service task
+            const serviceTask = elementFactory.createShape({
+                type: 'bpmn:ServiceTask',
+                id: 'TestServiceTask_1',
+                name: 'Test Service Task'
+            });
+
+            // Add it to the process
+            modeling.createShape(serviceTask, { x: 200, y: 200 }, process);
+
+            // Select it
+            const selection = modeler.get('selection');
+            selection.select(serviceTask);
+            selectElement(serviceTask);
+
+            // Set default extension properties
+            updateExtensionProperty(serviceTask, 'service:type', 'REST');
+            updateExtensionProperty(serviceTask, 'service:name', 'UserService_TEST');
+            updateExtensionProperty(serviceTask, 'service:version', '1.0');
+
+            console.log('Test service task created and selected with default properties');
+            updateStatus('Test service task created with default extension properties', 'success');
+        };
+
+        // Simple test function to check XML injection
+        window.testXMLInjection = function () {
+            if (!modeler) return;
+
+            console.log('Testing XML injection...');
+            modeler.saveXML({ format: true }).then(result => {
+                console.log('=== ORIGINAL XML ===');
+                console.log(result.xml);
+                console.log('=== INJECTED XML ===');
+                const injected = injectExtensionProperties(result.xml);
+                console.log(injected);
+            });
+        };
+
+        // Function to inject extension properties into XML
+        function injectExtensionProperties(xml) {
+            if (!modeler) return xml;
+
+            console.log('Injecting extension properties into XML...');
+
+            // Inject properties from cache for all service tasks
+            Object.keys(propertyCache).forEach(elementId => {
+                const props = propertyCache[elementId];
+                if (props && Object.keys(props).length > 0) {
+                    console.log('Injecting cached properties for element:', elementId, props);
+                    xml = injectServiceTaskExtensions(xml, elementId, props);
+                }
+            });
+
+            console.log('Final XML length:', xml.length);
+            return formatXML(xml);
+        }
+
+        // Function to extract and cache extension properties from XML
+        function extractAndCacheExtensionProperties(clearCache = true) {
+            if (!modeler) return;
+
+            console.log('Extracting extension properties from XML...');
+            console.log('clearCache parameter:', clearCache);
+            console.log('Cache before extraction:', propertyCache);
+
+            modeler.saveXML({ format: true }).then(result => {
+                const xmlContent = result.xml;
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Find all service tasks in the XML to see if any have extension properties
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+                let foundProperties = false;
+
+                serviceTasks.forEach(serviceTask => {
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (extensionElements) {
+                        const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                        if (properties.length > 0) {
+                            foundProperties = true;
+                        }
+                    }
+                });
+
+                // Only clear cache if explicitly requested AND either:
+                // 1. Cache is currently empty, OR
+                // 2. We found extension properties in the XML (indicating this is a legitimate extraction)
+                const shouldClearCache = clearCache && (Object.keys(propertyCache).length === 0 || foundProperties);
+                console.log('Found extension properties in XML:', foundProperties);
+                console.log('Should clear cache:', shouldClearCache);
+
+                if (shouldClearCache) {
+                    propertyCache = {};
+                    console.log('Cache cleared');
+                } else {
+                    console.log('Cache preserved - either clearCache=false or no properties found in XML');
+                }
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    // Initialize cache for this element if it doesn't exist
+                    if (!propertyCache[taskId]) {
+                        propertyCache[taskId] = {};
+                    }
+
+                    // Only process if we found properties in XML or if we cleared the cache
+                    if (foundProperties || shouldClearCache) {
+                        console.log('Processing service task for cache (no existing cache):', taskId);
+
+                        // Initialize cache for this element if it doesn't exist
+                        if (!propertyCache[taskId]) {
+                            propertyCache[taskId] = {};
+                        }
+
+                        // Find extension elements
+                        const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                        if (!extensionElements) {
+                            // If no extension elements found, clear the cache for this element
+                            propertyCache[taskId] = {};
+                            return;
+                        }
+
+                        // Extract camunda properties
+                        const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+
+                        // Clear existing properties for this element to ensure we get fresh values
+                        propertyCache[taskId] = {};
+
+                        properties.forEach(prop => {
+                            const name = prop.getAttribute('name');
+                            const value = prop.getAttribute('value');
+                            if (name && value) {
+                                propertyCache[taskId][name] = value;
+                                console.log('Cached property:', taskId, name, '=', value);
+                            }
+                        });
+                    } else {
+                        console.log('Skipping service task - already has cached properties:', taskId);
+                    }
+                });
+
+                console.log('Property cache updated:', propertyCache);
+            }).catch(error => {
+                console.error('Error extracting properties for cache:', error);
+            });
+        }
+
+        // Function to extract extension properties from XML and update modeler elements
+        function extractExtensionPropertiesFromXML(xmlContent) {
+            console.log('Extracting extension properties from XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task:', taskId);
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) return;
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                    const extractedProps = {};
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            extractedProps[name] = value;
+                            console.log('Extracted property:', name, '=', value);
+                        }
+                    });
+
+                    // Update the modeler element if it exists
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(taskId);
+
+                        if (element && Object.keys(extractedProps).length > 0) {
+                            console.log('Updating element with extracted properties:', extractedProps);
+
+                            // Update the element's attributes
+                            const modeling = modeler.get('modeling');
+                            modeling.updateProperties(element, extractedProps);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error extracting extension properties:', error);
+            }
+        }
+
+        // New function to extract extension properties directly from input XML
+        function extractExtensionPropertiesFromInputXML(xmlContent) {
+            console.log('Extracting extension properties from input XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Clear property cache
+                propertyCache = {};
+
+                // Find all service tasks - try multiple selectors
+                const serviceTasks = xmlDoc.querySelectorAll('serviceTask, bpmn\\:serviceTask');
+
+                console.log('Service tasks found in XML:', serviceTasks.length);
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task for cache:', taskId);
+
+                    // Initialize cache for this element
+                    propertyCache[taskId] = {};
+
+                    // Find extension elements - try multiple selectors
+                    let extensionElements = serviceTask.querySelector('extensionElements');
+                    if (!extensionElements) {
+                        extensionElements = serviceTask.querySelector('bpmn\\:extensionElements');
+                    }
+
+                    if (!extensionElements) {
+                        console.log('No extension elements found for:', taskId);
+                        // Let's see what children this service task has
+                        console.log('Service task children:', serviceTask.children);
+                        for (let i = 0; i < serviceTask.children.length; i++) {
+                            const child = serviceTask.children[i];
+                            console.log(`Child ${i}:`, child.tagName, child.namespaceURI);
+                        }
+                        return;
+                    }
+
+                    console.log('Found extension elements for:', taskId);
+
+                    // Extract camunda properties - try multiple selectors
+                    let properties = extensionElements.querySelectorAll('camunda\\:property');
+                    if (properties.length === 0) {
+                        properties = extensionElements.querySelectorAll('property');
+                    }
+                    if (properties.length === 0) {
+                        // Try looking inside camunda:properties wrapper
+                        const propertiesWrapper = extensionElements.querySelector('camunda\\:properties, properties');
+                        if (propertiesWrapper) {
+                            properties = propertiesWrapper.querySelectorAll('camunda\\:property, property');
+                        }
+                    }
+
+                    console.log('Properties found for', taskId, ':', properties.length);
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            propertyCache[taskId][name] = value;
+                            console.log('Cached property from input XML:', taskId, name, '=', value);
+                        }
+                    });
+
+                    // Remove empty entries
+                    if (Object.keys(propertyCache[taskId]).length === 0) {
+                        delete propertyCache[taskId];
+                    }
+                });
+
+                console.log('Property cache updated from input XML:', propertyCache);
+                console.log('Cache keys after extraction:', Object.keys(propertyCache));
+                if (Object.keys(propertyCache).length > 0) {
+                    Object.keys(propertyCache).forEach(elementId => {
+                        console.log(`Element ${elementId} properties:`, propertyCache[elementId]);
+                        console.log(`Element ${elementId} property keys:`, Object.keys(propertyCache[elementId]));
+                    });
+                }
+            } catch (error) {
+                console.error('Error extracting extension properties from input XML:', error);
+            }
+        }
+
+        // Function to extract extension properties from XML and update modeler elements
+        function extractExtensionPropertiesFromXML(xmlContent) {
+            console.log('Extracting extension properties from XML...');
+
+            try {
+                // Parse XML to find service tasks with extension elements
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+                // Find all service tasks
+                const serviceTasks = xmlDoc.querySelectorAll('bpmn\\:serviceTask, serviceTask');
+
+                serviceTasks.forEach(serviceTask => {
+                    const taskId = serviceTask.getAttribute('id');
+                    if (!taskId) return;
+
+                    console.log('Processing service task:', taskId);
+
+                    // Find extension elements
+                    const extensionElements = serviceTask.querySelector('bpmn\\:extensionElements, extensionElements');
+                    if (!extensionElements) return;
+
+                    // Extract camunda properties
+                    const properties = extensionElements.querySelectorAll('camunda\\:property, camunda\\:properties camunda\\:property');
+                    const extractedProps = {};
+
+                    properties.forEach(prop => {
+                        const name = prop.getAttribute('name');
+                        const value = prop.getAttribute('value');
+                        if (name && value) {
+                            extractedProps[name] = value;
+                            console.log('Extracted property:', name, '=', value);
+                        }
+                    });
+
+                    // Update the modeler element if it exists
+                    if (modeler) {
+                        const elementRegistry = modeler.get('elementRegistry');
+                        const element = elementRegistry.get(taskId);
+
+                        if (element && Object.keys(extractedProps).length > 0) {
+                            console.log('Updating element with extracted properties:', extractedProps);
+
+                            // Update the element's attributes
+                            const modeling = modeler.get('modeling');
+                            modeling.updateProperties(element, extractedProps);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error extracting extension properties:', error);
+            }
+        }
+
+        // Add function to toggle XML editing
+        function toggleXMLEditing() {
+            const xmlEditor = document.getElementById('xml-editor');
+            const toggle = document.getElementById('xml-edit-toggle');
+            const isEnabled = toggle.checked;
+
+            xmlEditor.disabled = !isEnabled;
+
+            if (isEnabled) {
+                xmlEditor.style.background = '#ffffff';
+                xmlEditor.style.color = '#333';
+                xmlEditor.style.cursor = 'text';
+                updateStatus('XML editing enabled - you can now edit the XML directly', 'success');
+            } else {
+                xmlEditor.style.background = '#f5f5f5';
+                xmlEditor.style.color = '#666';
+                xmlEditor.style.cursor = 'not-allowed';
+                updateStatus('XML editing disabled - XML is read-only', 'info');
+            }
+        }
+
+        // Function to toggle property groups
+        function togglePropertyGroup(headerElement) {
+            const icon = headerElement.querySelector('.collapse-icon');
+            const content = headerElement.nextElementSibling;
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }
+        }
+
+        // Function to toggle the entire properties panel
+        function togglePropertiesPanel() {
+            const propertiesPanel = document.getElementById('properties-panel');
+            const toggleBtn = document.getElementById('properties-toggle');
+            const canvasArea = document.querySelector('.canvas-main-area');
+
+            if (propertiesPanel.classList.contains('collapsed')) {
+                // Expand
+                propertiesPanel.classList.remove('collapsed');
+                toggleBtn.innerHTML = '◀';
+                toggleBtn.title = 'Collapse Properties Panel';
+                canvasArea.style.flex = '0 0 75%'; // Adjust canvas width
+            } else {
+                // Collapse
+                propertiesPanel.classList.add('collapsed');
+                toggleBtn.innerHTML = '▶';
+                toggleBtn.title = 'Expand Properties Panel';
+                canvasArea.style.flex = '1'; // Canvas takes remaining space
+            }
+        }
+
+        // Initialize draggable splitter functionality
+        function initializeSplitter() {
+            const splitter = document.getElementById('properties-splitter');
+            const canvasArea = document.querySelector('.canvas-main-area');
+            const propertiesPanel = document.getElementById('properties-panel');
+            const container = document.querySelector('.canvas-properties-container');
+
+            let isDragging = false;
+            let startX = 0;
+            let startCanvasWidth = 0;
+            let startPropertiesWidth = 0;
+
+            splitter.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+
+                const containerRect = container.getBoundingClientRect();
+                startCanvasWidth = canvasArea.getBoundingClientRect().width;
+                startPropertiesWidth = propertiesPanel.getBoundingClientRect().width;
+
+                splitter.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaX = e.clientX - startX;
+                const containerRect = container.getBoundingClientRect();
+                const containerWidth = containerRect.width;
+
+                // Calculate new widths
+                const newCanvasWidth = startCanvasWidth + deltaX;
+                const newPropertiesWidth = startPropertiesWidth - deltaX;
+
+                // Enforce minimum widths
+                const minCanvasWidth = 400;
+                const minPropertiesWidth = 250;
+                const maxPropertiesWidth = containerWidth * 0.6; // Max 60% of container
+
+                if (newCanvasWidth >= minCanvasWidth &&
+                    newPropertiesWidth >= minPropertiesWidth &&
+                    newPropertiesWidth <= maxPropertiesWidth) {
+
+                    const canvasPercentage = (newCanvasWidth / containerWidth) * 100;
+                    const propertiesPercentage = (newPropertiesWidth / containerWidth) * 100;
+
+                    canvasArea.style.flex = `0 0 ${canvasPercentage}%`;
+                    propertiesPanel.style.flex = `0 0 ${propertiesPercentage}%`;
+                }
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    splitter.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
+        // Update the status function to work with the new toolbar
+        function updateStatus(message, type = 'success') {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+        }
+
+        // Update button states for new toolbar
+        function updateButtonStates() {
+            const toggleBtn = document.getElementById('view-toggle-btn');
+
+            if (currentView === 'diagram') {
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = 'XML';
+            } else {
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = 'XML';
+            }
+        }
+
+        // Global variables for file handling
+        let currentFileName = null;
+        let hasUnsavedChanges = false;
+        let currentFileHandle = null; // <-- Store the file handle
+
+        // Restore file name from localStorage on load
+        (function restoreFileNameFromStorage() {
+            const storedName = localStorage.getItem('bpmn_model_filename');
+            if (storedName) {
+                currentFileName = storedName;
+                updateWindowTitle();
+            }
+        })();
+
+        // Menu Management Functions
+        function toggleMenu(menuId) {
+            // Close all other menus first
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                if (menu.id !== menuId) {
+                    menu.classList.remove('show');
+                }
+            });
+            document.querySelectorAll('.menu-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Toggle the requested menu
+            const menu = document.getElementById(menuId);
+            const button = menu.previousElementSibling;
+
+            if (menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                button.classList.remove('active');
+            } else {
+                menu.classList.add('show');
+                button.classList.add('active');
+            }
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-item')) {
+                document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+                document.querySelectorAll('.menu-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+        });
+
+        // File Management Functions
+        function newModel() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to create a new model?')) {
+                return;
+            }
+
+            try {
+                currentFileName = null;
+                hasUnsavedChanges = false;
+                propertyCache = {};
+                selectedElement = null;
+
+                modeler.importXML(emptyXML).then(() => {
+                    updateStatus('New model created', 'success');
+                    updatePropertiesPanel();
+                    updateXMLView();
+                    clearModelCache();
+                    updateWindowTitle();
+                    closeAllMenus();
+                }).catch(error => {
+                    updateStatus('Error creating new model: ' + error.message, 'error');
+                });
+            } catch (error) {
+                updateStatus('Error creating new model: ' + error.message, 'error');
+            }
+        }
+
+        function openFile() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to open a new file?')) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.bpmn,.xml';
+            input.style.display = 'none';
+
+            input.onchange = function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    loadModelFromXML(e.target.result, file.name);
+                };
+                reader.readAsText(file);
+            };
+
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+            closeAllMenus();
+        }
+
+        function openFromFolder() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to open a new file?')) {
+                return;
+            }
+
+            // Check if File System Access API is supported
+            if (!('showOpenFilePicker' in window)) {
+                updateStatus('File System Access API not supported in this browser. Use "Open..." instead.', 'error');
+                // Fallback to regular open
+                setTimeout(() => {
+                    openFile();
+                }, 1000);
+                return;
+            }
+
+            const options = {
+                types: [{
+                    description: 'BPMN Files',
+                    accept: {
+                        'application/xml': ['.bpmn', '.xml']
+                    }
+                }],
+                multiple: false
+            };
+
+            window.showOpenFilePicker(options)
+                .then(fileHandles => {
+                    if (fileHandles.length > 0) {
+                        const fileHandle = fileHandles[0];
+                        return fileHandle.getFile();
+                    }
+                })
+                .then(file => {
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            loadModelFromXML(e.target.result, file.name);
+                        };
+                        reader.readAsText(file);
+                    }
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError') {
+                        updateStatus('Open cancelled', 'info');
+                    } else {
+                        updateStatus('Error opening file: ' + error.message, 'error');
+                        console.error('Open error:', error);
+                    }
+                });
+
+            closeAllMenus();
+        }
+
+        function saveFile() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+            if (window.showSaveFilePicker && currentFileHandle) {
+                modeler.saveXML({ format: true }).then(result => {
+                    const xmlToSave = injectExtensionProperties(result.xml);
+                    const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                    currentFileHandle.createWritable().then(writable => {
+                        writable.write(blob).then(() => {
+                            writable.close().then(() => {
+                                hasUnsavedChanges = false;
+                                localStorage.setItem('bpmn_model_filename', currentFileName || ''); // persist name
+                                updateWindowTitle();
+                                updateStatus(`Model saved to: ${currentFileName}`, 'success');
+                            });
+                        });
+                    }).catch(error => {
+                        updateStatus('Error saving file: ' + error.message, 'error');
+                        console.error('Save error:', error);
+                    });
+                });
+                closeAllMenus();
+                return;
+            }
+            // Otherwise, fallback to Save As
+            saveToFolder();
+            closeAllMenus();
+        }
+
+        function saveAsFile() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            const filename = prompt('Enter filename (without extension):', currentFileName || 'untitled');
+            if (filename) {
+                const fullFilename = filename.endsWith('.bpmn') ? filename : filename + '.bpmn';
+                saveModelToFile(fullFilename);
+            }
+            closeAllMenus();
+        }
+
+        function saveToFolder() {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+            if (!('showSaveFilePicker' in window)) {
+                updateStatus('File System Access API not supported in this browser. Use "Save As..." instead.', 'error');
+                setTimeout(() => { saveAsFile(); }, 1000);
+                return;
+            }
+            modeler.saveXML({ format: true }).then(result => {
+                const xmlToSave = injectExtensionProperties(result.xml);
+                const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                const options = {
+                    suggestedName: currentFileName || 'untitled.bpmn',
+                    types: [{
+                        description: 'BPMN Files',
+                        accept: { 'application/xml': ['.bpmn', '.xml'] }
+                    }]
+                };
+                window.showSaveFilePicker(options)
+                    .then(fileHandle => {
+                        currentFileHandle = fileHandle;
+                        currentFileName = fileHandle.name;
+                        localStorage.setItem('bpmn_model_filename', currentFileName || ''); // persist name
+                        return fileHandle.createWritable().then(writable => ({ fileHandle, writable }));
+                    })
+                    .then(({ fileHandle, writable }) => {
+                        return writable.write(blob).then(() => ({ fileHandle, writable }));
+                    })
+                    .then(({ fileHandle, writable }) => {
+                        return writable.close().then(() => fileHandle);
+                    })
+                    .then(fileHandle => {
+                        hasUnsavedChanges = false;
+                        updateWindowTitle();
+                        updateStatus(`Model saved to: ${fileHandle.name}`, 'success');
+                    })
+                    .catch(error => {
+                        if (error.name === 'AbortError') {
+                            updateStatus('Save cancelled', 'info');
+                        } else {
+                            updateStatus('Error saving file: ' + error.message, 'error');
+                            console.error('Save error:', error);
+                        }
+                    });
+            }).catch(error => {
+                updateStatus('Error generating XML: ' + error.message, 'error');
+            });
+            closeAllMenus();
+        }
+
+        function loadModelFromXML(xmlContent, filename = null) {
+            if (!modeler) {
+                updateStatus('Modeler not initialized', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Loading model...', 'info');
+
+                // First, extract extension properties directly from the XML content
+                extractExtensionPropertiesFromInputXML(xmlContent);
+
+                modeler.importXML(xmlContent).then(() => {
+                    // Set current filename
+                    currentFileName = filename;
+                    hasUnsavedChanges = false;
+
+                    // Update UI - with a delay to ensure the modeler is ready
+                    setTimeout(() => {
+                        updatePropertiesPanel();
+                        updateXMLView();
+                        updateWindowTitle();
+
+                        // Save to cache
+                        saveModelToCache();
+
+                        // Zoom to fit
+                        if (modeler) {
+                            const canvas = modeler.get('canvas');
+                            canvas.zoom('fit-viewport');
+                        }
+
+                        updateStatus(`Model loaded successfully${filename ? ': ' + filename : ''}`, 'success');
+                        console.log('Model loaded, property cache:', propertyCache);
+                    }, 200);
+
+                }).catch(error => {
+                    updateStatus('Error loading model: ' + error.message, 'error');
+                    console.error('Error loading model:', error);
+                });
+
+            } catch (error) {
+                updateStatus('Error loading model: ' + error.message, 'error');
+                console.error('Error loading model:', error);
+            }
+        }
+
+        function saveModelToFile(filename) {
+            if (!modeler) {
+                updateStatus('No model to save', 'error');
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                // Inject extension properties into XML before saving
+                const xmlToSave = injectExtensionProperties(result.xml);
+
+                // Create download
+                const blob = new Blob([xmlToSave], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(url);
+
+                // Update state
+                currentFileName = filename;
+                hasUnsavedChanges = false;
+                updateWindowTitle();
+
+                updateStatus(`Model saved as: ${filename}`, 'success');
+
+            }).catch(error => {
+                updateStatus('Error saving model: ' + error.message, 'error');
+                console.error('Error saving model:', error);
+            });
+        }
+
+        function importXMLDialog() {
+            const xmlContent = prompt('Paste your BPMN XML here:');
+            if (xmlContent && xmlContent.trim()) {
+                loadModelFromXML(xmlContent.trim());
+            }
+            closeAllMenus();
+        }
+
+        function exportXMLToClipboard() {
+            if (!modeler) {
+                updateStatus('No model to export', 'error');
+                return;
+            }
+
+            modeler.saveXML({ format: true }).then(result => {
+                const xmlToExport = injectExtensionProperties(result.xml);
+
+                navigator.clipboard.writeText(xmlToExport).then(() => {
+                    updateStatus('XML copied to clipboard', 'success');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = xmlToExport;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    updateStatus('XML copied to clipboard', 'success');
+                });
+            }).catch(error => {
+                updateStatus('Error exporting XML: ' + error.message, 'error');
+            });
+            closeAllMenus();
+        }
+
+        // Edit Menu Functions
+        function undoAction() {
+            if (modeler) {
+                const commandStack = modeler.get('commandStack');
+                if (commandStack.canUndo()) {
+                    commandStack.undo();
+                    updateStatus('Undo performed', 'info');
+                }
+            }
+            closeAllMenus();
+        }
+
+        function redoAction() {
+            if (modeler) {
+                const commandStack = modeler.get('commandStack');
+                if (commandStack.canRedo()) {
+                    commandStack.redo();
+                    updateStatus('Redo performed', 'info');
+                }
+            }
+            closeAllMenus();
+        }
+
+        function deleteSelectedElement() {
+            if (selectedElement && modeler) {
+                const modeling = modeler.get('modeling');
+                modeling.removeElements([selectedElement]);
+                selectedElement = null;
+                updatePropertiesPanel();
+                updateStatus('Element deleted', 'info');
+            }
+            closeAllMenus();
+        }
+
+        function selectAllElements() {
+            if (modeler) {
+                const elementRegistry = modeler.get('elementRegistry');
+                const selection = modeler.get('selection');
+                const allElements = elementRegistry.getAll().filter(element =>
+                    element.type !== 'bpmn:Process' && element.type !== 'label'
+                );
+                selection.select(allElements);
+                updateStatus(`Selected ${allElements.length} elements`, 'info');
+            }
+            closeAllMenus();
+        }
+
+        function clearCanvas() {
+            if (hasUnsavedChanges && !confirm('This will clear the entire canvas. Are you sure?')) {
+                return;
+            }
+            newModel();
+            closeAllMenus();
+        }
+
+        // View Menu Functions
+        function zoomToFit() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                canvas.zoom('fit-viewport');
+                updateStatus('Zoomed to fit', 'info');
+            }
+            closeAllMenus();
+        }
+
+        function resetZoom() {
+            if (modeler) {
+                const canvas = modeler.get('canvas');
+                canvas.zoom(1.0);
+                updateStatus('Zoom reset', 'info');
+            }
+            closeAllMenus();
+        }
+
+        // Help Menu Functions
+        function showKeyboardShortcuts() {
+            const shortcuts = `
+Keyboard Shortcuts:
+
+File Operations:
+• Ctrl+N - New Model
+• Ctrl+O - Open File
+• Ctrl+Alt+O - Open from Folder
+• Ctrl+S - Save
+• Ctrl+Shift+S - Save As
+• Ctrl+Alt+S - Save to Folder
+
+Edit Operations:
+• Ctrl+Z - Undo
+• Ctrl+Y - Redo  
+• Delete - Delete Selected Element
+• Ctrl+A - Select All
+• Ctrl+Shift+R - Clear Canvas
+
+View Operations:
+• Space - Toggle XML View
+• Ctrl+P - Toggle Properties Panel
+• Ctrl+0 - Zoom to Fit
+• Ctrl+1 - Reset Zoom
+
+Other:
+• F1 - Show Help
+• Ctrl+R - Refresh Canvas
+            `.trim();
+
+            alert(shortcuts);
+            closeAllMenus();
+        }
+
+        function showAbout() {
+            const about = `
+Comprehensive BPMN Modeler
+Version 1.0
+
+A powerful BPMN 2.0 diagram editor with support for:
+• Standard BPMN elements
+• Extension properties
+• XML editing
+• File import/export
+• Real-time property editing
+
+Built with BPMN.js
+            `.trim();
+
+            alert(about);
+            closeAllMenus();
+        }
+
+        // Utility Functions
+        function closeAllMenus() {
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            document.querySelectorAll('.menu-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function updateWindowTitle() {
+            const title = currentFileName ?
+                `Comprehensive BPMN Modeler - ${currentFileName}${hasUnsavedChanges ? ' *' : ''}` :
+                `Comprehensive BPMN Modeler${hasUnsavedChanges ? ' - Untitled *' : ''}`;
+            document.title = title;
+
+            // Update file status indicator
+            const fileStatus = document.getElementById('file-status');
+            if (fileStatus) {
+                const displayName = currentFileName || 'Untitled';
+                fileStatus.textContent = displayName + (hasUnsavedChanges ? ' *' : '');
+                fileStatus.className = hasUnsavedChanges ? 'file-status modified' : 'file-status';
+            }
+        }
+
+        function markAsModified() {
+            if (!hasUnsavedChanges) {
+                hasUnsavedChanges = true;
+                updateWindowTitle();
+            }
+        }
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            // Check if we're in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // File operations
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                newModel();
+            } else if (e.ctrlKey && e.key === 'o') {
+                e.preventDefault();
+                openFile();
+            } else if (e.ctrlKey && e.altKey && e.key === 'O') {
+                e.preventDefault();
+                openFromFolder();
+            } else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveFile(); // Always call saveFile, let it decide
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                saveAsFile();
+            }
+            // Edit operations
+            else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undoAction();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redoAction();
+            } else if (e.key === 'Delete') {
+                e.preventDefault();
+                deleteSelectedElement();
+            } else if (e.ctrlKey && e.key === 'a') {
+                e.preventDefault();
+                selectAllElements();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                clearCanvas();
+            }
+            // View operations
+            else if (e.key === ' ') {
+                e.preventDefault();
+                toggleView();
+            } else if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                togglePropertiesPanel();
+            } else if (e.ctrlKey && e.key === '0') {
+                e.preventDefault();
+                zoomToFit();
+            } else if (e.ctrlKey && e.key === '1') {
+                e.preventDefault();
+                resetZoom();
+            }
+            // Help
+            else if (e.key === 'F1') {
+                e.preventDefault();
+                showKeyboardShortcuts();
+            }
+            // Refresh canvas
+            else if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                refreshCanvas();
+            }
+            // Fullscreen
+            else if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+
+        // Track changes for unsaved indicator
+        function setupChangeTracking() {
+            if (modeler) {
+                modeler.on('commandStack.changed', () => {
+                    markAsModified();
+                });
+            }
+        }
+
+        // Warn about unsaved changes before leaving
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        // Add debug function to compare cache keys with current elements
+        window.debugCacheKeyComparison = function () {
+            console.log('=== CACHE KEY COMPARISON DEBUG ===');
+            console.log('Property cache keys:', Object.keys(propertyCache));
+            console.log('Property cache contents:', propertyCache);
+
+            if (modeler) {
+                const elementRegistry = modeler.get('elementRegistry');
+                const allElements = elementRegistry.getAll();
+                const serviceTaskElements = allElements.filter(el =>
+                    el.businessObject && el.businessObject.$type === 'bpmn:ServiceTask'
+                );
+
+                console.log('Service task elements in current model:');
+                serviceTaskElements.forEach(el => {
+                    const elementId = el.businessObject.id;
+                    const hasCache = !!propertyCache[elementId];
+                    console.log(`- Element ID: "${elementId}", Has cache: ${hasCache}`);
+                    if (hasCache) {
+                        console.log(`  Cache contents:`, propertyCache[elementId]);
+                    }
+                });
+
+                if (selectedElement) {
+                    const selectedId = selectedElement.businessObject.id;
+                    console.log('Currently selected element ID:', `"${selectedId}"`);
+                    console.log('Selected element has cache:', !!propertyCache[selectedId]);
+
+                    // Check if there's a cache entry with similar ID
+                    const cacheKeys = Object.keys(propertyCache);
+                    console.log('All cache keys:', cacheKeys.map(k => `"${k}"`));
+
+                    const exactMatch = cacheKeys.find(key => key === selectedId);
+                    if (exactMatch) {
+                        console.log('Found exact match in cache');
+                    } else {
+                        console.log('No exact match found in cache');
+                        const similarKeys = cacheKeys.filter(key =>
+                            key.includes(selectedId) || selectedId.includes(key)
+                        );
+                        if (similarKeys.length > 0) {
+                            console.log('Similar cache keys found:', similarKeys);
+                        } else {
+                            console.log('No similar cache keys found');
+                        }
+                    }
+                }
+            } else {
+                console.log('Modeler not available');
+            }
+            console.log('=====================================');
+        };
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            const ws = document.querySelector('.workspace-container');
+            if (!document.fullscreenElement) {
+                ws.requestFullscreen().catch(err => {
+                    updateStatus('Error entering fullscreen: ' + err.message, 'error');
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Add F11 keyboard shortcut for fullscreen
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+    </script>
+</body>
+
+</html>
