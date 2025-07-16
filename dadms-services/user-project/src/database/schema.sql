@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS projects (
         "personas": [],
         "tools_enabled": ["rag_search", "web_search"]
     }'::jsonb,
+    decision_context TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     
@@ -66,8 +67,10 @@ INSERT INTO users (email, name, password_hash) VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample project for development
-INSERT INTO projects (name, description, owner_id, knowledge_domain) VALUES 
+INSERT INTO projects (name, description, owner_id, knowledge_domain, decision_context) VALUES 
     ('Sample Decision Project', 'Example project for testing DADMS functionality', 
      (SELECT id FROM users WHERE email = 'admin@dadms.com'), 
-     'business_strategy')
+     'business_strategy',
+     'Our agency needs to select the most suitable Unmanned Aircraft System (UAS) platform for rapid deployment in disaster response scenarios. The decision must consider operational requirements, technical capabilities, cost constraints, and regulatory compliance. The selected UAS should support emergency response teams by providing timely, high-quality data in various weather conditions, while staying within a $2M budget and meeting payload and endurance requirements. Stakeholders include emergency response teams, procurement officers, technical experts, and regulatory authorities.'
+    )
 ON CONFLICT DO NOTHING; 

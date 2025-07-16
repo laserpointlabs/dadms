@@ -14,6 +14,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onSelect, onE
     >
         <h3 className="text-lg font-bold mb-1">{project.name}</h3>
         <p className="text-sm text-gray-600 mb-2">{project.description}</p>
+        {project.decision_context && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 mb-2 text-xs text-gray-800">
+                <div className="font-semibold mb-1">Decision Context</div>
+                <div>{project.decision_context}</div>
+            </div>
+        )}
         <div className="flex flex-wrap gap-2 text-xs">
             <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">{project.knowledge_domain}</span>
             <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">{project.status}</span>
