@@ -287,8 +287,8 @@ collection_name: `project_${project_id}_threads`
 - BPMN Workspace service task configuration
 
 ### **Week 3: Execution**
-- Process orchestration integration
-- Task Execution Manager enhancement
+- Process Mangment integration
+- Task Execution Manager enhancement (previously service-orchstrator)
 - Thread management implementation
 
 ### **Week 4: Documentation**
