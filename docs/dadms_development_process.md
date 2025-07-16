@@ -13,6 +13,19 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Development Tooling Update
+
+- **pm2 for Local Process Management:** Adopted [pm2](https://pm2.keymetrics.io/) as a process manager for local development. pm2 is used to manage the Next.js dev server (and can be extended to other Node.js services), providing easier process control, auto-restart, and unified logging. This simplifies running and monitoring the UI and backend services during development.
+
+  Example command to start the UI dev server:
+  ```bash
+  cd ~/dadms/dadms-ui
+  pm2 start npm --name dadms-ui-dev -- run dev
+  ```
+  Use `pm2 list`, `pm2 logs`, `pm2 stop <name>`, and `pm2 delete <name>` for process management.
+
+---
+
 ## Key Decisions & Rationale
 - **UI Scaffolding:** Use local state for domains/tags to enable fast iteration and feedback.
 - **Domain/Tag Model:** Domains and tags are managed centrally for governance and reusability. Tags can span multiple domains (multi-select).
