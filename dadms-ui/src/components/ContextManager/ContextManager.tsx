@@ -1,9 +1,9 @@
 import { Tab, Tabs, Typography } from '@mui/material';
 import React, { useState } from 'react';
-import PersonasTab from './PersonasTab';
-import PromptsTab from './PromptsTab';
+import PersonaManager from './PersonaManager';
+import PromptManager from './PromptManager';
 import TeamsTab from './TeamsTab';
-import ToolsTab from './ToolsTab';
+import ToolManager from './ToolManager';
 
 const ContextManager = () => {
     const [tab, setTab] = useState(0);
@@ -22,10 +22,10 @@ const ContextManager = () => {
                 <Tab label="Tools" />
                 <Tab label="Prompts" />
             </Tabs>
-            {tab === 0 && <PersonasTab />}
+            {tab === 0 && <PersonaManager />}
             {tab === 1 && <TeamsTab />}
-            {tab === 2 && <ToolsTab />}
-            {tab === 3 && <PromptsTab />}
+            {tab === 2 && <ToolManager />}
+            {tab === 3 && <PromptManager />}
         </>
     );
 };

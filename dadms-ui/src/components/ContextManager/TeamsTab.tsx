@@ -1,11 +1,11 @@
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItem, ListItemText, TextField, Typography } from '@mui/material';
 import React, { useState } from 'react';
-import { Team, Persona } from './types';
-import { Box, Typography, Button, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Chip } from '@mui/material';
+import { Persona, Team } from './types';
 
 // Mocked personas for demo
 const mockPersonas: Persona[] = [
-    { id: 'p1', name: 'Analyst', ... },
-    { id: 'p2', name: 'Engineer', ... },
+    { id: 'p1', name: 'Analyst' },
+    { id: 'p2', name: 'Engineer' },
     // ...
 ];
 
@@ -32,7 +32,7 @@ const TeamsTab: React.FC = () => {
                             secondary={team.description}
                         />
                         <Box>
-                            {team.persona_ids.map(pid => {
+                            {team.persona_ids.map((pid: string) => {
                                 const persona = mockPersonas.find(p => p.id === pid);
                                 return persona ? <Chip key={pid} label={persona.name} /> : null;
                             })}

@@ -5,6 +5,12 @@ export interface Team {
     persona_ids: string[]; // references to Persona IDs
 }
 
+export interface Persona {
+    id: string;
+    name: string;
+    // Add more fields as needed (e.g., role, expertise, etc.)
+}
+
 export interface ContextTemplate {
     id: string;
     project_id: string;
