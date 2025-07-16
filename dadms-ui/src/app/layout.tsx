@@ -70,6 +70,11 @@ export default function RootLayout({
                                     Thread Manager
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/aads" className="block px-3 py-2 rounded hover:bg-blue-100 text-gray-800 font-medium">
+                                    AASD (Finalize Decision)
+                                </Link>
+                            </li>
                             {/* Add more navigation links here as new pages are added */}
                         </ul>
                         <div className="mt-auto pt-8 text-xs text-gray-400">
