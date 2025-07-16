@@ -59,6 +59,17 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Teams Tab Enhancements (Context Manager)
+
+- Teams can now specify if a moderator is employed (checkbox in team dialog)
+- If enabled, a moderator persona can be selected from all available personas (not limited to team members)
+- Decision agreement type can be set for each team (dropdown: Voting, Moderator decides, Third party, Consensus, Random/Lottery)
+- Team data model updated to include: `uses_moderator`, `moderator_id`, and `decision_type`
+- Team summary displays decision type and moderator (if set)
+- UI/UX designed for easy backend integration in future
+
+---
+
 ## Next Steps
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.
