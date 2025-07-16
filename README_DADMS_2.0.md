@@ -88,3 +88,18 @@ This is a clean rebuild following modern development practices:
 - Comprehensive testing required
 - API documentation mandatory
 - Clean, readable code standards
+
+## Agent Assistance & Documentation Service (AASD)
+
+AASD is a post-process tool in DADMS that enables users to:
+- Review and finalize decisions with the help of an AI assistant or team.
+- Generate formal documentation (white paper) summarizing the decision, rationale, and supporting evidence.
+- Route the finalized decision document through an approval workflow managed by the BPMN server (Camunda).
+
+**Workflow:**
+1. Review process outcome, context, and supporting data.
+2. Collaborate with an AI assistant or team for feedback and improvement suggestions.
+3. Draft and edit a decision white paper using a rich text/markdown editor, with LLM assistance.
+4. Submit the document for approval via a BPMN-driven workflow, with status tracking and audit trail.
+
+AASD ensures that every major decision in DADMS is thoroughly reviewed, documented, and approved before implementation, supporting compliance, governance, and knowledge sharing across the organization.
