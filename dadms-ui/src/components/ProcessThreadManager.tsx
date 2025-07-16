@@ -17,6 +17,12 @@ import {
 import React, { useState } from 'react';
 
 // Mock data types
+interface TaskFeedback {
+    user: string;
+    timestamp: string;
+    comment: string;
+}
+
 interface ServiceTaskContext {
     task_id: string;
     name: string;
@@ -24,8 +30,10 @@ interface ServiceTaskContext {
     injected_context: any;
     output_context: any;
     created_at: string;
+    feedback?: TaskFeedback[];
 }
 
+// Extend ProcessThread to include thread-level feedback
 interface ProcessThread {
     thread_id: string;
     process_name: string;
@@ -34,6 +42,7 @@ interface ProcessThread {
     created_at: string;
     metadata: any;
     tasks: ServiceTaskContext[];
+    feedback?: TaskFeedback[];
 }
 
 const MOCK_PROCESS_THREADS: ProcessThread[] = [
@@ -44,6 +53,9 @@ const MOCK_PROCESS_THREADS: ProcessThread[] = [
         status: 'active',
         created_at: new Date().toISOString(),
         metadata: { project: 'Demo', process: 'Invoice Process' },
+        feedback: [
+            { user: 'Carol', timestamp: new Date().toISOString(), comment: 'Overall, this process run was smooth.' }
+        ],
         tasks: [
             {
                 task_id: 'task-1',
@@ -52,6 +64,10 @@ const MOCK_PROCESS_THREADS: ProcessThread[] = [
                 injected_context: { tool: 'OCR', confidence: 0.98 },
                 output_context: { extracted: true, fields: ['amount', 'date'] },
                 created_at: new Date().toISOString(),
+                feedback: [
+                    { user: 'Alice', timestamp: new Date().toISOString(), comment: 'Extraction looks good.' },
+                    { user: 'Bob', timestamp: new Date(Date.now() - 60000).toISOString(), comment: 'Consider double-checking the date field.' }
+                ]
             },
             {
                 task_id: 'task-2',
@@ -60,6 +76,7 @@ const MOCK_PROCESS_THREADS: ProcessThread[] = [
                 injected_context: { persona: 'Manager', rules: ['limit < 5000'] },
                 output_context: { approved: true, approver: 'Alice' },
                 created_at: new Date().toISOString(),
+                feedback: []
             },
         ],
     },
@@ -70,6 +87,7 @@ const MOCK_PROCESS_THREADS: ProcessThread[] = [
         status: 'completed',
         created_at: new Date(Date.now() - 86400000).toISOString(),
         metadata: { project: 'Demo', process: 'Purchase Process' },
+        feedback: [],
         tasks: [
             {
                 task_id: 'task-3',
@@ -101,6 +119,12 @@ const ProcessThreadManager: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedThreads, setExpandedThreads] = useState<{ [threadId: string]: boolean }>({});
+    // Add state for new feedback input
+    const [newFeedback, setNewFeedback] = useState<string>('');
+    const [feedbackError, setFeedbackError] = useState<string | null>(null);
+    // Add state for new thread feedback input
+    const [newThreadFeedback, setNewThreadFeedback] = useState<string>('');
+    const [threadFeedbackError, setThreadFeedbackError] = useState<string | null>(null);
 
     const filteredThreads = threads.filter(thread =>
         thread.process_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -117,6 +141,63 @@ const ProcessThreadManager: React.FC = () => {
     };
     const handleExpandToggle = (threadId: string) => {
         setExpandedThreads(prev => ({ ...prev, [threadId]: !prev[threadId] }));
+    };
+
+    // Add handler for submitting feedback
+    const handleAddFeedback = () => {
+        if (!selectedThread || !selectedTask) return;
+        if (!newFeedback.trim()) {
+            setFeedbackError('Comment cannot be empty.');
+            return;
+        }
+        // Add feedback to the selected task in local state
+        setThreads(prevThreads => prevThreads.map(thread => {
+            if (thread.thread_id !== selectedThread.thread_id) return thread;
+            return {
+                ...thread,
+                tasks: thread.tasks.map(task => {
+                    if (task.task_id !== selectedTask.task_id) return task;
+                    return {
+                        ...task,
+                        feedback: [
+                            ...(task.feedback || []),
+                            {
+                                user: 'CurrentUser', // Replace with real user in future
+                                timestamp: new Date().toISOString(),
+                                comment: newFeedback.trim(),
+                            }
+                        ]
+                    };
+                })
+            };
+        }));
+        setNewFeedback('');
+        setFeedbackError(null);
+    };
+
+    // Add handler for submitting thread feedback
+    const handleAddThreadFeedback = () => {
+        if (!selectedThread) return;
+        if (!newThreadFeedback.trim()) {
+            setThreadFeedbackError('Comment cannot be empty.');
+            return;
+        }
+        setThreads(prevThreads => prevThreads.map(thread => {
+            if (thread.thread_id !== selectedThread.thread_id) return thread;
+            return {
+                ...thread,
+                feedback: [
+                    ...(thread.feedback || []),
+                    {
+                        user: 'CurrentUser', // Replace with real user in future
+                        timestamp: new Date().toISOString(),
+                        comment: newThreadFeedback.trim(),
+                    }
+                ]
+            };
+        }));
+        setNewThreadFeedback('');
+        setThreadFeedbackError(null);
     };
 
     const selectedThread = threads.find(t => t.thread_id === selectedThreadId) || null;
@@ -246,9 +327,82 @@ const ProcessThreadManager: React.FC = () => {
                                     </CardContent>
                                 </Card>
                             </Box>
+                            <Box sx={{ p: 2, mt: 2 }}>
+                                <Typography variant="h6" gutterBottom>Feedback & Review</Typography>
+                                {(selectedTask.feedback && selectedTask.feedback.length > 0) ? (
+                                    <List sx={{ mb: 2 }}>
+                                        {selectedTask.feedback.map((fb, idx) => (
+                                            <React.Fragment key={idx}>
+                                                <ListItemText
+                                                    primary={<><b>{fb.user}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>{new Date(fb.timestamp).toLocaleString()}</span></>}
+                                                    secondary={fb.comment}
+                                                    sx={{ mb: 1 }}
+                                                />
+                                                <Divider />
+                                            </React.Fragment>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No feedback yet. Be the first to comment!</Typography>
+                                )}
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    minRows={2}
+                                    maxRows={4}
+                                    label="Add feedback or review"
+                                    value={newFeedback}
+                                    onChange={e => setNewFeedback(e.target.value)}
+                                    error={!!feedbackError}
+                                    helperText={feedbackError}
+                                    sx={{ mb: 1 }}
+                                />
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <IconButton color="primary" onClick={handleAddFeedback}>
+                                        <Typography variant="button">Submit</Typography>
+                                    </IconButton>
+                                </Box>
+                            </Box>
                         </Paper>
                     ) : (
                         <Paper sx={{ p: 0, height: '100%', overflow: 'auto', width: '100%', maxWidth: '100%', wordWrap: 'break-word', overflowWrap: 'break-word', hyphens: 'auto', '& *': { maxWidth: '100% !important', wordWrap: 'break-word !important', overflowWrap: 'break-word !important', whiteSpace: 'pre-wrap' } }}>
+                            {/* Thread Feedback Section */}
+                            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50', maxWidth: '100%', overflow: 'hidden' }}>
+                                <Typography variant="h6" gutterBottom>Thread Feedback & Review</Typography>
+                                {(selectedThread.feedback && selectedThread.feedback.length > 0) ? (
+                                    <List sx={{ mb: 2 }}>
+                                        {selectedThread.feedback.map((fb, idx) => (
+                                            <React.Fragment key={idx}>
+                                                <ListItemText
+                                                    primary={<><b>{fb.user}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>{new Date(fb.timestamp).toLocaleString()}</span></>}
+                                                    secondary={fb.comment}
+                                                    sx={{ mb: 1 }}
+                                                />
+                                                <Divider />
+                                            </React.Fragment>
+                                        ))}
+                                    </List>
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No thread feedback yet. Be the first to comment!</Typography>
+                                )}
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    minRows={2}
+                                    maxRows={4}
+                                    label="Add thread feedback or review"
+                                    value={newThreadFeedback}
+                                    onChange={e => setNewThreadFeedback(e.target.value)}
+                                    error={!!threadFeedbackError}
+                                    helperText={threadFeedbackError}
+                                    sx={{ mb: 1 }}
+                                />
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <IconButton color="primary" onClick={handleAddThreadFeedback}>
+                                        <Typography variant="button">Submit</Typography>
+                                    </IconButton>
+                                </Box>
+                            </Box>
                             {/* Thread Header */}
                             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50', maxWidth: '100%', overflow: 'hidden' }}>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
