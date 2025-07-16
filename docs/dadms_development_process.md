@@ -21,11 +21,28 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## Known Issues & Lessons Learned
+
+- **Camunda Variable Truncation:** Camunda's default schema uses `VARCHAR(4000)` for string process variables, which can cause truncation of large context data (e.g., long JSON or prompt context). In previous installations, attempts to alter the table type to `TEXT` were difficult and risky. The recommended approach is to use Camunda's `bytearray` variable type for large payloads instead of changing the table schema. No change is made now, but this is a known limitation to address if large context must be passed through BPMN workflows.
+
+---
+
+## Container Orchestration & Process Engine Integration
+
+- **Podman Compose Adoption:** Switched to using Podman Compose for local container orchestration, ensuring compatibility with rootless containers and modern Linux workflows.
+- **Camunda BPM Platform Integration:** Added Camunda BPM Platform to the docker-compose stack to support BPMN workflow execution as part of the DADMS architecture.
+- **Camunda 7.15.0/Postgres 15 Issue:** Initial attempt to use Camunda 7.15.0 with Postgres 15 failed due to JDBC driver incompatibility with the default `scram-sha-256` authentication in newer Postgres versions (error: `The authentication type 10 is not supported`).
+- **Resolution:** Upgraded Camunda to 7.18.0, which includes a newer JDBC driver supporting Postgres 13+ authentication methods. This resolved the startup and connectivity issues without requiring changes to Postgres configuration or downgrading the database version.
+- **Rationale:** Upgrading Camunda was the least disruptive and most future-proof solution, maintaining compatibility with the latest Postgres and container best practices.
+
+---
+
 ## Milestones & Progress
 - **Day 1:** Project CRUD UI and backend complete.
 - **Day 2:** Knowledge page scaffolded; Domain and Tag management UIs scaffolded with local state.
 - **Next:** Document upload and RAG search UI scaffolding; backend API integration for knowledge entities.
 - **Day X:** BPMN Workspace scaffolded with iframe integration of comprehensive_bpmn_modeler.html and localStorage-based model state management.
+- **Day X:** Camunda BPM Platform added to docker-compose; verified integration with Postgres 15 using Camunda 7.18.0 and Podman Compose. Documented and resolved authentication compatibility issues.
 
 ---
 
