@@ -136,12 +136,50 @@ services:
   #     - knowledge-service
   #     - llm-service
 
+  # MinIO - Object Storage for Artifacts
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9002:9000"   # S3 API
+      - "9001:9001"   # MinIO Console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Neo4j - Graph Database for Process/Task Relationships
+  neo4j:
+    image: docker.io/neo4j:5.13
+    container_name: neo4j
+    environment:
+      NEO4J_AUTH: neo4j/testpassword
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "testpassword", "RETURN 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
   camunda_data:
   ollama_data:
+  minio-data:
+  neo4j-data:
 
 
 networks:

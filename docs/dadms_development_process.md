@@ -150,6 +150,53 @@ This example demonstrates how DADMS supports safer, more transparent process evo
 
 ---
 
+## Task Execution Manager (TEM)
+
+The Task Execution Manager (TEM) is the core backend component responsible for orchestrating the execution of process tasks in DADMS. It is the critical link between workflow composition, service/tool invocation, and analysis/feedback capture.
+
+### Legacy Capabilities (Service Orchestrator)
+- **Dynamic Task Routing:** Routes tasks to the appropriate service/tool based on BPMN properties (service.type, service.name, etc.).
+- **Service Registry:** Supported Consul, config-based, and fallback registries for service discovery.
+- **HTTP Service Invocation:** Robust HTTP client with retry, pooling, and metrics.
+- **Batch Processing:** Efficient batch routing and prefetching for performance.
+- **Caching:** Time-expiring caches for process XML, service properties, documentation, and parsed XML.
+- **Analysis Integration:** Stores task analysis/results in vector and graph stores for later retrieval and impact analysis.
+- **Metrics & Monitoring:** Detailed metrics for cache usage, operation times, API calls, and processed tasks.
+
+### DADMS 2.0 Improvements & Principles
+- **Clean Architecture:**
+  - Separate orchestration logic, service registry, and analysis integration into clear domains/interfaces.
+  - Stateless, horizontally scalable design.
+- **Config-Driven Service Registry:**
+  - **Consul is not required for DADMS 2.0.**
+  - Use a simple config- or environment-driven registry for service endpoints.
+  - Keep the interface extensible for future dynamic discovery if needed.
+- **Plug-in Service Adapters:**
+  - Allow new service types (LLMs, RAG, external APIs) to be added as plug-ins, not hardcoded.
+- **LLM/AI Integration:**
+  - Support LLMs as orchestrators, enabling dynamic tool selection and context injection.
+  - Inject historical context, feedback, and similarity search results into service/LLM calls.
+- **Human-in-the-Loop Feedback:**
+  - Store and utilize human/SME feedback for continuous improvement and auditability.
+- **Observability & Governance:**
+  - Log all task executions, context, and decisions for compliance and traceability.
+  - Store and expose “why” a service/tool was chosen for a task (e.g., LLM rationale, similarity match).
+  - Integrate with impact analysis and risk reporting.
+- **Performance & Scalability:**
+  - Support async task execution and queue-based orchestration for scale.
+  - Use distributed caching if needed for large deployments.
+- **API-First Design:**
+  - Expose orchestration endpoints via OpenAPI spec for easy integration and testing.
+
+### TEM in the DADMS Architecture
+- The TEM receives tasks from the workflow engine (e.g., Camunda), determines the appropriate service/tool, and manages execution, context injection, and result/feedback capture.
+- It integrates tightly with the vector/graph stores for analysis, similarity search, and impact analysis.
+- The TEM is designed for extensibility, observability, and future-proofing, supporting both MVP and advanced DADMS capabilities.
+
+**Decision:** For DADMS 2.0, keep the orchestration layer as simple and maintainable as possible. Avoid unnecessary dependencies (e.g., Consul) unless required for scale or dynamic environments. Prioritize clean interfaces, plug-in extensibility, and robust metrics/auditability.
+
+---
+
 ## Next Steps
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.
@@ -285,3 +332,36 @@ The initial BPMN Workspace uses an iframe to embed the comprehensive_bpmn_modele
 8. **Audit & Export:** Provide audit trails, export options (PDF, SVG), and integration with the Document Generator service.
 
 These enhancements will be prioritized based on user feedback and MVP progress, with a focus on delivering a robust, extensible BPMN workflow design experience. 
+
+---
+
+## Artifact Management Strategy
+
+Artifacts in DADMS include diagrams (e.g., objective hierarchies, process charts), documents (PDFs, Markdown, CSVs), generated visuals (Mermaid diagrams, LLM-generated charts), and other files (data exports, reports).
+
+### Storage Approach
+- **Textual/Generated Artifacts (e.g., Mermaid, Markdown, JSON):**
+  - Store the source (and optionally a rendered preview) in the vector store as part of the process/thread context.
+  - No separate artifact manager is needed unless versioning or explicit artifact lifecycle is required.
+- **Large/Binary Artifacts (PDF, images, data files):**
+  - Store the file in MinIO (object store) as part of the docker compose stack.
+  - Store metadata, embeddings, and a reference (URL/key) in the vector store for semantic search and retrieval.
+  - This is especially useful for RAG, where full documents or chunks are retrieved for context injection.
+- **Process-Generated Artifacts (e.g., objective hierarchies, charts):**
+  - If generated by LLM or code, store the source (e.g., Mermaid) in the vector store.
+  - If user-edited or uploaded, treat as a document: store in MinIO + vector store reference.
+
+### Artifact Manager UI/Service
+- For MVP, a separate artifact manager service is **not required**.
+- A simple UI for upload, search, and retrieval can be added as needed.
+- All artifacts are linked to process runs, threads, or decisions via metadata in the vector store.
+
+### Example: Objective Hierarchy Chart
+- If generated as a Mermaid diagram by the LLM, store the Mermaid source in the vector store as part of the process/thread context.
+- If a user uploads a PDF or image of the chart, store the file in MinIO and the metadata/embedding in the vector store.
+- When displaying, either render from source or fetch the file as needed.
+
+### Implementation Decision
+- **Add a MinIO server to the docker compose setup** for storing uploaded documents and large artifacts as part of knowledge management.
+- Use the vector store for all text-based/generated artifacts and for metadata/search of binary files.
+- This approach balances simplicity, scalability, and future extensibility for DADMS artifact management. 
