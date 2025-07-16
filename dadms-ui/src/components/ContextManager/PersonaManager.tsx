@@ -1,7 +1,7 @@
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, OutlinedInput, Select, TextField, Typography } from "@mui/material";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 interface Persona {
     id: string;
@@ -20,13 +20,12 @@ const MOCK_TOOLS = [
     { id: "3", name: "AFSIM" },
 ];
 
-const MOCK_PERSONAS: Persona[] = [
-    { id: "1", name: "Risk Analyst", role: "Analyst", expertise: ["Risk", "Finance"], guidelines: "Be thorough and cautious.", tags: ['finance', 'analysis'], tool_ids: ["2"] },
-    { id: "2", name: "Mission Simulation Expert", role: "Simulation Expert", expertise: ["Simulation", "Mission Planning"], guidelines: "Use all available simulation tools.", tags: ['simulation'], tool_ids: ["1", "3"] },
-];
+interface PersonaManagerProps {
+    personas: Persona[];
+    setPersonas: Dispatch<SetStateAction<Persona[]>>;
+}
 
-export default function PersonaManager() {
-    const [personas, setPersonas] = useState<Persona[]>(MOCK_PERSONAS);
+export default function PersonaManager({ personas, setPersonas }: PersonaManagerProps) {
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState<Persona | null>(null);
     const [form, setForm] = useState<Omit<Persona, "id">>({ name: "", role: "", expertise: [], guidelines: "", tags: [], tool_ids: [] });
