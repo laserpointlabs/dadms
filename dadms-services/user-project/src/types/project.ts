@@ -8,6 +8,7 @@ export interface Project {
     settings: ProjectSettings;
     created_at: Date;
     updated_at: Date;
+    decision_context?: string;
 }
 
 export interface ProjectSettings {
@@ -21,6 +22,7 @@ export interface CreateProjectRequest {
     description: string;
     knowledge_domain: string;
     settings?: Partial<ProjectSettings>;
+    decision_context?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -29,6 +31,7 @@ export interface UpdateProjectRequest {
     knowledge_domain?: string;
     status?: 'active' | 'completed';
     settings?: Partial<ProjectSettings>;
+    decision_context?: string;
 }
 
 export interface ProjectListResponse {

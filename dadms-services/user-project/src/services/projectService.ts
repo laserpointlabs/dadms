@@ -16,9 +16,9 @@ export class ProjectService {
         };
 
         const query = `
-      INSERT INTO projects (id, name, description, owner_id, knowledge_domain, settings)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, name, description, owner_id, status, knowledge_domain, settings, created_at, updated_at
+      INSERT INTO projects (id, name, description, owner_id, knowledge_domain, settings, decision_context)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, name, description, owner_id, status, knowledge_domain, settings, decision_context, created_at, updated_at
     `;
 
         const values = [
@@ -27,7 +27,8 @@ export class ProjectService {
             projectData.description,
             userId,
             projectData.knowledge_domain,
-            JSON.stringify(defaultSettings)
+            JSON.stringify(defaultSettings),
+            projectData.decision_context || null
         ];
 
         try {
@@ -47,7 +48,7 @@ export class ProjectService {
 
         const countQuery = 'SELECT COUNT(*) FROM projects WHERE owner_id = $1';
         const dataQuery = `
-      SELECT id, name, description, owner_id, status, knowledge_domain, settings, created_at, updated_at
+      SELECT id, name, description, owner_id, status, knowledge_domain, settings, decision_context, created_at, updated_at
       FROM projects 
       WHERE owner_id = $1 
       ORDER BY created_at DESC 
@@ -80,7 +81,7 @@ export class ProjectService {
      */
     async getProject(projectId: string, userId: string): Promise<Project | null> {
         const query = `
-      SELECT id, name, description, owner_id, status, knowledge_domain, settings, created_at, updated_at
+      SELECT id, name, description, owner_id, status, knowledge_domain, settings, decision_context, created_at, updated_at
       FROM projects 
       WHERE id = $1 AND owner_id = $2
     `;
@@ -133,6 +134,10 @@ export class ProjectService {
             fields.push(`settings = $${paramCount++}`);
             values.push(JSON.stringify(mergedSettings));
         }
+        if (updateData.decision_context !== undefined) {
+            fields.push(`decision_context = $${paramCount++}`);
+            values.push(updateData.decision_context);
+        }
 
         if (fields.length === 0) {
             // No fields to update, return existing project
@@ -146,7 +151,7 @@ export class ProjectService {
       UPDATE projects 
       SET ${fields.join(', ')}
       WHERE id = $${paramCount++} AND owner_id = $${paramCount++}
-      RETURNING id, name, description, owner_id, status, knowledge_domain, settings, created_at, updated_at
+      RETURNING id, name, description, owner_id, status, knowledge_domain, settings, decision_context, created_at, updated_at
     `;
 
         try {
@@ -191,7 +196,8 @@ export class ProjectService {
             knowledge_domain: row.knowledge_domain,
             settings: typeof row.settings === 'string' ? JSON.parse(row.settings) : row.settings,
             created_at: new Date(row.created_at),
-            updated_at: new Date(row.updated_at)
+            updated_at: new Date(row.updated_at),
+            decision_context: row.decision_context || undefined
         };
     }
 } 

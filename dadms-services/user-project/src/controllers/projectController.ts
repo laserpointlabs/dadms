@@ -14,7 +14,8 @@ const createProjectSchema = Joi.object({
         default_llm: Joi.string(),
         personas: Joi.array().items(Joi.string()),
         tools_enabled: Joi.array().items(Joi.string())
-    }).optional()
+    }).optional(),
+    decision_context: Joi.string().max(2000).allow('').optional()
 });
 
 const updateProjectSchema = Joi.object({
@@ -26,7 +27,8 @@ const updateProjectSchema = Joi.object({
         default_llm: Joi.string(),
         personas: Joi.array().items(Joi.string()),
         tools_enabled: Joi.array().items(Joi.string())
-    }).optional()
+    }).optional(),
+    decision_context: Joi.string().max(2000).allow('').optional()
 });
 
 export class ProjectController {

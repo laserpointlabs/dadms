@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { CreateProjectRequest } from '../../types/project';
 
 interface CreateProjectProps {
-    onCreate: (data: CreateProjectRequest) => Promise<void>;
+    onCreate: (data: CreateProjectRequest) => void;
 }
 
 export const CreateProject: React.FC<CreateProjectProps> = ({ onCreate }) => {
     const [form, setForm] = useState<CreateProjectRequest>({
         name: '',
         description: '',
-        knowledge_domain: ''
+        knowledge_domain: '',
+        decision_context: ''
     });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -21,20 +21,13 @@ export const CreateProject: React.FC<CreateProjectProps> = ({ onCreate }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
-        try {
-            await onCreate(form);
-            setForm({ name: '', description: '', knowledge_domain: '' });
-        } catch (err: any) {
-            setError(err.message || 'Failed to create project');
-        } finally {
-            setLoading(false);
-        }
+        await onCreate(form);
+        setForm({ name: '', description: '', knowledge_domain: '', decision_context: '' });
+        setLoading(false);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-2 bg-white p-4 rounded shadow mb-6">
-            <h2 className="text-lg font-semibold">Create New Project</h2>
+        <form onSubmit={handleSubmit} className="mb-6 space-y-2">
             <input
                 name="name"
                 value={form.name}
@@ -59,14 +52,22 @@ export const CreateProject: React.FC<CreateProjectProps> = ({ onCreate }) => {
                 className="w-full border rounded px-2 py-1"
                 rows={2}
             />
+            <textarea
+                name="decision_context"
+                value={form.decision_context}
+                onChange={handleChange}
+                placeholder="Decision Context (e.g. What is this project trying to decide? Who are the stakeholders? Constraints?)"
+                className="w-full border rounded px-2 py-1 bg-yellow-50 border-yellow-300"
+                rows={3}
+                required
+            />
             <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-1 rounded disabled:opacity-50"
+                className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
                 disabled={loading}
             >
                 {loading ? 'Creating...' : 'Create Project'}
             </button>
-            {error && <div className="text-red-600 text-sm">{error}</div>}
         </form>
     );
 }; 
