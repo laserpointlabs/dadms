@@ -18,6 +18,7 @@ tracking:
     - "meetings"
     - "testing"
     - "deployment"
+    - "planning"
   default_category: "development"
   auto_commit: true
   break_reminders: false
