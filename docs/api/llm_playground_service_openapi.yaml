@@ -1,0 +1,1585 @@
+openapi: 3.0.3
+info:
+  title: LLM Playground Service API
+  description: |
+    Interactive interface for testing and experimenting with LLM models, prompts, personas, and tools.
+    Enables users to test different configurations, evaluate responses, and validate prompts before using them in production workflows.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3006
+    description: Development server
+  - url: https://api.dadms.com/playground
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "LLM Playground"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /api/models:
+    get:
+      summary: Get available models
+      description: Returns a list of all available LLM models across all providers
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/models/{modelId}:
+    get:
+      summary: Get model details
+      description: Returns detailed information about a specific model
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the model
+      responses:
+        '200':
+          description: Model details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/providers/status:
+    get:
+      summary: Get provider status
+      description: Returns the status and health of all LLM providers
+      responses:
+        '200':
+          description: Provider status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/prompts/execute:
+    post:
+      summary: Execute prompt
+      description: Execute a prompt against a specified model with optional tools and context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptExecutionRequest'
+      responses:
+        '200':
+          description: Prompt execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptExecutionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/prompts/execute/stream:
+    post:
+      summary: Stream prompt execution
+      description: Execute a prompt with streaming response for real-time output
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptExecutionRequest'
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  data: {"type": "start", "executionId": "exec-123"}
+                  data: {"type": "content", "content": "Based on the analysis..."}
+                  data: {"type": "end", "usage": {...}}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/templates:
+    get:
+      summary: Get prompt templates
+      description: Returns available prompt templates organized by category
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by template category
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+      responses:
+        '200':
+          description: List of prompt templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create prompt template
+      description: Create a new prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreateRequest'
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/templates/{templateId}:
+    put:
+      summary: Update prompt template
+      description: Update an existing prompt template
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdateRequest'
+      responses:
+        '200':
+          description: Template updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete prompt template
+      description: Delete a prompt template
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/sessions:
+    get:
+      summary: Get user sessions
+      description: Returns all sessions for the current user
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+          description: Filter by project ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of sessions to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of sessions to skip
+      responses:
+        '200':
+          description: List of user sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create session
+      description: Create a new testing session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/sessions/{sessionId}/history:
+    get:
+      summary: Get session history
+      description: Returns the execution history for a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session execution history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionHistoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/evaluation/probabilistic:
+    post:
+      summary: Run probabilistic test
+      description: Run a probabilistic test to evaluate prompt reliability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProbabilisticTestRequest'
+      responses:
+        '200':
+          description: Probabilistic test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbabilisticTestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/evaluation/{testId}:
+    get:
+      summary: Get evaluation results
+      description: Returns detailed results for a specific evaluation test
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Evaluation test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProbabilisticTestResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tools:
+    get:
+      summary: Get available tools
+      description: Returns all available tools that can be used with LLM prompts
+      responses:
+        '200':
+          description: List of available tools
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tools/{toolName}/test:
+    post:
+      summary: Test tool
+      description: Test a specific tool with provided parameters
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolTestRequest'
+      responses:
+        '200':
+          description: Tool test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolTestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/analytics/usage:
+    get:
+      summary: Get usage analytics
+      description: Returns usage analytics for the current user
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Start date for analytics (ISO 8601)
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: End date for analytics (ISO 8601)
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+          description: Group by day, week, month
+      responses:
+        '200':
+          description: Usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageAnalyticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/analytics/cost-estimation:
+    post:
+      summary: Get cost estimation
+      description: Estimate the cost of executing a prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CostEstimationRequest'
+      responses:
+        '200':
+          description: Cost estimation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostEstimationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+      required:
+        - models
+
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "gpt-4"
+        name:
+          type: string
+          example: "GPT-4"
+        provider:
+          type: string
+          example: "openai"
+        contextWindow:
+          type: integer
+          example: 8192
+        maxTokens:
+          type: integer
+          example: 4096
+        capabilities:
+          type: array
+          items:
+            type: string
+          example: ["text-generation", "function-calling", "vision"]
+        pricing:
+          $ref: '#/components/schemas/Pricing'
+        status:
+          type: string
+          enum: [available, unavailable, deprecated]
+          example: "available"
+      required:
+        - id
+        - name
+        - provider
+        - contextWindow
+        - maxTokens
+        - capabilities
+        - pricing
+        - status
+
+    ModelDetails:
+      allOf:
+        - $ref: '#/components/schemas/Model'
+        - type: object
+          properties:
+            description:
+              type: string
+              example: "Most capable GPT-4 model for complex reasoning tasks"
+            parameters:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/ModelParameter'
+            lastUpdated:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+
+    ModelParameter:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+        default:
+          type: number
+        description:
+          type: string
+
+    Pricing:
+      type: object
+      properties:
+        input:
+          type: number
+          example: 0.03
+        output:
+          type: number
+          example: 0.06
+        currency:
+          type: string
+          example: "USD"
+        unit:
+          type: string
+          example: "per_1k_tokens"
+      required:
+        - input
+        - output
+        - currency
+        - unit
+
+    ProviderStatusResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderStatus'
+      required:
+        - providers
+
+    ProviderStatus:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "openai"
+        status:
+          type: string
+          enum: [healthy, degraded, down]
+          example: "healthy"
+        models:
+          type: integer
+          example: 5
+        rateLimit:
+          $ref: '#/components/schemas/RateLimit'
+        quota:
+          $ref: '#/components/schemas/Quota'
+        lastCheck:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+      required:
+        - name
+        - status
+        - models
+        - rateLimit
+        - quota
+        - lastCheck
+
+    RateLimit:
+      type: object
+      properties:
+        requests:
+          type: string
+          example: "3500"
+        tokens:
+          type: string
+          example: "90000"
+        window:
+          type: string
+          example: "per_minute"
+      required:
+        - requests
+        - tokens
+        - window
+
+    Quota:
+      type: object
+      properties:
+        used:
+          type: integer
+          example: 1500000
+        limit:
+          type: integer
+          example: 10000000
+        resetDate:
+          type: string
+          format: date-time
+          example: "2024-02-01T00:00:00Z"
+      required:
+        - used
+        - limit
+        - resetDate
+
+    PromptExecutionRequest:
+      type: object
+      properties:
+        modelId:
+          type: string
+          example: "gpt-4"
+        prompt:
+          type: string
+          example: "Analyze the following decision context and provide recommendations:"
+        systemPrompt:
+          type: string
+          example: "You are an expert decision analyst with 20 years of experience."
+        context:
+          type: object
+          additionalProperties: true
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        stream:
+          type: boolean
+          default: false
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - modelId
+        - prompt
+
+    ExecutionParameters:
+      type: object
+      properties:
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          example: 0.7
+        maxTokens:
+          type: integer
+          minimum: 1
+          example: 1000
+        topP:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.9
+        frequencyPenalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          example: 0
+        presencePenalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          example: 0
+
+    Tool:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "search_knowledge_base"
+        description:
+          type: string
+          example: "Search the knowledge base for relevant documents"
+        parameters:
+          type: object
+          additionalProperties: true
+      required:
+        - name
+        - description
+
+    PromptExecutionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "exec-123"
+        modelId:
+          type: string
+          example: "gpt-4"
+        prompt:
+          type: string
+          example: "Analyze the following decision context and provide recommendations:"
+        response:
+          type: string
+          example: "Based on the decision context provided, I recommend the following approach..."
+        usage:
+          $ref: '#/components/schemas/TokenUsage'
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolExecution'
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - modelId
+        - prompt
+        - response
+        - usage
+        - metadata
+
+    TokenUsage:
+      type: object
+      properties:
+        promptTokens:
+          type: integer
+          example: 150
+        completionTokens:
+          type: integer
+          example: 450
+        totalTokens:
+          type: integer
+          example: 600
+        estimatedCost:
+          type: number
+          example: 0.027
+      required:
+        - promptTokens
+        - completionTokens
+        - totalTokens
+        - estimatedCost
+
+    ToolExecution:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "search_knowledge_base"
+        input:
+          type: object
+          additionalProperties: true
+        output:
+          type: object
+          additionalProperties: true
+      required:
+        - name
+        - input
+        - output
+
+    TemplatesResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+      required:
+        - templates
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "decision-analysis"
+        name:
+          type: string
+          example: "Decision Analysis"
+        category:
+          type: string
+          example: "analysis"
+        description:
+          type: string
+          example: "Template for analyzing decision contexts and providing recommendations"
+        prompt:
+          type: string
+          example: "Analyze the following decision context:\n\nContext: {context}\n\nStakeholders: {stakeholders}\n\nProvide a structured analysis including:\n1. Key considerations\n2. Risk assessment\n3. Recommendations"
+        variables:
+          type: array
+          items:
+            type: string
+          example: ["context", "stakeholders"]
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["decision", "analysis", "recommendation"]
+        usage:
+          type: integer
+          example: 45
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          example: 4.8
+        createdBy:
+          type: string
+          example: "user-123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-10T10:00:00Z"
+      required:
+        - id
+        - name
+        - category
+        - description
+        - prompt
+        - variables
+        - tags
+        - createdBy
+        - createdAt
+
+    TemplateCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Cost-Benefit Analysis"
+        category:
+          type: string
+          example: "analysis"
+        description:
+          type: string
+          example: "Template for conducting cost-benefit analysis"
+        prompt:
+          type: string
+          example: "Conduct a cost-benefit analysis for the following proposal:\n\nProposal: {proposal}\n\nCosts: {costs}\n\nBenefits: {benefits}\n\nProvide a detailed analysis with recommendations."
+        variables:
+          type: array
+          items:
+            type: string
+          example: ["proposal", "costs", "benefits"]
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["cost", "benefit", "analysis"]
+        isPublic:
+          type: boolean
+          default: false
+      required:
+        - name
+        - category
+        - description
+        - prompt
+        - variables
+        - tags
+
+    TemplateUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        prompt:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+
+    SessionsResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        total:
+          type: integer
+          example: 25
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - sessions
+        - total
+        - limit
+        - offset
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "session-456"
+        name:
+          type: string
+          example: "UAV Decision Analysis Session"
+        description:
+          type: string
+          example: "Testing prompts for UAV acquisition decision analysis"
+        projectId:
+          type: string
+          example: "proj-123"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["uav", "acquisition", "decision"]
+        createdBy:
+          type: string
+          example: "user-789"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        executionCount:
+          type: integer
+          example: 0
+        lastExecuted:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+      required:
+        - id
+        - name
+        - description
+        - projectId
+        - tags
+        - createdBy
+        - createdAt
+        - executionCount
+        - lastExecuted
+
+    SessionCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "UAV Decision Analysis Session"
+        description:
+          type: string
+          example: "Testing prompts for UAV acquisition decision analysis"
+        projectId:
+          type: string
+          example: "proj-123"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["uav", "acquisition", "decision"]
+      required:
+        - name
+        - description
+        - projectId
+        - tags
+
+    SessionHistoryResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          example: "session-456"
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionHistory'
+        summary:
+          $ref: '#/components/schemas/HistorySummary'
+      required:
+        - sessionId
+        - executions
+        - summary
+
+    ExecutionHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "exec-123"
+        modelId:
+          type: string
+          example: "gpt-4"
+        prompt:
+          type: string
+          example: "Analyze the UAV acquisition decision..."
+        response:
+          type: string
+          example: "Based on the analysis..."
+        usage:
+          $ref: '#/components/schemas/TokenUsage'
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+        executionTime:
+          type: number
+          example: 2.3
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        status:
+          type: string
+          enum: [completed, failed, cancelled]
+          example: "completed"
+      required:
+        - id
+        - modelId
+        - prompt
+        - response
+        - usage
+        - parameters
+        - executionTime
+        - timestamp
+        - status
+
+    HistorySummary:
+      type: object
+      properties:
+        totalExecutions:
+          type: integer
+          example: 15
+        totalTokens:
+          type: integer
+          example: 9000
+        totalCost:
+          type: number
+          example: 0.405
+        averageExecutionTime:
+          type: number
+          example: 2.1
+      required:
+        - totalExecutions
+        - totalTokens
+        - totalCost
+        - averageExecutionTime
+
+    ProbabilisticTestRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+          example: "Analyze the decision context and provide recommendations"
+        modelId:
+          type: string
+          example: "gpt-4"
+        testCases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestCase'
+        parameters:
+          $ref: '#/components/schemas/TestParameters'
+      required:
+        - prompt
+        - modelId
+        - testCases
+        - parameters
+
+    TestCase:
+      type: object
+      properties:
+        input:
+          type: object
+          additionalProperties: true
+        expectedOutput:
+          $ref: '#/components/schemas/ExpectedOutput'
+      required:
+        - input
+        - expectedOutput
+
+    ExpectedOutput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [contains, exact, regex, semantic]
+          example: "contains"
+        keywords:
+          type: array
+          items:
+            type: string
+          example: ["recommendation", "analysis", "risk"]
+        pattern:
+          type: string
+          example: ".*recommendation.*"
+      required:
+        - type
+
+    TestParameters:
+      type: object
+      properties:
+        runs:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 10
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          example: 0.7
+        evaluationCriteria:
+          type: array
+          items:
+            type: string
+          example: ["completeness", "relevance", "structure"]
+      required:
+        - runs
+        - temperature
+        - evaluationCriteria
+
+    ProbabilisticTestResponse:
+      type: object
+      properties:
+        testId:
+          type: string
+          example: "test-789"
+        prompt:
+          type: string
+          example: "Analyze the decision context and provide recommendations"
+        modelId:
+          type: string
+          example: "gpt-4"
+        results:
+          $ref: '#/components/schemas/TestResults'
+        summary:
+          $ref: '#/components/schemas/TestSummary'
+        recommendations:
+          type: array
+          items:
+            type: string
+          example: ["Consider adding more specific criteria for risk assessment", "Include cost-benefit analysis in the prompt"]
+      required:
+        - testId
+        - prompt
+        - modelId
+        - results
+        - summary
+        - recommendations
+
+    TestResults:
+      type: object
+      properties:
+        totalRuns:
+          type: integer
+          example: 10
+        successfulRuns:
+          type: integer
+          example: 9
+        successRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.9
+        averageScore:
+          type: number
+          minimum: 0
+          maximum: 5
+          example: 4.2
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestExecution'
+      required:
+        - totalRuns
+        - successfulRuns
+        - successRate
+        - averageScore
+        - executions
+
+    TestExecution:
+      type: object
+      properties:
+        runId:
+          type: integer
+          example: 1
+        input:
+          type: object
+          additionalProperties: true
+        output:
+          type: string
+          example: "Based on the analysis..."
+        score:
+          type: number
+          minimum: 0
+          maximum: 5
+          example: 4.5
+        passed:
+          type: boolean
+          example: true
+        feedback:
+          type: string
+          example: "Good structure and comprehensive analysis"
+      required:
+        - runId
+        - input
+        - output
+        - score
+        - passed
+        - feedback
+
+    TestSummary:
+      type: object
+      properties:
+        completeness:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.95
+        relevance:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.88
+        structure:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.92
+      required:
+        - completeness
+        - relevance
+        - structure
+
+    ToolsResponse:
+      type: object
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolDefinition'
+      required:
+        - tools
+
+    ToolDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "search_knowledge_base"
+        description:
+          type: string
+          example: "Search the knowledge base for relevant documents"
+        category:
+          type: string
+          example: "knowledge"
+        parameters:
+          type: object
+          additionalProperties: true
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolExample'
+      required:
+        - name
+        - description
+        - category
+        - parameters
+
+    ToolExample:
+      type: object
+      properties:
+        query:
+          type: string
+          example: "UAV acquisition criteria"
+        description:
+          type: string
+          example: "Search for UAV acquisition guidelines"
+      required:
+        - query
+        - description
+
+    ToolTestRequest:
+      type: object
+      properties:
+        parameters:
+          type: object
+          additionalProperties: true
+      required:
+        - parameters
+
+    ToolTestResponse:
+      type: object
+      properties:
+        toolName:
+          type: string
+          example: "search_knowledge_base"
+        parameters:
+          type: object
+          additionalProperties: true
+        result:
+          type: object
+          additionalProperties: true
+        executionTime:
+          type: number
+          example: 0.5
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+      required:
+        - toolName
+        - parameters
+        - result
+        - executionTime
+        - timestamp
+
+    UsageAnalyticsResponse:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/AnalyticsPeriod'
+        summary:
+          $ref: '#/components/schemas/AnalyticsSummary'
+        byModel:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelAnalytics'
+        byDay:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyAnalytics'
+      required:
+        - period
+        - summary
+        - byModel
+        - byDay
+
+    AnalyticsPeriod:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        endDate:
+          type: string
+          format: date-time
+          example: "2024-01-15T23:59:59Z"
+      required:
+        - startDate
+        - endDate
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        totalExecutions:
+          type: integer
+          example: 150
+        totalTokens:
+          type: integer
+          example: 45000
+        totalCost:
+          type: number
+          example: 2.025
+        averageExecutionTime:
+          type: number
+          example: 2.3
+      required:
+        - totalExecutions
+        - totalTokens
+        - totalCost
+        - averageExecutionTime
+
+    ModelAnalytics:
+      type: object
+      properties:
+        modelId:
+          type: string
+          example: "gpt-4"
+        executions:
+          type: integer
+          example: 100
+        tokens:
+          type: integer
+          example: 30000
+        cost:
+          type: number
+          example: 1.35
+      required:
+        - modelId
+        - executions
+        - tokens
+        - cost
+
+    DailyAnalytics:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-01-15"
+        executions:
+          type: integer
+          example: 10
+        tokens:
+          type: integer
+          example: 3000
+        cost:
+          type: number
+          example: 0.135
+      required:
+        - date
+        - executions
+        - tokens
+        - cost
+
+    CostEstimationRequest:
+      type: object
+      properties:
+        modelId:
+          type: string
+          example: "gpt-4"
+        prompt:
+          type: string
+          example: "Analyze the decision context..."
+        estimatedOutputTokens:
+          type: integer
+          example: 500
+      required:
+        - modelId
+        - prompt
+        - estimatedOutputTokens
+
+    CostEstimationResponse:
+      type: object
+      properties:
+        modelId:
+          type: string
+          example: "gpt-4"
+        estimatedCost:
+          type: number
+          example: 0.027
+        breakdown:
+          $ref: '#/components/schemas/CostBreakdown'
+        currency:
+          type: string
+          example: "USD"
+      required:
+        - modelId
+        - estimatedCost
+        - breakdown
+        - currency
+
+    CostBreakdown:
+      type: object
+      properties:
+        inputTokens:
+          type: integer
+          example: 150
+        inputCost:
+          type: number
+          example: 0.0045
+        outputTokens:
+          type: integer
+          example: 500
+        outputCost:
+          type: number
+          example: 0.03
+        totalCost:
+          type: number
+          example: 0.0345
+      required:
+        - inputTokens
+        - inputCost
+        - outputTokens
+        - outputCost
+        - totalCost
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_MODEL"
+            message:
+              type: string
+              example: "The specified model is not available"
+            details:
+              type: object
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+          required:
+            - code
+            - message
+            - timestamp
+      required:
+        - error 

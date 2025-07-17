@@ -12,6 +12,7 @@ This directory contains API documentation for all DADMS services.
 - **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3005) - **NEW: Intelligent assistant**
 
 ### Extended Services (Week 2+)
+- **[Thread Manager Service API](thread_manager_service_openapi.yaml)** (Port 3008) - **NEW: Process traceability & feedback**
 - **[BPMN Workspace API](bpmn-workspace-api.md)** (Port 3006)
 - **[Process Management API](process-management-api.md)** (Port 3007)
 
@@ -82,6 +83,7 @@ User Action → Service → Event Bus → AAS → Proactive Assistance
 - [x] Knowledge Service API
 - [x] **Event Bus Service API** - ✅ NEW
 - [x] **Agent Assistance Service API** - ✅ NEW
+- [x] **Thread Manager Service API** - ✅ NEW
 - [ ] BPMN Workspace API
 - [ ] Process Management API
 

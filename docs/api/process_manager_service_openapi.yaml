@@ -1,0 +1,1697 @@
+openapi: 3.0.3
+info:
+  title: Process Manager Service API
+  description: |
+    Comprehensive BPMN process management capabilities including process definitions, instances, deployment, monitoring, and lifecycle management.
+    Serves as the central interface for managing workflow processes in DADMS.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3007
+    description: Development server
+  - url: https://api.dadms.com/process-manager
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "Process Manager"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /api/processes/definitions:
+    get:
+      summary: Get process definitions
+      description: Returns a list of all available process definitions
+      parameters:
+        - name: key
+          in: query
+          schema:
+            type: string
+          description: Filter by process key
+        - name: version
+          in: query
+          schema:
+            type: integer
+          description: Filter by specific version
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of definitions to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of definitions to skip
+      responses:
+        '200':
+          description: List of process definitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDefinitionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Deploy process definition
+      description: Deploy a new process definition from BPMN XML
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessDeploymentRequest'
+      responses:
+        '201':
+          description: Process definition deployed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDeploymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/definitions/{definitionId}:
+    get:
+      summary: Get process definition details
+      description: Returns detailed information about a specific process definition
+      parameters:
+        - name: definitionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the process definition
+      responses:
+        '200':
+          description: Process definition details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDefinitionDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update process definition
+      description: Update an existing process definition
+      parameters:
+        - name: definitionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessUpdateRequest'
+      responses:
+        '200':
+          description: Process definition updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDefinitionDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete process definition
+      description: Delete a process definition and all its instances
+      parameters:
+        - name: definitionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: cascade
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Cascade delete to instances
+      responses:
+        '204':
+          description: Process definition deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/definitions/{definitionId}/suspended:
+    put:
+      summary: Suspend/activate process definition
+      description: Suspend or activate a process definition
+      parameters:
+        - name: definitionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendRequest'
+      responses:
+        '200':
+          description: Process definition suspension status updated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/instances:
+    get:
+      summary: Get process instances
+      description: Returns a list of process instances
+      parameters:
+        - name: processDefinitionKey
+          in: query
+          schema:
+            type: string
+          description: Filter by process definition key
+        - name: businessKey
+          in: query
+          schema:
+            type: string
+          description: Filter by business key
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, completed, terminated]
+          description: Filter by status
+        - name: startedBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter instances started before date
+        - name: startedAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter instances started after date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of instances to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of instances to skip
+      responses:
+        '200':
+          description: List of process instances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstancesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Start process instance
+      description: Start a new process instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessInstanceStartRequest'
+      responses:
+        '201':
+          description: Process instance started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/instances/{instanceId}:
+    get:
+      summary: Get process instance details
+      description: Returns detailed information about a specific process instance
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Process instance details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Terminate process instance
+      description: Terminate a process instance
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deleteReason
+          in: query
+          schema:
+            type: string
+          description: Reason for termination
+      responses:
+        '204':
+          description: Process instance terminated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/instances/{instanceId}/suspended:
+    put:
+      summary: Suspend/activate process instance
+      description: Suspend or activate a process instance
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceSuspendRequest'
+      responses:
+        '200':
+          description: Process instance suspension status updated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/instances/{instanceId}/variables:
+    get:
+      summary: Get process instance variables
+      description: Returns all variables for a process instance
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Process instance variables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessVariables'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update process instance variables
+      description: Update variables for a process instance
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessVariables'
+      responses:
+        '200':
+          description: Process instance variables updated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks:
+    get:
+      summary: Get tasks
+      description: Returns a list of tasks
+      parameters:
+        - name: processInstanceId
+          in: query
+          schema:
+            type: string
+          description: Filter by process instance ID
+        - name: assignee
+          in: query
+          schema:
+            type: string
+          description: Filter by assignee
+        - name: candidateUser
+          in: query
+          schema:
+            type: string
+          description: Filter by candidate user
+        - name: candidateGroup
+          in: query
+          schema:
+            type: string
+          description: Filter by candidate group
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [created, assigned, completed]
+          description: Filter by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of tasks to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of tasks to skip
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/{taskId}:
+    get:
+      summary: Get task details
+      description: Returns detailed information about a specific task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/{taskId}/complete:
+    post:
+      summary: Complete task
+      description: Complete a task with variables
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletionRequest'
+      responses:
+        '200':
+          description: Task completed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/{taskId}/claim:
+    post:
+      summary: Claim task
+      description: Claim a task for the current user
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task claimed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/{taskId}/unclaim:
+    post:
+      summary: Unclaim task
+      description: Unclaim a task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task unclaimed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/{taskId}/assign:
+    post:
+      summary: Assign task
+      description: Assign a task to a specific user
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssignmentRequest'
+      responses:
+        '200':
+          description: Task assigned successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/incidents:
+    get:
+      summary: Get incidents
+      description: Returns a list of incidents
+      parameters:
+        - name: processInstanceId
+          in: query
+          schema:
+            type: string
+          description: Filter by process instance ID
+        - name: incidentType
+          in: query
+          schema:
+            type: string
+          description: Filter by incident type
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, resolved]
+          description: Filter by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of incidents to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of incidents to skip
+      responses:
+        '200':
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/incidents/{incidentId}/resolve:
+    post:
+      summary: Resolve incident
+      description: Resolve an incident
+      parameters:
+        - name: incidentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentResolutionRequest'
+      responses:
+        '200':
+          description: Incident resolved successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/statistics:
+    get:
+      summary: Get process statistics
+      description: Returns process statistics and analytics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Start date for statistics
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: End date for statistics
+        - name: processDefinitionKey
+          in: query
+          schema:
+            type: string
+          description: Filter by process definition key
+      responses:
+        '200':
+          description: Process statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatisticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processes/tasks/statistics:
+    get:
+      summary: Get task statistics
+      description: Returns task statistics and analytics
+      responses:
+        '200':
+          description: Task statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatisticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ProcessDefinitionsResponse:
+      type: object
+      properties:
+        definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessDefinition'
+        total:
+          type: integer
+          example: 25
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - definitions
+        - total
+        - limit
+        - offset
+
+    ProcessDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "decision-analysis:1:abc123"
+        key:
+          type: string
+          example: "decision-analysis"
+        name:
+          type: string
+          example: "Decision Analysis Process"
+        version:
+          type: integer
+          example: 1
+        category:
+          type: string
+          example: "decision"
+        description:
+          type: string
+          example: "Multi-step decision analysis workflow"
+        deploymentId:
+          type: string
+          example: "deploy-456"
+        deployedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        active:
+          type: boolean
+          example: true
+        suspended:
+          type: boolean
+          example: false
+        instances:
+          type: integer
+          example: 5
+        xml:
+          type: string
+          example: "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">...</bpmn:definitions>"
+      required:
+        - id
+        - key
+        - name
+        - version
+        - category
+        - description
+        - deploymentId
+        - deployedAt
+        - active
+        - suspended
+        - instances
+
+    ProcessDefinitionDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProcessDefinition'
+        - type: object
+          properties:
+            diagram:
+              type: string
+              example: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCI+..."
+            startForm:
+              $ref: '#/components/schemas/StartForm'
+            tasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProcessTask'
+
+    StartForm:
+      type: object
+      properties:
+        key:
+          type: string
+          example: "decision-analysis-start"
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormField'
+      required:
+        - key
+        - fields
+
+    FormField:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "projectId"
+        label:
+          type: string
+          example: "Project ID"
+        type:
+          type: string
+          example: "string"
+        required:
+          type: boolean
+          example: true
+        options:
+          type: array
+          items:
+            type: string
+          example: ["acquisition", "strategy", "operation"]
+      required:
+        - id
+        - label
+        - type
+        - required
+
+    ProcessTask:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "task-1"
+        name:
+          type: string
+          example: "Define Objectives"
+        type:
+          type: string
+          enum: [userTask, serviceTask, scriptTask]
+          example: "userTask"
+        assignee:
+          type: string
+          example: "decision-analyst"
+        candidateGroups:
+          type: array
+          items:
+            type: string
+          example: ["analysts", "stakeholders"]
+        serviceType:
+          type: string
+          example: "llm"
+        serviceName:
+          type: string
+          example: "alternative-analysis"
+      required:
+        - id
+        - name
+        - type
+
+    ProcessDeploymentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "New Decision Process"
+        key:
+          type: string
+          example: "new-decision-process"
+        category:
+          type: string
+          example: "decision"
+        description:
+          type: string
+          example: "New decision analysis workflow"
+        xml:
+          type: string
+          example: "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">...</bpmn:definitions>"
+        enableDuplicateFiltering:
+          type: boolean
+          default: true
+        deployChangedOnly:
+          type: boolean
+          default: false
+      required:
+        - name
+        - key
+        - category
+        - description
+        - xml
+
+    ProcessDeploymentResponse:
+      type: object
+      properties:
+        deploymentId:
+          type: string
+          example: "deploy-123"
+        definitionId:
+          type: string
+          example: "new-decision-process:1:def456"
+        name:
+          type: string
+          example: "New Decision Process"
+        key:
+          type: string
+          example: "new-decision-process"
+        version:
+          type: integer
+          example: 1
+        deployedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T11:00:00Z"
+        status:
+          type: string
+          example: "deployed"
+      required:
+        - deploymentId
+        - definitionId
+        - name
+        - key
+        - version
+        - deployedAt
+        - status
+
+    ProcessUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated Decision Process"
+        description:
+          type: string
+          example: "Updated decision analysis workflow"
+        xml:
+          type: string
+          example: "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">...</bpmn:definitions>"
+
+    SuspendRequest:
+      type: object
+      properties:
+        suspended:
+          type: boolean
+          example: true
+        includeProcessInstances:
+          type: boolean
+          example: true
+        executionDate:
+          type: string
+          format: date-time
+          example: "2024-01-15T12:00:00Z"
+      required:
+        - suspended
+
+    ProcessInstancesResponse:
+      type: object
+      properties:
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessInstance'
+        total:
+          type: integer
+          example: 50
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - instances
+        - total
+        - limit
+        - offset
+
+    ProcessInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "instance-123"
+        processDefinitionId:
+          type: string
+          example: "decision-analysis:1:abc123"
+        processDefinitionKey:
+          type: string
+          example: "decision-analysis"
+        processDefinitionName:
+          type: string
+          example: "Decision Analysis Process"
+        businessKey:
+          type: string
+          example: "proj-uav-2024"
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        duration:
+          type: integer
+          example: 3600
+        status:
+          type: string
+          enum: [active, suspended, completed, terminated]
+          example: "active"
+        startedBy:
+          type: string
+          example: "user-456"
+        variables:
+          type: object
+          additionalProperties: true
+          example:
+            projectId: "proj-123"
+            decisionType: "acquisition"
+            stakeholders: ["Col. Smith", "Maj. Johnson"]
+        currentActivities:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrentActivity'
+      required:
+        - id
+        - processDefinitionId
+        - processDefinitionKey
+        - processDefinitionName
+        - businessKey
+        - startTime
+        - status
+        - startedBy
+
+    ProcessInstanceDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProcessInstance'
+        - type: object
+          properties:
+            activities:
+              type: array
+              items:
+                $ref: '#/components/schemas/Activity'
+            incidents:
+              type: array
+              items:
+                $ref: '#/components/schemas/Incident'
+            executionPath:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExecutionPath'
+
+    CurrentActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "task-1"
+        name:
+          type: string
+          example: "Define Objectives"
+        type:
+          type: string
+          enum: [userTask, serviceTask, scriptTask]
+          example: "userTask"
+        assignee:
+          type: string
+          example: "user-789"
+      required:
+        - id
+        - name
+        - type
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "task-1"
+        name:
+          type: string
+          example: "Define Objectives"
+        type:
+          type: string
+          enum: [startEvent, userTask, serviceTask, scriptTask, endEvent]
+          example: "userTask"
+        status:
+          type: string
+          enum: [completed, active, failed]
+          example: "active"
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:05Z"
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        assignee:
+          type: string
+          example: "user-789"
+        dueDate:
+          type: string
+          format: date-time
+          example: "2024-01-16T10:30:00Z"
+      required:
+        - id
+        - name
+        - type
+        - status
+        - startTime
+
+    ExecutionPath:
+      type: object
+      properties:
+        activityId:
+          type: string
+          example: "task-1"
+        activityName:
+          type: string
+          example: "Define Objectives"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:05Z"
+      required:
+        - activityId
+        - activityName
+        - timestamp
+
+    ProcessInstanceStartRequest:
+      type: object
+      properties:
+        processDefinitionKey:
+          type: string
+          example: "decision-analysis"
+        businessKey:
+          type: string
+          example: "proj-uav-2024"
+        variables:
+          type: object
+          additionalProperties: true
+          example:
+            projectId: "proj-123"
+            decisionType: "acquisition"
+            stakeholders: ["Col. Smith", "Maj. Johnson"]
+            priority: "high"
+        startInstructions:
+          type: array
+          items:
+            $ref: '#/components/schemas/StartInstruction'
+      required:
+        - processDefinitionKey
+
+    StartInstruction:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [startBeforeActivity, startAfterActivity]
+          example: "startBeforeActivity"
+        activityId:
+          type: string
+          example: "task-1"
+      required:
+        - type
+        - activityId
+
+    InstanceSuspendRequest:
+      type: object
+      properties:
+        suspended:
+          type: boolean
+          example: true
+      required:
+        - suspended
+
+    ProcessVariables:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/ProcessVariable'
+
+    ProcessVariable:
+      type: object
+      properties:
+        value:
+          type: object
+          additionalProperties: true
+        type:
+          type: string
+          example: "String"
+        valueInfo:
+          type: object
+          additionalProperties: true
+      required:
+        - value
+        - type
+
+    TasksResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        total:
+          type: integer
+          example: 15
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - tasks
+        - total
+        - limit
+        - offset
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "task-123"
+        name:
+          type: string
+          example: "Define Objectives"
+        description:
+          type: string
+          example: "Define the objectives for the decision analysis"
+        processInstanceId:
+          type: string
+          example: "instance-123"
+        processDefinitionId:
+          type: string
+          example: "decision-analysis:1:abc123"
+        processDefinitionKey:
+          type: string
+          example: "decision-analysis"
+        taskDefinitionKey:
+          type: string
+          example: "define-objectives"
+        assignee:
+          type: string
+          example: "user-789"
+        created:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:05Z"
+        due:
+          type: string
+          format: date-time
+          example: "2024-01-16T10:30:00Z"
+        followUp:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00Z"
+        priority:
+          type: integer
+          example: 50
+        status:
+          type: string
+          enum: [created, assigned, completed]
+          example: "assigned"
+        variables:
+          type: object
+          additionalProperties: true
+          example:
+            projectId: "proj-123"
+            decisionType: "acquisition"
+      required:
+        - id
+        - name
+        - processInstanceId
+        - processDefinitionId
+        - processDefinitionKey
+        - created
+        - status
+
+    TaskDetails:
+      allOf:
+        - $ref: '#/components/schemas/Task'
+        - type: object
+          properties:
+            owner:
+              type: string
+              example: "user-456"
+            formKey:
+              type: string
+              example: "define-objectives-form"
+            candidateUsers:
+              type: array
+              items:
+                type: string
+              example: ["user-789", "user-456"]
+            candidateGroups:
+              type: array
+              items:
+                type: string
+              example: ["analysts", "stakeholders"]
+
+    TaskCompletionRequest:
+      type: object
+      properties:
+        variables:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ProcessVariable'
+          example:
+            objectives:
+              value: "Maximize operational effectiveness while minimizing cost"
+              type: "String"
+            constraints:
+              value: ["budget", "timeline", "regulatory"]
+              type: "Json"
+
+    TaskAssignmentRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "user-789"
+      required:
+        - userId
+
+    IncidentsResponse:
+      type: object
+      properties:
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        total:
+          type: integer
+          example: 5
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - incidents
+        - total
+        - limit
+        - offset
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "incident-123"
+        processInstanceId:
+          type: string
+          example: "instance-123"
+        processDefinitionId:
+          type: string
+          example: "decision-analysis:1:abc123"
+        incidentType:
+          type: string
+          example: "failedJob"
+        incidentMessage:
+          type: string
+          example: "Service task execution failed"
+        activityId:
+          type: string
+          example: "service-task-1"
+        activityName:
+          type: string
+          example: "Analyze Alternatives"
+        created:
+          type: string
+          format: date-time
+          example: "2024-01-15T11:00:00Z"
+        status:
+          type: string
+          enum: [open, resolved]
+          example: "open"
+        configuration:
+          type: string
+          example: "service-task-1"
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentHistory'
+      required:
+        - id
+        - processInstanceId
+        - processDefinitionId
+        - incidentType
+        - incidentMessage
+        - created
+        - status
+
+    IncidentHistory:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T11:00:00Z"
+        action:
+          type: string
+          example: "created"
+        message:
+          type: string
+          example: "Service task execution failed"
+      required:
+        - timestamp
+        - action
+        - message
+
+    IncidentResolutionRequest:
+      type: object
+      properties:
+        resolution:
+          type: string
+          example: "Service restored and task retried successfully"
+      required:
+        - resolution
+
+    ProcessStatisticsResponse:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/StatisticsPeriod'
+        summary:
+          $ref: '#/components/schemas/ProcessSummary'
+        byProcess:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessStatistics'
+        byDay:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyStatistics'
+      required:
+        - period
+        - summary
+        - byProcess
+        - byDay
+
+    StatisticsPeriod:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        endDate:
+          type: string
+          format: date-time
+          example: "2024-01-15T23:59:59Z"
+      required:
+        - startDate
+        - endDate
+
+    ProcessSummary:
+      type: object
+      properties:
+        totalInstances:
+          type: integer
+          example: 150
+        activeInstances:
+          type: integer
+          example: 25
+        completedInstances:
+          type: integer
+          example: 120
+        terminatedInstances:
+          type: integer
+          example: 5
+        averageDuration:
+          type: integer
+          example: 7200
+        totalTasks:
+          type: integer
+          example: 450
+        completedTasks:
+          type: integer
+          example: 420
+        openTasks:
+          type: integer
+          example: 30
+      required:
+        - totalInstances
+        - activeInstances
+        - completedInstances
+        - terminatedInstances
+        - averageDuration
+        - totalTasks
+        - completedTasks
+        - openTasks
+
+    ProcessStatistics:
+      type: object
+      properties:
+        processDefinitionKey:
+          type: string
+          example: "decision-analysis"
+        processDefinitionName:
+          type: string
+          example: "Decision Analysis Process"
+        instances:
+          type: integer
+          example: 80
+        activeInstances:
+          type: integer
+          example: 15
+        completedInstances:
+          type: integer
+          example: 65
+        averageDuration:
+          type: integer
+          example: 5400
+        tasks:
+          type: integer
+          example: 240
+        completedTasks:
+          type: integer
+          example: 225
+        openTasks:
+          type: integer
+          example: 15
+      required:
+        - processDefinitionKey
+        - processDefinitionName
+        - instances
+        - activeInstances
+        - completedInstances
+        - averageDuration
+        - tasks
+        - completedTasks
+        - openTasks
+
+    DailyStatistics:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-01-15"
+        instances:
+          type: integer
+          example: 10
+        completedInstances:
+          type: integer
+          example: 8
+        averageDuration:
+          type: integer
+          example: 6000
+      required:
+        - date
+        - instances
+        - completedInstances
+        - averageDuration
+
+    TaskStatisticsResponse:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/TaskSummary'
+        byAssignee:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssigneeStatistics'
+        byTaskType:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskTypeStatistics'
+      required:
+        - summary
+        - byAssignee
+        - byTaskType
+
+    TaskSummary:
+      type: object
+      properties:
+        totalTasks:
+          type: integer
+          example: 450
+        assignedTasks:
+          type: integer
+          example: 300
+        unassignedTasks:
+          type: integer
+          example: 150
+        completedTasks:
+          type: integer
+          example: 420
+        overdueTasks:
+          type: integer
+          example: 5
+      required:
+        - totalTasks
+        - assignedTasks
+        - unassignedTasks
+        - completedTasks
+        - overdueTasks
+
+    AssigneeStatistics:
+      type: object
+      properties:
+        assignee:
+          type: string
+          example: "user-789"
+        totalTasks:
+          type: integer
+          example: 50
+        completedTasks:
+          type: integer
+          example: 45
+        overdueTasks:
+          type: integer
+          example: 2
+        averageCompletionTime:
+          type: integer
+          example: 3600
+      required:
+        - assignee
+        - totalTasks
+        - completedTasks
+        - overdueTasks
+        - averageCompletionTime
+
+    TaskTypeStatistics:
+      type: object
+      properties:
+        taskType:
+          type: string
+          example: "userTask"
+        totalTasks:
+          type: integer
+          example: 300
+        completedTasks:
+          type: integer
+          example: 280
+        averageCompletionTime:
+          type: integer
+          example: 4800
+      required:
+        - taskType
+        - totalTasks
+        - completedTasks
+        - averageCompletionTime
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "PROCESS_DEFINITION_NOT_FOUND"
+            message:
+              type: string
+              example: "Process definition not found"
+            details:
+              type: object
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+          required:
+            - code
+            - message
+            - timestamp
+      required:
+        - error 
