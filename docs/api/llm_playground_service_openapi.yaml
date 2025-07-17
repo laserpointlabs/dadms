@@ -19,7 +19,7 @@ servers:
     description: Production server
 
 security:
-  - BearerAuth: []
+  - bearerAuth: []
 
 paths:
   /health:
@@ -468,7 +468,7 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
@@ -1560,15 +1560,34 @@ components:
 
     ErrorResponse:
       type: object
+      required: [error]
       properties:
         error:
           type: object
+          required: [code, message]
           properties:
             code:
               type: string
-              example: "INVALID_MODEL"
             message:
               type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
               example: "The specified model is not available"
             details:
               type: object

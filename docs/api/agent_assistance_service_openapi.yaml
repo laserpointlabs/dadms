@@ -13,6 +13,38 @@ servers:
   - url: https://api.dadms.com/aas
     description: Production server
 
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
 paths:
   /aas/observe-context:
     post:
@@ -21,7 +53,7 @@ paths:
       tags:
         - Context
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -61,7 +93,7 @@ paths:
       tags:
         - Interaction
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -97,7 +129,7 @@ paths:
       tags:
         - Suggestions
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: context
           in: query
@@ -136,7 +168,7 @@ paths:
       tags:
         - Actions
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -177,7 +209,7 @@ paths:
       tags:
         - Learning
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -214,7 +246,7 @@ paths:
       tags:
         - Status
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Status retrieved successfully
@@ -263,7 +295,7 @@ paths:
         '500':
           description: Internal server error
 
-  /aas/health:
+  /health:
     get:
       summary: Service health check
       description: Service health and readiness check
@@ -281,7 +313,7 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT

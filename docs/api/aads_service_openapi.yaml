@@ -1,0 +1,869 @@
+openapi: 3.0.3
+info:
+  title: DADMS Agent Assistance & Documentation Service (AADS) API
+  description: |
+    Post-process tool that enables users to finalize decisions with AI assistance, generate formal documentation,
+    and route decisions through approval workflows. Includes decision review, team collaboration, white paper
+    generation, and BPMN-managed approval processes.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3005
+    description: Development server
+  - url: https://api.dadms.com/aads
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Decision Review Models
+    DecisionReview:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique decision review identifier
+        process_id:
+          type: string
+          description: Originating process instance ID
+        project_id:
+          type: string
+          description: Associated project ID
+        title:
+          type: string
+          description: Decision title
+        summary:
+          type: string
+          description: Decision summary
+        outcome:
+          type: string
+          description: Process outcome and decision
+        context:
+          type: object
+          description: Supporting context and data
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
+        key_findings:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Risk'
+        recommendations:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, under_review, ready_for_approval, approved, rejected]
+
+    Participant:
+      type: object
+      properties:
+        user_id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        contribution:
+          type: string
+
+    Risk:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        impact:
+          type: string
+          enum: [low, medium, high, critical]
+        likelihood:
+          type: string
+          enum: [low, medium, high]
+        mitigation:
+          type: string
+
+    # Collaboration Models
+    CollaborationMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        decision_review_id:
+          type: string
+        author_id:
+          type: string
+        author_name:
+          type: string
+        message:
+          type: string
+        message_type:
+          type: string
+          enum: [comment, suggestion, question, ai_response]
+        parent_id:
+          type: string
+          description: For threaded conversations
+        created_at:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        url:
+          type: string
+        content_type:
+          type: string
+        size:
+          type: integer
+
+    CollaborationRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        message_type:
+          type: string
+          enum: [comment, suggestion, question]
+          default: comment
+        parent_id:
+          type: string
+
+    # White Paper Models
+    WhitePaper:
+      type: object
+      properties:
+        id:
+          type: string
+        decision_review_id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+          description: Markdown/rich text content
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhitePaperSection'
+        template_id:
+          type: string
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        status:
+          type: string
+          enum: [draft, review, final]
+
+    WhitePaperSection:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        content:
+          type: string
+        order:
+          type: integer
+        ai_generated:
+          type: boolean
+
+    WhitePaperRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        template_id:
+          type: string
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              content:
+                type: string
+              order:
+                type: integer
+
+    WhitePaperGenerationRequest:
+      type: object
+      required: [section_id, prompt]
+      properties:
+        section_id:
+          type: string
+        prompt:
+          type: string
+        include_context:
+          type: boolean
+          default: true
+        generation_type:
+          type: string
+          enum: [content, summary, analysis]
+          default: content
+
+    # Approval Models
+    ApprovalSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+        decision_review_id:
+          type: string
+        white_paper_id:
+          type: string
+        workflow_id:
+          type: string
+        submitted_by:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        approval_type:
+          type: string
+          enum: [single_approver, multi_approver, committee]
+        approvers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Approver'
+        status:
+          type: string
+          enum: [submitted, pending, approved, rejected, cancelled]
+        comments:
+          type: string
+
+    Approver:
+      type: object
+      properties:
+        user_id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        required:
+          type: boolean
+        approved_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        comments:
+          type: string
+
+    ApprovalRequest:
+      type: object
+      required: [approval_type, approvers]
+      properties:
+        approval_type:
+          type: string
+          enum: [single_approver, multi_approver, committee]
+        approvers:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+              required:
+                type: boolean
+        comments:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+
+    # AI Assistant Models
+    AIAssistantRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+        context_type:
+          type: string
+          enum: [decision_review, white_paper, collaboration]
+        include_process_context:
+          type: boolean
+          default: true
+        include_project_context:
+          type: boolean
+          default: true
+
+    AIAssistantResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        sources:
+          type: array
+          items:
+            type: string
+
+    # Standard Response Models
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  # Decision Review Endpoints
+  /decisions:
+    get:
+      summary: List decision reviews
+      description: Get a list of decision reviews for the user
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, under_review, ready_for_approval, approved, rejected]
+          description: Filter by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of decision reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  decisions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DecisionReview'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      summary: Create decision review
+      description: Create a new decision review from a completed process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [process_id, title]
+              properties:
+                process_id:
+                  type: string
+                project_id:
+                  type: string
+                title:
+                  type: string
+                summary:
+                  type: string
+      responses:
+        '201':
+          description: Decision review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /decisions/{decision_id}:
+    get:
+      summary: Get decision review
+      description: Get a specific decision review by ID
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Decision review details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionReview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update decision review
+      description: Update a decision review
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                summary:
+                  type: string
+                outcome:
+                  type: string
+                key_findings:
+                  type: array
+                  items:
+                    type: string
+                recommendations:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: string
+                  enum: [draft, under_review, ready_for_approval]
+      responses:
+        '200':
+          description: Decision review updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionReview'
+
+  # Collaboration Endpoints
+  /decisions/{decision_id}/messages:
+    get:
+      summary: Get collaboration messages
+      description: Get messages for a decision review
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Collaboration messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollaborationMessage'
+                  total:
+                    type: integer
+
+    post:
+      summary: Add collaboration message
+      description: Add a message to the collaboration thread
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationRequest'
+      responses:
+        '201':
+          description: Message added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationMessage'
+
+  /decisions/{decision_id}/ai-assistant:
+    post:
+      summary: AI assistant interaction
+      description: Get AI assistance for decision review
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIAssistantRequest'
+      responses:
+        '200':
+          description: AI assistant response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAssistantResponse'
+
+  # White Paper Endpoints
+  /decisions/{decision_id}/whitepaper:
+    get:
+      summary: Get white paper
+      description: Get the white paper for a decision review
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: White paper details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhitePaper'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create white paper
+      description: Create a white paper for the decision review
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhitePaperRequest'
+      responses:
+        '201':
+          description: White paper created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhitePaper'
+
+    put:
+      summary: Update white paper
+      description: Update the white paper content
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                sections:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/WhitePaperSection'
+      responses:
+        '200':
+          description: White paper updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhitePaper'
+
+  /decisions/{decision_id}/whitepaper/generate:
+    post:
+      summary: Generate white paper content
+      description: Use AI to generate content for a white paper section
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhitePaperGenerationRequest'
+      responses:
+        '200':
+          description: Generated content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: string
+                  section_id:
+                    type: string
+
+  /decisions/{decision_id}/whitepaper/export:
+    get:
+      summary: Export white paper
+      description: Export the white paper in various formats
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, docx, html, markdown]
+            default: pdf
+      responses:
+        '200':
+          description: Exported document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            text/html:
+              schema:
+                type: string
+            text/markdown:
+              schema:
+                type: string
+
+  # Approval Endpoints
+  /decisions/{decision_id}/approval:
+    post:
+      summary: Submit for approval
+      description: Submit the decision review for approval workflow
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '201':
+          description: Submitted for approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalSubmission'
+
+    get:
+      summary: Get approval status
+      description: Get the current approval status
+      parameters:
+        - name: decision_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approval status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalSubmission'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /approvals/{approval_id}/respond:
+    post:
+      summary: Respond to approval request
+      description: Approve or reject an approval request
+      parameters:
+        - name: approval_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, reject]
+                comments:
+                  type: string
+      responses:
+        '200':
+          description: Approval response recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse' 

@@ -5,16 +5,16 @@ This directory contains API documentation for all DADMS services.
 ## Service APIs
 
 ### Core Services (Week 1)
-- **[Project Service API](project_service_openapi.yaml)** (Port 3001)
-- **[LLM Service API](llm_service_openapi.yaml)** (Port 3002)  
-- **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003)
+- **[Project Service API](project_service_openapi.yaml)** (Port 3001) - **ENHANCED: Lifecycle & Analytics**
+- **[LLM Service API](llm_service_openapi.yaml)** (Port 3002) - **ENHANCED: Multi-provider & Cost Tracking**
+- **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003) - **ENHANCED: RAG & Vector Search**
 - **[Event Bus Service API](event_bus_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
 - **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3005) - **NEW: Intelligent assistant**
 
 ### Extended Services (Week 2+)
+- **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
+- **[Process Manager Service API](process_manager_service_openapi.yaml)** (Port 3007) - **NEW: BPMN workflow management**
 - **[Thread Manager Service API](thread_manager_service_openapi.yaml)** (Port 3008) - **NEW: Process traceability & feedback**
-- **[BPMN Workspace API](bpmn-workspace-api.md)** (Port 3006)
-- **[Process Management API](process-management-api.md)** (Port 3007)
 
 ## API Standards
 
@@ -78,14 +78,17 @@ User Action → Service → Event Bus → AAS → Proactive Assistance
 
 ## Documentation Status
 
-- [x] Project Service API
-- [x] LLM Service API  
-- [x] Knowledge Service API
-- [x] **Event Bus Service API** - ✅ NEW
-- [x] **Agent Assistance Service API** - ✅ NEW
-- [x] **Thread Manager Service API** - ✅ NEW
-- [ ] BPMN Workspace API
-- [ ] Process Management API
+### Core Services (Week 1)
+- [x] **Project Service API** - ✅ ENHANCED
+- [x] **LLM Service API** - ✅ ENHANCED
+- [x] **Knowledge Service API** - ✅ ENHANCED
+- [x] **Event Bus Service API** - ✅ COMPLETE
+- [x] **Agent Assistance Service API** - ✅ COMPLETE
+
+### Extended Services (Week 2+)
+- [x] **LLM Playground Service API** - ✅ COMPLETE
+- [x] **Process Manager Service API** - ✅ COMPLETE
+- [x] **Thread Manager Service API** - ✅ COMPLETE
 
 ## Key Features
 

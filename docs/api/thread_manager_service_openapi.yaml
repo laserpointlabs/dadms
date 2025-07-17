@@ -680,6 +680,38 @@ components:
               type: string
               format: date-time
 
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
 security:
   - bearerAuth: []
 

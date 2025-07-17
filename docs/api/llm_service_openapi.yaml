@@ -3,7 +3,10 @@ info:
   title: DADMS LLM Service API
   version: 1.0.0
   description: |
-    OpenAPI specification for the DADMS 2.0 LLM Service. Defines endpoints for prompt generation, tool calling, model/persona/provider management, and cost estimation.
+    OpenAPI specification for the DADMS 2.0 LLM Service. Defines endpoints for LLM interactions, 
+    model management, provider integration, cost tracking, and tool calling capabilities. Supports 
+    multi-provider LLM orchestration with comprehensive monitoring and analytics.
+
 servers:
   - url: http://localhost:3002
     description: Local development server
@@ -14,117 +17,467 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
+    # Core LLM Models
     LLMGenerateRequest:
       type: object
+      required: [prompt]
       properties:
         prompt:
           type: string
+          description: Input prompt text
         model:
           type: string
+          description: Model identifier (defaults to service default)
+        provider:
+          type: string
+          description: Provider identifier (openai, anthropic, ollama, etc.)
         persona:
           type: string
+          description: Persona identifier for context injection
         temperature:
           type: number
           minimum: 0
           maximum: 2
           default: 1.0
-          description: Controls randomness/creativity.
+          description: Controls randomness/creativity
         top_p:
           type: number
           minimum: 0
           maximum: 1
           default: 1.0
-          description: Nucleus sampling.
+          description: Nucleus sampling parameter
         max_tokens:
           type: integer
+          minimum: 1
+          maximum: 100000
           default: 256
-          description: Maximum output length.
+          description: Maximum output length
         presence_penalty:
           type: number
           minimum: -2
           maximum: 2
-          description: Penalizes new topics.
+          default: 0
+          description: Penalizes new topics
         frequency_penalty:
           type: number
           minimum: -2
           maximum: 2
-          description: Penalizes repetition.
+          default: 0
+          description: Penalizes repetition
         stop:
           type: array
           items:
             type: string
-          description: Stop sequences.
+          description: Stop sequences
         tools:
           type: array
           items:
-            type: object
-          description: Tool/function definitions for tool calling.
+            $ref: '#/components/schemas/ToolDefinition'
+          description: Tool/function definitions for tool calling
+        tool_choice:
+          type: string
+          enum: [none, auto, required]
+          default: auto
+          description: Tool calling behavior
         stream:
           type: boolean
           default: false
-          description: If true, response is streamed.
+          description: Enable streaming response
+        project_id:
+          type: string
+          description: Associated project for context and billing
+        session_id:
+          type: string
+          description: Session identifier for conversation tracking
+        context:
+          type: object
+          description: Additional context for prompt enhancement
+
+    LLMGenerateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Response identifier
+        response:
+          type: string
+          description: Generated text response
+        model:
+          type: string
+          description: Model used for generation
+        provider:
+          type: string
+          description: Provider used
+        usage:
+          $ref: '#/components/schemas/UsageMetrics'
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+          description: Tool calls made during generation
+        finish_reason:
+          type: string
+          enum: [stop, length, tool_calls, content_filter]
+          description: Reason generation finished
+        created_at:
+          type: string
+          format: date-time
+        latency_ms:
+          type: integer
+          description: Response latency in milliseconds
+
+    # Model and Provider Management
     LLMModel:
       type: object
       properties:
         id:
           type: string
+          description: Unique model identifier
         name:
           type: string
+          description: Human-readable model name
         provider:
           type: string
+          description: Provider identifier
         description:
           type: string
+          description: Model description
         capabilities:
           type: array
           items:
             type: string
+            enum: [text_generation, tool_calling, vision, embedding, function_calling]
+          description: Model capabilities
+        context_window:
+          type: integer
+          description: Maximum context window size
+        max_output_tokens:
+          type: integer
+          description: Maximum output tokens
         supported_parameters:
           type: array
           items:
             type: string
-          description: List of supported generation parameters for this model.
+          description: Supported generation parameters
+        pricing:
+          $ref: '#/components/schemas/ModelPricing'
+        status:
+          type: string
+          enum: [available, unavailable, deprecated]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     LLMProvider:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Provider identifier
+        name:
+          type: string
+          description: Provider name
+        status:
+          type: string
+          enum: [healthy, degraded, unavailable, maintenance]
+          description: Provider health status
+        models:
+          type: array
+          items:
+            type: string
+          description: Available model IDs
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: Provider capabilities
+        quota:
+          $ref: '#/components/schemas/ProviderQuota'
+        rate_limits:
+          $ref: '#/components/schemas/RateLimits'
+        last_health_check:
+          type: string
+          format: date-time
+        error_rate:
+          type: number
+          format: float
+          description: Recent error rate (0-1)
+        average_latency:
+          type: number
+          format: float
+          description: Average response latency in seconds
+
+    ModelPricing:
+      type: object
+      properties:
+        input_cost_per_token:
+          type: number
+          format: float
+          description: Cost per input token
+        output_cost_per_token:
+          type: number
+          format: float
+          description: Cost per output token
+        currency:
+          type: string
+          default: USD
+          description: Currency code
+
+    ProviderQuota:
+      type: object
+      properties:
+        used:
+          type: integer
+          description: Tokens/requests used
+        limit:
+          type: integer
+          description: Total limit
+        reset_time:
+          type: string
+          format: date-time
+          description: Quota reset time
+
+    RateLimits:
+      type: object
+      properties:
+        requests_per_minute:
+          type: integer
+        tokens_per_minute:
+          type: integer
+        concurrent_requests:
+          type: integer
+
+    # Tool Calling
+    ToolDefinition:
+      type: object
+      required: [name, description, parameters]
+      properties:
+        name:
+          type: string
+          description: Tool name
+        description:
+          type: string
+          description: Tool description
+        parameters:
+          type: object
+          description: JSON schema for tool parameters
+
+    ToolCall:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Tool call identifier
+        name:
+          type: string
+          description: Tool name
+        arguments:
+          type: object
+          description: Tool arguments
+        result:
+          type: object
+          description: Tool execution result
+
+    # Usage and Analytics
+    UsageMetrics:
+      type: object
+      properties:
+        prompt_tokens:
+          type: integer
+          description: Input tokens used
+        completion_tokens:
+          type: integer
+          description: Output tokens generated
+        total_tokens:
+          type: integer
+          description: Total tokens used
+        cost:
+          type: number
+          format: float
+          description: Estimated cost in USD
+
+    LLMAnalytics:
+      type: object
+      properties:
+        total_requests:
+          type: integer
+        total_tokens:
+          type: integer
+        total_cost:
+          type: number
+          format: float
+        average_latency:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        most_used_models:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              usage_count:
+                type: integer
+        cost_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              provider:
+                type: string
+              cost:
+                type: number
+                format: float
+        time_range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+
+    # Persona Management
+    Persona:
       type: object
       properties:
         id:
           type: string
         name:
           type: string
-        status:
+        description:
           type: string
-          enum: [healthy, degraded, unavailable]
-        models:
+        system_prompt:
+          type: string
+          description: System prompt for the persona
+        tools:
           type: array
           items:
             type: string
-        capabilities:
+          description: Available tool IDs
+        model_preferences:
           type: array
           items:
             type: string
-        quota:
+          description: Preferred model IDs
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PersonaCreate:
+      type: object
+      required: [name, system_prompt]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        system_prompt:
+          type: string
+        tools:
+          type: array
+          items:
+            type: string
+        model_preferences:
+          type: array
+          items:
+            type: string
+
+    # Session Management
+    LLMSession:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_activity:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        total_tokens:
+          type: integer
+        total_cost:
+          type: number
+          format: float
+
+    # Error Models
+    Error:
+      type: object
+      properties:
+        error:
           type: object
           properties:
-            used:
-              type: integer
-            limit:
-              type: integer
-        supported_parameters:
-          type: array
-          items:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            timestamp:
+              type: string
+              format: date-time
+
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
             type: string
-          description: List of supported generation parameters for this provider.
-    # ... (other schemas as previously defined)
 
 security:
   - bearerAuth: []
 
 paths:
-  /llm/health:
+  # Health Check
+  /health:
     get:
       summary: Service health/readiness check
-      description: Returns service health status, uptime, and version.
-      tags: [LLM]
+      description: Returns service health status, uptime, version, and provider status.
+      tags: [Health]
       responses:
         '200':
           description: Health status
@@ -139,93 +492,24 @@ paths:
                     type: integer
                   version:
                     type: string
-  # Planned endpoints for future implementation (not MVP)
-  /llm/rate-limit:
-    get:
-      summary: (Planned) Get current rate limit/quota status
-      description: Returns current usage and quota for the user/service. Planned for future implementation.
-      tags: [LLM]
-      responses:
-        '200':
-          description: Rate limit status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  limit:
-                    type: integer
-                  used:
-                    type: integer
-                  reset_in:
-                    type: integer
-  /llm/audit-log:
-    get:
-      summary: (Planned) Get recent LLM/tool calls for audit/compliance
-      description: Returns recent LLM/tool calls for the user/service. Planned for future implementation.
-      tags: [LLM]
-      responses:
-        '200':
-          description: Audit log entries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    timestamp:
-                      type: string
-                    action:
-                      type: string
-                    model:
-                      type: string
-                    user:
-                      type: string
-  /llm/limits:
-    get:
-      summary: (Planned) Get input/output size limits
-      description: Returns max prompt and completion size limits. Planned for future implementation.
-      tags: [LLM]
-      responses:
-        '200':
-          description: Input/output size limits
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  max_prompt_tokens:
-                    type: integer
-                  max_completion_tokens:
-                    type: integer
-  /llm/providers:
-    get:
-      summary: List available LLM providers and status
-      tags: [LLM]
-      responses:
-        '200':
-          description: List of LLM providers
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LLMProvider'
-        default:
-          description: Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-  /llm/generate:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        provider:
+                          type: string
+                        status:
+                          type: string
+                        models_available:
+                          type: integer
+
+  # LLM Generation
+  /generate:
     post:
-      summary: Generate a completion from a prompt (supports streaming)
-      description: |
-        Generates a completion from a prompt using the selected model/persona. If `stream: true` is set in the request body, the response will be streamed as a series of chunks (e.g., via Server-Sent Events).
-      tags: [LLM]
+      summary: Generate LLM response
+      description: Generate a completion from a prompt using the selected model/persona with optional tool calling.
+      tags: [Generation]
       requestBody:
         required: true
         content:
@@ -234,40 +518,49 @@ paths:
               $ref: '#/components/schemas/LLMGenerateRequest'
       responses:
         '200':
-          description: Completion (streamed if requested)
+          description: Generation completed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LLMGenerateResponse'
             text/event-stream:
               schema:
-                type: object
-                properties:
-                  content:
-                    type: string
-        default:
-          description: Error
+                type: string
+              description: Streamed response (when stream=true)
+        '400':
+          description: Bad request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-  /llm/generate-async:
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /generate/async:
     post:
-      summary: (Planned) Submit an async LLM generation request
-      description: |
-        Planned for future implementation (not MVP). Submits a generation request and returns a job/task ID for polling or callback.
-      tags: [LLM]
+      summary: Submit async generation request
+      description: Submit a generation request and return a job ID for polling.
+      tags: [Generation]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LLMGenerateRequest'
+              allOf:
+                - $ref: '#/components/schemas/LLMGenerateRequest'
+                - type: object
+                  properties:
+                    callback_url:
+                      type: string
+                      format: uri
+                      description: Webhook URL for completion notification
       responses:
         '202':
-          description: Accepted, job created
+          description: Request accepted
           content:
             application/json:
               schema:
@@ -277,21 +570,16 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: [pending, running, completed, failed]
-        default:
-          description: Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-  /llm/generate/{job_id}/status:
+                    enum: [pending, processing, completed, failed]
+                  estimated_completion:
+                    type: string
+                    format: date-time
+
+  /generate/async/{job_id}:
     get:
-      summary: (Planned) Get status/result of an async LLM generation job
-      description: |
-        Planned for future implementation (not MVP). Returns the status and, if complete, the result of the async generation job.
-      tags: [LLM]
+      summary: Get async generation status
+      description: Get the status and result of an async generation job.
+      tags: [Generation]
       parameters:
         - in: path
           name: job_id
@@ -300,23 +588,406 @@ paths:
             type: string
       responses:
         '200':
-          description: Job status and result (if complete)
+          description: Job status and result
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  job_id:
+                    type: string
                   status:
                     type: string
-                    enum: [pending, running, completed, failed]
+                    enum: [pending, processing, completed, failed]
                   result:
                     $ref: '#/components/schemas/LLMGenerateResponse'
-        default:
-          description: Error
+                  progress:
+                    type: number
+                    format: float
+                    minimum: 0
+                    maximum: 1
+
+  # Provider Management
+  /providers:
+    get:
+      summary: List LLM providers
+      description: Get all available LLM providers and their status.
+      tags: [Providers]
+      responses:
+        '200':
+          description: List of providers
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-# ... (other paths as previously defined) 
+                type: array
+                items:
+                  $ref: '#/components/schemas/LLMProvider'
+
+  /providers/{provider_id}/health:
+    get:
+      summary: Check provider health
+      description: Check the health status of a specific provider.
+      tags: [Providers]
+      parameters:
+        - in: path
+          name: provider_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMProvider'
+
+  # Model Management
+  /models:
+    get:
+      summary: List available models
+      description: Get all available LLM models across all providers.
+      tags: [Models]
+      parameters:
+        - in: query
+          name: provider
+          schema:
+            type: string
+          description: Filter by provider
+        - in: query
+          name: capability
+          schema:
+            type: string
+            enum: [text_generation, tool_calling, vision, embedding]
+          description: Filter by capability
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [available, unavailable, deprecated]
+          description: Filter by status
+      responses:
+        '200':
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LLMModel'
+
+  /models/{model_id}:
+    get:
+      summary: Get model details
+      description: Get detailed information about a specific model.
+      tags: [Models]
+      parameters:
+        - in: path
+          name: model_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMModel'
+
+  # Persona Management
+  /personas:
+    get:
+      summary: List personas
+      description: Get all available personas for LLM interactions.
+      tags: [Personas]
+      responses:
+        '200':
+          description: List of personas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Persona'
+
+    post:
+      summary: Create persona
+      description: Create a new persona with system prompt and tool access.
+      tags: [Personas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonaCreate'
+      responses:
+        '201':
+          description: Persona created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+
+  /personas/{persona_id}:
+    get:
+      summary: Get persona details
+      tags: [Personas]
+      parameters:
+        - in: path
+          name: persona_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Persona details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+
+    put:
+      summary: Update persona
+      tags: [Personas]
+      parameters:
+        - in: path
+          name: persona_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonaCreate'
+      responses:
+        '200':
+          description: Persona updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+
+    delete:
+      summary: Delete persona
+      tags: [Personas]
+      parameters:
+        - in: path
+          name: persona_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Persona deleted
+
+  # Session Management
+  /sessions:
+    get:
+      summary: List user sessions
+      description: Get LLM sessions for the current user.
+      tags: [Sessions]
+      parameters:
+        - in: query
+          name: project_id
+          schema:
+            type: string
+          description: Filter by project
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of sessions to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Number of sessions to skip
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LLMSession'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      summary: Create session
+      description: Create a new LLM session.
+      tags: [Sessions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMSession'
+
+  /sessions/{session_id}:
+    get:
+      summary: Get session details
+      tags: [Sessions]
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMSession'
+
+    delete:
+      summary: Delete session
+      tags: [Sessions]
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session deleted
+
+  # Analytics and Usage
+  /analytics:
+    get:
+      summary: Get LLM usage analytics
+      description: Get comprehensive usage analytics and metrics.
+      tags: [Analytics]
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date-time
+          description: Start date for analytics
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date-time
+          description: End date for analytics
+        - in: query
+          name: project_id
+          schema:
+            type: string
+          description: Filter by project
+        - in: query
+          name: model
+          schema:
+            type: string
+          description: Filter by model
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMAnalytics'
+
+  /usage/current:
+    get:
+      summary: Get current usage status
+      description: Get current usage and quota status for rate limiting.
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Current usage status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_usage:
+                    type: object
+                    properties:
+                      requests_this_minute:
+                        type: integer
+                      tokens_this_minute:
+                        type: integer
+                  limits:
+                    $ref: '#/components/schemas/RateLimits'
+                  quotas:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        provider:
+                          type: string
+                        quota:
+                          $ref: '#/components/schemas/ProviderQuota'
+
+  # Cost Estimation
+  /estimate-cost:
+    post:
+      summary: Estimate generation cost
+      description: Estimate the cost of a generation request before execution.
+      tags: [Cost]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+                model:
+                  type: string
+                max_tokens:
+                  type: integer
+      responses:
+        '200':
+          description: Cost estimation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estimated_cost:
+                    type: number
+                    format: float
+                  estimated_tokens:
+                    type: object
+                    properties:
+                      input:
+                        type: integer
+                      output:
+                        type: integer
+                  model_used:
+                    type: string
+                  provider:
+                    type: string 
