@@ -11,6 +11,7 @@ export default function AASCar() {
     const [visible, setVisible] = useState(true);
     const [height, setHeight] = useState(250);
     const [activeTab, setActiveTab] = useState(TAB_AAS);
+    const [aasInput, setAasInput] = useState("");
     const dragRef = useRef<HTMLDivElement>(null);
     const startY = useRef<number | null>(null);
     const startHeight = useRef<number>(height);
@@ -35,6 +36,14 @@ export default function AASCar() {
         window.removeEventListener("mousemove", handleDragMove);
         window.removeEventListener("mouseup", handleDragEnd);
         startY.current = null;
+    };
+
+    const handleAasSend = () => {
+        if (aasInput.trim()) {
+            // For now, just log the input
+            console.log("AAS User Input:", aasInput);
+            setAasInput("");
+        }
     };
 
     if (!visible) {
@@ -66,8 +75,8 @@ export default function AASCar() {
                     <button
                         key={tab}
                         className={`px-4 py-2 font-medium border-b-2 transition-colors duration-150 ${activeTab === tab
-                            ? "border-blue-600 text-blue-700 bg-white"
-                            : "border-transparent text-gray-500 hover:text-blue-600"
+                                ? "border-blue-600 text-blue-700 bg-white"
+                                : "border-transparent text-gray-500 hover:text-blue-600"
                             }`}
                         onClick={() => setActiveTab(tab)}
                     >
@@ -92,7 +101,31 @@ export default function AASCar() {
                     <div className="text-blue-600">[Info placeholder]</div>
                 )}
                 {activeTab === TAB_AAS && (
-                    <div className="text-gray-800">[AAS Assistant placeholder]</div>
+                    <div className="flex flex-col h-full">
+                        <div className="flex-1 text-gray-800">[AAS Assistant placeholder]</div>
+                        <form
+                            className="mt-4 flex gap-2"
+                            onSubmit={e => {
+                                e.preventDefault();
+                                handleAasSend();
+                            }}
+                        >
+                            <input
+                                type="text"
+                                className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-blue-400"
+                                placeholder="Ask the AAS a question or leave a comment..."
+                                value={aasInput}
+                                onChange={e => setAasInput(e.target.value)}
+                            />
+                            <button
+                                type="submit"
+                                className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:opacity-50"
+                                disabled={!aasInput.trim()}
+                            >
+                                Send
+                            </button>
+                        </form>
+                    </div>
                 )}
             </div>
         </div>

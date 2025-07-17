@@ -1,6 +1,7 @@
 # DADMS 2.0 – Architecture Overview
 
 ```mermaid
+%%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
 flowchart TD
     subgraph PM2["pm2-managed (Node.js)"]
       UI["Modern React UI (TypeScript)"]
@@ -14,7 +15,7 @@ flowchart TD
       EventLog["Event Logging / Audit Service"]
     end
 
-    subgraph External["External / Containerized"]
+    subgraph External["External / Containerized (DADMS)"]
       Traefik["Traefik / Nginx (Reverse Proxy)"]
       MessageBroker["Message Broker (Kafka/RabbitMQ/NATS)"]
       BPMN["BPMN Engine (Camunda)"]
@@ -22,6 +23,13 @@ flowchart TD
       GraphDB["Neo4j (Graph DB)"]
       Postgres["PostgreSQL (Primary DB)"]
       MinIO["MinIO (Object Store)"]
+      Ollama["Ollama / LLM Server"]
+    end
+
+    subgraph Cloud["External Cloud LLM Providers"]
+      OpenAI["OpenAI (GPT-4, etc.)"]
+      Claude["Claude (Anthropic)"]
+      OtherCloudLLM["Other Cloud LLMs"]
     end
 
     UI --> API
@@ -43,6 +51,14 @@ flowchart TD
     KnowledgeService --> GraphDB
     LLMService --> VectorDB
     LLMService --> AAS
+    LLMService --> Ollama
+    LLMService --> OpenAI
+    LLMService --> Claude
+    LLMService --> OtherCloudLLM
+    TaskOrchestrator --> Ollama
+    TaskOrchestrator --> OpenAI
+    TaskOrchestrator --> Claude
+    TaskOrchestrator --> OtherCloudLLM
     AAS --> VectorDB
     AAS --> GraphDB
     BPMN --> Postgres
@@ -71,20 +87,24 @@ flowchart TD
 
     classDef pm2 fill:#e0f7fa,stroke:#00796b,stroke-width:2px;
     classDef external fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef cloud fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
     class UI,ProjectService,KnowledgeService,LLMService,AAS,API,TaskOrchestrator,EventBus,EventLog pm2;
-    class BPMN,VectorDB,GraphDB,Postgres,MinIO,Traefik,MessageBroker external;
+    class BPMN,VectorDB,GraphDB,Postgres,MinIO,Traefik,MessageBroker,Ollama external;
+    class OpenAI,Claude,OtherCloudLLM cloud;
 ```
 
 ## Overview
 
 This diagram illustrates the high-level architecture of DADMS 2.0:
 - **pm2-managed (blue):** Node.js-based services typically managed by pm2 in local/dev environments.
-- **External/Containerized (purple):** Databases, BPMN engine, object stores, reverse proxy (Traefik/Nginx), and message brokers managed outside pm2 (e.g., via Docker Compose, Kubernetes).
-- **Task Orchestrator (TEM):** The core backend service that receives tasks from the BPMN Engine, determines and invokes the appropriate microservice/LLM/tool, manages context/results, and emits events to the Event Bus. It is the critical link between BPMN execution and the rest of the system.
+- **External/Containerized (purple):** Databases, BPMN engine, object stores, reverse proxy (Traefik/Nginx), message brokers, and LLM servers (Ollama, etc.) managed outside pm2 (e.g., via Docker Compose, Kubernetes).
+- **External Cloud (orange):** Cloud-based LLM providers such as OpenAI, Claude, and others, accessed via API for advanced AI capabilities.
+- **Task Orchestrator (TEM):** The core backend service that receives tasks from the BPMN Engine, determines and invokes the appropriate microservice/LLM/tool (local or cloud), manages context/results, and emits events to the Event Bus. It is the critical link between BPMN execution and the rest of the system.
 - **Event Bus & Event Log:** The Event Bus handles orchestration and automation, while the Event Log provides audit and traceability. Both are watched by the AAS for oversight and user assistance.
 - **AAS Oversight:** The AAS observes all major services, the event bus, and the event log, providing real-time feedback, risk alerts, and recommendations to users.
 - **Reverse Proxy:** Traefik or Nginx routes external traffic to the API and UI.
 - **Message Broker:** Kafka, RabbitMQ, or NATS can be used for scalable, decoupled event/message handling.
+- **LLM Server (Ollama, etc.):** Pluggable local or remote LLM providers for AI-powered features and orchestration.
 
 **Future Services (Planned for Extensibility):**
 - **Ontology Service:** For extraction, management, and integration of ontologies across domains and projects.
@@ -96,6 +116,7 @@ This diagram illustrates the high-level architecture of DADMS 2.0:
 
 **Legend:**
 - <span style="background:#e0f7fa; color:#00796b; padding:2px 6px; border-radius:3px;">pm2-managed (Node.js)</span>
-- <span style="background:#f3e5f5; color:#6a1b9a; padding:2px 6px; border-radius:3px;">External / Containerized</span>
+- <span style="background:#f3e5f5; color:#6a1b9a; padding:2px 6px; border-radius:3px;">External / Containerized (DADMS)</span>
+- <span style="background:#fff3e0; color:#ef6c00; padding:2px 6px; border-radius:3px;">External Cloud LLM Providers</span>
 
 This is a living document—details and relationships will be expanded as the system evolves. 
