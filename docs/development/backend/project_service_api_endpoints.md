@@ -16,6 +16,7 @@ This document details the API endpoints for the Project Service in DADMS 2.0, in
 | GET    | `/projects/{id}/users`            | List users assigned to a project   | Path: id                      | Array of User                | Yes   |
 | POST   | `/projects/{id}/users`            | Assign user(s) to a project        | UserAssignment (JSON)         | Success/Error                | Yes   |
 | DELETE | `/projects/{id}/users/{userId}`   | Remove user from project           | Path: id, userId              | Success/Error                | Yes   |
+| GET    | `/project/health`    | Service health/readiness check              | None                          | HealthStatus (JSON)          | No    |
 
 ---
 
@@ -64,6 +65,15 @@ This document details the API endpoints for the Project Service in DADMS 2.0, in
 ```json
 {
   "user_ids": ["string", "string"]
+}
+```
+
+### HealthStatus (Response)
+```json
+{
+  "status": "ok",
+  "uptime": 123456,
+  "version": "1.0.0"
 }
 ```
 

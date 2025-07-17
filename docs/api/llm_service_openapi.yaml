@@ -120,6 +120,85 @@ security:
   - bearerAuth: []
 
 paths:
+  /llm/health:
+    get:
+      summary: Service health/readiness check
+      description: Returns service health status, uptime, and version.
+      tags: [LLM]
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  uptime:
+                    type: integer
+                  version:
+                    type: string
+  # Planned endpoints for future implementation (not MVP)
+  /llm/rate-limit:
+    get:
+      summary: (Planned) Get current rate limit/quota status
+      description: Returns current usage and quota for the user/service. Planned for future implementation.
+      tags: [LLM]
+      responses:
+        '200':
+          description: Rate limit status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limit:
+                    type: integer
+                  used:
+                    type: integer
+                  reset_in:
+                    type: integer
+  /llm/audit-log:
+    get:
+      summary: (Planned) Get recent LLM/tool calls for audit/compliance
+      description: Returns recent LLM/tool calls for the user/service. Planned for future implementation.
+      tags: [LLM]
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                    action:
+                      type: string
+                    model:
+                      type: string
+                    user:
+                      type: string
+  /llm/limits:
+    get:
+      summary: (Planned) Get input/output size limits
+      description: Returns max prompt and completion size limits. Planned for future implementation.
+      tags: [LLM]
+      responses:
+        '200':
+          description: Input/output size limits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  max_prompt_tokens:
+                    type: integer
+                  max_completion_tokens:
+                    type: integer
   /llm/providers:
     get:
       summary: List available LLM providers and status
@@ -166,6 +245,72 @@ paths:
                 properties:
                   content:
                     type: string
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /llm/generate-async:
+    post:
+      summary: (Planned) Submit an async LLM generation request
+      description: |
+        Planned for future implementation (not MVP). Submits a generation request and returns a job/task ID for polling or callback.
+      tags: [LLM]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMGenerateRequest'
+      responses:
+        '202':
+          description: Accepted, job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, running, completed, failed]
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /llm/generate/{job_id}/status:
+    get:
+      summary: (Planned) Get status/result of an async LLM generation job
+      description: |
+        Planned for future implementation (not MVP). Returns the status and, if complete, the result of the async generation job.
+      tags: [LLM]
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status and result (if complete)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [pending, running, completed, failed]
+                  result:
+                    $ref: '#/components/schemas/LLMGenerateResponse'
         default:
           description: Error
           content:
