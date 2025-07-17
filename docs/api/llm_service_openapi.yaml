@@ -1,0 +1,177 @@
+openapi: 3.0.3
+info:
+  title: DADMS LLM Service API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for the DADMS 2.0 LLM Service. Defines endpoints for prompt generation, tool calling, model/persona/provider management, and cost estimation.
+servers:
+  - url: http://localhost:3002
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LLMGenerateRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        model:
+          type: string
+        persona:
+          type: string
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 1.0
+          description: Controls randomness/creativity.
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 1.0
+          description: Nucleus sampling.
+        max_tokens:
+          type: integer
+          default: 256
+          description: Maximum output length.
+        presence_penalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          description: Penalizes new topics.
+        frequency_penalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          description: Penalizes repetition.
+        stop:
+          type: array
+          items:
+            type: string
+          description: Stop sequences.
+        tools:
+          type: array
+          items:
+            type: object
+          description: Tool/function definitions for tool calling.
+        stream:
+          type: boolean
+          default: false
+          description: If true, response is streamed.
+    LLMModel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+        description:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        supported_parameters:
+          type: array
+          items:
+            type: string
+          description: List of supported generation parameters for this model.
+    LLMProvider:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unavailable]
+        models:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        quota:
+          type: object
+          properties:
+            used:
+              type: integer
+            limit:
+              type: integer
+        supported_parameters:
+          type: array
+          items:
+            type: string
+          description: List of supported generation parameters for this provider.
+    # ... (other schemas as previously defined)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /llm/providers:
+    get:
+      summary: List available LLM providers and status
+      tags: [LLM]
+      responses:
+        '200':
+          description: List of LLM providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LLMProvider'
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+  /llm/generate:
+    post:
+      summary: Generate a completion from a prompt (supports streaming)
+      description: |
+        Generates a completion from a prompt using the selected model/persona. If `stream: true` is set in the request body, the response will be streamed as a series of chunks (e.g., via Server-Sent Events).
+      tags: [LLM]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMGenerateRequest'
+      responses:
+        '200':
+          description: Completion (streamed if requested)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMGenerateResponse'
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: string
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+# ... (other paths as previously defined) 
