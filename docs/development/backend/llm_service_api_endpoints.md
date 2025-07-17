@@ -14,6 +14,18 @@ This document details the API endpoints for the LLM Service in DADMS 2.0, includ
 | GET    | `/llm/providers`    | List available LLM providers and status     | None                          | Array of LLMProvider         | Yes   |
 | GET    | `/llm/personas`     | List available personas/system prompts      | None                          | Array of Persona             | Yes   |
 | POST   | `/llm/estimate`     | Estimate token/cost for a prompt (optional) | LLMEstimateRequest (JSON)     | LLMEstimateResponse (JSON)   | Yes   |
+| GET    | `/llm/health`        | Service health/readiness check              | None                          | HealthStatus (JSON)          | No    |
+
+---
+
+### HealthStatus (Response)
+```json
+{
+  "status": "ok",
+  "uptime": 123456,
+  "version": "1.0.0"
+}
+```
 
 ---
 
@@ -225,6 +237,145 @@ When prompted with the tool definition, the LLM may return a tool call like:
 
 ### 5. When to Use a Separate Document
 If your tool orchestration becomes complex (e.g., many tool types, advanced routing, multi-step workflows, or cross-service orchestration), consider breaking this out into a dedicated document (e.g., `tool_orchestration.md`) for deeper design, patterns, and implementation details.
+
+---
+
+## Persona and Tool Handling: Hybrid Pass-Through and Caching Pattern
+
+### Overview
+- **Personas and tools are managed in the Context Manager** (source of truth for governance, versioning, and sharing).
+- **LLM Service acts as a proxy** for `/llm/personas` and `/llm/tool-call`, fetching from the Context Manager.
+- **Redis caching** is used in the LLM Service to store recently fetched personas/tools for resilience and performance.
+- **Clients may also supply the full persona/tool object** in the request for stateless, advanced, or fallback operation.
+
+### Request Patterns
+- **Proxy by ID (default):**
+  ```json
+  {
+    "prompt": "Explain quantum computing.",
+    "model": "gpt-4",
+    "persona_id": "expert-educator"
+  }
+  ```
+  (LLM Service fetches persona from Context Manager, caches in Redis)
+
+- **Client-supplied Persona (stateless/fallback):**
+  ```json
+  {
+    "prompt": "Explain quantum computing.",
+    "model": "gpt-4",
+    "persona": {
+      "id": "expert-educator",
+      "name": "Expert Educator",
+      "system_prompt": "You are a patient, expert science educator...",
+      "tools": [ ... ]
+    }
+  }
+  ```
+  (LLM Service uses the supplied persona directly)
+
+### Caching and Fallback Behavior
+- **Redis is used as the cache backend** for personas and tools in the LLM Service.
+- If the Context Manager is unavailable, the LLM Service uses the last-known-good persona/tool from Redis.
+- If neither the Context Manager nor cache is available, the client must supply the full persona/tool object, or a default/safe persona is used.
+
+### LLM Auto-Selecting Persona
+- Optionally, the client can send a list of available personas (like tools) and let the LLM select the best one.
+- The LLM can return a persona selection as part of its output, or the orchestrator can select before calling the LLM.
+
+### Summary Table
+| Pattern                | LLM Service Stores | Pros                        | Cons                        | Best For                |
+|------------------------|-------------------|-----------------------------|-----------------------------|-------------------------|
+| Pass-through           | No                | Clean, centralized          | Proxy dependency            | Clean arch, governance  |
+| Pass-through + cache   | No (cache only)   | Resilient, centralized      | Cache complexity            | Most robust             |
+| Client-supplied        | No                | Stateless, flexible         | Larger requests             | Advanced, dynamic flows |
+| Hybrid                 | No (cache opt.)   | Flexible, robust            | More code paths             | Large/complex systems   |
+
+### Implementation Note
+- **Redis is recommended as the cache backend** for personas and tools in the LLM Service, enabling high availability and fast lookups.
+- This hybrid approach enables robust governance, resilience, and advanced use cases for persona and tool management in DADMS.
+
+---
+
+## Planned: Asynchronous LLM Generation & Event Bus Integration
+
+To support high-throughput, event-driven, or background LLM tasks (such as those triggered by the AAS or event bus), the LLM Service will support asynchronous generation in a future release.
+
+### Async Pattern & Endpoints (Planned)
+- `POST /llm/generate-async` — Submit a generation request, receive a job/task ID immediately.
+- `GET /llm/generate/{job_id}/status` — Poll for job status and result.
+- (Optional) Register a webhook for result delivery.
+- (Optional) Integrate with the event bus for decoupled, scalable workflows.
+
+#### Example Async Request
+```json
+POST /llm/generate-async
+{
+  "prompt": "string",
+  "model": "string",
+  "stream": false
+}
+```
+
+#### Example Async Response
+```json
+{
+  "job_id": "abc123",
+  "status": "pending"
+}
+```
+
+#### Example Status Polling
+```json
+GET /llm/generate/abc123/status
+{
+  "status": "completed",
+  "result": { "completion": "..." }
+}
+```
+
+### Event Bus Integration (Planned)
+- The LLM Service may subscribe to a topic (e.g., `aas.llm.requests`) and publish results to another (e.g., `aas.llm.results`).
+- Enables decoupled, scalable, and resilient LLM workflows for AAS and other services.
+
+### When to Use Async vs Sync
+| Pattern         | Pros                        | Cons                        | When to Use                |
+|-----------------|----------------------------|-----------------------------|----------------------------|
+| Synchronous     | Simple, real-time           | Blocks, not scalable        | UI, low volume, quick calls|
+| Asynchronous    | Scalable, non-blocking      | More complex, needs infra   | Event bus, batch, high volume, AAS|
+
+**Note:** These async features are planned for future implementation and are not part of the MVP.
+
+---
+
+## Planned: Additional Endpoints for Robustness & Compliance
+
+The following endpoints are planned for future implementation to enhance robustness, monitoring, and compliance:
+
+- **Rate Limiting/Quota:**
+  - `GET /llm/rate-limit` — Returns current usage and quota for the user/service.
+  - Example response:
+    ```json
+    { "limit": 10000, "used": 123, "reset_in": 3600 }
+    ```
+
+- **Audit Log:**
+  - `GET /llm/audit-log` — Returns recent LLM/tool calls for the user/service (for compliance and debugging).
+  - Example response:
+    ```json
+    [
+      { "timestamp": "2024-06-01T12:00:00Z", "action": "generate", "model": "gpt-4", "user": "alice" }
+    ]
+    ```
+
+- **Input/Output Size Limits:**
+  - Documented in API docs and enforced in the backend. Optionally, expose via `GET /llm/limits`.
+  - Example response:
+    ```json
+    { "max_prompt_tokens": 4096, "max_completion_tokens": 1024 }
+    ```
+
+**Note:** These endpoints are planned for future releases and are not part of the MVP.
 
 ---
 

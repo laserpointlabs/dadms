@@ -93,6 +93,25 @@ security:
   - bearerAuth: []
 
 paths:
+  /project/health:
+    get:
+      summary: Service health/readiness check
+      description: Returns service health status, uptime, and version.
+      tags: [Project]
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  uptime:
+                    type: integer
+                  version:
+                    type: string
   /projects:
     get:
       summary: List all projects

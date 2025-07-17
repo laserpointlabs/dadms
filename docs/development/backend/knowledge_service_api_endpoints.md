@@ -24,7 +24,21 @@ This document details the API endpoints for the Knowledge Service in DADMS 2.0, 
 | PUT    | `/tags/{id}`      | Update tag by ID           | TagUpdate (JSON)              | Tag                          | Yes   |
 | DELETE | `/tags/{id}`      | Delete tag by ID           | Path: id                      | Success/Error                | Yes   |
 
+### Health
+| Method | Path              | Description                | Request Body / Params         | Response Body                | Auth? |
+|--------|-------------------|----------------------------|-------------------------------|------------------------------|-------|
+| GET    | `/knowledge/health`  | Service health/readiness check              | None                          | HealthStatus (JSON)          | No    |
+
 ---
+
+### HealthStatus (Response)
+```json
+{
+  "status": "ok",
+  "uptime": 123456,
+  "version": "1.0.0"
+}
+```
 
 ## Example Schemas
 
