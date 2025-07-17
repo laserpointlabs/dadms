@@ -19,7 +19,7 @@ servers:
     description: Production server
 
 security:
-  - BearerAuth: []
+  - bearerAuth: []
 
 paths:
   /health:
@@ -670,7 +670,7 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
@@ -1672,15 +1672,34 @@ components:
 
     ErrorResponse:
       type: object
+      required: [error]
       properties:
         error:
           type: object
+          required: [code, message]
           properties:
             code:
               type: string
-              example: "PROCESS_DEFINITION_NOT_FOUND"
             message:
               type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
               example: "Process definition not found"
             details:
               type: object

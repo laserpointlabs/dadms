@@ -13,6 +13,38 @@ servers:
   - url: https://api.dadms.com/event-bus
     description: Production server
 
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
 paths:
   /events/publish:
     post:
@@ -21,7 +53,7 @@ paths:
       tags:
         - Events
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -62,7 +94,7 @@ paths:
       tags:
         - Events
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: filter
           in: query
@@ -109,7 +141,7 @@ paths:
       tags:
         - Events
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: event_type
           in: query
@@ -175,7 +207,7 @@ paths:
       tags:
         - Events
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Event types retrieved successfully
@@ -195,7 +227,7 @@ paths:
       tags:
         - Subscriptions
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -230,7 +262,7 @@ paths:
       tags:
         - Subscriptions
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -259,7 +291,7 @@ paths:
       tags:
         - Statistics
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: Statistics retrieved successfully
@@ -272,7 +304,7 @@ paths:
         '500':
           description: Internal server error
 
-  /events/health:
+  /health:
     get:
       summary: Service health check
       description: Service health and readiness check
@@ -290,7 +322,7 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
