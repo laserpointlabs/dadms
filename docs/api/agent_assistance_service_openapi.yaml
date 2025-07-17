@@ -13,38 +13,6 @@ servers:
   - url: https://api.dadms.com/aas
     description: Production server
 
-
-    ErrorResponse:
-      type: object
-      required: [error]
-      properties:
-        error:
-          type: object
-          required: [code, message]
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            details:
-              type: string
-
-    HealthStatus:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [healthy, unhealthy, degraded]
-        timestamp:
-          type: string
-          format: date-time
-        version:
-          type: string
-        dependencies:
-          type: object
-          additionalProperties:
-            type: string
-
 paths:
   /aas/observe-context:
     post:
@@ -53,7 +21,7 @@ paths:
       tags:
         - Context
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -93,7 +61,7 @@ paths:
       tags:
         - Interaction
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -129,7 +97,7 @@ paths:
       tags:
         - Suggestions
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - name: context
           in: query
@@ -168,7 +136,7 @@ paths:
       tags:
         - Actions
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -209,7 +177,7 @@ paths:
       tags:
         - Learning
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -246,7 +214,7 @@ paths:
       tags:
         - Status
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       responses:
         '200':
           description: Status retrieved successfully
