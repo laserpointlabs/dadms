@@ -5,13 +5,14 @@ This directory contains API documentation for all DADMS services.
 ## Service APIs
 
 ### Core Services (Week 1)
-- **[User/Project Service API](user-project-api.md)** (Port 3001)
-- **[LLM Service API](llm-service-api.md)** (Port 3002)  
-- **[Knowledge Service API](knowledge-service-api.md)** (Port 3003)
+- **[Project Service API](project_service_openapi.yaml)** (Port 3001)
+- **[LLM Service API](llm_service_openapi.yaml)** (Port 3002)  
+- **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003)
+- **[Event Bus Service API](event_bus_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
+- **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3005) - **NEW: Intelligent assistant**
 
 ### Extended Services (Week 2+)
-- **[Context Manager API](context-manager-api.md)** (Port 3005)
-- **[Tool Service API](tool-service-api.md)** (Port 3006)
+- **[BPMN Workspace API](bpmn-workspace-api.md)** (Port 3006)
 - **[Process Management API](process-management-api.md)** (Port 3007)
 
 ## API Standards
@@ -46,13 +47,103 @@ Each service will include:
 - Postman collections
 - Code examples
 
+## MVP Architecture with Event Bus + AAS
+
+### **Event Bus Service (Port 3004)**
+The central nervous system that enables real-time communication between all services:
+
+- **Event Publishing**: All services publish events to the bus
+- **Real-time Streaming**: Server-Sent Events for live updates
+- **Event History**: Historical event retrieval and filtering
+- **Subscriptions**: Webhook-based event delivery
+- **Statistics**: Performance monitoring and metrics
+
+### **Agent Assistance Service (Port 3005)**
+The intelligent assistant that provides proactive, context-aware help:
+
+- **Context Awareness**: Knows what page user is on and current project
+- **Proactive Suggestions**: Offers help without being asked
+- **Natural Language**: Conversational interaction with users
+- **Action Execution**: Can perform tasks on user's behalf
+- **Learning**: Improves based on user feedback and patterns
+
+### **Integration Flow**
+```
+User Action → Service → Event Bus → AAS → Proactive Assistance
+     ↓           ↓         ↓        ↓
+  Context    Event     Stream    Suggestions
+  Update   Published   Events    & Actions
+```
+
 ## Documentation Status
 
-- [ ] User/Project Service API
-- [ ] LLM Service API  
-- [ ] Knowledge Service API
-- [ ] Context Manager API
-- [ ] Tool Service API
+- [x] Project Service API
+- [x] LLM Service API  
+- [x] Knowledge Service API
+- [x] **Event Bus Service API** - ✅ NEW
+- [x] **Agent Assistance Service API** - ✅ NEW
+- [ ] BPMN Workspace API
 - [ ] Process Management API
 
-*API documentation will be generated as services are implemented during Week 1 development.*
+## Key Features
+
+### **Event-Driven Architecture**
+- All services publish events for system-wide visibility
+- Real-time event streaming enables live monitoring
+- Event history provides audit trail and analysis
+- Webhook subscriptions enable service-to-service communication
+
+### **Intelligent Assistance**
+- Page context awareness for relevant help
+- Proactive suggestions based on user behavior
+- Natural language interaction with the system
+- Action execution on user's behalf
+- Continuous learning and improvement
+
+### **Real-World Examples**
+
+**Scenario 1: User Creates Project**
+```
+1. User creates project → Project Service publishes "project.created" event
+2. Event Bus streams event to all subscribers
+3. AAS receives event → Welcomes user with personalized guidance
+4. AAS suggests next steps: "Upload documents" or "Create workflow"
+```
+
+**Scenario 2: Process Gets Stuck**
+```
+1. Process Service detects stuck process → Publishes "process.stuck" event
+2. AAS receives event → Analyzes logs and context
+3. AAS proactively offers: "I detected your process is stuck. Let me fix it for you."
+4. User confirms → AAS executes fix action
+```
+
+**Scenario 3: User Asks for Help**
+```
+1. User asks: "What should I do next?"
+2. AAS analyzes current context (page, project, recent events)
+3. AAS responds: "Based on your UAV project, I recommend starting the cost analysis workflow."
+4. AAS offers to execute the action: "Would you like me to start it for you?"
+```
+
+## Development Notes
+
+### **Event Bus Implementation**
+- Simple but functional for MVP
+- PostgreSQL for event persistence
+- Redis for real-time streaming
+- Webhook delivery for service integration
+
+### **AAS Implementation**
+- LLM integration for natural language processing
+- Context management for user state
+- Action registry for executable tasks
+- Learning system for continuous improvement
+
+### **Integration Points**
+- All services integrate with Event Bus
+- Frontend updates context with AAS
+- AAS subscribes to relevant events
+- Real-time UI updates via event streaming
+
+*API documentation will be updated as services are implemented during Week 1 development.*

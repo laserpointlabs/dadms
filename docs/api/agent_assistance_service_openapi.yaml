@@ -1,0 +1,811 @@
+openapi: 3.0.3
+info:
+  title: DADMS Agent Assistance Service (AAS) API
+  description: Intelligent, proactive assistant that monitors system events and provides context-aware help to users
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3005
+    description: Development server
+  - url: https://api.dadms.com/aas
+    description: Production server
+
+paths:
+  /aas/observe-context:
+    post:
+      summary: Update AAS with current user context
+      description: Updates AAS with current user context to enable proactive assistance
+      tags:
+        - Context
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASContextRequest'
+            example:
+              current_page: "process-manager"
+              current_project: "uav-design-2024"
+              user_id: "user123"
+              session_data:
+                session_start: "2024-01-15T10:00:00Z"
+                actions_taken: ["created_project", "uploaded_documents"]
+                time_on_page: 300
+              user_preferences:
+                preferred_assistance_level: "proactive"
+                notification_preferences: ["suggestions", "warnings"]
+                learning_enabled: true
+      responses:
+        '200':
+          description: Context updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASContextResponse'
+        '400':
+          description: Invalid context data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/ask:
+    post:
+      summary: Ask AAS a natural language question
+      description: Ask AAS a natural language question about the system, current context, or request assistance
+      tags:
+        - Interaction
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASAskRequest'
+            example:
+              question: "What's happening with my UAV project?"
+              context:
+                current_page: "process-manager"
+                current_project: "uav-design-2024"
+                user_id: "user123"
+              include_suggestions: true
+              include_actions: true
+      responses:
+        '200':
+          description: AAS response received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASAskResponse'
+        '400':
+          description: Invalid question or context
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/suggestions:
+    get:
+      summary: Get proactive suggestions
+      description: Get proactive suggestions based on current context without being asked
+      tags:
+        - Suggestions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: context
+          in: query
+          description: Comma-separated context elements to consider
+          schema:
+            type: string
+          example: "current_page,current_project"
+        - name: limit
+          in: query
+          description: Number of suggestions to return
+          schema:
+            type: integer
+            default: 5
+        - name: priority
+          in: query
+          description: Filter by priority level
+          schema:
+            type: string
+            enum: [low, medium, high]
+      responses:
+        '200':
+          description: Suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASSuggestionsResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/execute-action:
+    post:
+      summary: Execute an action on user's behalf
+      description: Execute an action on the user's behalf with optional confirmation
+      tags:
+        - Actions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASActionRequest'
+            example:
+              action_id: "create_uav_workflow"
+              parameters:
+                template_type: "uav_design"
+                include_cost_analysis: true
+                include_risk_assessment: true
+              context:
+                current_page: "process-manager"
+                current_project: "uav-design-2024"
+                user_id: "user123"
+              confirmation: true
+      responses:
+        '200':
+          description: Action executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASActionResponse'
+        '400':
+          description: Invalid action or parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Action not permitted
+        '500':
+          description: Internal server error
+
+  /aas/learn:
+    post:
+      summary: Provide feedback to improve AAS
+      description: Provide feedback to help AAS learn and improve its assistance
+      tags:
+        - Learning
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASLearnRequest'
+            example:
+              feedback_type: "suggestion_helpful"
+              suggestion_id: "sug-001"
+              user_rating: 5
+              user_comment: "This was exactly what I needed!"
+              context:
+                current_page: "process-manager"
+                current_project: "uav-design-2024"
+                user_id: "user123"
+      responses:
+        '200':
+          description: Learning applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASLearnResponse'
+        '400':
+          description: Invalid feedback data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/status:
+    get:
+      summary: Get current AAS status and context
+      description: Get current AAS status and context information
+      tags:
+        - Status
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASStatusResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/events/webhook:
+    post:
+      summary: Receive events from Event Bus
+      description: Receive events from the Event Bus for proactive monitoring and assistance
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+            example:
+              id: "evt-123"
+              event_type: "process.stuck"
+              source_service: "process-service"
+              data:
+                process_id: "proc-abc123"
+                process_name: "UAV Cost Analysis"
+                stuck_duration: 1800
+                last_activity: "2024-01-15T10:00:00Z"
+              user_id: "user123"
+              project_id: "uav-design-2024"
+              timestamp: "2024-01-15T10:30:00Z"
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASWebhookResponse'
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+  /aas/health:
+    get:
+      summary: Service health check
+      description: Service health and readiness check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AASContext:
+      type: object
+      required:
+        - current_page
+        - user_id
+      properties:
+        current_page:
+          type: string
+          description: Current page user is on
+        current_project:
+          type: string
+          description: Current project (if applicable)
+        user_id:
+          type: string
+          description: User identifier
+        recent_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+          description: Recent system events
+        system_state:
+          type: object
+          properties:
+            active_processes:
+              type: integer
+              description: Number of active processes
+            pending_tasks:
+              type: integer
+              description: Number of pending tasks
+            system_health:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+              description: Overall system health
+        user_preferences:
+          type: object
+          properties:
+            preferred_assistance_level:
+              type: string
+              enum: [minimal, moderate, proactive]
+              description: User's preferred assistance level
+            notification_preferences:
+              type: array
+              items:
+                type: string
+              description: Types of notifications user wants
+            learning_enabled:
+              type: boolean
+              description: Whether learning is enabled
+        session_data:
+          type: object
+          properties:
+            session_start:
+              type: string
+              format: date-time
+              description: Session start time
+            actions_taken:
+              type: array
+              items:
+                type: string
+              description: Actions taken in this session
+            time_on_page:
+              type: integer
+              description: Time spent on current page (seconds)
+
+    AASContextRequest:
+      type: object
+      required:
+        - current_page
+        - user_id
+      properties:
+        current_page:
+          type: string
+          description: Current page user is on
+        current_project:
+          type: string
+          description: Current project (if applicable)
+        user_id:
+          type: string
+          description: User identifier
+        session_data:
+          type: object
+          properties:
+            session_start:
+              type: string
+              format: date-time
+            actions_taken:
+              type: array
+              items:
+                type: string
+            time_on_page:
+              type: integer
+        user_preferences:
+          type: object
+          properties:
+            preferred_assistance_level:
+              type: string
+              enum: [minimal, moderate, proactive]
+            notification_preferences:
+              type: array
+              items:
+                type: string
+            learning_enabled:
+              type: boolean
+
+    AASContextResponse:
+      type: object
+      required:
+        - context_updated
+        - timestamp
+      properties:
+        context_updated:
+          type: boolean
+          description: Whether context was updated successfully
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp
+        proactive_suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+          description: Proactive suggestions based on context
+        system_insights:
+          type: object
+          properties:
+            project_status:
+              type: string
+              description: Current project status
+            recommended_next_steps:
+              type: array
+              items:
+                type: string
+              description: Recommended next steps
+            potential_issues:
+              type: array
+              items:
+                type: string
+              description: Potential issues detected
+
+    AASAskRequest:
+      type: object
+      required:
+        - question
+        - context
+      properties:
+        question:
+          type: string
+          description: Natural language question
+        context:
+          $ref: '#/components/schemas/AASContext'
+        include_suggestions:
+          type: boolean
+          default: true
+          description: Whether to include suggestions in response
+        include_actions:
+          type: boolean
+          default: true
+          description: Whether to include available actions in response
+
+    AASAskResponse:
+      type: object
+      required:
+        - answer
+        - confidence
+        - context_used
+      properties:
+        answer:
+          type: string
+          description: Human-readable response
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+          description: Proactive suggestions
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASAction'
+          description: Available actions
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence level (0-1)
+        context_used:
+          type: array
+          items:
+            type: string
+          description: Context sources used
+
+    AASSuggestionsResponse:
+      type: object
+      required:
+        - suggestions
+        - timestamp
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+          description: Proactive suggestions
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp
+        context_analyzed:
+          type: array
+          items:
+            type: string
+          description: Context elements analyzed
+
+    AASSuggestion:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - action_type
+        - priority
+        - can_execute
+      properties:
+        id:
+          type: string
+          description: Unique suggestion ID
+        title:
+          type: string
+          description: Suggestion title
+        description:
+          type: string
+          description: Detailed description
+        action_type:
+          type: string
+          enum: [info, suggestion, warning, action]
+          description: Type of suggestion
+        priority:
+          type: string
+          enum: [low, medium, high]
+          description: Priority level
+        can_execute:
+          type: boolean
+          description: Whether AAS can execute this action
+        action_id:
+          type: string
+          description: Associated action ID (if applicable)
+
+    AASActionRequest:
+      type: object
+      required:
+        - action_id
+        - context
+      properties:
+        action_id:
+          type: string
+          description: Action to execute
+        parameters:
+          type: object
+          description: Action parameters
+        context:
+          $ref: '#/components/schemas/AASContext'
+        confirmation:
+          type: boolean
+          default: false
+          description: Whether user confirmed the action
+
+    AASActionResponse:
+      type: object
+      required:
+        - action_executed
+        - action_id
+        - message
+      properties:
+        action_executed:
+          type: boolean
+          description: Whether action was executed successfully
+        action_id:
+          type: string
+          description: Executed action ID
+        result:
+          type: object
+          description: Action execution result
+        message:
+          type: string
+          description: Human-readable message about the action
+        next_suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+          description: Suggestions for next steps
+        execution_time:
+          type: number
+          format: float
+          description: Execution time in seconds
+
+    AASAction:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - parameters
+        - requires_confirmation
+        - estimated_time
+      properties:
+        id:
+          type: string
+          description: Action ID
+        name:
+          type: string
+          description: Action name
+        description:
+          type: string
+          description: Action description
+        parameters:
+          type: object
+          description: Required parameters
+        requires_confirmation:
+          type: boolean
+          description: Whether user confirmation is required
+        estimated_time:
+          type: integer
+          description: Estimated execution time in seconds
+
+    AASLearnRequest:
+      type: object
+      required:
+        - feedback_type
+        - context
+      properties:
+        feedback_type:
+          type: string
+          enum: [suggestion_helpful, suggestion_not_helpful, action_successful, action_failed, user_correction]
+          description: Type of feedback
+        suggestion_id:
+          type: string
+          description: Associated suggestion ID (if applicable)
+        user_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: User rating (1-5)
+        user_comment:
+          type: string
+          description: User comment
+        context:
+          $ref: '#/components/schemas/AASContext'
+
+    AASLearnResponse:
+      type: object
+      required:
+        - learning_applied
+        - feedback_id
+        - message
+      properties:
+        learning_applied:
+          type: boolean
+          description: Whether learning was applied successfully
+        feedback_id:
+          type: string
+          description: Feedback ID
+        message:
+          type: string
+          description: Response message
+        improvements_made:
+          type: array
+          items:
+            type: string
+          description: Specific improvements made
+
+    AASStatusResponse:
+      type: object
+      required:
+        - status
+        - current_context
+      properties:
+        status:
+          type: string
+          enum: [active, inactive, learning]
+          description: AAS status
+        current_context:
+          $ref: '#/components/schemas/AASContext'
+        active_monitoring:
+          type: object
+          properties:
+            processes_watched:
+              type: integer
+              description: Number of processes being monitored
+            alerts_active:
+              type: integer
+              description: Number of active alerts
+            suggestions_pending:
+              type: integer
+              description: Number of pending suggestions
+        user_preferences:
+          type: object
+          properties:
+            assistance_level:
+              type: string
+              enum: [minimal, moderate, proactive]
+            learning_enabled:
+              type: boolean
+        system_health:
+          type: object
+          properties:
+            event_bus_connected:
+              type: boolean
+            llm_service_available:
+              type: boolean
+            knowledge_service_available:
+              type: boolean
+
+    AASWebhookResponse:
+      type: object
+      required:
+        - event_processed
+      properties:
+        event_processed:
+          type: boolean
+          description: Whether event was processed successfully
+        actions_taken:
+          type: array
+          items:
+            type: string
+          description: Actions taken in response to event
+        proactive_response:
+          type: object
+          properties:
+            suggestion_id:
+              type: string
+            message:
+              type: string
+
+    Event:
+      type: object
+      required:
+        - id
+        - event_type
+        - source_service
+        - data
+        - timestamp
+      properties:
+        id:
+          type: string
+          description: Unique event identifier
+        event_type:
+          type: string
+          description: Event type
+        source_service:
+          type: string
+          description: Service that published the event
+        data:
+          type: object
+          description: Event payload
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+        user_id:
+          type: string
+          description: Associated user
+        project_id:
+          type: string
+          description: Associated project
+
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Service health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+        version:
+          type: string
+          description: Service version
+        dependencies:
+          type: object
+          description: Dependency health status
+          properties:
+            event_bus:
+              type: string
+              enum: [healthy, unhealthy]
+            llm_service:
+              type: string
+              enum: [healthy, unhealthy]
+            knowledge_service:
+              type: string
+              enum: [healthy, unhealthy]
+            project_service:
+              type: string
+              enum: [healthy, unhealthy]
+        active_users:
+          type: integer
+          description: Number of active users
+        suggestions_generated_today:
+          type: integer
+          description: Number of suggestions generated today
+
+tags:
+  - name: Context
+    description: Context management and observation
+  - name: Interaction
+    description: Natural language interaction with AAS
+  - name: Suggestions
+    description: Proactive suggestions and recommendations
+  - name: Actions
+    description: Action execution and management
+  - name: Learning
+    description: Learning and feedback mechanisms
+  - name: Status
+    description: AAS status and monitoring
+  - name: Events
+    description: Event processing and webhooks
+  - name: Health
+    description: Service health and status 

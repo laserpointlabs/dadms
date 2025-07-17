@@ -27,10 +27,31 @@ This document captures the ongoing development process, key decisions, rationale
 ---
 
 ## Key Decisions & Rationale
-- **UI Scaffolding:** Use local state for domains/tags to enable fast iteration and feedback.
-- **Domain/Tag Model:** Domains and tags are managed centrally for governance and reusability. Tags can span multiple domains (multi-select).
-- **Separation of Concerns:** Frontend handles UX, backend handles chunking, vectorization, and storage.
-- **Best Practice Alignment:** Follow modern SaaS and knowledge management patterns for extensibility and maintainability.
+
+### **MVP Architecture Decision: Include Event Bus + AAS**
+**Date**: January 15, 2025
+**Decision**: Include Event Bus Service and Agent Assistance Service (AAS) in the MVP
+**Rationale**: 
+- **Differentiation**: Without Event Bus + AAS, DADMS is just another workflow tool. With them, it becomes an intelligent, proactive decision assistant.
+- **User Experience**: The AAS provides Clipy-like intelligent assistance that makes users feel like they have an expert colleague by their side.
+- **Demonstration Value**: The MVP will be much more compelling and showcase the true potential of DADMS.
+- **Foundation**: Event Bus provides the foundation for all future intelligent features.
+
+**Impact**:
+- Updated MVP specification to include 7 core services instead of 10
+- Event Bus (Port 3004) and AAS (Port 3005) are now core MVP components
+- Week 1 implementation plan updated to include these services
+- Complete API documentation created for both services
+
+**Technical Approach**:
+- **Event Bus**: Simple but functional implementation with PostgreSQL persistence, Redis streaming, and webhook delivery
+- **AAS**: LLM-powered intelligent assistant with context awareness, proactive suggestions, and action execution
+- **Integration**: All services publish events, AAS subscribes and provides proactive assistance
+
+### **UI Scaffolding:** Use local state for domains/tags to enable fast iteration and feedback.
+### **Domain/Tag Model:** Domains and tags are managed centrally for governance and reusability. Tags can span multiple domains (multi-select).
+### **Separation of Concerns:** Frontend handles UX, backend handles chunking, vectorization, and storage.
+### **Best Practice Alignment:** Follow modern SaaS and knowledge management patterns for extensibility and maintainability.
 
 ---
 
@@ -56,6 +77,7 @@ This document captures the ongoing development process, key decisions, rationale
 - **Next:** Document upload and RAG search UI scaffolding; backend API integration for knowledge entities.
 - **Day X:** BPMN Workspace scaffolded with iframe integration of comprehensive_bpmn_modeler.html and localStorage-based model state management.
 - **Day X:** Camunda BPM Platform added to docker-compose; verified integration with Postgres 15 using Camunda 7.18.0 and Podman Compose. Documented and resolved authentication compatibility issues.
+- **January 15, 2025:** **MVP Architecture Updated** - Decided to include Event Bus and AAS in MVP for intelligent, proactive assistance. Complete API documentation created for both services.
 
 ---
 
@@ -138,7 +160,7 @@ AASD is a post-process tool that enables users to finalize decisions with the he
 ### Rationale & Benefits
 - Ensures decisions are thoroughly reviewed, documented, and approved before implementation.
 - Leverages AI and team collaboration for higher-quality, auditable decision records.
-- Integrates seamlessly with DADMS’s process-centric architecture and BPMN-driven governance.
+- Integrates seamlessly with DADMS's process-centric architecture and BPMN-driven governance.
 - Provides a clear, extensible workflow for decision finalization, documentation, and approval.
 
 ---
@@ -216,7 +238,7 @@ Suppose the organization is evaluating a new air refueling process, where the de
 - **Run impact analysis** using the Thread Impact Analysis tool:
   - The system performs a similarity and dependency search against all historical process tasks and decisions.
   - It identifies other processes, such as previous refueling operations, maintenance workflows, or related mission profiles, that are semantically or operationally similar to the new design.
-  - The impact report highlights which historical decisions or process runs may be affected by the adoption of process X and probe Y (e.g., “Switching to probe Y may impact compatibility with tanker fleet Z, as seen in historical process runs A, B, and C”).
+  - The impact report highlights which historical decisions or process runs may be affected by the adoption of process X and probe Y (e.g., "Switching to probe Y may impact compatibility with tanker fleet Z, as seen in historical process runs A, B, and C").
 - **Enable risk management and informed decision-making** by surfacing these potential impacts before approval, allowing stakeholders to review, simulate, and mitigate risks proactively.
 
 This example demonstrates how DADMS supports safer, more transparent process evolution and cross-domain insight, especially in complex, high-stakes environments like air refueling operations.
@@ -253,7 +275,7 @@ The Task Execution Manager (TEM) is the core backend component responsible for o
   - Store and utilize human/SME feedback for continuous improvement and auditability.
 - **Observability & Governance:**
   - Log all task executions, context, and decisions for compliance and traceability.
-  - Store and expose “why” a service/tool was chosen for a task (e.g., LLM rationale, similarity match).
+  - Store and expose "why" a service/tool was chosen for a task (e.g., LLM rationale, similarity match).
   - Integrate with impact analysis and risk reporting.
 - **Performance & Scalability:**
   - Support async task execution and queue-based orchestration for scale.
@@ -274,6 +296,8 @@ The Task Execution Manager (TEM) is the core backend component responsible for o
 - Scaffold Document Upload and Knowledge Search UIs.
 - Define and implement backend API endpoints for domains, tags, documents, and search.
 - Integrate frontend with backend for persistent data.
+- **Implement Event Bus Service (Port 3004) for real-time event communication.**
+- **Implement Agent Assistance Service (Port 3005) for intelligent, proactive assistance.**
 - Continue to update this document as new decisions and milestones occur.
 
 ---
@@ -296,7 +320,7 @@ The Task Execution Manager (TEM) is the core backend component responsible for o
 ## LLM Playground – Best Practices & Future Enhancements
 
 1. **Prompt Templates**: Allow users to select/save common prompt templates.
-2. **System/Instruction Prompts**: Field for system-level instructions (e.g., “You are a helpful assistant…”).
+2. **System/Instruction Prompts**: Field for system-level instructions (e.g., "You are a helpful assistant…").
 3. **Response Formatting Options**: Let users choose output format (plain text, markdown, JSON, etc.).
 4. **Token/Cost Estimation**: Show estimated token usage and cost for each prompt.
 5. **Streaming Responses**: Support streaming output for long completions.

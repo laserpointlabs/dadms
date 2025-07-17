@@ -6,7 +6,9 @@
 
 **User Journey**: Create Project → Load Knowledge → Design BPMN Process → Execute with AI → Review Task Results → Generate Decision Document
 
-## MVP Service Architecture (10 Core Services)
+**Key Innovation**: **Intelligent, proactive assistance** via Event Bus + AAS that makes DADMS feel like having an expert colleague
+
+## MVP Service Architecture (7 Core Services)
 
 ### **Priority 1: Foundation Services** (Week 1-2)
 
@@ -76,9 +78,98 @@ GET /knowledge/projects/:projectId/status
 // Project-isolated vector collections
 ```
 
-### **Priority 2: Workflow Core** (Week 2-3)
+### **Priority 2: Intelligence Layer** (Week 1-2)
 
-#### **4. BPMN Workspace** - Port 3004
+#### **4. Event Bus Service** - Port 3004
+**Status**: 🆕 New - Core MVP component
+**Purpose**: Central nervous system for all system events
+
+**MVP Features**:
+```typescript
+interface Event {
+    id: string;
+    event_type: string;
+    source_service: string;
+    data: object;
+    timestamp: string;
+    user_id?: string;
+    project_id?: string;
+}
+
+// Event Publishing
+POST /events/publish
+{
+    "event_type": "project.created",
+    "data": { "project_id": "uuid", "name": "UAV Design" },
+    "user_id": "user123"
+}
+
+// Event Subscription
+GET /events/stream?filter=project.created,process.started
+// Server-Sent Events stream
+
+// Event History
+GET /events/history?event_type=project.created&limit=50
+```
+
+**Event Types**:
+- `project.created`, `project.updated`, `project.deleted`
+- `knowledge.uploaded`, `knowledge.processed`, `knowledge.indexed`
+- `process.started`, `process.completed`, `process.stuck`, `process.failed`
+- `task.started`, `task.completed`, `task.failed`
+- `user.page_view`, `user.action`, `user.stuck`
+
+#### **5. Agent Assistance Service (AAS)** - Port 3005
+**Status**: 🆕 New - Core MVP component
+**Purpose**: Intelligent, proactive assistant that monitors and helps users
+
+**MVP Features**:
+```typescript
+interface AASContext {
+    current_page: string;
+    current_project?: string;
+    user_id: string;
+    recent_events: Event[];
+    system_state: object;
+}
+
+// Proactive Assistance
+POST /aas/observe-context
+{
+    "current_page": "process-manager",
+    "current_project": "uav-design-2024",
+    "user_id": "user123"
+}
+
+// Natural Language Interaction
+POST /aas/ask
+{
+    "question": "What's happening with my UAV project?",
+    "context": AASContext
+}
+
+// Proactive Suggestions
+GET /aas/suggestions?context=current_page,current_project
+
+// Action Execution
+POST /aas/execute-action
+{
+    "action": "create_process_template",
+    "parameters": { "template_type": "uav_design" },
+    "context": AASContext
+}
+```
+
+**AAS Capabilities**:
+- **Page Context Awareness**: Knows what page user is on
+- **Proactive Monitoring**: Watches for issues and opportunities
+- **Natural Language**: Conversational interaction
+- **Action Execution**: Can perform tasks on user's behalf
+- **Learning**: Remembers user preferences and patterns
+
+### **Priority 3: Workflow Core** (Week 2-3)
+
+#### **6. BPMN Workspace** - Port 3006
 **Status**: ✅ Excellent foundation - comprehensive_bpmn_modeler.html
 **Purpose**: Process design with AI assistance
 
@@ -89,59 +180,8 @@ GET /knowledge/projects/:projectId/status
 
 **MVP Enhancements**:
 - Service task configuration for prompts + personas + tools
-- Simple AI suggestions for next nodes
+- **AAS integration for intelligent suggestions**
 - Direct integration with Context Manager
-
-#### **5. Context Manager** - Port 3005
-**Status**: 🔄 Enhance current prompt service
-**Purpose**: Prompt + Persona + Tool context assembly
-
-**Leverage Existing**:
-- Current prompt service PostgreSQL schema
-- Test case management
-- LLM integration patterns
-
-**MVP Focus**:
-```typescript
-interface ContextTemplate {
-    id: string;
-    project_id: string;
-    name: string;
-    prompt_template: string;
-    persona: {
-        role: string;
-        expertise: string[];
-        guidelines: string;
-    };
-    tools_available: string[];
-    knowledge_domains: string[];
-}
-
-// Service task context assembly
-POST /context/assemble
-{
-    template_id: string,
-    project_id: string,
-    task_variables: object,
-    thread_id: string
-}
-```
-
-#### **6. Tool Manager** - Port 3006
-**Status**: 🔄 Enhance current tool service
-**Purpose**: Tool registration and schema validation
-
-**Leverage Existing**:
-- Current tool service structure
-- Basic tool registration
-
-**MVP Tools**:
-- RAG Search tool (integrate with Knowledge Service)
-- Web Search tool (simple API integration)
-- Calculator/Analysis tool (basic math/stats)
-- Document Generator tool (basic templates)
-
-### **Priority 3: Execution Engine** (Week 3-4)
 
 #### **7. Process Management** - Port 3007
 **Status**: ✅ Excellent - reuse current implementation
@@ -154,184 +194,97 @@ POST /context/assemble
 
 **MVP Enhancements**:
 - Integration with project scope
-- Enhanced process instance tracking
-- Link to Task Execution Manager
+- **Event Bus integration for real-time updates**
+- **AAS monitoring and assistance**
 
-#### **8. Task Execution Manager** - Port 3008
-**Status**: 🔄 Enhance current analysis data management
-**Purpose**: Task I/O capture and efficacy tracking
+## MVP User Experience Flow
 
-**Leverage Existing**:
-- Current analysis_metadata and analysis_data tables
-- Task monitoring scripts
-- PostgreSQL storage patterns
+### **Intelligent, Proactive Experience**:
 
-**MVP Schema Enhancement**:
-```sql
--- Enhance existing analysis_metadata
-ALTER TABLE analysis_metadata ADD COLUMN project_id UUID;
-ALTER TABLE analysis_metadata ADD COLUMN task_name VARCHAR(255);
-ALTER TABLE analysis_metadata ADD COLUMN efficacy_score INTEGER;
+1. **User creates project** → Event published → AAS welcomes user with personalized guidance
+2. **User uploads documents** → Event published → AAS suggests next steps and templates
+3. **User designs process** → Event published → AAS offers intelligent workflow suggestions
+4. **Process runs** → Events published → AAS monitors and proactively assists
+5. **Issues occur** → Events published → AAS detects and fixes problems automatically
 
--- Task I/O storage
-CREATE TABLE task_executions (
-    id UUID PRIMARY KEY,
-    project_id UUID,
-    process_instance_id VARCHAR(255),
-    task_id VARCHAR(255),
-    task_name VARCHAR(255),
-    thread_id VARCHAR(255),
-    input_context JSONB,
-    output_context JSONB,
-    execution_time_ms INTEGER,
-    efficacy_score INTEGER,
-    user_rating INTEGER,
-    comments TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
+### **Example AAS Interactions**:
+
+**Scenario 1: User on Process Designer**
+```
+AAS: "I see you're designing a UAV workflow. Based on your project context, 
+     I recommend adding these service tasks: cost analysis, risk assessment, 
+     and design validation. Want me to create this template for you?"
+
+User: "Yes, please"
+
+AAS: *automatically creates the workflow template with proper service tasks*
 ```
 
-### **Priority 4: Documentation & Review** (Week 4)
-
-#### **9. Thread Manager** - Port 3009
-**Status**: 🔄 Enhance current thread persistence
-**Purpose**: Decision conversation management
-
-**Leverage Existing**:
-- Current thread_id patterns in analysis data
-- OpenAI thread management
-
-**MVP Implementation**:
-- Store thread context in vector store
-- Thread history and replay
-- Thread similarity for related decisions
-
-#### **10. Agent Assistant & Documentation Service (AADS)** - Port 3010
-**Status**: 🆕 New but simple implementation
-**Purpose**: AI-assisted document generation
-
-**MVP Features**:
-- Template-based document generation
-- Simple artifact embedding
-- Export to PDF/MD formats
-- Integration with thread context
-
-```typescript
-// Simple document generation
-POST /documents/generate
-{
-    template: "decision_summary",
-    project_id: string,
-    thread_id: string,
-    process_instance_id: string,
-    include_artifacts: string[]
-}
+**Scenario 2: Process Stuck**
+```
+AAS: "Your cost analysis process has been waiting for 30 minutes. 
+     I checked the logs and found the issue - the LLM service is down. 
+     I've restarted it for you. The process should resume in 2 minutes."
 ```
 
-## MVP Database Schema
+**Scenario 3: User Asks for Help**
+```
+User: "What should I do next?"
 
-### **Enhanced PostgreSQL** (Build on existing)
-```sql
--- Projects table
-CREATE TABLE projects (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    owner_id UUID NOT NULL,
-    status VARCHAR(50) DEFAULT 'active',
-    knowledge_domain VARCHAR(100),
-    settings JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Context templates (enhance prompts table)
-ALTER TABLE prompts ADD COLUMN project_id UUID;
-ALTER TABLE prompts ADD COLUMN persona JSONB;
-ALTER TABLE prompts ADD COLUMN tools_available JSONB;
-
--- Task executions (enhance analysis_metadata)
--- [Schema from above]
+AAS: "Looking at your UAV project, you've completed the design phase. 
+     The next logical step is to run the cost analysis. I can start that 
+     process for you right now. Would you like me to?"
 ```
 
-### **Qdrant Collections** (Project-scoped)
-```javascript
-// Collection per project
-collection_name: `project_${project_id}_knowledge`
-collection_name: `project_${project_id}_threads`
-```
+## Implementation Priority
 
-## MVP UI Architecture
+### **Week 1: Foundation + Intelligence**
+- Day 1: Project Service foundation
+- Day 2: Knowledge Service with Qdrant
+- Day 3: **Event Bus Service** (simple but functional)
+- Day 4: **AAS Service** (basic but intelligent)
+- Day 5: LLM Service integration and testing
 
-### **Enhanced Current UI**
-**Leverage**: Existing React components, Material-UI, microservices integration
+### **Week 2: Workflow Integration**
+- Day 1-2: BPMN Workspace with AAS integration
+- Day 3-4: Process Management with Event Bus
+- Day 5: End-to-end testing and refinement
 
-**New Components**:
-1. **Project Dashboard** - Project CRUD with knowledge upload
-2. **BPMN Designer** - Enhanced comprehensive modeler
-3. **Context Designer** - Prompt + Persona + Tool configuration
-4. **Process Monitor** - Enhanced current process management
-5. **Task Review** - Task I/O review and efficacy rating
-6. **Document Generator** - AI-assisted report creation
+## Success Criteria
 
-## MVP Development Timeline
+### **Functional Goals**
+1. **User can create decision project in <30 seconds**
+2. **Knowledge upload and processing completes in <5 minutes**
+3. **BPMN workflow creation with AI assistance in <15 minutes**
+4. **End-to-end decision workflow execution in <10 minutes**
+5. **AAS provides proactive assistance within 5 seconds of user actions**
 
-### **Week 1: Foundation**
-- Project Service implementation
-- Knowledge Service project-scoping
-- Enhanced LLM Service tool integration
+### **User Experience Goals**
+1. **AAS feels like having an expert colleague**
+2. **Users receive proactive help without asking**
+3. **System automatically detects and fixes common issues**
+4. **Natural language interaction feels intuitive**
+5. **Context-aware suggestions are relevant and helpful**
 
-### **Week 2: Workflow Core**
-- Context Manager persona integration
-- Tool Manager basic tools
-- BPMN Workspace service task configuration
+### **Technical Goals**
+1. **System handles 50+ concurrent users**
+2. **99.9% uptime for critical decision processes**
+3. **Sub-second response times for AAS interactions**
+4. **Event Bus processes 1000+ events per minute**
+5. **Complete audit trail for regulatory compliance**
 
-### **Week 3: Execution**
-- Process Mangment integration
-- Task Execution Manager enhancement (previously service-orchstrator)
-- Thread management implementation
+## Why This MVP is Special
 
-### **Week 4: Documentation**
-- AADS basic implementation
-- End-to-end testing
-- Documentation and demos
+### **Without Event Bus + AAS:**
+- Static workflow execution
+- Manual monitoring and debugging
+- No proactive assistance
+- Just another BPMN tool
 
-## MVP Success Criteria
+### **With Event Bus + AAS:**
+- **Live, intelligent system** that responds to user needs
+- **Proactive problem detection** and resolution
+- **Context-aware assistance** that feels magical
+- **Differentiated product** that stands out in the market
 
-### **Functional Demo**
-1. ✅ Create project and upload domain knowledge (5 min)
-2. ✅ Design BPMN process with AI-configured service tasks (10 min)
-3. ✅ Execute process with real LLM interactions (5 min)
-4. ✅ Review task results and rate efficacy (5 min)
-5. ✅ Generate decision document with AI assistance (10 min)
-
-### **Technical Benchmarks**
-- 📊 Support 3-5 concurrent users
-- 📊 Process 10MB knowledge documents
-- 📊 Execute 5-node BPMN workflows
-- 📊 Generate 10-page decision documents
-- 📊 Complete audit trail for all operations
-
-## Rapid Development Strategy
-
-### **Reuse Current Assets**
-- ✅ comprehensive_bpmn_modeler.html (90% ready)
-- ✅ Process management UI (80% ready)  
-- ✅ LLM service architecture (85% ready)
-- ✅ PostgreSQL schemas (70% ready)
-- ✅ Microservices patterns (80% ready)
-
-### **Focus Areas for New Development**
-- 🔧 Project-scoped knowledge management
-- 🔧 Context assembly with personas
-- 🔧 Task I/O comprehensive capture
-- 🔧 Simple document generation
-- 🔧 UI integration and polish
-
-### **Risk Mitigation**
-- Build on proven components first
-- Simple implementations for new features
-- Incremental integration and testing
-- Focus on end-to-end flow over feature completeness
-
-This MVP specification leverages ~80% of existing work while adding the key missing pieces for a complete demonstrator. Ready to start implementation?
+This MVP will demonstrate the true potential of DADMS as an intelligent decision assistant, not just a workflow tool.
