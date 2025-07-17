@@ -17,6 +17,7 @@ export default function ProjectsPage() {
     const [editForm, setEditForm] = useState<UpdateProjectRequest>({});
     const [editLoading, setEditLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
 
     const STATUS_OPTIONS: Array<'active' | 'completed'> = [
         'active',
@@ -29,8 +30,8 @@ export default function ProjectsPage() {
         try {
             const data = await fetchProjects();
             setProjects(data.projects);
-        } catch (err: any) {
-            setError(err.message || 'Failed to load projects');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to load projects');
         } finally {
             setLoading(false);
         }
@@ -43,6 +44,7 @@ export default function ProjectsPage() {
     const handleCreate = async (data: CreateProjectRequest) => {
         await createProject(data);
         setSuccess('Project created successfully!');
+        setShowCreateForm(false);
         await loadProjects();
         setTimeout(() => setSuccess(null), 2000);
     };
@@ -51,40 +53,28 @@ export default function ProjectsPage() {
         loadProjects();
     };
 
-    const handleSelect = (id: string) => {
-        // Placeholder for future navigation to project details
-        alert(`Project ID: ${id}`);
-    };
-
     const handleEdit = (project: Project) => {
         setEditProject(project);
         setEditForm({
             name: project.name,
             description: project.description,
+            decision_context: project.decision_context,
             knowledge_domain: project.knowledge_domain,
             status: project.status,
         });
     };
 
-    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setEditForm({ ...editForm, [e.target.name]: e.target.value });
-    };
-
-    const handleEditSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleUpdate = async () => {
         if (!editProject) return;
         setEditLoading(true);
         try {
-            const formToSend: UpdateProjectRequest = {
-                ...editForm,
-            };
-            await updateProject(editProject.id, formToSend);
+            await updateProject(editProject.id, editForm);
             setSuccess('Project updated successfully!');
             setEditProject(null);
             await loadProjects();
             setTimeout(() => setSuccess(null), 2000);
-        } catch (err: any) {
-            setError(err.message || 'Failed to update project');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to update project');
         } finally {
             setEditLoading(false);
         }
@@ -94,7 +84,7 @@ export default function ProjectsPage() {
         setDeleteProjectTarget(project);
     };
 
-    const handleDeleteConfirm = async () => {
+    const confirmDelete = async () => {
         if (!deleteProjectTarget) return;
         setDeleteLoading(true);
         try {
@@ -103,134 +93,291 @@ export default function ProjectsPage() {
             setDeleteProjectTarget(null);
             await loadProjects();
             setTimeout(() => setSuccess(null), 2000);
-        } catch (err: any) {
-            setError(err.message || 'Failed to delete project');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to delete project');
         } finally {
             setDeleteLoading(false);
         }
     };
 
-    const handleModalClose = () => {
-        setEditProject(null);
-        setDeleteProjectTarget(null);
+    // Calculate project statistics
+    const stats = {
+        total: projects.length,
+        active: projects.filter(p => p.status === 'active').length,
+        completed: projects.filter(p => p.status === 'completed').length,
     };
 
     return (
-        <div className="max-w-3xl mx-auto py-8 px-4">
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Projects</h1>
-                <div className="flex gap-2 items-center">
-                    <a
-                        href="http://localhost:3001/api-docs"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 underline text-sm"
-                    >
-                        API Docs
-                    </a>
-                    <button
-                        onClick={handleRefresh}
-                        className="ml-2 px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
-                        title="Refresh"
-                    >
-                        Refresh
-                    </button>
+        <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Project Dashboard</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Manage decision analysis projects and track progress
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleRefresh}
+                            className="btn-secondary"
+                            disabled={loading}
+                            title="Refresh projects"
+                        >
+                            {loading ? (
+                                <div className="loading-spinner" />
+                            ) : (
+                                '🔄'
+                            )}
+                            Refresh
+                        </button>
+                        <button
+                            onClick={() => setShowCreateForm(true)}
+                            className="btn-primary"
+                        >
+                            ➕ New Project
+                        </button>
+                    </div>
                 </div>
             </div>
-            <CreateProject onCreate={handleCreate} />
-            {success && <div className="text-green-600 mb-2">{success}</div>}
-            {loading ? (
-                <div>Loading projects...</div>
-            ) : error ? (
-                <div className="text-red-600">{error}</div>
-            ) : projects.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">No projects found. Create your first project above!</div>
-            ) : (
-                <ProjectList
-                    projects={projects}
-                    onSelect={handleSelect}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                />
-            )}
-            {/* Edit Modal */}
-            <Modal isOpen={!!editProject} onClose={handleModalClose} title="Edit Project">
-                {editProject && (
-                    <form onSubmit={handleEditSubmit} className="space-y-2">
-                        <input
-                            name="name"
-                            value={editForm.name || ''}
-                            onChange={handleEditChange}
-                            placeholder="Project Name"
-                            className="w-full border rounded px-2 py-1"
-                            required
-                        />
-                        <input
-                            name="knowledge_domain"
-                            value={editForm.knowledge_domain || ''}
-                            onChange={handleEditChange}
-                            placeholder="Knowledge Domain"
-                            className="w-full border rounded px-2 py-1"
-                            required
-                        />
-                        <textarea
-                            name="description"
-                            value={editForm.description || ''}
-                            onChange={handleEditChange}
-                            placeholder="Description"
-                            className="w-full border rounded px-2 py-1"
-                            rows={2}
-                        />
-                        <select
-                            name="status"
-                            value={editForm.status || 'active'}
-                            onChange={e => setEditForm({ ...editForm, status: e.target.value as 'active' | 'completed' })}
-                            className="w-full border rounded px-2 py-1"
-                            required
-                        >
-                            {STATUS_OPTIONS.map(opt => (
-                                <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-                            ))}
-                        </select>
-                        <div className="text-xs text-gray-500 mt-2">
-                            <div><b>Owner:</b> {editProject.owner_id}</div>
-                            <div><b>Created:</b> {new Date(editProject.created_at).toLocaleString()}</div>
-                            <div><b>Updated:</b> {new Date(editProject.updated_at).toLocaleString()}</div>
+
+            {/* Stats Cards */}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="card p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Total Projects</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                            </div>
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                📁
+                            </div>
                         </div>
-                        <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-4 py-1 rounded disabled:opacity-50"
-                            disabled={editLoading}
-                        >
-                            {editLoading ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </form>
+                    </div>
+                    <div className="card p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Active Projects</p>
+                                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                            </div>
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                ⚡
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Completed</p>
+                                <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
+                            </div>
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                ✅
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+                {/* Status Messages */}
+                {error && (
+                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <span className="text-red-600">❌</span>
+                            <span className="text-sm font-medium text-red-800">{error}</span>
+                        </div>
+                    </div>
                 )}
-            </Modal>
+
+                {success && (
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <span className="text-green-600">✅</span>
+                            <span className="text-sm font-medium text-green-800">{success}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Projects List */}
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="loading-spinner mr-3" />
+                        <span className="text-gray-600">Loading projects...</span>
+                    </div>
+                ) : projects.length > 0 ? (
+                    <ProjectList
+                        projects={projects}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                    />
+                ) : (
+                    <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                            📁
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
+                        <p className="text-gray-600 mb-4">
+                            Create your first decision analysis project to get started.
+                        </p>
+                        <button
+                            onClick={() => setShowCreateForm(true)}
+                            className="btn-primary"
+                        >
+                            ➕ Create Project
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Create Project Modal */}
+            {showCreateForm && (
+                <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
+                    <div className="p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Project</h2>
+                        <CreateProject
+                            onCreate={handleCreate}
+                        />
+                    </div>
+                </Modal>
+            )}
+
+            {/* Edit Project Modal */}
+            {editProject && (
+                <Modal isOpen={!!editProject} onClose={() => setEditProject(null)}>
+                    <div className="p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Project</h2>
+                        <form onSubmit={(e) => { e.preventDefault(); handleUpdate(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Project Name
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={editForm.name || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Description
+                                </label>
+                                <textarea
+                                    className="input min-h-[100px] resize-y"
+                                    value={editForm.description || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    rows={3}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Decision Context
+                                </label>
+                                <textarea
+                                    className="input min-h-[80px] resize-y"
+                                    value={editForm.decision_context || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, decision_context: e.target.value })}
+                                    placeholder="What decision needs to be made?"
+                                    rows={2}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Knowledge Domain
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        value={editForm.knowledge_domain || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, knowledge_domain: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Status
+                                    </label>
+                                    <select
+                                        className="input"
+                                        value={editForm.status || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'completed' })}
+                                    >
+                                        {STATUS_OPTIONS.map(status => (
+                                            <option key={status} value={status}>
+                                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditProject(null)}
+                                    className="btn-secondary"
+                                    disabled={editLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn-primary"
+                                    disabled={editLoading}
+                                >
+                                    {editLoading ? (
+                                        <>
+                                            <div className="loading-spinner" />
+                                            Updating...
+                                        </>
+                                    ) : (
+                                        'Update Project'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </Modal>
+            )}
+
             {/* Delete Confirmation Modal */}
-            <Modal isOpen={!!deleteProjectTarget} onClose={handleModalClose} title="Delete Project?">
-                {deleteProjectTarget && (
-                    <div>
-                        <p>Are you sure you want to delete <b>{deleteProjectTarget.name}</b>? This action cannot be undone.</p>
-                        <div className="flex gap-2 mt-4">
+            {deleteProjectTarget && (
+                <Modal isOpen={!!deleteProjectTarget} onClose={() => setDeleteProjectTarget(null)}>
+                    <div className="p-6">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Project</h2>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete &ldquo;{deleteProjectTarget.name}&rdquo;? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-3">
                             <button
-                                onClick={handleDeleteConfirm}
-                                className="bg-red-600 text-white px-4 py-1 rounded disabled:opacity-50"
-                                disabled={deleteLoading}
-                            >
-                                {deleteLoading ? 'Deleting...' : 'Delete'}
-                            </button>
-                            <button
-                                onClick={handleModalClose}
-                                className="bg-gray-200 px-4 py-1 rounded"
+                                onClick={() => setDeleteProjectTarget(null)}
+                                className="btn-secondary"
                                 disabled={deleteLoading}
                             >
                                 Cancel
                             </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+                                disabled={deleteLoading}
+                            >
+                                {deleteLoading ? (
+                                    <>
+                                        <div className="loading-spinner" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    'Delete Project'
+                                )}
+                            </button>
                         </div>
                     </div>
-                )}
-            </Modal>
+                </Modal>
+            )}
         </div>
     );
 } 
