@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: DADMS Event Bus Service API
+  description: Central event publishing, subscription, and streaming for all DADMS services
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3004
+    description: Development server
+  - url: https://api.dadms.com/event-bus
+    description: Production server
+
+paths:
+  /events/publish:
+    post:
+      summary: Publish an event to the bus
+      description: Publishes an event to the event bus for distribution to subscribers
+      tags:
+        - Events
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventPublishRequest'
+            example:
+              event_type: "project.created"
+              source_service: "project-service"
+              data:
+                project_id: "uuid"
+                name: "UAV Design Project"
+                owner_id: "user123"
+              user_id: "user123"
+              project_id: "uuid"
+              correlation_id: "corr-123"
+              metadata:
+                priority: "high"
+                tags: ["urgent", "new-project"]
+      responses:
+        '200':
+          description: Event published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventPublishResponse'
+        '400':
+          description: Invalid event data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/stream:
+    get:
+      summary: Stream events in real-time
+      description: Streams events in real-time using Server-Sent Events (SSE)
+      tags:
+        - Events
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          description: Comma-separated event types to filter
+          schema:
+            type: string
+          example: "project.created,process.started"
+        - name: user_id
+          in: query
+          description: Filter events for specific user
+          schema:
+            type: string
+        - name: project_id
+          in: query
+          description: Filter events for specific project
+          schema:
+            type: string
+        - name: since
+          in: query
+          description: ISO timestamp to get events since
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                data: {"event_id": "evt-123", "event_type": "project.created", "data": {...}}
+                
+                data: {"event_id": "evt-124", "event_type": "knowledge.uploaded", "data": {...}}
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/history:
+    get:
+      summary: Get historical events
+      description: Retrieves historical events with filtering and pagination
+      tags:
+        - Events
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: event_type
+          in: query
+          description: Filter by event type
+          schema:
+            type: string
+        - name: source_service
+          in: query
+          description: Filter by source service
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          description: Filter by user
+          schema:
+            type: string
+        - name: project_id
+          in: query
+          description: Filter by project
+          schema:
+            type: string
+        - name: since
+          in: query
+          description: ISO timestamp for events since
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: ISO timestamp for events until
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of events to return
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+        - name: offset
+          in: query
+          description: Number of events to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Event history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventHistoryResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/types:
+    get:
+      summary: List all event types
+      description: Returns all available event types and their descriptions
+      tags:
+        - Events
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Event types retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTypesResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/subscribe:
+    post:
+      summary: Subscribe to specific event types
+      description: Creates a subscription to specific event types with optional filtering
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSubscribeRequest'
+            example:
+              event_types: ["project.created", "process.started"]
+              filters:
+                user_id: "user123"
+                project_id: "uuid"
+              webhook_url: "https://aas-service:3005/events/webhook"
+              description: "AAS subscription for user assistance"
+      responses:
+        '200':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSubscribeResponse'
+        '400':
+          description: Invalid subscription data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/subscribe/{id}:
+    delete:
+      summary: Unsubscribe from event stream
+      description: Removes an event subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Subscription ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventUnsubscribeResponse'
+        '404':
+          description: Subscription not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/stats:
+    get:
+      summary: Get event bus statistics
+      description: Returns event bus performance and usage statistics
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventStatsResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/health:
+    get:
+      summary: Service health check
+      description: Service health and readiness check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Event:
+      type: object
+      required:
+        - id
+        - event_type
+        - source_service
+        - data
+        - timestamp
+      properties:
+        id:
+          type: string
+          description: Unique event identifier
+        event_type:
+          type: string
+          description: Event type (e.g., "project.created")
+        source_service:
+          type: string
+          description: Service that published the event
+        data:
+          type: object
+          description: Event payload
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+        user_id:
+          type: string
+          description: Associated user (if applicable)
+        project_id:
+          type: string
+          description: Associated project (if applicable)
+        correlation_id:
+          type: string
+          description: For tracking related events
+        metadata:
+          type: object
+          description: Additional metadata
+
+    EventPublishRequest:
+      type: object
+      required:
+        - event_type
+        - source_service
+        - data
+      properties:
+        event_type:
+          type: string
+          description: Event type
+        source_service:
+          type: string
+          description: Service publishing the event
+        data:
+          type: object
+          description: Event payload
+        user_id:
+          type: string
+          description: Associated user
+        project_id:
+          type: string
+          description: Associated project
+        correlation_id:
+          type: string
+          description: Correlation ID for tracking
+        metadata:
+          type: object
+          description: Additional metadata
+
+    EventPublishResponse:
+      type: object
+      required:
+        - event_id
+        - status
+        - timestamp
+      properties:
+        event_id:
+          type: string
+          description: Published event ID
+        status:
+          type: string
+          enum: [published, failed]
+          description: Publication status
+        timestamp:
+          type: string
+          format: date-time
+          description: Publication timestamp
+        subscribers_notified:
+          type: integer
+          description: Number of subscribers notified
+
+    EventHistoryResponse:
+      type: object
+      required:
+        - events
+        - pagination
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        pagination:
+          type: object
+          required:
+            - total
+            - limit
+            - offset
+            - has_more
+          properties:
+            total:
+              type: integer
+              description: Total number of events
+            limit:
+              type: integer
+              description: Number of events returned
+            offset:
+              type: integer
+              description: Number of events skipped
+            has_more:
+              type: boolean
+              description: Whether more events are available
+
+    EventTypesResponse:
+      type: object
+      required:
+        - event_types
+      properties:
+        event_types:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - description
+              - category
+            properties:
+              type:
+                type: string
+                description: Event type
+              description:
+                type: string
+                description: Event description
+              category:
+                type: string
+                description: Event category
+              data_schema:
+                type: object
+                description: JSON schema for event data
+
+    EventSubscribeRequest:
+      type: object
+      required:
+        - event_types
+        - webhook_url
+      properties:
+        event_types:
+          type: array
+          items:
+            type: string
+          description: Event types to subscribe to
+        filters:
+          type: object
+          description: Optional filters
+          properties:
+            user_id:
+              type: string
+            project_id:
+              type: string
+        webhook_url:
+          type: string
+          format: uri
+          description: Webhook URL for event delivery
+        description:
+          type: string
+          description: Subscription description
+
+    EventSubscribeResponse:
+      type: object
+      required:
+        - subscription_id
+        - status
+        - created_at
+      properties:
+        subscription_id:
+          type: string
+          description: Subscription ID
+        status:
+          type: string
+          enum: [active, inactive]
+          description: Subscription status
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        event_types:
+          type: array
+          items:
+            type: string
+          description: Subscribed event types
+        webhook_url:
+          type: string
+          format: uri
+          description: Webhook URL
+
+    EventUnsubscribeResponse:
+      type: object
+      required:
+        - subscription_id
+        - status
+        - cancelled_at
+      properties:
+        subscription_id:
+          type: string
+          description: Subscription ID
+        status:
+          type: string
+          enum: [cancelled]
+          description: Subscription status
+        cancelled_at:
+          type: string
+          format: date-time
+          description: Cancellation timestamp
+
+    EventStatsResponse:
+      type: object
+      required:
+        - total_events
+        - events_today
+        - active_subscriptions
+        - events_per_second
+      properties:
+        total_events:
+          type: integer
+          description: Total events processed
+        events_today:
+          type: integer
+          description: Events processed today
+        active_subscriptions:
+          type: integer
+          description: Active subscriptions
+        events_per_second:
+          type: number
+          format: float
+          description: Events per second
+        top_event_types:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              count:
+                type: integer
+        service_health:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+            uptime:
+              type: integer
+              description: Uptime in seconds
+            last_event:
+              type: string
+              format: date-time
+
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Service health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+        version:
+          type: string
+          description: Service version
+        dependencies:
+          type: object
+          description: Dependency health status
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            redis:
+              type: string
+              enum: [healthy, unhealthy]
+
+tags:
+  - name: Events
+    description: Event publishing and streaming operations
+  - name: Subscriptions
+    description: Event subscription management
+  - name: Statistics
+    description: Event bus statistics and monitoring
+  - name: Health
+    description: Service health and status 
