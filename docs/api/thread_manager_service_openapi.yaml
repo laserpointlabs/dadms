@@ -1,0 +1,1206 @@
+openapi: 3.0.3
+info:
+  title: DADMS Thread Manager Service API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for the DADMS 2.0 Thread Manager Service. Defines endpoints for process thread management, 
+    feedback collection, similarity analysis, and impact assessment capabilities. Enables full traceability and 
+    auditability of process runs and their tasks, supporting progressive process improvement through human and SME feedback.
+
+servers:
+  - url: http://localhost:3008
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Thread Models
+    ProcessThread:
+      type: object
+      properties:
+        threadId:
+          type: string
+          description: Unique identifier for the process thread
+        processInstanceId:
+          type: string
+          description: BPMN process instance ID
+        processDefinitionKey:
+          type: string
+          description: BPMN process definition key
+        processDefinitionName:
+          type: string
+          description: Human-readable process definition name
+        businessKey:
+          type: string
+          description: Business key associated with the process instance
+        startTime:
+          type: string
+          format: date-time
+          description: When the thread started
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the thread completed (null if still active)
+        status:
+          type: string
+          enum: [active, completed, failed, suspended]
+          description: Current status of the thread
+        startedBy:
+          type: string
+          description: User ID who started the thread
+        taskCount:
+          type: integer
+          description: Total number of tasks in the thread
+        completedTasks:
+          type: integer
+          description: Number of completed tasks
+        failedTasks:
+          type: integer
+          description: Number of failed tasks
+        totalDuration:
+          type: integer
+          description: Total duration in seconds
+        currentTask:
+          $ref: '#/components/schemas/CurrentTask'
+        summary:
+          $ref: '#/components/schemas/ThreadSummary'
+
+    CurrentTask:
+      type: object
+      nullable: true
+      properties:
+        taskId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [userTask, serviceTask, scriptTask]
+        assignee:
+          type: string
+          nullable: true
+
+    ThreadSummary:
+      type: object
+      properties:
+        totalFeedback:
+          type: integer
+        averageRating:
+          type: number
+          format: float
+        lastActivity:
+          type: string
+          format: date-time
+
+    # Task Models
+    ProcessTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [userTask, serviceTask, scriptTask]
+        status:
+          type: string
+          enum: [active, completed, failed, suspended]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+        duration:
+          type: integer
+          description: Duration in seconds
+        assignee:
+          type: string
+          nullable: true
+        inputContext:
+          type: object
+          description: Input context passed to the task
+        injectedContext:
+          $ref: '#/components/schemas/InjectedContext'
+        outputContext:
+          type: object
+          nullable: true
+          description: Output context from the task
+        feedback:
+          $ref: '#/components/schemas/TaskFeedback'
+
+    InjectedContext:
+      type: object
+      properties:
+        persona:
+          $ref: '#/components/schemas/Persona'
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        prompt:
+          type: string
+        model:
+          type: string
+        temperature:
+          type: number
+          format: float
+
+    Persona:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+
+    Tool:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+
+    TaskFeedback:
+      type: object
+      properties:
+        count:
+          type: integer
+        averageRating:
+          type: number
+          format: float
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedbackComment'
+
+    # Feedback Models
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [summary, meta, cross-task]
+        content:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        author:
+          $ref: '#/components/schemas/FeedbackAuthor'
+        timestamp:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    FeedbackComment:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [summary, meta, cross-task]
+        content:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        author:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    FeedbackAuthor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+
+    Attachment:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+
+    FeedbackCreate:
+      type: object
+      required: [type, content, rating]
+      properties:
+        type:
+          type: string
+          enum: [summary, meta, cross-task]
+        content:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    # Similarity Analysis Models
+    SimilarTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+        threadId:
+          type: string
+        processDefinitionKey:
+          type: string
+        processDefinitionName:
+          type: string
+        name:
+          type: string
+        similarityScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        similarityFactors:
+          type: array
+          items:
+            type: string
+        context:
+          $ref: '#/components/schemas/TaskContext'
+
+    TaskContext:
+      type: object
+      properties:
+        inputContext:
+          type: object
+        injectedContext:
+          $ref: '#/components/schemas/InjectedContext'
+        outputContext:
+          type: object
+          nullable: true
+
+    # Impact Analysis Models
+    ImpactAnalysis:
+      type: object
+      properties:
+        analysisId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        processDefinitionKey:
+          type: string
+        changeType:
+          type: string
+          enum: [task-modification, process-addition, process-removal, parameter-change]
+        impactedHistoricalTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImpactedTask'
+        impactedSimilarProcesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImpactedProcess'
+        dependencyImpact:
+          type: array
+          items:
+            $ref: '#/components/schemas/DependencyImpact'
+        summary:
+          $ref: '#/components/schemas/ImpactSummary'
+
+    ImpactedTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+        threadId:
+          type: string
+        processDefinitionKey:
+          type: string
+        name:
+          type: string
+        impactScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        impactLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        explanation:
+          type: string
+        affectedMetrics:
+          type: object
+
+    ImpactedProcess:
+      type: object
+      properties:
+        processDefinitionKey:
+          type: string
+        processDefinitionName:
+          type: string
+        impactScore:
+          type: number
+          format: float
+        explanation:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    DependencyImpact:
+      type: object
+      properties:
+        dependentProcess:
+          type: string
+        impactScore:
+          type: number
+          format: float
+        explanation:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    ImpactSummary:
+      type: object
+      properties:
+        totalImpactedTasks:
+          type: integer
+        totalImpactedProcesses:
+          type: integer
+        averageImpactScore:
+          type: number
+          format: float
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    ProcessChangeRequest:
+      type: object
+      required: [processDefinitionKey, changeType, changeDescription]
+      properties:
+        processDefinitionKey:
+          type: string
+        changeType:
+          type: string
+          enum: [task-modification, process-addition, process-removal, parameter-change]
+        changeDescription:
+          type: string
+        affectedTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AffectedTask'
+        analysisScope:
+          $ref: '#/components/schemas/AnalysisScope'
+
+    AffectedTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+        change:
+          type: string
+        impact:
+          type: string
+
+    AnalysisScope:
+      type: object
+      properties:
+        includeHistoricalTasks:
+          type: boolean
+          default: true
+        includeSimilarProcesses:
+          type: boolean
+          default: true
+        includeDependencies:
+          type: boolean
+          default: true
+
+    # Analytics Models
+    ThreadAnalytics:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/AnalyticsPeriod'
+        summary:
+          $ref: '#/components/schemas/ThreadAnalyticsSummary'
+        byProcess:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessAnalytics'
+        byDay:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyAnalytics'
+        insights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsInsight'
+
+    AnalyticsPeriod:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+
+    ThreadAnalyticsSummary:
+      type: object
+      properties:
+        totalThreads:
+          type: integer
+        activeThreads:
+          type: integer
+        completedThreads:
+          type: integer
+        failedThreads:
+          type: integer
+        averageDuration:
+          type: integer
+        averageTasksPerThread:
+          type: number
+          format: float
+        totalFeedback:
+          type: integer
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    ProcessAnalytics:
+      type: object
+      properties:
+        processDefinitionKey:
+          type: string
+        processDefinitionName:
+          type: string
+        threads:
+          type: integer
+        activeThreads:
+          type: integer
+        completedThreads:
+          type: integer
+        averageDuration:
+          type: integer
+        averageTasksPerThread:
+          type: number
+          format: float
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    DailyAnalytics:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        threads:
+          type: integer
+        completedThreads:
+          type: integer
+        averageDuration:
+          type: integer
+        feedback:
+          type: integer
+
+    AnalyticsInsight:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [performance, feedback, efficiency, quality]
+        title:
+          type: string
+        description:
+          type: string
+        metric:
+          type: string
+        value:
+          type: number
+          format: float
+        trend:
+          type: string
+          enum: [increasing, decreasing, stable]
+
+    TaskAnalytics:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/TaskAnalyticsSummary'
+        byTaskType:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskTypeAnalytics'
+        byAssignee:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssigneeAnalytics'
+        performanceTrends:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerformanceTrend'
+
+    TaskAnalyticsSummary:
+      type: object
+      properties:
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        failedTasks:
+          type: integer
+        activeTasks:
+          type: integer
+        averageCompletionTime:
+          type: integer
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    TaskTypeAnalytics:
+      type: object
+      properties:
+        taskType:
+          type: string
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        averageCompletionTime:
+          type: integer
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    AssigneeAnalytics:
+      type: object
+      properties:
+        assignee:
+          type: string
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        averageCompletionTime:
+          type: integer
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    PerformanceTrend:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        completionRate:
+          type: number
+          format: float
+        averageCompletionTime:
+          type: integer
+        averageFeedbackRating:
+          type: number
+          format: float
+
+    # Pagination Models
+    PaginatedResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # Error Models
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            timestamp:
+              type: string
+              format: date-time
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Health Check
+  /health:
+    get:
+      summary: Service health/readiness check
+      description: Returns service health status, uptime, and version.
+      tags: [Health]
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  uptime:
+                    type: integer
+                  version:
+                    type: string
+
+  # Process Threads
+  /api/threads/process:
+    get:
+      summary: Get process threads
+      description: Returns a list of process threads organized by process definition runs.
+      tags: [Process Threads]
+      parameters:
+        - in: query
+          name: processDefinitionKey
+          schema:
+            type: string
+          description: Filter by process definition key
+        - in: query
+          name: processInstanceId
+          schema:
+            type: string
+          description: Filter by specific process instance
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, completed, failed, suspended]
+          description: Filter by thread status
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter threads started after date (ISO 8601)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter threads started before date (ISO 8601)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of threads to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Number of threads to skip
+      responses:
+        '200':
+          description: List of process threads
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      threads:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProcessThread'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/threads/process/{threadId}:
+    get:
+      summary: Get thread details
+      description: Returns detailed information about a specific process thread including all tasks and their context.
+      tags: [Process Threads]
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema:
+            type: string
+          description: Thread ID
+      responses:
+        '200':
+          description: Thread details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ProcessThread'
+                  - type: object
+                    properties:
+                      variables:
+                        type: object
+                        description: Process variables
+                      tasks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProcessTask'
+                      threadFeedback:
+                        $ref: '#/components/schemas/Feedback'
+                      executionPath:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            taskId:
+                              type: string
+                            name:
+                              type: string
+                            timestamp:
+                              type: string
+                              format: date-time
+                            status:
+                              type: string
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/threads/process/{threadId}/tasks:
+    get:
+      summary: Get thread tasks
+      description: Returns all tasks for a specific process thread.
+      tags: [Process Threads]
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema:
+            type: string
+          description: Thread ID
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, completed, failed, suspended]
+          description: Filter by task status
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [userTask, serviceTask, scriptTask]
+          description: Filter by task type
+        - in: query
+          name: assignee
+          schema:
+            type: string
+          description: Filter by assignee
+      responses:
+        '200':
+          description: Thread tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threadId:
+                    type: string
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProcessTask'
+
+  # Task Context & Details
+  /api/threads/tasks/{taskId}/context:
+    get:
+      summary: Get task context
+      description: Returns the complete context for a specific task including input, injected, and output context.
+      tags: [Task Context]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      responses:
+        '200':
+          description: Task context
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ProcessTask'
+                  - type: object
+                    properties:
+                      threadId:
+                        type: string
+                      processInstanceId:
+                        type: string
+                      executionMetrics:
+                        type: object
+                        properties:
+                          processingTime:
+                            type: integer
+                          tokenUsage:
+                            type: object
+                          toolCalls:
+                            type: integer
+                          successRate:
+                            type: number
+                            format: float
+
+  # Feedback Management
+  /api/threads/process/{threadId}/feedback:
+    get:
+      summary: Get thread feedback
+      description: Returns all feedback for a specific process thread.
+      tags: [Feedback]
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema:
+            type: string
+          description: Thread ID
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [summary, meta, cross-task]
+          description: Filter by feedback type
+        - in: query
+          name: author
+          schema:
+            type: string
+          description: Filter by feedback author
+        - in: query
+          name: rating
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+          description: Filter by minimum rating
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of feedback items to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Number of feedback items to skip
+      responses:
+        '200':
+          description: Thread feedback
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threadId:
+                    type: string
+                  feedback:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Feedback'
+                  summary:
+                    type: object
+                    properties:
+                      totalFeedback:
+                        type: integer
+                      averageRating:
+                        type: number
+                        format: float
+                      ratingDistribution:
+                        type: object
+                      typeDistribution:
+                        type: object
+
+    post:
+      summary: Add thread feedback
+      description: Add feedback to a process thread.
+      tags: [Feedback]
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema:
+            type: string
+          description: Thread ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackCreate'
+      responses:
+        '201':
+          description: Feedback created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/threads/tasks/{taskId}/feedback:
+    get:
+      summary: Get task feedback
+      description: Returns all feedback for a specific task.
+      tags: [Feedback]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      responses:
+        '200':
+          description: Task feedback
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                  feedback:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Feedback'
+                  summary:
+                    type: object
+                    properties:
+                      totalFeedback:
+                        type: integer
+                      averageRating:
+                        type: number
+                        format: float
+                      ratingDistribution:
+                        type: object
+
+    post:
+      summary: Add task feedback
+      description: Add feedback to a specific task.
+      tags: [Feedback]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackCreate'
+      responses:
+        '201':
+          description: Feedback created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+
+  # Similarity Analysis
+  /api/threads/tasks/{taskId}/similar:
+    get:
+      summary: Get similar tasks
+      description: Returns tasks similar to the specified task based on semantic similarity analysis.
+      tags: [Similarity Analysis]
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+          description: Task ID
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of similar tasks to return
+        - in: query
+          name: minSimilarity
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 1
+            default: 0.7
+          description: Minimum similarity score
+        - in: query
+          name: includeContext
+          schema:
+            type: boolean
+            default: false
+          description: Include task context in response
+      responses:
+        '200':
+          description: Similar tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                  similarTasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SimilarTask'
+
+  # Impact Analysis
+  /api/threads/impact/process-change:
+    post:
+      summary: Analyze process change impact
+      description: Analyze the impact of a proposed process change on historical tasks and processes.
+      tags: [Impact Analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessChangeRequest'
+      responses:
+        '200':
+          description: Impact analysis results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactAnalysis'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Analytics & Reporting
+  /api/threads/analytics:
+    get:
+      summary: Get thread analytics
+      description: Returns analytics and insights about process threads.
+      tags: [Analytics]
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for analytics (ISO 8601)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for analytics (ISO 8601)
+        - in: query
+          name: processDefinitionKey
+          schema:
+            type: string
+          description: Filter by process definition key
+        - in: query
+          name: groupBy
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+          description: Group by time period
+      responses:
+        '200':
+          description: Thread analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadAnalytics'
+
+  /api/threads/tasks/analytics:
+    get:
+      summary: Get task performance analytics
+      description: Returns analytics about task performance and patterns.
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Task analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskAnalytics' 
