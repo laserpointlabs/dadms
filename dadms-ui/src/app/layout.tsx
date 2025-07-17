@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import AASCar from "../components/AASCar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -84,6 +85,7 @@ export default function RootLayout({
                     {/* Main Content */}
                     <main className="flex-1 p-0 min-h-screen">{children}</main>
                 </div>
+                <AASCar />
             </body>
         </html>
     );
