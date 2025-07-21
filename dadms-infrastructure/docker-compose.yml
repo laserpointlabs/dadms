@@ -127,6 +127,28 @@ services:
   #       condition: service_healthy
   #     ollama:
   #       condition: service_healthy
+
+  # context-manager-service:
+  #   build: 
+  #     context: ../dadms-services/context-manager
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3020:3020"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://dadms_user:dadms_password@postgres:5432/dadms
+  #     - REDIS_URL=redis://redis:6379
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+  #     - OLLAMA_ENDPOINT=http://ollama:11434
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
   #   networks:
   #     - default
 
