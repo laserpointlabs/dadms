@@ -1,110 +1,150 @@
 # Event-Driven Decision System (EDS): Concept, Architecture, and Development Strategy
 
 ## Executive Summary
-
-The Event-Driven Decision System (EDS) is a next-generation decision architecture designed to continuously ingest real-world events, execute structured decision workflows, and emit tangible, trackable outcomes. Unlike traditional systems that culminate in static artifacts (e.g., white papers), EDS treats every decision as a bounded, actionable unit of transformation—triggered by an initiating event and resulting in a consequential event.
-
-This white paper serves as a foundation for guiding LLM-based agents, software developers (via GitHub Copilot), and orchestrators (e.g., Cursor) in building and expanding EDS using intelligent, composable components, simulation workflows, and scoring mechanisms.
+The Event-Driven Decision System (EDS) is a next-generation architecture for ingesting real-world events, executing structured decision workflows, and emitting trackable outcomes. Unlike static systems, EDS treats each decision as a bounded, actionable transformation—triggered by an event and resulting in a consequential event. This white paper guides LLM-based agents, developers, and orchestrators in building EDS using composable components, simulation workflows, and scoring.
 
 ## Core Philosophy: The Punch Decision Process
-
-EDS is grounded in a real-time, iterative framework inspired by a high-stakes human reflex scenario—the punch:
-
-### Example: The ‘Punch’ Scenario
+EDS uses a real-time, iterative framework inspired by a reflex scenario—the punch:
 
 - **Event In**: Incoming punch (external event)
-- **Objective**: Avoid injury (defined goal)
+- **Objective**: Avoid injury (goal)
 - **Assumptions**: Opponent is right-handed, expected angle, reaction time
-- **Ontology**: Formalized knowledge of "punch," "avoidance," body mechanics
-- **Data**: Direction, velocity, position, prior training history
-- **Model**: Motion physics, body kinematics, evasive maneuvers
-- **Parameterization**: Reflex delay, shoulder width, stance
-- **Simulation**: Predict results of ducking, dodging, blocking
-- **Validation**: Test historical reactions or real-world sparring outcomes
-- **Analysis**: Assess maneuver outcomes vs objectives
+- **Ontology**: Knowledge of "punch," "avoidance," body mechanics
+- **Data**: Direction, velocity, position, training history
+- **Model**: Motion physics, kinematics, maneuvers
+- **Parameterization**: Reflex delay, stance
+- **Simulation**: Predict ducking, dodging, blocking
+- **Validation**: Test reactions or sparring outcomes
+- **Analysis**: Assess outcomes vs objectives
 - **Decision**: Dodge left
-- **Event Out**: Action occurs, results registered (dodged, hit, countered)
+- **Event Out**: Action occurs, results registered
 
-Every decision in EDS follows this structure. It begins with a triggering event, proceeds through modeling, simulation, and analysis, and concludes with an emitted event—creating a closed, learnable loop.
+Each EDS decision follows this structure: trigger, model, simulate, analyze, emit event—forming a closed, learnable loop.
 
-## Foundational Pillars of EDS
+## Foundational Pillars
 
-### 1. **Event-to-Event Decision Flow**
+**1. Event-to-Event Decision Flow**
+- **Event In**: Data signal or trigger
+- **Workflow**: Model-driven reasoning
+- **Event Out**: Action or consequence
 
-Every decision is framed between two events:
+**2. Knowledge & Heuristics**
+- Ontologies define decision spaces
+- Context threads stored in a vector DB with metadata and feedback
+- Threads accumulate scores, revisions, impact mappings
 
-- **Event In**: Data signal, change, or trigger
-- **Workflow Execution**: Model-driven reasoning
-- **Event Out**: Real action or consequence
+**3. Modeling, Simulation, and Analysis**
+- Validated models: physics, ML, business
+- Simulation tools: AFSIM, Simulink, Python
+- Analytical evaluators define scorecards
 
-### 2. **Knowledge & Heuristics:** **Ontology + Context Threading**
-
-- Ontologies define structured decision spaces
-- Context threads are stored in a vector database with metadata and feedback
-- 'Context Threads' accumulate scores, revisions, and impact mappings
-
-### 3. **Modeling, Simulation, and Analysis (MS&A)**
-
-- Validated models: physics, ML, business, SysML
-- Simulation tools: AFSIM, Simulink, Python engines
-- Analytical evaluators define scorecards and options
-
-### 4. **Agent-Oriented Execution**
-
-- Agents are assigned tools, personas, and prompts
-- Decision agents can bootstrap, simulate, and revise workflows (Decision Space)
+**4. Agent-Oriented Execution**
+- Agents have tools, personas, prompts
+- Agents bootstrap, simulate, revise workflows
 - Supervisory agents monitor and score outputs
 
-### 5. **Scoring Mechanism: The Baseball Analogy**
-
-- **Batting Average**: % of successful decision executions
-- **Clutch Score**: Impact-weighted score based on time sensitivity
+**5. Scoring Mechanism (Baseball Analogy)**
+- **Batting Avg**: % successful executions
+- **Clutch Score**: Impact x time sensitivity
 - **On-Base %**: Utility of partial actions
-- **Slugging %**: Combined impact x frequency
-- Each decision, process, or agent earns scores over time
+- **Slugging %**: Impact x frequency
+- All decisions, processes, agents earn scores
 
 ## Advanced Capabilities
 
-### Event Decision Trees
+**Event Decision Trees**
+- Auto-constructed decision chains
+- Simulate branches: event → decision → event
+- Game theory for cascading impacts
 
-- Automatically constructed decision chains
-- Simulate all potential branches: event → decision → event
-- Use game theory to evaluate complex, cascading impacts
-
-### Event Decision Space Bootstrapping
-
-- Generate "gray space" maps of possible outcomes
+**Event Decision Space Bootstrapping**
+- Map possible outcomes ("gray space")
 - Guide agent workflows or human review
-- Enables proactive rather than reactive execution
 
-### Terminal Events and Action Enforcement
-
-- ***Every decision must produce an Event Out:*** Once the system is active, it runs continuously—forcing the evaluation and re-evaluation of the decision space in real time. Early on, this may seem manageable, as decision patterns converge and stabilize. But as new data, knowledge, and decision domains are introduced, the complexity and branching of the decision space will scale rapidly. This self-sustaining dynamic ensures that EDS remains not only responsive, but increasingly intelligent, adapting to a growing and evolving ecosystem of inputs and outcomes.
-- Static reports (e.g., white papers) are insufficient unless they trigger downstream action
-- Terminal decisions (e.g., mission end) must still be recorded as events for learning
+**Terminal Events & Action Enforcement**
+- Every decision emits an Event Out; system runs continuously, adapting as complexity grows
+- Static reports insufficient unless they trigger action
+- Terminal decisions must be recorded for learning
 
 ## Application Domains
-
-- Aircraft acquisition
-- Options trading / market response
-- Logistics planning
-- ISR mission coordination
-- Digital transformation initiatives
+- Aircraft acquisition, options trading, logistics, ISR coordination, digital transformation
 
 ## MVP vs Vision
-
-- **MVP**: Reactive execution of structured decision flows
-- **Full Vision**: Autonomous propagation of self-learning decision graphs
+- **MVP**: Reactive execution of structured flows
+- **Vision**: Autonomous, self-learning decision graphs
 
 ## Implementation Notes
-
-- Use GitHub Copilot to scaffold agents, pipelines, and test workflows
-- Cursor can be employed to manage revisions, memory, and iterative design
-- Workflows are executed serially but support parallel tree growth via agent branching
+- Use GitHub Copilot for agents, pipelines, workflows
+- Cursor manages revisions, memory, design
+- Workflows run serially, support parallel tree growth
 
 ## Closing Statement
-
-EDS is not just a decision tool. It is a continuous reasoning engine that builds and acts upon a living knowledge base. It replaces passive digital thread concepts with tangible execution. Every decision is scored. Every outcome is real. Every improvement is learned.
+EDS is a continuous reasoning engine, building and acting on a living knowledge base. Every decision is scored, every outcome is real, every improvement is learned.
 
 > *“The digital thread was the promise. EDS is the delivery.”*
 
+---
+
+**Appendix: EDS Workflow (Mermaid)**
+
+```mermaid
+flowchart TD
+    A(["<b>Event In</b><br><span style='font-size:15px;color:#555;'>Trigger: Incoming Punch, Market Shift, Sensor Alert</span>"]) 
+    -->|<b>Sense</b>| B(["<b>Frame Objective</b><br><span style='font-size:15px;color:#555;'>Avoid injury, Maximize return, Neutralize threat</span>"])
+    B -->|<b>Contextualize</b>| C(["<b>Ontology & Data</b><br><span style='font-size:15px;color:#555;'>Define entities, context, and relevant data</span>"])
+    C -->|<b>Model</b>| D(["<b>Model & Parameters</b><br><span style='font-size:15px;color:#555;'>Select models, set parameters (e.g., kinematics, stats)</span>"])
+    D -->|<b>Simulate</b>| E(["<b>Simulate Actions</b><br><span style='font-size:15px;color:#555;'>Evaluate possible responses (e.g., Duck, Dodge, Block)</span>"])
+    E -->|<b>Analyze</b>| F(["<b>Analyze Outcomes</b><br><span style='font-size:15px;color:#555;'>Score impact, assess success/failure</span>"])
+    F -->|<b>Decide</b>| G(["<b>Make Decision</b><br><span style='font-size:15px;color:#555;'>Choose best action (e.g., Dodge Left, Buy Option)</span>"])
+    G -->|<b>Act</b>| H(["<b>Emit Event Out</b><br><span style='font-size:15px;color:#555;'>Trigger consequence or system change</span>"])
+    H -->|<b>Learn</b>| I(["<b>Log & Learn</b><br><span style='font-size:15px;color:#555;'>Record outcome, update knowledge, generate next event</span>"])
+    I -->|<b>Bootstrap Gray Space</b>| J(["<b>Sandbox/Gray Area</b><br><span style='font-size:15px;color:#555;'>Explore and simulate potential decision paths</span>"])
+    J -->|<b>Evaluate & Expand</b>| A
+    H -->|<b>Trigger Next</b>| A
+
+    classDef event fill:#f9f,stroke:#333,stroke-width:4px,color:#222;
+    classDef objective fill:#bbf,stroke:#333,stroke-width:2px,color:#222;
+    classDef ontology fill:#bfb,stroke:#333,stroke-width:2px,color:#222;
+    classDef model fill:#ffb,stroke:#333,stroke-width:2px,color:#222;
+    classDef simulate fill:#fbb,stroke:#333,stroke-width:2px,color:#222;
+    classDef analyze fill:#bff,stroke:#333,stroke-width:2px,color:#222;
+    classDef decide fill:#fbf,stroke:#333,stroke-width:2px,color:#222;
+    classDef emit fill:#fdb,stroke:#333,stroke-width:2px,color:#222;
+    classDef log fill:#dfd,stroke:#333,stroke-width:2px,color:#222;
+    classDef sandbox fill:#eee,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:#222;
+    class A event;
+    class B objective;
+    class C ontology;
+    class D model;
+    class E simulate;
+    class F analyze;
+    class G decide;
+    class H emit;
+    class I log;
+    class J sandbox;
+```
+
+This diagram illustrates EDS as a continuous, self-sustaining loop: each decision not only triggers the next event but also explores and bootstraps the "gray space"—a sandbox where new, uncharted decision paths are simulated and evaluated. This ensures the system is always learning, expanding its decision space, and adapting to novel scenarios in real time.
+
+---
+## Additional Diagrams
+EDS Execution Ecosystem  
+This shows the broader architectural loop of how events are handled system-wide, including scoring and agent involvement.
+
+```mermaid
+flowchart TB
+    E1(["<b>Event In</b>"])
+    CT(["<b>Context Threading<br>+ Ontology Retrieval</b>"])
+    DS(["<b>Decision Space Expansion<br>(Simulate Options)</b>"])
+    MS(["<b>Modeling + Simulation</b>"])
+    AS(["<b>Agent Support + Tool Access</b>"])
+    SC(["<b>Score Alternatives<br>(Batting Avg, Clutch)</b>"])
+    DO(["<b>Decision Output</b>"])
+    EO(["<b>Event Out<br>(Trigger Action or Next Event)</b>"])
+    LS(["<b>Learn + Update Thread</b>"])
+
+    E1 --> CT --> DS --> MS --> AS --> SC --> DO --> EO --> LS --> DS
+
+    classDef node fill:#f8f8ff,stroke:#333,stroke-width:2px,color:#222;
+    class E1,CT,DS,MS,AS,SC,DO,EO,LS node;
+```
