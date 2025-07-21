@@ -1,0 +1,1678 @@
+openapi: 3.0.3
+info:
+  title: DADMS Simulation Manager Service API
+  description: |
+    Execution orchestration hub for computational simulations in DADMS's Event-Driven System (EDS).
+    Provides scalable, observable, and resilient simulation execution capabilities across diverse 
+    computational models and distributed computing resources with comprehensive result management.
+  version: 2.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3011
+    description: Development server
+  - url: https://api.dadms.com/simulation-manager
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Simulations
+    description: Simulation execution and management
+  - name: Batch
+    description: Batch simulation processing
+  - name: Status
+    description: Status monitoring and progress tracking
+  - name: Results
+    description: Result retrieval and analysis
+  - name: Resources
+    description: Resource management and optimization
+  - name: Analytics
+    description: Performance analytics and comparison
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  # Simulation Execution
+  /api/v1/simulations:
+    post:
+      summary: Run new simulation
+      description: Execute a simulation for a registered model with specified parameters
+      tags:
+        - Simulations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+            example:
+              model_id: "model-uuid-123"
+              name: "UAV Performance Analysis"
+              description: "Monte Carlo analysis of UAV performance under varying conditions"
+              parameters:
+                inputs:
+                  altitude: 1000
+                  velocity: 50
+                  weight: 25.5
+                monte_carlo_runs: 1000
+              configuration:
+                execution_mode: "cloud_batch"
+                timeout_minutes: 60
+                priority: "HIGH"
+              tags: ["uav", "performance", "monte-carlo"]
+      responses:
+        '201':
+          description: Simulation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRun'
+        '400':
+          description: Invalid simulation request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List simulations
+      description: Retrieve a list of simulations with filtering and pagination
+      tags:
+        - Simulations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SimulationStatus'
+          description: Filter by simulation status
+        - name: model_id
+          in: query
+          schema:
+            type: string
+          description: Filter by model ID
+        - name: created_by
+          in: query
+          schema:
+            type: string
+          description: Filter by creator
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project
+        - name: simulation_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/SimulationType'
+          description: Filter by simulation type
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter simulations created after date
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter simulations created before date
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, duration, name]
+            default: created_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: Simulations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationListResponse'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/batch:
+    post:
+      summary: Run batch simulations
+      description: Execute multiple simulations with parameter variations
+      tags:
+        - Batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchSimulationRequest'
+            example:
+              base_request:
+                model_id: "model-uuid-123"
+                name: "Parameter Sweep Analysis"
+                parameters:
+                  inputs:
+                    altitude: 1000
+                    velocity: 50
+              parameter_variations:
+                - set_id: "set-1"
+                  parameters:
+                    weight: 20.0
+                    wind_speed: 5
+                - set_id: "set-2"
+                  parameters:
+                    weight: 25.0
+                    wind_speed: 10
+              execution_mode: "parallel"
+              max_concurrent_runs: 10
+      responses:
+        '201':
+          description: Batch simulation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSimulationResult'
+        '400':
+          description: Invalid batch request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}:
+    get:
+      summary: Get simulation details
+      description: Retrieve detailed information about a specific simulation
+      tags:
+        - Simulations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Simulation details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRun'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Cancel simulation
+      description: Cancel a running simulation
+      tags:
+        - Simulations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '204':
+          description: Simulation cancelled successfully
+        '400':
+          description: Cannot cancel simulation (already completed)
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/retry:
+    post:
+      summary: Retry simulation
+      description: Retry a failed simulation
+      tags:
+        - Simulations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Simulation retry started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRun'
+        '400':
+          description: Cannot retry simulation
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Status & Monitoring
+  /api/v1/simulations/{id}/status:
+    get:
+      summary: Get simulation status
+      description: Get current status and progress of a simulation
+      tags:
+        - Status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationStatus'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/progress:
+    get:
+      summary: Get simulation progress
+      description: Get detailed progress information for a running simulation
+      tags:
+        - Status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressUpdate'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/logs:
+    get:
+      summary: Get simulation logs
+      description: Retrieve execution logs for a simulation
+      tags:
+        - Status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+        - name: level
+          in: query
+          schema:
+            $ref: '#/components/schemas/LogLevel'
+          description: Filter by log level
+        - name: component
+          in: query
+          schema:
+            type: string
+          description: Filter by component
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: Number of log entries
+      responses:
+        '200':
+          description: Logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionLog'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/metrics:
+    get:
+      summary: Get simulation metrics
+      description: Get performance and resource metrics for a simulation
+      tags:
+        - Status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionMetrics'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Results & Analytics
+  /api/v1/simulations/{id}/results:
+    get:
+      summary: Get simulation results
+      description: Retrieve results and outputs from a completed simulation
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, xlsx]
+            default: json
+          description: Result format
+      responses:
+        '200':
+          description: Results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResults'
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Simulation not found or no results available
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/artifacts:
+    get:
+      summary: List simulation artifacts
+      description: List all output artifacts from a simulation
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+      responses:
+        '200':
+          description: Artifacts listed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultArtifact'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/artifacts/{name}:
+    get:
+      summary: Download simulation artifact
+      description: Download a specific output artifact from a simulation
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Artifact name
+      responses:
+        '200':
+          description: Artifact download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Artifact not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/compare:
+    post:
+      summary: Compare simulations
+      description: Compare results from multiple simulations
+      tags:
+        - Analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                simulation_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of simulation IDs to compare
+                comparison_metrics:
+                  type: array
+                  items:
+                    type: string
+                  description: Metrics to compare
+              required:
+                - simulation_ids
+      responses:
+        '200':
+          description: Comparison completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationComparison'
+        '400':
+          description: Invalid comparison request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/summary:
+    post:
+      summary: Get result summary
+      description: Get statistical summary across multiple simulations
+      tags:
+        - Analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                simulation_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of simulation IDs to summarize
+                summary_type:
+                  type: string
+                  enum: [statistical, performance, cost]
+                  description: Type of summary to generate
+              required:
+                - simulation_ids
+      responses:
+        '200':
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultSummary'
+        '400':
+          description: Invalid summary request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Resource Management
+  /api/v1/resources/usage:
+    get:
+      summary: Get resource usage
+      description: Get current resource utilization across compute nodes
+      tags:
+        - Resources
+      responses:
+        '200':
+          description: Resource usage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceUsageReport'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/queue/status:
+    get:
+      summary: Get queue status
+      description: Get current job queue status and statistics
+      tags:
+        - Resources
+      responses:
+        '200':
+          description: Queue status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueStatus'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/estimate:
+    post:
+      summary: Estimate execution cost
+      description: Estimate cost and resource requirements for a simulation
+      tags:
+        - Resources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+      responses:
+        '200':
+          description: Cost estimate generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostEstimate'
+        '400':
+          description: Invalid estimation request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Configuration
+  /api/v1/compute-targets:
+    get:
+      summary: Get compute targets
+      description: Get available compute targets and their capabilities
+      tags:
+        - Resources
+      responses:
+        '200':
+          description: Compute targets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComputeTarget'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/validate:
+    post:
+      summary: Validate simulation request
+      description: Validate a simulation request before execution
+      tags:
+        - Simulations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Validation failed
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Search & Discovery
+  /api/v1/simulations/search:
+    get:
+      summary: Search simulations
+      description: Search simulations using text query and filters
+      tags:
+        - Analytics
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: model_type
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by model types
+        - name: simulation_type
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SimulationType'
+          description: Filter by simulation types
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SimulationStatus'
+          description: Filter by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimulationSearchResult'
+        '400':
+          description: Invalid search query
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/simulations:
+    get:
+      summary: Get model simulation history
+      description: Get all simulations run for a specific model
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: Model simulation history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimulationSummary'
+        '404':
+          description: Model not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Health & Monitoring
+  /health:
+    get:
+      summary: Health check
+      description: Service health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+  /metrics:
+    get:
+      summary: Service metrics
+      description: Prometheus-formatted service metrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Simulation Schemas
+    SimulationRun:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUID for unique identification
+        name:
+          type: string
+          description: Human-readable run name
+        model_id:
+          type: string
+          description: Reference to Model Manager model
+        model_version:
+          type: string
+          description: Model version used
+        simulation_type:
+          $ref: '#/components/schemas/SimulationType'
+        status:
+          $ref: '#/components/schemas/SimulationStatus'
+        parameters:
+          $ref: '#/components/schemas/SimulationParameters'
+        configuration:
+          $ref: '#/components/schemas/ExecutionConfig'
+        resource_requirements:
+          $ref: '#/components/schemas/ResourceRequirements'
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        results:
+          $ref: '#/components/schemas/SimulationResults'
+        metrics:
+          $ref: '#/components/schemas/ExecutionMetrics'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultArtifact'
+        created_by:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        retry_count:
+          type: integer
+        error_message:
+          type: string
+      required:
+        - id
+        - name
+        - model_id
+        - simulation_type
+        - status
+        - parameters
+
+    SimulationType:
+      type: string
+      enum:
+        - deterministic
+        - monte_carlo
+        - parameter_sweep
+        - sensitivity_analysis
+        - optimization
+        - scenario_based
+        - batch
+      description: Type of simulation
+
+    SimulationStatus:
+      type: string
+      enum:
+        - queued
+        - preparing
+        - running
+        - completed
+        - failed
+        - cancelled
+        - timeout
+        - retrying
+      description: Current simulation status
+
+    SimulationParameters:
+      type: object
+      properties:
+        inputs:
+          type: object
+          additionalProperties: true
+          description: Model input parameters
+        parameter_sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParameterSet'
+          description: Multiple parameter combinations
+        random_seed:
+          type: integer
+          description: Random seed for reproducibility
+        monte_carlo_runs:
+          type: integer
+          description: Number of Monte Carlo iterations
+        sweep_configuration:
+          $ref: '#/components/schemas/SweepConfig'
+      required:
+        - inputs
+
+    ExecutionConfig:
+      type: object
+      properties:
+        execution_mode:
+          $ref: '#/components/schemas/ExecutionMode'
+        timeout_minutes:
+          type: integer
+        retry_policy:
+          $ref: '#/components/schemas/RetryPolicy'
+        scaling_policy:
+          $ref: '#/components/schemas/ScalingPolicy'
+        environment_variables:
+          type: object
+          additionalProperties:
+            type: string
+        compute_target:
+          $ref: '#/components/schemas/ComputeTarget'
+        priority:
+          $ref: '#/components/schemas/ExecutionPriority'
+
+    ExecutionMode:
+      type: string
+      enum:
+        - local
+        - container
+        - cloud_batch
+        - hpc_cluster
+        - serverless
+        - distributed
+      description: Execution environment mode
+
+    ExecutionPriority:
+      type: string
+      enum:
+        - LOW
+        - NORMAL
+        - HIGH
+        - CRITICAL
+      description: Job priority level
+
+    SimulationResults:
+      type: object
+      properties:
+        outputs:
+          type: object
+          additionalProperties: true
+          description: Primary simulation outputs
+        summary_statistics:
+          $ref: '#/components/schemas/SummaryStats'
+        convergence_metrics:
+          $ref: '#/components/schemas/ConvergenceMetrics'
+        sensitivity_indices:
+          $ref: '#/components/schemas/SensitivityIndices'
+        time_series:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeriesData'
+        spatial_data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpatialData'
+
+    ExecutionMetrics:
+      type: object
+      properties:
+        resource_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+        cost_metrics:
+          $ref: '#/components/schemas/CostMetrics'
+        environmental_metrics:
+          $ref: '#/components/schemas/EnvironmentalMetrics'
+
+    # Request/Response Schemas
+    SimulationRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+          description: Model to execute
+        model_version:
+          type: string
+          description: Specific model version
+        name:
+          type: string
+          description: Simulation run name
+        description:
+          type: string
+          description: Run description
+        parameters:
+          $ref: '#/components/schemas/SimulationParameters'
+        configuration:
+          $ref: '#/components/schemas/ExecutionConfig'
+        tags:
+          type: array
+          items:
+            type: string
+        project_id:
+          type: string
+      required:
+        - model_id
+        - parameters
+
+    BatchSimulationRequest:
+      type: object
+      properties:
+        base_request:
+          $ref: '#/components/schemas/SimulationRequest'
+        parameter_variations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParameterSet'
+        execution_mode:
+          $ref: '#/components/schemas/BatchExecutionMode'
+        max_concurrent_runs:
+          type: integer
+      required:
+        - base_request
+        - parameter_variations
+
+    BatchExecutionMode:
+      type: string
+      enum:
+        - sequential
+        - parallel
+        - adaptive
+      description: Batch execution strategy
+
+    SimulationListResponse:
+      type: object
+      properties:
+        simulations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimulationSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - simulations
+        - total
+
+    SimulationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        model_id:
+          type: string
+        simulation_type:
+          $ref: '#/components/schemas/SimulationType'
+        status:
+          $ref: '#/components/schemas/SimulationStatus'
+        progress_percent:
+          type: integer
+        duration_seconds:
+          type: integer
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+
+    BatchSimulationResult:
+      type: object
+      properties:
+        batch_id:
+          type: string
+        total_simulations:
+          type: integer
+        simulation_ids:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+
+    ProgressUpdate:
+      type: object
+      properties:
+        simulation_id:
+          type: string
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        current_phase:
+          type: string
+        estimated_completion:
+          type: string
+          format: date-time
+        resource_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+        last_updated:
+          type: string
+          format: date-time
+
+    ExecutionLog:
+      type: object
+      properties:
+        id:
+          type: string
+        simulation_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          $ref: '#/components/schemas/LogLevel'
+        message:
+          type: string
+        component:
+          type: string
+        metadata:
+          type: object
+
+    LogLevel:
+      type: string
+      enum:
+        - DEBUG
+        - INFO
+        - WARN
+        - ERROR
+        - FATAL
+
+    # Resource & Performance Schemas
+    ResourceRequirements:
+      type: object
+      properties:
+        cpu_cores:
+          type: number
+        memory_gb:
+          type: number
+        gpu_count:
+          type: integer
+        gpu_memory_gb:
+          type: number
+        storage_gb:
+          type: number
+        network_bandwidth_mbps:
+          type: number
+        estimated_runtime_minutes:
+          type: number
+
+    ResourceUsage:
+      type: object
+      properties:
+        peak_cpu_percent:
+          type: number
+        average_cpu_percent:
+          type: number
+        peak_memory_gb:
+          type: number
+        average_memory_gb:
+          type: number
+        gpu_utilization_percent:
+          type: number
+        network_io_gb:
+          type: number
+        disk_io_gb:
+          type: number
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        throughput:
+          type: number
+        latency_ms:
+          type: number
+        convergence_rate:
+          type: number
+        numerical_stability:
+          type: number
+        accuracy_metrics:
+          type: object
+          additionalProperties:
+            type: number
+
+    CostMetrics:
+      type: object
+      properties:
+        compute_cost_usd:
+          type: number
+        storage_cost_usd:
+          type: number
+        network_cost_usd:
+          type: number
+        total_cost_usd:
+          type: number
+        cost_per_simulation:
+          type: number
+
+    EnvironmentalMetrics:
+      type: object
+      properties:
+        carbon_footprint_kg:
+          type: number
+        energy_consumption_kwh:
+          type: number
+        efficiency_score:
+          type: number
+
+    # Support Schemas
+    ParameterSet:
+      type: object
+      properties:
+        set_id:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        weight:
+          type: number
+        description:
+          type: string
+      required:
+        - set_id
+        - parameters
+
+    SweepConfig:
+      type: object
+      properties:
+        parameter_ranges:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParameterRange'
+        sampling_method:
+          $ref: '#/components/schemas/SamplingMethod'
+        total_samples:
+          type: integer
+
+    ParameterRange:
+      type: object
+      properties:
+        parameter_name:
+          type: string
+        min_value:
+          type: number
+        max_value:
+          type: number
+        step_size:
+          type: number
+        distribution:
+          type: string
+
+    SamplingMethod:
+      type: string
+      enum:
+        - grid
+        - random
+        - latin_hypercube
+        - sobol
+        - halton
+
+    RetryPolicy:
+      type: object
+      properties:
+        max_retries:
+          type: integer
+        retry_delay_seconds:
+          type: integer
+        exponential_backoff:
+          type: boolean
+        retry_on_failure_types:
+          type: array
+          items:
+            type: string
+
+    ScalingPolicy:
+      type: object
+      properties:
+        min_instances:
+          type: integer
+        max_instances:
+          type: integer
+        scale_up_threshold:
+          type: number
+        scale_down_threshold:
+          type: number
+        auto_scaling_enabled:
+          type: boolean
+
+    ComputeTarget:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          $ref: '#/components/schemas/ComputeProvider'
+        instance_type:
+          type: string
+        region:
+          type: string
+        availability_zone:
+          type: string
+        custom_image:
+          type: string
+        capabilities:
+          type: object
+        status:
+          type: string
+          enum: [available, busy, maintenance, offline]
+
+    ComputeProvider:
+      type: string
+      enum:
+        - local
+        - aws_batch
+        - aws_lambda
+        - azure_batch
+        - gcp_compute
+        - kubernetes
+        - slurm
+        - pbs
+
+    # Analytics Schemas
+    SimulationComparison:
+      type: object
+      properties:
+        simulation_ids:
+          type: array
+          items:
+            type: string
+        comparison_date:
+          type: string
+          format: date-time
+        metrics_comparison:
+          type: object
+        performance_comparison:
+          type: object
+        cost_comparison:
+          type: object
+        recommendation:
+          type: string
+
+    SimulationSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/SimulationSummary'
+        - type: object
+          properties:
+            relevance_score:
+              type: number
+            matched_fields:
+              type: array
+              items:
+                type: string
+
+    ResultSummary:
+      type: object
+      properties:
+        simulation_count:
+          type: integer
+        summary_type:
+          type: string
+        statistical_summary:
+          type: object
+        performance_summary:
+          type: object
+        cost_summary:
+          type: object
+        generated_at:
+          type: string
+          format: date-time
+
+    ResultArtifact:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        hash:
+          type: string
+        mime_type:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # Utility Schemas
+    SummaryStats:
+      type: object
+      properties:
+        mean:
+          type: object
+          additionalProperties:
+            type: number
+        std_dev:
+          type: object
+          additionalProperties:
+            type: number
+        min:
+          type: object
+          additionalProperties:
+            type: number
+        max:
+          type: object
+          additionalProperties:
+            type: number
+        percentiles:
+          type: object
+
+    ConvergenceMetrics:
+      type: object
+      properties:
+        convergence_achieved:
+          type: boolean
+        convergence_iterations:
+          type: integer
+        convergence_rate:
+          type: number
+        final_error:
+          type: number
+
+    SensitivityIndices:
+      type: object
+      properties:
+        first_order:
+          type: object
+          additionalProperties:
+            type: number
+        total_order:
+          type: object
+          additionalProperties:
+            type: number
+        interaction_effects:
+          type: object
+
+    TimeSeriesData:
+      type: object
+      properties:
+        variable_name:
+          type: string
+        timestamps:
+          type: array
+          items:
+            type: string
+            format: date-time
+        values:
+          type: array
+          items:
+            type: number
+
+    SpatialData:
+      type: object
+      properties:
+        variable_name:
+          type: string
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+        values:
+          type: array
+          items:
+            type: number
+
+    ResourceUsageReport:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        total_capacity:
+          $ref: '#/components/schemas/ResourceRequirements'
+        current_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+        utilization_percent:
+          type: number
+        active_simulations:
+          type: integer
+        queued_simulations:
+          type: integer
+
+    QueueStatus:
+      type: object
+      properties:
+        queued_jobs:
+          type: integer
+        running_jobs:
+          type: integer
+        completed_jobs_today:
+          type: integer
+        failed_jobs_today:
+          type: integer
+        average_queue_time_minutes:
+          type: number
+        average_execution_time_minutes:
+          type: number
+        next_available_slot:
+          type: string
+          format: date-time
+
+    CostEstimate:
+      type: object
+      properties:
+        estimated_cost_usd:
+          type: number
+        cost_breakdown:
+          $ref: '#/components/schemas/CostMetrics'
+        estimated_duration_minutes:
+          type: number
+        confidence_level:
+          type: number
+        based_on_simulations:
+          type: integer
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        estimated_resources:
+          $ref: '#/components/schemas/ResourceRequirements'
+        estimated_cost:
+          type: number
+
+    # Health Schema
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            job_queue:
+              type: string
+              enum: [healthy, unhealthy]
+            object_storage:
+              type: string
+              enum: [healthy, unhealthy]
+            model_manager:
+              type: string
+              enum: [healthy, unhealthy]
+            event_manager:
+              type: string
+              enum: [healthy, unhealthy]
+        queue_status:
+          $ref: '#/components/schemas/QueueStatus'
+        resource_status:
+          $ref: '#/components/schemas/ResourceUsageReport'
+      required:
+        - status
+        - timestamp 

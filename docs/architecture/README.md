@@ -38,6 +38,7 @@ flowchart TD
         ThreadManager["Thread Manager<br/>(Port 3008)"]
         DataManager["Data Manager<br/>(Port 3009)"]
         ModelManager["Model Manager<br/>(Port 3010)"]
+        SimulationManager["Simulation Manager<br/>(Port 3011)"]
     end
     
     %% UI connections
@@ -55,16 +56,20 @@ flowchart TD
     ProcessManager --> EventManager
     DataManager --> EventManager
     ModelManager --> EventManager
+    SimulationManager --> EventManager
     
     %% EventManager back to services
     EventManager --> AAS
     EventManager --> ProcessManager
     EventManager --> ModelManager
+    EventManager --> SimulationManager
     
     %% Service interconnections
     ProcessManager --> LLMService
     ModelManager --> KnowledgeService
     DataManager --> KnowledgeService
+    SimulationManager --> ModelManager
+    SimulationManager --> KnowledgeService
     
     classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
     classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -74,15 +79,15 @@ flowchart TD
     class WebUI,Playground ui;
     class ProjectService,LLMService,KnowledgeService,AAS core;
     class EventManager event;
-    class ProcessManager,ThreadManager,DataManager,ModelManager process;
+    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager process;
 ```
 
 **Port Allocation:**
 - **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
 - **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
 - **Event System**: 3004 (EventManager)
-- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model)
-- **Future Services**: 3011+
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation)
+- **Future Services**: 3012+
 
 ### Data Architecture
 
@@ -106,6 +111,9 @@ flowchart TD
         ModelManager --> MinIO
         ModelManager --> Neo4j
         ModelManager --> Qdrant
+        SimulationManager --> PostgreSQL
+        SimulationManager --> MinIO
+        SimulationManager --> Redis
         EventManager --> PostgreSQL
         EventManager --> Redis
         AAS --> Qdrant
@@ -124,7 +132,7 @@ flowchart TD
     class Redis cache;
     class MinIO object;
     class Neo4j graphdb;
-    class ProjectService,KnowledgeService,ModelManager,EventManager,AAS service;
+    class ProjectService,KnowledgeService,ModelManager,SimulationManager,EventManager,AAS service;
 ```
 
 ## Service Specifications
@@ -133,9 +141,9 @@ flowchart TD
 - **[EventManager Service](./event_manager_specification.md)** - Central event processing and distribution hub
 - **[Data Manager Service](./data_manager_specification.md)** - External data ingestion and processing gateway
 - **[Model Manager Service](./model_manager_specification.md)** - Computational model registry and lifecycle management
+- **[Simulation Manager Service](./simulation_manager_specification.md)** - Scalable simulation execution and orchestration hub
 
 ### Future Services (Planned)
-- **SimulationManager Service** - Model execution and simulation orchestration
 - **OntologyManager Service** - Domain knowledge and semantic modeling
 - **ProcessManager Service** - Business process workflow management
 
