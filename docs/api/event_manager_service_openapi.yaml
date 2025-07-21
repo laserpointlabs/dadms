@@ -1,0 +1,1001 @@
+openapi: 3.0.3
+info:
+  title: DADMS EventManager Service API
+  description: Central nervous system for DADMS event-driven intelligence, providing reliable event processing, real-time notifications, and proactive assistance integration
+  version: 2.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3004
+    description: Development server
+  - url: https://api.dadms.com/event-manager
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Events
+    description: Event publishing and querying
+  - name: Subscriptions
+    description: Event subscription management
+  - name: Topics
+    description: Topic management and routing
+  - name: AAS Integration
+    description: Agent Assistance Service integration
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  /events:
+    post:
+      summary: Publish single event
+      description: Publish a single event to the EventManager for distribution to subscribers
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventPublishRequest'
+            example:
+              type: 'project.created'
+              source: 'project-service'
+              topic: 'project/created'
+              priority: 'HIGH'
+              payload:
+                project_id: 'proj-123'
+                project_name: 'UAV Design 2024'
+                created_by: 'user-456'
+              metadata:
+                projectId: 'proj-123'
+                userId: 'user-456'
+                tags: ['project', 'user-action']
+      responses:
+        '200':
+          description: Event published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResult'
+        '400':
+          description: Invalid event data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/batch:
+    post:
+      summary: Publish multiple events
+      description: Publish multiple events in a single batch operation
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchPublishRequest'
+      responses:
+        '200':
+          description: Batch published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchPublishResult'
+        '400':
+          description: Invalid batch data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/query:
+    get:
+      summary: Query event history
+      description: Query historical events with filtering and pagination
+      tags:
+        - Events
+      parameters:
+        - name: topic
+          in: query
+          description: Topic pattern to filter by
+          schema:
+            type: string
+            example: "project.*"
+        - name: type
+          in: query
+          description: Event type to filter by
+          schema:
+            type: string
+            example: "project.created"
+        - name: source
+          in: query
+          description: Source service to filter by
+          schema:
+            type: string
+            example: "project-service"
+        - name: since
+          in: query
+          description: Return events after this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: Return events before this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          description: Number of events to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventQueryResult'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /subscriptions:
+    post:
+      summary: Create event subscription
+      description: Create a new subscription to receive events matching specified criteria
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+            examples:
+              aas_universal_monitoring:
+                summary: AAS Universal Event Monitoring
+                value:
+                  topic: "#"
+                  endpoint: "https://aas-service:3005/events/webhook"
+                  connection_type: "webhook"
+                  filter:
+                    priority: "NORMAL"
+                    exclude_types: ["system.heartbeat", "metrics.internal"]
+                    user_relevant: true
+                  options:
+                    batch_size: 20
+                    realtime: true
+                    fallback_webhook: "https://aas-service:3005/events/webhook"
+                  description: "AAS continuous monitoring subscription"
+              service_specific:
+                summary: Service-Specific Subscription
+                value:
+                  topic: "project.*"
+                  endpoint: "https://project-service:3001/events/webhook"
+                  connection_type: "webhook"
+                  filter:
+                    priority: "HIGH"
+                  description: "Project service event subscription"
+      responses:
+        '200':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          description: Invalid subscription data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List subscriptions
+      description: List all active subscriptions for the authenticated service
+      tags:
+        - Subscriptions
+      responses:
+        '200':
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionInfo'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /subscriptions/{subscriptionId}:
+    delete:
+      summary: Cancel subscription
+      description: Cancel an existing event subscription
+      tags:
+        - Subscriptions
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          description: Subscription ID to cancel
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription cancelled successfully
+        '404':
+          description: Subscription not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /topics:
+    get:
+      summary: List all topics
+      description: Get list of all available event topics with metadata
+      tags:
+        - Topics
+      responses:
+        '200':
+          description: Topics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopicInfo'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    post:
+      summary: Create topic
+      description: Create a new event topic with optional schema validation
+      tags:
+        - Topics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTopicRequest'
+      responses:
+        '200':
+          description: Topic created successfully
+        '400':
+          description: Invalid topic data
+        '401':
+          description: Unauthorized
+        '409':
+          description: Topic already exists
+        '500':
+          description: Internal server error
+
+  /topics/{topic}/events:
+    get:
+      summary: Get events for topic
+      description: Get recent events for a specific topic
+      tags:
+        - Topics
+      parameters:
+        - name: topic
+          in: path
+          required: true
+          description: Topic name (URL encoded)
+          schema:
+            type: string
+            example: "project%2Fcreated"
+        - name: limit
+          in: query
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: since
+          in: query
+          description: Return events after this timestamp
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Topic events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '404':
+          description: Topic not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/realtime:
+    get:
+      summary: AAS Real-time Event Stream
+      description: WebSocket endpoint for AAS real-time event monitoring
+      tags:
+        - AAS Integration
+      parameters:
+        - name: Upgrade
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [websocket]
+        - name: Connection
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [Upgrade]
+      responses:
+        '101':
+          description: WebSocket connection established
+        '400':
+          description: Invalid WebSocket request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /aas/context:
+    post:
+      summary: Update AAS event context
+      description: Update contextual information for AAS event filtering and assistance
+      tags:
+        - AAS Integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASContextUpdate'
+      responses:
+        '200':
+          description: Context updated successfully
+        '400':
+          description: Invalid context data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /replay:
+    post:
+      summary: Replay events
+      description: Replay historical events to subscribers for debugging or recovery
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayRequest'
+      responses:
+        '200':
+          description: Replay started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayResult'
+        '400':
+          description: Invalid replay parameters
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /health:
+    get:
+      summary: Service health check
+      description: Get EventManager service health status and metrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+  /metrics:
+    get:
+      summary: Service metrics
+      description: Get EventManager performance and usage metrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventMetrics'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Event:
+      type: object
+      required:
+        - id
+        - type
+        - source
+        - timestamp
+        - topic
+        - priority
+        - payload
+        - metadata
+      properties:
+        id:
+          type: string
+          description: Unique event identifier (UUID)
+        type:
+          type: string
+          description: Event type (e.g., 'project.created')
+        source:
+          type: string
+          description: Originating service
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+        version:
+          type: string
+          description: Event schema version
+          default: "1.0"
+        topic:
+          type: string
+          description: Routing topic
+        priority:
+          $ref: '#/components/schemas/EventPriority'
+        metadata:
+          $ref: '#/components/schemas/EventMetadata'
+        payload:
+          type: object
+          description: Event data
+        correlationId:
+          type: string
+          description: Request correlation ID
+        causationId:
+          type: string
+          description: ID of event that caused this event
+
+    EventPriority:
+      type: string
+      enum: [CRITICAL, HIGH, NORMAL, LOW]
+      description: Event priority level
+
+    EventMetadata:
+      type: object
+      properties:
+        projectId:
+          type: string
+          description: Associated project ID
+        userId:
+          type: string
+          description: Associated user ID
+        sessionId:
+          type: string
+          description: User session ID
+        tags:
+          type: array
+          items:
+            type: string
+          description: Event tags for filtering
+        retryCount:
+          type: integer
+          description: Number of retry attempts
+          default: 0
+        maxRetries:
+          type: integer
+          description: Maximum retry attempts
+          default: 3
+        expiresAt:
+          type: string
+          format: date-time
+          description: Event expiration time
+
+    EventPublishRequest:
+      type: object
+      required:
+        - type
+        - source
+        - topic
+        - payload
+      properties:
+        type:
+          type: string
+          description: Event type
+        source:
+          type: string
+          description: Source service
+        topic:
+          type: string
+          description: Routing topic
+        priority:
+          $ref: '#/components/schemas/EventPriority'
+          default: NORMAL
+        payload:
+          type: object
+          description: Event data
+        metadata:
+          $ref: '#/components/schemas/EventMetadata'
+        correlationId:
+          type: string
+          description: Request correlation ID
+
+    BatchPublishRequest:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventPublishRequest'
+          maxItems: 100
+
+    PublishResult:
+      type: object
+      required:
+        - success
+        - eventId
+      properties:
+        success:
+          type: boolean
+        eventId:
+          type: string
+          description: Generated event ID
+        message:
+          type: string
+          description: Result message
+
+    BatchPublishResult:
+      type: object
+      required:
+        - success
+        - results
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublishResult'
+        failedCount:
+          type: integer
+          description: Number of failed events
+
+    SubscriptionRequest:
+      type: object
+      required:
+        - topic
+        - endpoint
+        - connection_type
+      properties:
+        topic:
+          type: string
+          description: Topic pattern (supports wildcards like '#' for all events)
+        endpoint:
+          type: string
+          description: Callback endpoint URL or WebSocket endpoint
+        connection_type:
+          type: string
+          enum: [webhook, websocket, grpc]
+          description: Connection type for event delivery
+        filter:
+          $ref: '#/components/schemas/EventFilter'
+        options:
+          $ref: '#/components/schemas/SubscriptionOptions'
+        description:
+          type: string
+          description: Subscription description
+
+    EventFilter:
+      type: object
+      properties:
+        types:
+          type: array
+          items:
+            type: string
+          description: Event types to include
+        exclude_types:
+          type: array
+          items:
+            type: string
+          description: Event types to exclude
+        sources:
+          type: array
+          items:
+            type: string
+          description: Source services to include
+        priority:
+          $ref: '#/components/schemas/EventPriority'
+          description: Minimum priority level
+        tags:
+          type: array
+          items:
+            type: string
+          description: Required tags
+        user_relevant:
+          type: boolean
+          description: Only user-relevant events
+        project_scoped:
+          type: boolean
+          description: Only project-scoped events
+
+    SubscriptionOptions:
+      type: object
+      properties:
+        batch_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of events to batch together
+        max_concurrency:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Maximum concurrent event processing
+        realtime:
+          type: boolean
+          default: false
+          description: Enable real-time delivery via WebSocket
+        fallback_webhook:
+          type: string
+          description: Fallback webhook URL if WebSocket fails
+        retry_policy:
+          $ref: '#/components/schemas/RetryPolicy'
+
+    RetryPolicy:
+      type: object
+      properties:
+        max_retries:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 3
+        backoff_strategy:
+          type: string
+          enum: [linear, exponential, fixed]
+          default: exponential
+        initial_delay:
+          type: integer
+          description: Initial delay in milliseconds
+          default: 1000
+        max_delay:
+          type: integer
+          description: Maximum delay in milliseconds
+          default: 30000
+        jitter:
+          type: boolean
+          description: Add randomness to prevent thundering herd
+          default: true
+
+    SubscriptionResponse:
+      type: object
+      required:
+        - subscriptionId
+        - topic
+        - endpoint
+      properties:
+        subscriptionId:
+          type: string
+          description: Unique subscription identifier
+        topic:
+          type: string
+          description: Subscribed topic pattern
+        endpoint:
+          type: string
+          description: Callback endpoint
+        filter:
+          $ref: '#/components/schemas/EventFilter'
+        options:
+          $ref: '#/components/schemas/SubscriptionOptions'
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, paused, error]
+
+    SubscriptionInfo:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/SubscriptionResponse'
+        - type: object
+          properties:
+            events_delivered:
+              type: integer
+              description: Total events delivered
+            last_delivery:
+              type: string
+              format: date-time
+              description: Last successful delivery
+            error_count:
+              type: integer
+              description: Number of delivery errors
+
+    TopicInfo:
+      type: object
+      required:
+        - topic
+        - subscriber_count
+        - event_count
+      properties:
+        topic:
+          type: string
+          description: Topic name
+        subscriber_count:
+          type: integer
+          description: Number of active subscribers
+        event_count:
+          type: integer
+          description: Total events published to this topic
+        last_event:
+          type: string
+          format: date-time
+          description: Timestamp of last event
+        schema:
+          type: object
+          description: Optional event schema for this topic
+
+    CreateTopicRequest:
+      type: object
+      required:
+        - topic
+      properties:
+        topic:
+          type: string
+          description: Topic name
+        description:
+          type: string
+          description: Topic description
+        schema:
+          type: object
+          description: Optional JSON schema for events on this topic
+
+    EventQueryResult:
+      type: object
+      required:
+        - events
+        - total
+        - limit
+        - offset
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        total:
+          type: integer
+          description: Total number of matching events
+        limit:
+          type: integer
+          description: Requested limit
+        offset:
+          type: integer
+          description: Requested offset
+        has_more:
+          type: boolean
+          description: Whether more events are available
+
+    AASContextUpdate:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: Current user ID
+        project_id:
+          type: string
+          description: Current project ID
+        session_id:
+          type: string
+          description: Current session ID
+        current_page:
+          type: string
+          description: Current UI page/context
+        assistance_level:
+          type: string
+          enum: [minimal, moderate, proactive]
+          description: Desired assistance level
+        relevant_topics:
+          type: array
+          items:
+            type: string
+          description: Topics relevant to current context
+
+    ReplayRequest:
+      type: object
+      required:
+        - from_timestamp
+        - to_timestamp
+      properties:
+        from_timestamp:
+          type: string
+          format: date-time
+          description: Start timestamp for replay
+        to_timestamp:
+          type: string
+          format: date-time
+          description: End timestamp for replay
+        topic_pattern:
+          type: string
+          description: Topic pattern to replay (default: all)
+        subscriber_ids:
+          type: array
+          items:
+            type: string
+          description: Specific subscribers to replay to (default: all)
+        speed_multiplier:
+          type: number
+          minimum: 0.1
+          maximum: 100
+          default: 1.0
+          description: Replay speed multiplier
+
+    ReplayResult:
+      type: object
+      required:
+        - replay_id
+        - status
+      properties:
+        replay_id:
+          type: string
+          description: Unique replay operation ID
+        status:
+          type: string
+          enum: [started, running, completed, failed]
+        events_to_replay:
+          type: integer
+          description: Total number of events to replay
+        estimated_duration:
+          type: integer
+          description: Estimated duration in seconds
+
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          description: Service version
+        dependencies:
+          type: object
+          properties:
+            postgresql:
+              type: string
+              enum: [healthy, unhealthy]
+            redis:
+              type: string
+              enum: [healthy, unhealthy]
+            vector_store:
+              type: string
+              enum: [healthy, unhealthy]
+        metrics:
+          type: object
+          properties:
+            events_per_second:
+              type: number
+            active_subscriptions:
+              type: integer
+            queue_depth:
+              type: integer
+            memory_usage_mb:
+              type: number
+
+    EventMetrics:
+      type: object
+      properties:
+        events_published_total:
+          type: integer
+          description: Total events published
+        events_processed_total:
+          type: integer
+          description: Total events processed
+        events_retried_total:
+          type: integer
+          description: Total events retried
+        events_failed_total:
+          type: integer
+          description: Total events failed
+        publish_latency_p95_ms:
+          type: number
+          description: 95th percentile publish latency
+        handler_latency_p95_ms:
+          type: number
+          description: 95th percentile handler latency
+        active_subscriptions:
+          type: integer
+          description: Number of active subscriptions
+        queue_depth:
+          type: integer
+          description: Current queue depth
+        dead_letter_count:
+          type: integer
+          description: Events in dead letter queue
+        aas_integration:
+          type: object
+          properties:
+            events_delivered_to_aas:
+              type: integer
+            aas_delivery_latency_p95_ms:
+              type: number
+            aas_webhook_failures:
+              type: integer
+            aas_websocket_disconnections:
+              type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: string 
