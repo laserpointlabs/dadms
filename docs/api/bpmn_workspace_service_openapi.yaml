@@ -1,0 +1,1987 @@
+openapi: 3.0.3
+info:
+  title: BPMN Workspace Service API
+  description: |
+    AI-enhanced BPMN workflow design environment providing comprehensive process modeling capabilities
+    with intelligent assistance, collaboration features, and seamless DADMS integration.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3021
+    description: Development server
+  - url: https://api.dadms.com/bpmn-workspace
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /api/models:
+    get:
+      summary: List process models
+      description: Returns a list of process models with optional filtering
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project ID
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, review, approved, deployed, deprecated]
+          description: Filter by status
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of models to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of models to skip
+      responses:
+        '200':
+          description: List of process models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessModelsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create process model
+      description: Create a new BPMN process model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessModelCreateRequest'
+      responses:
+        '201':
+          description: Process model created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessModel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/models/{modelId}:
+    get:
+      summary: Get process model
+      description: Returns detailed information about a specific process model
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the process model
+      responses:
+        '200':
+          description: Process model details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessModelDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update process model
+      description: Update an existing process model
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessModelUpdateRequest'
+      responses:
+        '200':
+          description: Process model updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessModel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete process model
+      description: Delete a process model
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Process model deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/models/{modelId}/deploy:
+    post:
+      summary: Deploy process model
+      description: Deploy a process model to execution environment
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+      responses:
+        '200':
+          description: Process model deployed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/models/{modelId}/versions:
+    get:
+      summary: Get model versions
+      description: Returns version history for a process model
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model version history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelVersionsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai/suggestions:
+    post:
+      summary: Get AI suggestions
+      description: Get AI-powered suggestions for process model improvements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AISuggestionsRequest'
+      responses:
+        '200':
+          description: AI suggestions generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AISuggestionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai/complete:
+    post:
+      summary: Auto-complete workflow
+      description: Auto-complete BPMN workflow based on current context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoCompleteRequest'
+      responses:
+        '200':
+          description: Workflow auto-completion suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoCompleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai/optimize:
+    post:
+      summary: Optimize model
+      description: Get optimization suggestions for a process model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptimizationRequest'
+      responses:
+        '200':
+          description: Optimization suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai/generate:
+    post:
+      summary: Generate from description
+      description: Generate BPMN model from natural language description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateFromDescriptionRequest'
+      responses:
+        '200':
+          description: BPMN model generated from description
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratedModelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/templates:
+    get:
+      summary: List process templates
+      description: Returns a list of available process templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter by industry
+        - name: complexity_level
+          in: query
+          schema:
+            type: string
+            enum: [simple, intermediate, advanced, expert]
+          description: Filter by complexity level
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: is_public
+          in: query
+          schema:
+            type: boolean
+          description: Filter by public/private templates
+      responses:
+        '200':
+          description: List of process templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessTemplatesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create process template
+      description: Create a new process template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessTemplateCreateRequest'
+      responses:
+        '201':
+          description: Process template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/templates/{templateId}:
+    get:
+      summary: Get process template
+      description: Returns detailed information about a specific process template
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Process template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/templates/{templateId}/instantiate:
+    post:
+      summary: Create model from template
+      description: Create a new process model from a template
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInstantiationRequest'
+      responses:
+        '201':
+          description: Process model created from template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessModel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collaboration/sessions:
+    get:
+      summary: List collaboration sessions
+      description: Returns active collaboration sessions for the user
+      responses:
+        '200':
+          description: List of collaboration sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationSessionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Start collaboration session
+      description: Start a new collaboration session for a process model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationSessionCreateRequest'
+      responses:
+        '201':
+          description: Collaboration session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collaboration/sessions/{sessionId}:
+    get:
+      summary: Get collaboration session
+      description: Get details of a specific collaboration session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Collaboration session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationSessionDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: End collaboration session
+      description: End a collaboration session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Collaboration session ended
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collaboration/sessions/{sessionId}/participants:
+    post:
+      summary: Add session participant
+      description: Add a participant to a collaboration session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddParticipantRequest'
+      responses:
+        '200':
+          description: Participant added to session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionParticipant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collaboration/sessions/{sessionId}/changes:
+    get:
+      summary: Get session changes
+      description: Get all changes made during a collaboration session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session changes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionChangesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Apply model change
+      description: Apply a change to the model during collaboration
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelChangeRequest'
+      responses:
+        '200':
+          description: Change applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/validation/syntax:
+    post:
+      summary: Validate BPMN syntax
+      description: Validate BPMN XML syntax and structure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/validation/semantic:
+    post:
+      summary: Validate semantics
+      description: Validate BPMN semantic correctness and logic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Semantic validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/validation/performance:
+    post:
+      summary: Analyze performance
+      description: Analyze process model for performance characteristics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerformanceAnalysisRequest'
+      responses:
+        '200':
+          description: Performance analysis results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceAnalysisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/validation/compliance:
+    post:
+      summary: Check compliance
+      description: Check process model compliance with organizational standards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceCheckRequest'
+      responses:
+        '200':
+          description: Compliance check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceCheckResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - status
+        - timestamp
+        - version
+        - dependencies
+
+    ProcessModel:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "model-123"
+        name:
+          type: string
+          example: "Customer Onboarding Process"
+        description:
+          type: string
+          example: "Complete customer onboarding workflow with approval gates"
+        category:
+          type: string
+          example: "onboarding"
+        project_id:
+          type: string
+          example: "proj-456"
+        version:
+          type: integer
+          example: 3
+        status:
+          type: string
+          enum: [draft, review, approved, deployed, deprecated]
+          example: "approved"
+        metadata:
+          $ref: '#/components/schemas/ProcessMetadata'
+        created_by:
+          type: string
+          example: "user-789"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deployed_at:
+          type: string
+          format: date-time
+        deployed_by:
+          type: string
+          example: "user-456"
+      required:
+        - id
+        - name
+        - description
+        - category
+        - version
+        - status
+        - metadata
+        - created_by
+        - created_at
+        - updated_at
+
+    ProcessModelDetailed:
+      allOf:
+        - $ref: '#/components/schemas/ProcessModel'
+        - type: object
+          properties:
+            bpmn_xml:
+              type: string
+              example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+            version_history:
+              type: array
+              items:
+                $ref: '#/components/schemas/ModelVersion'
+            ai_suggestions:
+              type: array
+              items:
+                $ref: '#/components/schemas/AISuggestion'
+
+    ProcessMetadata:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["customer", "onboarding", "approval"]
+        estimated_duration:
+          type: integer
+          example: 3600
+        complexity_score:
+          type: number
+          minimum: 0
+          maximum: 10
+          example: 6.5
+        participant_count:
+          type: integer
+          example: 4
+        decision_points:
+          type: integer
+          example: 3
+        automation_level:
+          type: string
+          enum: [manual, semi_automated, fully_automated]
+          example: "semi_automated"
+        business_value:
+          type: string
+          enum: [low, medium, high, critical]
+          example: "high"
+      required:
+        - tags
+        - complexity_score
+        - participant_count
+        - decision_points
+        - automation_level
+        - business_value
+
+    ProcessModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessModel'
+        total:
+          type: integer
+          example: 150
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - models
+        - total
+        - limit
+        - offset
+
+    ProcessModelCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Customer Onboarding Process"
+        description:
+          type: string
+          example: "Complete customer onboarding workflow"
+        category:
+          type: string
+          example: "onboarding"
+        project_id:
+          type: string
+          example: "proj-456"
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        metadata:
+          $ref: '#/components/schemas/ProcessMetadata'
+        template_id:
+          type: string
+          example: "template-789"
+      required:
+        - name
+        - description
+        - category
+        - metadata
+
+    ProcessModelUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        bpmn_xml:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/ProcessMetadata'
+        status:
+          type: string
+          enum: [draft, review, approved, deployed, deprecated]
+
+    ModelVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "version-123"
+        model_id:
+          type: string
+          example: "model-456"
+        version_number:
+          type: integer
+          example: 2
+        change_summary:
+          type: string
+          example: "Added approval gateway and updated task assignments"
+        created_by:
+          type: string
+          example: "user-789"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - model_id
+        - version_number
+        - created_by
+        - created_at
+
+    ModelVersionsResponse:
+      type: object
+      properties:
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelVersion'
+        model_id:
+          type: string
+          example: "model-456"
+        current_version:
+          type: integer
+          example: 3
+      required:
+        - versions
+        - model_id
+        - current_version
+
+    DeploymentRequest:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [development, staging, production]
+          example: "production"
+        configuration:
+          type: object
+          additionalProperties: true
+        description:
+          type: string
+          example: "Production deployment with updated approval flow"
+      required:
+        - environment
+
+    DeploymentResponse:
+      type: object
+      properties:
+        deployment_id:
+          type: string
+          example: "deploy-789"
+        model_id:
+          type: string
+          example: "model-456"
+        environment:
+          type: string
+          example: "production"
+        status:
+          type: string
+          enum: [pending, deployed, failed]
+          example: "deployed"
+        deployed_at:
+          type: string
+          format: date-time
+        deployed_by:
+          type: string
+          example: "user-123"
+        deployment_url:
+          type: string
+          example: "https://engine.dadms.com/process/customer-onboarding"
+      required:
+        - deployment_id
+        - model_id
+        - environment
+        - status
+        - deployed_at
+        - deployed_by
+
+    AISuggestion:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "suggestion-123"
+        type:
+          type: string
+          enum: [add_element, modify_element, add_flow, optimize_path, add_validation, improve_naming]
+          example: "add_element"
+        element_type:
+          type: string
+          example: "gateway"
+        description:
+          type: string
+          example: "Add decision gateway to handle approval logic"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.85
+        auto_apply:
+          type: boolean
+          example: false
+        preview_data:
+          type: object
+          additionalProperties: true
+        reasoning:
+          type: string
+          example: "Current flow lacks proper decision handling for approval scenarios"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - description
+        - confidence
+        - auto_apply
+        - reasoning
+        - created_at
+
+    AISuggestionsRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+          example: "model-456"
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        context:
+          type: object
+          properties:
+            current_element:
+              type: string
+              example: "task-approve"
+            selection:
+              type: array
+              items:
+                type: string
+              example: ["task-1", "gateway-2"]
+            user_intent:
+              type: string
+              example: "add approval process"
+        max_suggestions:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+          example: 5
+      required:
+        - bpmn_xml
+
+    AISuggestionsResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AISuggestion'
+        context_analysis:
+          type: object
+          properties:
+            model_complexity:
+              type: number
+              example: 6.5
+            optimization_potential:
+              type: number
+              example: 0.3
+            compliance_score:
+              type: number
+              example: 0.9
+        generated_at:
+          type: string
+          format: date-time
+      required:
+        - suggestions
+        - context_analysis
+        - generated_at
+
+    AutoCompleteRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+          example: "model-456"
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        completion_context:
+          type: object
+          properties:
+            from_element:
+              type: string
+              example: "task-review"
+            completion_type:
+              type: string
+              enum: [next_task, decision_logic, parallel_flow, subprocess]
+              example: "decision_logic"
+            business_context:
+              type: string
+              example: "Customer approval process requires manager review"
+      required:
+        - bpmn_xml
+        - completion_context
+
+    AutoCompleteResponse:
+      type: object
+      properties:
+        completions:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "gateway_with_conditions"
+              confidence:
+                type: number
+                example: 0.92
+              elements:
+                type: array
+                items:
+                  type: object
+              description:
+                type: string
+                example: "Decision gateway with approve/reject conditions"
+        recommended_completion:
+          type: integer
+          example: 0
+        generated_at:
+          type: string
+          format: date-time
+      required:
+        - completions
+        - generated_at
+
+    OptimizationRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+          example: "model-456"
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        optimization_goals:
+          type: array
+          items:
+            type: string
+            enum: [reduce_duration, improve_efficiency, reduce_complexity, enhance_compliance]
+          example: ["reduce_duration", "improve_efficiency"]
+      required:
+        - bpmn_xml
+        - optimization_goals
+
+    OptimizationResponse:
+      type: object
+      properties:
+        optimizations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "parallel_execution"
+              impact:
+                type: string
+                enum: [low, medium, high]
+                example: "high"
+              description:
+                type: string
+                example: "Execute approval tasks in parallel to reduce total duration"
+              estimated_improvement:
+                type: string
+                example: "30% duration reduction"
+              implementation_complexity:
+                type: string
+                enum: [low, medium, high]
+                example: "medium"
+              modified_xml:
+                type: string
+                example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        overall_score:
+          type: number
+          example: 7.2
+        generated_at:
+          type: string
+          format: date-time
+      required:
+        - optimizations
+        - overall_score
+        - generated_at
+
+    GenerateFromDescriptionRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          example: "Customer submits application, manager reviews and approves, system sends confirmation"
+        context:
+          type: object
+          properties:
+            domain:
+              type: string
+              example: "customer_onboarding"
+            participants:
+              type: array
+              items:
+                type: string
+              example: ["customer", "manager", "system"]
+            constraints:
+              type: array
+              items:
+                type: string
+              example: ["must complete within 24 hours", "requires manager approval for amounts > $1000"]
+        preferences:
+          type: object
+          properties:
+            complexity_level:
+              type: string
+              enum: [simple, intermediate, advanced]
+              example: "intermediate"
+            include_error_handling:
+              type: boolean
+              example: true
+      required:
+        - description
+
+    GeneratedModelResponse:
+      type: object
+      properties:
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        model_analysis:
+          type: object
+          properties:
+            complexity_score:
+              type: number
+              example: 5.5
+            element_count:
+              type: integer
+              example: 12
+            decision_points:
+              type: integer
+              example: 2
+            estimated_duration:
+              type: integer
+              example: 1800
+        suggestions:
+          type: array
+          items:
+            type: string
+          example: ["Consider adding timeout handling", "Add notification tasks"]
+        confidence:
+          type: number
+          example: 0.88
+        generated_at:
+          type: string
+          format: date-time
+      required:
+        - bpmn_xml
+        - model_analysis
+        - confidence
+        - generated_at
+
+    ProcessTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "template-123"
+        name:
+          type: string
+          example: "Standard Approval Process"
+        description:
+          type: string
+          example: "Template for standard three-tier approval processes"
+        category:
+          type: string
+          example: "approval"
+        industry:
+          type: string
+          example: "financial_services"
+        use_case:
+          type: string
+          example: "Document approval workflow"
+        complexity_level:
+          type: string
+          enum: [simple, intermediate, advanced, expert]
+          example: "intermediate"
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        configuration_schema:
+          type: object
+          additionalProperties: true
+        usage_count:
+          type: integer
+          example: 45
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          example: 4.7
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["approval", "three-tier", "finance"]
+        created_by:
+          type: string
+          example: "user-456"
+        created_at:
+          type: string
+          format: date-time
+        is_public:
+          type: boolean
+          example: true
+      required:
+        - id
+        - name
+        - description
+        - category
+        - use_case
+        - complexity_level
+        - variables
+        - usage_count
+        - rating
+        - tags
+        - created_by
+        - created_at
+        - is_public
+
+    TemplateVariable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "approval_threshold"
+        type:
+          type: string
+          enum: [string, number, boolean, selection]
+          example: "number"
+        description:
+          type: string
+          example: "Dollar amount requiring approval"
+        required:
+          type: boolean
+          example: true
+        default_value:
+          type: any
+          example: 1000
+        options:
+          type: array
+          items:
+            type: string
+          example: ["manager", "director", "vp"]
+        validation_rules:
+          type: array
+          items:
+            type: object
+      required:
+        - name
+        - type
+        - description
+        - required
+
+    ProcessTemplatesResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessTemplate'
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+        total:
+          type: integer
+          example: 200
+      required:
+        - templates
+        - categories
+        - total
+
+    ProcessTemplateCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Custom Approval Process"
+        description:
+          type: string
+          example: "Custom three-tier approval process for high-value transactions"
+        category:
+          type: string
+          example: "approval"
+        industry:
+          type: string
+          example: "financial_services"
+        use_case:
+          type: string
+          example: "High-value transaction approval"
+        complexity_level:
+          type: string
+          enum: [simple, intermediate, advanced, expert]
+          example: "advanced"
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["approval", "high-value", "finance"]
+        is_public:
+          type: boolean
+          example: false
+      required:
+        - name
+        - description
+        - category
+        - use_case
+        - complexity_level
+        - bpmn_xml
+        - variables
+        - tags
+
+    TemplateInstantiationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Customer Approval Process"
+        description:
+          type: string
+          example: "Customer-specific approval process based on standard template"
+        project_id:
+          type: string
+          example: "proj-456"
+        variable_values:
+          type: object
+          additionalProperties: true
+          example:
+            approval_threshold: 5000
+            approver_roles: ["manager", "director"]
+            notification_email: "approvals@company.com"
+        customizations:
+          type: object
+          properties:
+            additional_tasks:
+              type: array
+              items:
+                type: object
+            modified_flows:
+              type: array
+              items:
+                type: object
+      required:
+        - name
+        - description
+        - variable_values
+
+    CollaborationSession:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "session-123"
+        model_id:
+          type: string
+          example: "model-456"
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionParticipant'
+        created_by:
+          type: string
+          example: "user-789"
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, paused, ended]
+          example: "active"
+      required:
+        - id
+        - model_id
+        - participants
+        - created_by
+        - created_at
+        - expires_at
+        - status
+
+    CollaborationSessionDetailed:
+      allOf:
+        - $ref: '#/components/schemas/CollaborationSession'
+        - type: object
+          properties:
+            changes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ModelChange'
+            current_model_state:
+              type: string
+              example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+
+    SessionParticipant:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "user-456"
+        name:
+          type: string
+          example: "John Smith"
+        role:
+          type: string
+          enum: [owner, editor, reviewer, viewer]
+          example: "editor"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["edit", "comment", "view"]
+        cursor_position:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        last_active:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - name
+        - role
+        - permissions
+        - last_active
+
+    CollaborationSessionsResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollaborationSession'
+        active_count:
+          type: integer
+          example: 3
+      required:
+        - sessions
+        - active_count
+
+    CollaborationSessionCreateRequest:
+      type: object
+      properties:
+        model_id:
+          type: string
+          example: "model-456"
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+              role:
+                type: string
+                enum: [editor, reviewer, viewer]
+        expires_in:
+          type: integer
+          example: 3600
+        description:
+          type: string
+          example: "Collaborative design session for customer onboarding process"
+      required:
+        - model_id
+        - participants
+
+    AddParticipantRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "user-789"
+        role:
+          type: string
+          enum: [editor, reviewer, viewer]
+          example: "editor"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["edit", "comment"]
+      required:
+        - user_id
+        - role
+
+    ModelChange:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "change-123"
+        session_id:
+          type: string
+          example: "session-456"
+        user_id:
+          type: string
+          example: "user-789"
+        change_type:
+          type: string
+          enum: [add, modify, delete, move, connect]
+          example: "add"
+        element_id:
+          type: string
+          example: "gateway-approval"
+        before_state:
+          type: object
+          additionalProperties: true
+        after_state:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        applied:
+          type: boolean
+          example: true
+        conflict_resolution:
+          type: string
+          enum: [none, manual, auto]
+          example: "none"
+      required:
+        - id
+        - session_id
+        - user_id
+        - change_type
+        - timestamp
+        - applied
+
+    SessionChangesResponse:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelChange'
+        session_id:
+          type: string
+          example: "session-456"
+        total_changes:
+          type: integer
+          example: 15
+        applied_changes:
+          type: integer
+          example: 13
+        conflicts:
+          type: integer
+          example: 2
+      required:
+        - changes
+        - session_id
+        - total_changes
+        - applied_changes
+        - conflicts
+
+    ModelChangeRequest:
+      type: object
+      properties:
+        change_type:
+          type: string
+          enum: [add, modify, delete, move, connect]
+          example: "add"
+        element_data:
+          type: object
+          additionalProperties: true
+        position:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        description:
+          type: string
+          example: "Added approval gateway for high-value transactions"
+      required:
+        - change_type
+        - element_data
+
+    ValidationRequest:
+      type: object
+      properties:
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        validation_level:
+          type: string
+          enum: [basic, comprehensive, strict]
+          default: comprehensive
+          example: "comprehensive"
+      required:
+        - bpmn_xml
+
+    ValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "syntax_error"
+              message:
+                type: string
+                example: "Missing end event in process flow"
+              element_id:
+                type: string
+                example: "process-main"
+              severity:
+                type: string
+                enum: [error, warning, info]
+                example: "error"
+              line:
+                type: integer
+                example: 45
+        warnings:
+          type: array
+          items:
+            type: object
+        suggestions:
+          type: array
+          items:
+            type: string
+          example: ["Add end event to complete the process flow"]
+        validated_at:
+          type: string
+          format: date-time
+      required:
+        - valid
+        - errors
+        - warnings
+        - validated_at
+
+    PerformanceAnalysisRequest:
+      type: object
+      properties:
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        analysis_scope:
+          type: array
+          items:
+            type: string
+            enum: [duration, bottlenecks, resource_usage, parallelization]
+          example: ["duration", "bottlenecks"]
+        simulation_parameters:
+          type: object
+          properties:
+            instance_count:
+              type: integer
+              example: 1000
+            duration_days:
+              type: integer
+              example: 30
+      required:
+        - bpmn_xml
+        - analysis_scope
+
+    PerformanceAnalysisResponse:
+      type: object
+      properties:
+        analysis_results:
+          type: object
+          properties:
+            estimated_duration:
+              type: object
+              properties:
+                min:
+                  type: number
+                  example: 1800
+                max:
+                  type: number
+                  example: 7200
+                average:
+                  type: number
+                  example: 3600
+            bottlenecks:
+              type: array
+              items:
+                type: object
+                properties:
+                  element_id:
+                    type: string
+                  element_name:
+                    type: string
+                  wait_time:
+                    type: number
+                  impact_score:
+                    type: number
+            resource_utilization:
+              type: object
+              additionalProperties:
+                type: number
+            optimization_opportunities:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  description:
+                    type: string
+                  potential_improvement:
+                    type: string
+        performance_score:
+          type: number
+          minimum: 0
+          maximum: 10
+          example: 6.8
+        analyzed_at:
+          type: string
+          format: date-time
+      required:
+        - analysis_results
+        - performance_score
+        - analyzed_at
+
+    ComplianceCheckRequest:
+      type: object
+      properties:
+        bpmn_xml:
+          type: string
+          example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>..."
+        compliance_standards:
+          type: array
+          items:
+            type: string
+          example: ["sox", "gdpr", "company_policy"]
+        organization_rules:
+          type: object
+          additionalProperties: true
+      required:
+        - bpmn_xml
+        - compliance_standards
+
+    ComplianceCheckResponse:
+      type: object
+      properties:
+        compliant:
+          type: boolean
+          example: false
+        compliance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.75
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              standard:
+                type: string
+                example: "sox"
+              rule:
+                type: string
+                example: "requires_approval_audit_trail"
+              severity:
+                type: string
+                enum: [low, medium, high, critical]
+                example: "high"
+              element_id:
+                type: string
+                example: "task-approve"
+              description:
+                type: string
+                example: "Approval task lacks proper audit trail configuration"
+              remediation:
+                type: string
+                example: "Add audit logging to approval task properties"
+        recommendations:
+          type: array
+          items:
+            type: string
+          example: ["Add compliance documentation to all approval tasks"]
+        checked_at:
+          type: string
+          format: date-time
+      required:
+        - compliant
+        - compliance_score
+        - violations
+        - checked_at
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Conflict - resource conflict during collaboration
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: "MODEL_NOT_FOUND"
+            message:
+              type: string
+              example: "The specified process model was not found"
+            details:
+              type: object
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+          required:
+            - code
+            - message
+            - timestamp 
