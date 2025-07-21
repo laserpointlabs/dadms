@@ -10,8 +10,10 @@ This directory contains API documentation for all DADMS services.
 - **[LLM Service API](llm_service_openapi.yaml)** (Port 3002) - **ENHANCED: Multi-provider & Cost Tracking**
 - **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003) - **ENHANCED: RAG & Vector Search**
 - **[EventManager Service API](event_manager_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
-- **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3006) - **📋 SPECIFICATION: Proactive intelligent assistant**
+- **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3005) - **📋 SPECIFICATION: Proactive intelligent assistant**
   - **[Detailed API Endpoints](../development/backend/agent_assistance_service_api_endpoints.md)** - Comprehensive API reference with examples
+- **[Context Manager Service API](context_manager_service_openapi.yaml)** (Port 3020) - **📋 SPECIFICATION: AI context management with personas, teams, tools & prompts**
+  - **[Detailed API Endpoints](../development/backend/context_manager_service_api_endpoints.md)** - Comprehensive API reference with examples
 
 ### Data & Model Services
 - **[Data Manager Service API](data_manager_service_openapi.yaml)** (Port 3009) - **NEW: External data integration**

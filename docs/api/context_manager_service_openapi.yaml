@@ -1,0 +1,2102 @@
+openapi: 3.0.3
+info:
+  title: Context Manager Service API
+  description: |
+    Comprehensive context management for AI interactions including personas, teams, tools, and prompt templates.
+    Provides centralized governance, testing, and approval workflows for all AI context components.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3020
+    description: Development server
+  - url: https://api.dadms.com/context
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /api/personas:
+    get:
+      summary: List personas
+      description: Returns a list of personas with optional filtering
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: role
+          in: query
+          schema:
+            type: string
+          description: Filter by role
+        - name: approval_status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending, approved, deprecated]
+          description: Filter by approval status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of personas to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of personas to skip
+      responses:
+        '200':
+          description: List of personas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonasResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create persona
+      description: Create a new persona
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonaCreateRequest'
+      responses:
+        '201':
+          description: Persona created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/personas/{personaId}:
+    get:
+      summary: Get persona details
+      description: Returns detailed information about a specific persona
+      parameters:
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the persona
+      responses:
+        '200':
+          description: Persona details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update persona
+      description: Update an existing persona
+      parameters:
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonaUpdateRequest'
+      responses:
+        '200':
+          description: Persona updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete persona
+      description: Delete a persona
+      parameters:
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Persona deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/personas/{personaId}/approve:
+    post:
+      summary: Approve persona
+      description: Approve a persona for production use
+      parameters:
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: Persona approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/teams:
+    get:
+      summary: List teams
+      description: Returns a list of teams with optional filtering
+      parameters:
+        - name: approval_status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending, approved, deprecated]
+          description: Filter by approval status
+        - name: decision_type
+          in: query
+          schema:
+            type: string
+            enum: [voting, moderator, third_party, consensus, random]
+          description: Filter by decision type
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of teams to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of teams to skip
+      responses:
+        '200':
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create team
+      description: Create a new team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamCreateRequest'
+      responses:
+        '201':
+          description: Team created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/teams/{teamId}:
+    get:
+      summary: Get team details
+      description: Returns detailed information about a specific team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update team
+      description: Update an existing team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamUpdateRequest'
+      responses:
+        '200':
+          description: Team updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete team
+      description: Delete a team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Team deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/teams/{teamId}/execute:
+    post:
+      summary: Execute team prompt
+      description: Execute a prompt using the specified team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamExecutionRequest'
+      responses:
+        '200':
+          description: Team execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamExecutionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tools:
+    get:
+      summary: List tools
+      description: Returns a list of tools with optional filtering
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: availability_status
+          in: query
+          schema:
+            type: string
+            enum: [active, deprecated, maintenance]
+          description: Filter by availability status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of tools to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of tools to skip
+      responses:
+        '200':
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Register tool
+      description: Register a new tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolCreateRequest'
+      responses:
+        '201':
+          description: Tool registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tools/{toolId}:
+    get:
+      summary: Get tool details
+      description: Returns detailed information about a specific tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update tool
+      description: Update an existing tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolUpdateRequest'
+      responses:
+        '200':
+          description: Tool updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete tool
+      description: Delete a tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Tool deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tools/{toolId}/test:
+    post:
+      summary: Test tool
+      description: Test a tool with provided parameters
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolTestRequest'
+      responses:
+        '200':
+          description: Tool test completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolTestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/prompts:
+    get:
+      summary: List prompt templates
+      description: Returns a list of prompt templates with optional filtering
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: approval_status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending, approved, deprecated]
+          description: Filter by approval status
+        - name: persona_id
+          in: query
+          schema:
+            type: string
+          description: Filter by persona
+        - name: team_id
+          in: query
+          schema:
+            type: string
+          description: Filter by team
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of prompts to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of prompts to skip
+      responses:
+        '200':
+          description: List of prompt templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create prompt template
+      description: Create a new prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptCreateRequest'
+      responses:
+        '201':
+          description: Prompt template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/prompts/{promptId}:
+    get:
+      summary: Get prompt template details
+      description: Returns detailed information about a specific prompt template
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Prompt template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update prompt template
+      description: Update an existing prompt template
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptUpdateRequest'
+      responses:
+        '200':
+          description: Prompt template updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete prompt template
+      description: Delete a prompt template
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Prompt template deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/prompts/{promptId}/test:
+    post:
+      summary: Test prompt template
+      description: Run probabilistic tests on a prompt template
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptTestRequest'
+      responses:
+        '200':
+          description: Prompt test completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/prompts/{promptId}/approve:
+    post:
+      summary: Approve prompt template
+      description: Approve a prompt template for production use
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: Prompt template approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/contexts/assemble:
+    post:
+      summary: Assemble execution context
+      description: Assemble a complete execution context from personas, tools, and prompts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextAssemblyRequest'
+      responses:
+        '200':
+          description: Context assembled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssembledContext'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/contexts/{contextId}:
+    get:
+      summary: Get assembled context
+      description: Retrieve a previously assembled context
+      parameters:
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assembled context details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssembledContext'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/contexts/{contextId}/execute:
+    post:
+      summary: Execute assembled context
+      description: Execute a previously assembled context
+      parameters:
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextExecutionRequest'
+      responses:
+        '200':
+          description: Context execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextExecutionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - status
+        - timestamp
+        - version
+        - dependencies
+
+    Persona:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "persona-123"
+        name:
+          type: string
+          example: "Risk Analyst"
+        role:
+          type: string
+          example: "Analyst"
+        expertise:
+          type: array
+          items:
+            type: string
+          example: ["Risk Assessment", "Financial Analysis"]
+        guidelines:
+          type: string
+          example: "Be thorough and cautious in all analyses"
+        system_prompt:
+          type: string
+          example: "You are an expert risk analyst with 20 years of experience"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["finance", "analysis", "risk"]
+        tool_ids:
+          type: array
+          items:
+            type: string
+          example: ["tool-calc", "tool-api"]
+        model_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPreference'
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+        approval_status:
+          type: string
+          enum: [draft, pending, approved, deprecated]
+          example: "approved"
+        created_by:
+          type: string
+          example: "user-456"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          example: 1
+      required:
+        - id
+        - name
+        - role
+        - expertise
+        - guidelines
+        - tags
+        - tool_ids
+        - approval_status
+        - created_by
+        - created_at
+        - updated_at
+        - version
+
+    ModelPreference:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: "openai"
+        model_id:
+          type: string
+          example: "gpt-4"
+        priority:
+          type: integer
+          example: 1
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - provider
+        - model_id
+        - priority
+
+    ExecutionParameters:
+      type: object
+      properties:
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          example: 0.7
+        max_tokens:
+          type: integer
+          minimum: 1
+          example: 1000
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.9
+        frequency_penalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          example: 0
+        presence_penalty:
+          type: number
+          minimum: -2
+          maximum: 2
+          example: 0
+      required:
+        - temperature
+        - max_tokens
+
+    PersonasResponse:
+      type: object
+      properties:
+        personas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Persona'
+        total:
+          type: integer
+          example: 50
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - personas
+        - total
+        - limit
+        - offset
+
+    PersonaCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Risk Analyst"
+        role:
+          type: string
+          example: "Analyst"
+        expertise:
+          type: array
+          items:
+            type: string
+          example: ["Risk Assessment", "Financial Analysis"]
+        guidelines:
+          type: string
+          example: "Be thorough and cautious in all analyses"
+        system_prompt:
+          type: string
+          example: "You are an expert risk analyst"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["finance", "analysis"]
+        tool_ids:
+          type: array
+          items:
+            type: string
+          example: ["tool-calc"]
+        model_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPreference'
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - name
+        - role
+        - expertise
+        - guidelines
+        - tags
+        - tool_ids
+
+    PersonaUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        expertise:
+          type: array
+          items:
+            type: string
+        guidelines:
+          type: string
+        system_prompt:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        tool_ids:
+          type: array
+          items:
+            type: string
+        model_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPreference'
+        parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "team-123"
+        name:
+          type: string
+          example: "AI Experts"
+        description:
+          type: string
+          example: "Team of AI and ML specialists"
+        persona_ids:
+          type: array
+          items:
+            type: string
+          example: ["persona-1", "persona-2"]
+        uses_moderator:
+          type: boolean
+          example: false
+        moderator_id:
+          type: string
+          example: "persona-mod"
+        decision_type:
+          type: string
+          enum: [voting, moderator, third_party, consensus, random]
+          example: "voting"
+        collaboration_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollaborationRule'
+        approval_status:
+          type: string
+          enum: [draft, pending, approved, deprecated]
+          example: "approved"
+        created_by:
+          type: string
+          example: "user-456"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - persona_ids
+        - uses_moderator
+        - decision_type
+        - approval_status
+        - created_by
+        - created_at
+        - updated_at
+
+    CollaborationRule:
+      type: object
+      properties:
+        trigger:
+          type: string
+          example: "disagreement"
+        action:
+          type: string
+          example: "escalate_to_moderator"
+        parameters:
+          type: object
+          additionalProperties: true
+      required:
+        - trigger
+        - action
+
+    TeamsResponse:
+      type: object
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+        total:
+          type: integer
+          example: 25
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - teams
+        - total
+        - limit
+        - offset
+
+    TeamCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "AI Experts"
+        description:
+          type: string
+          example: "Team of AI and ML specialists"
+        persona_ids:
+          type: array
+          items:
+            type: string
+          example: ["persona-1", "persona-2"]
+        uses_moderator:
+          type: boolean
+          example: false
+        moderator_id:
+          type: string
+          example: "persona-mod"
+        decision_type:
+          type: string
+          enum: [voting, moderator, third_party, consensus, random]
+          example: "voting"
+        collaboration_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollaborationRule'
+      required:
+        - name
+        - persona_ids
+        - uses_moderator
+        - decision_type
+
+    TeamUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        persona_ids:
+          type: array
+          items:
+            type: string
+        uses_moderator:
+          type: boolean
+        moderator_id:
+          type: string
+        decision_type:
+          type: string
+          enum: [voting, moderator, third_party, consensus, random]
+        collaboration_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollaborationRule'
+
+    TeamExecutionRequest:
+      type: object
+      properties:
+        prompt_id:
+          type: string
+          example: "prompt-123"
+        context:
+          type: object
+          additionalProperties: true
+          example: {"decision": "Should we proceed with the acquisition?"}
+        execution_parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - prompt_id
+        - context
+
+    TeamExecutionResponse:
+      type: object
+      properties:
+        execution_id:
+          type: string
+          example: "exec-789"
+        team_id:
+          type: string
+          example: "team-123"
+        prompt_id:
+          type: string
+          example: "prompt-123"
+        persona_responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonaResponse'
+        final_decision:
+          type: string
+          example: "Proceed with acquisition after risk mitigation"
+        decision_method:
+          type: string
+          enum: [voting, moderator, third_party, consensus, random]
+          example: "voting"
+        execution_time:
+          type: number
+          example: 5.2
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - execution_id
+        - team_id
+        - prompt_id
+        - persona_responses
+        - final_decision
+        - decision_method
+        - execution_time
+        - created_at
+
+    PersonaResponse:
+      type: object
+      properties:
+        persona_id:
+          type: string
+          example: "persona-1"
+        response:
+          type: string
+          example: "I recommend proceeding with caution"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.85
+        reasoning:
+          type: string
+          example: "Based on financial analysis, the risks are manageable"
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+      required:
+        - persona_id
+        - response
+        - confidence
+
+    ToolCall:
+      type: object
+      properties:
+        tool_id:
+          type: string
+          example: "tool-calc"
+        input:
+          type: object
+          additionalProperties: true
+        output:
+          type: object
+          additionalProperties: true
+        execution_time:
+          type: number
+          example: 0.5
+      required:
+        - tool_id
+        - input
+        - output
+
+    Tool:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "tool-123"
+        name:
+          type: string
+          example: "Calculator API"
+        description:
+          type: string
+          example: "Basic mathematical operations"
+        category:
+          type: string
+          example: "math"
+        api_spec:
+          type: string
+          example: "OpenAPI 3.0"
+        endpoint:
+          type: string
+          example: "https://api.example.com/calc"
+        authentication:
+          $ref: '#/components/schemas/AuthenticationConfig'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolParameter'
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["math", "calculation"]
+        availability_status:
+          type: string
+          enum: [active, deprecated, maintenance]
+          example: "active"
+        rate_limits:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateLimit'
+        cost_per_call:
+          type: number
+          example: 0.01
+        created_by:
+          type: string
+          example: "user-456"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - category
+        - parameters
+        - tags
+        - availability_status
+        - created_by
+        - created_at
+        - updated_at
+
+    AuthenticationConfig:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [api_key, oauth, basic, bearer]
+          example: "api_key"
+        config:
+          type: object
+          additionalProperties: true
+      required:
+        - type
+        - config
+
+    ToolParameter:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "operation"
+        type:
+          type: string
+          enum: [string, number, boolean, array, object]
+          example: "string"
+        description:
+          type: string
+          example: "Mathematical operation to perform"
+        required:
+          type: boolean
+          example: true
+        default_value:
+          type: any
+          example: "add"
+        validation_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRule'
+      required:
+        - name
+        - type
+        - description
+        - required
+
+    ValidationRule:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "enum"
+        value:
+          type: any
+          example: ["add", "subtract", "multiply", "divide"]
+      required:
+        - type
+        - value
+
+    RateLimit:
+      type: object
+      properties:
+        requests:
+          type: integer
+          example: 100
+        window:
+          type: string
+          example: "per_minute"
+        burst_limit:
+          type: integer
+          example: 10
+      required:
+        - requests
+        - window
+
+    ToolsResponse:
+      type: object
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        total:
+          type: integer
+          example: 75
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - tools
+        - total
+        - limit
+        - offset
+
+    ToolCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Calculator API"
+        description:
+          type: string
+          example: "Basic mathematical operations"
+        category:
+          type: string
+          example: "math"
+        api_spec:
+          type: string
+          example: "OpenAPI 3.0"
+        endpoint:
+          type: string
+          example: "https://api.example.com/calc"
+        authentication:
+          $ref: '#/components/schemas/AuthenticationConfig'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolParameter'
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["math", "calculation"]
+        rate_limits:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateLimit'
+        cost_per_call:
+          type: number
+          example: 0.01
+      required:
+        - name
+        - description
+        - category
+        - parameters
+        - tags
+
+    ToolUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        api_spec:
+          type: string
+        endpoint:
+          type: string
+        authentication:
+          $ref: '#/components/schemas/AuthenticationConfig'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolParameter'
+        tags:
+          type: array
+          items:
+            type: string
+        availability_status:
+          type: string
+          enum: [active, deprecated, maintenance]
+        rate_limits:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateLimit'
+        cost_per_call:
+          type: number
+
+    ToolTestRequest:
+      type: object
+      properties:
+        parameters:
+          type: object
+          additionalProperties: true
+          example: {"operation": "add", "a": 5, "b": 3}
+      required:
+        - parameters
+
+    ToolTestResponse:
+      type: object
+      properties:
+        tool_id:
+          type: string
+          example: "tool-123"
+        success:
+          type: boolean
+          example: true
+        result:
+          type: object
+          additionalProperties: true
+          example: {"result": 8}
+        execution_time:
+          type: number
+          example: 0.5
+        error_message:
+          type: string
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - tool_id
+        - success
+        - execution_time
+        - timestamp
+
+    PromptTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "prompt-123"
+        name:
+          type: string
+          example: "Risk Assessment Template"
+        description:
+          type: string
+          example: "Template for conducting risk assessments"
+        template:
+          type: string
+          example: "Assess the risks of {{scenario}} considering {{factors}}"
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        persona_id:
+          type: string
+          example: "persona-123"
+        team_id:
+          type: string
+          example: "team-123"
+        tool_ids:
+          type: array
+          items:
+            type: string
+          example: ["tool-1", "tool-2"]
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["risk", "assessment"]
+        test_cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestCase'
+        approval_status:
+          type: string
+          enum: [draft, pending, approved, deprecated]
+          example: "approved"
+        version:
+          type: integer
+          example: 1
+        parent_id:
+          type: string
+          example: "prompt-parent"
+        created_by:
+          type: string
+          example: "user-456"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_tested:
+          type: string
+          format: date-time
+        test_results:
+          $ref: '#/components/schemas/TestResults'
+      required:
+        - id
+        - name
+        - description
+        - template
+        - variables
+        - tool_ids
+        - tags
+        - test_cases
+        - approval_status
+        - version
+        - created_by
+        - created_at
+        - updated_at
+
+    TemplateVariable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "scenario"
+        type:
+          type: string
+          enum: [string, number, object, array]
+          example: "string"
+        description:
+          type: string
+          example: "The scenario to assess"
+        required:
+          type: boolean
+          example: true
+        default_value:
+          type: any
+          example: null
+        validation_pattern:
+          type: string
+          example: "^[a-zA-Z\\s]+$"
+      required:
+        - name
+        - type
+        - description
+        - required
+
+    TestCase:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "test-123"
+        name:
+          type: string
+          example: "Basic risk assessment"
+        input_context:
+          type: object
+          additionalProperties: true
+          example: {"scenario": "New market entry", "factors": "Competition, regulation"}
+        expected_output:
+          type: string
+          example: "Comprehensive risk analysis with mitigation strategies"
+        success_criteria:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuccessCriteria'
+      required:
+        - id
+        - input_context
+        - expected_output
+        - success_criteria
+
+    SuccessCriteria:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [contains, exact, regex, semantic, length, sentiment]
+          example: "contains"
+        value:
+          type: any
+          example: ["risk", "mitigation", "analysis"]
+        weight:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.8
+      required:
+        - type
+        - value
+        - weight
+
+    TestResults:
+      type: object
+      properties:
+        total_tests:
+          type: integer
+          example: 10
+        passed_tests:
+          type: integer
+          example: 9
+        success_rate:
+          type: number
+          example: 0.9
+        average_score:
+          type: number
+          example: 0.85
+        detailed_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestResult'
+      required:
+        - total_tests
+        - passed_tests
+        - success_rate
+        - average_score
+
+    TestResult:
+      type: object
+      properties:
+        test_case_id:
+          type: string
+          example: "test-123"
+        passed:
+          type: boolean
+          example: true
+        score:
+          type: number
+          example: 0.85
+        output:
+          type: string
+          example: "The risks include market competition..."
+        criteria_scores:
+          type: object
+          additionalProperties:
+            type: number
+      required:
+        - test_case_id
+        - passed
+        - score
+        - output
+
+    PromptsResponse:
+      type: object
+      properties:
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptTemplate'
+        total:
+          type: integer
+          example: 100
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+      required:
+        - prompts
+        - total
+        - limit
+        - offset
+
+    PromptCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Risk Assessment Template"
+        description:
+          type: string
+          example: "Template for conducting risk assessments"
+        template:
+          type: string
+          example: "Assess the risks of {{scenario}} considering {{factors}}"
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        persona_id:
+          type: string
+          example: "persona-123"
+        team_id:
+          type: string
+          example: "team-123"
+        tool_ids:
+          type: array
+          items:
+            type: string
+          example: ["tool-1", "tool-2"]
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["risk", "assessment"]
+        test_cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestCase'
+      required:
+        - name
+        - description
+        - template
+        - variables
+        - tool_ids
+        - tags
+
+    PromptUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        template:
+          type: string
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        persona_id:
+          type: string
+        team_id:
+          type: string
+        tool_ids:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        test_cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestCase'
+
+    PromptTestRequest:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            type: string
+          example: ["gpt-4", "claude-3-opus"]
+        test_runs:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 10
+        execution_parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - models
+        - test_runs
+
+    PromptTestResponse:
+      type: object
+      properties:
+        test_id:
+          type: string
+          example: "test-789"
+        prompt_id:
+          type: string
+          example: "prompt-123"
+        test_results:
+          $ref: '#/components/schemas/TestResults'
+        model_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelTestResult'
+        recommendations:
+          type: array
+          items:
+            type: string
+          example: ["Consider adding more specific criteria"]
+        completed_at:
+          type: string
+          format: date-time
+      required:
+        - test_id
+        - prompt_id
+        - test_results
+        - model_results
+        - completed_at
+
+    ModelTestResult:
+      type: object
+      properties:
+        model:
+          type: string
+          example: "gpt-4"
+        success_rate:
+          type: number
+          example: 0.9
+        average_score:
+          type: number
+          example: 0.85
+        execution_time:
+          type: number
+          example: 2.5
+        cost:
+          type: number
+          example: 0.15
+      required:
+        - model
+        - success_rate
+        - average_score
+        - execution_time
+
+    ApprovalRequest:
+      type: object
+      properties:
+        comments:
+          type: string
+          example: "Approved after thorough review"
+        approved:
+          type: boolean
+          example: true
+      required:
+        - approved
+
+    ContextAssemblyRequest:
+      type: object
+      properties:
+        prompt_id:
+          type: string
+          example: "prompt-123"
+        persona_id:
+          type: string
+          example: "persona-123"
+        team_id:
+          type: string
+          example: "team-123"
+        tool_ids:
+          type: array
+          items:
+            type: string
+          example: ["tool-1", "tool-2"]
+        context_variables:
+          type: object
+          additionalProperties: true
+          example: {"scenario": "Market expansion"}
+        execution_parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - prompt_id
+
+    AssembledContext:
+      type: object
+      properties:
+        context_id:
+          type: string
+          example: "ctx-789"
+        prompt:
+          $ref: '#/components/schemas/PromptTemplate'
+        persona:
+          $ref: '#/components/schemas/Persona'
+        team:
+          $ref: '#/components/schemas/Team'
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        assembled_prompt:
+          type: string
+          example: "You are a risk analyst. Assess the risks of market expansion..."
+        context_variables:
+          type: object
+          additionalProperties: true
+        execution_parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - context_id
+        - prompt
+        - assembled_prompt
+        - created_at
+        - expires_at
+
+    ContextExecutionRequest:
+      type: object
+      properties:
+        input_variables:
+          type: object
+          additionalProperties: true
+          example: {"scenario": "Enter European market"}
+        override_parameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+      required:
+        - input_variables
+
+    ContextExecutionResponse:
+      type: object
+      properties:
+        execution_id:
+          type: string
+          example: "exec-456"
+        context_id:
+          type: string
+          example: "ctx-789"
+        response:
+          type: string
+          example: "Based on the analysis, the primary risks include..."
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+        execution_time:
+          type: number
+          example: 3.2
+        cost:
+          type: number
+          example: 0.08
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - execution_id
+        - context_id
+        - response
+        - execution_time
+        - created_at
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: "PERSONA_NOT_FOUND"
+            message:
+              type: string
+              example: "The specified persona was not found"
+            details:
+              type: object
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+          required:
+            - code
+            - message
+            - timestamp 
