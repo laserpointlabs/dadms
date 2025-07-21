@@ -15,6 +15,8 @@ This directory contains API documentation for all DADMS services.
 - **[Data Manager Service API](data_manager_service_openapi.yaml)** (Port 3009) - **NEW: External data integration**
 - **[Model Manager Service API](model_manager_service_openapi.yaml)** (Port 3010) - **NEW: Model registry & lifecycle**
   - **[Detailed API Endpoints](model_manager_api_endpoints.md)** - Human-readable documentation
+- **[Simulation Manager Service API](simulation_manager_service_openapi.yaml)** (Port 3011) - **NEW: Simulation orchestration & execution**
+  - **[Detailed API Endpoints](simulation_manager_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -125,6 +127,7 @@ flowchart LR
 ### Data & Model Services
 - [x] **Data Manager Service API** - ✅ COMPLETE
 - [x] **Model Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Simulation Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE

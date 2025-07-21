@@ -28,6 +28,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 ### 🌐 API Documentation
 - **[API Overview](api/README.md)**: Service APIs, authentication, and integration guides
 - **[Model Manager API](api/model_manager_api_endpoints.md)**: Comprehensive model registry API documentation
+- **[Simulation Manager API](api/simulation_manager_api_endpoints.md)**: Comprehensive simulation execution and orchestration API
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides
