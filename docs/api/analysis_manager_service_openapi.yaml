@@ -1,0 +1,2257 @@
+openapi: 3.0.3
+info:
+  title: DADMS Analysis Manager Service API
+  description: |
+    Intelligent evaluation and decision-support hub for DADMS's Event-Driven System (EDS).
+    Transforms raw simulation outputs into actionable insights through sophisticated analytical methods,
+    providing comprehensive scoring, comparative analysis, and statistical evaluation capabilities to
+    support data-driven decision making with extensible plugin architecture.
+  version: 2.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3012
+    description: Development server
+  - url: https://api.dadms.com/analysis-manager
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Analyses
+    description: Analysis execution and management
+  - name: Results
+    description: Analysis results and insights
+  - name: Recommendations
+    description: Generated recommendations and scoring
+  - name: Comparative
+    description: Comparative and trade-space analysis
+  - name: Methods
+    description: Analysis method management
+  - name: Plugins
+    description: Plugin management and extension
+  - name: Search
+    description: Search and discovery
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  # Analysis Execution
+  /api/v1/analyses:
+    post:
+      summary: Start new analysis
+      description: Execute analysis on simulation results or other data sources using specified methods
+      tags:
+        - Analyses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+            example:
+              name: "UAV Performance Analysis"
+              description: "Multi-objective scoring and trade-space analysis of UAV simulation results"
+              simulation_id: "sim-uuid-789"
+              data_sources:
+                - source_id: "sim-uuid-789"
+                  source_type: "simulation_result"
+                  format: "json"
+              analysis_methods:
+                - method_id: "weighted_scoring"
+                  method_type: "scoring"
+                  parameters:
+                    criteria_weights:
+                      performance: 0.4
+                      efficiency: 0.3
+                      cost: 0.3
+                - method_id: "trade_space_analysis"
+                  method_type: "comparative"
+                  parameters:
+                    objectives: ["performance", "cost"]
+              output_requirements:
+                - type: "scores"
+                  format: "json"
+                - type: "visualization"
+                  format: "png"
+              tags: ["uav", "performance", "multi-objective"]
+      responses:
+        '201':
+          description: Analysis started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisReport'
+        '400':
+          description: Invalid analysis request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List analyses
+      description: Retrieve a list of analyses with filtering and pagination
+      tags:
+        - Analyses
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AnalysisStatus'
+          description: Filter by analysis status
+        - name: analysis_type
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AnalysisType'
+          description: Filter by analysis type
+        - name: simulation_id
+          in: query
+          schema:
+            type: string
+          description: Filter by simulation ID
+        - name: created_by
+          in: query
+          schema:
+            type: string
+          description: Filter by creator
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter analyses created after date
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter analyses created before date
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, name, status]
+            default: created_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: Analyses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisListResponse'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/batch:
+    post:
+      summary: Run batch analyses
+      description: Execute multiple analyses with different configurations
+      tags:
+        - Analyses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAnalysisRequest'
+      responses:
+        '201':
+          description: Batch analysis started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchAnalysisResult'
+        '400':
+          description: Invalid batch request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}:
+    get:
+      summary: Get analysis details
+      description: Retrieve detailed information about a specific analysis
+      tags:
+        - Analyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      responses:
+        '200':
+          description: Analysis details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisReport'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Cancel analysis
+      description: Cancel a running analysis
+      tags:
+        - Analyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      responses:
+        '204':
+          description: Analysis cancelled successfully
+        '400':
+          description: Cannot cancel analysis (already completed)
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/rerun:
+    post:
+      summary: Rerun analysis
+      description: Rerun an analysis with updated configuration or methods
+      tags:
+        - Analyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RerunOptions'
+      responses:
+        '200':
+          description: Analysis rerun started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisReport'
+        '400':
+          description: Invalid rerun options
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Status & Monitoring
+  /api/v1/analyses/{id}/status:
+    get:
+      summary: Get analysis status
+      description: Get current status and progress of an analysis
+      tags:
+        - Analyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisStatusResponse'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/progress:
+    get:
+      summary: Get analysis progress
+      description: Get detailed progress information for a running analysis
+      tags:
+        - Analyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      responses:
+        '200':
+          description: Progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressUpdate'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Results & Insights
+  /api/v1/analyses/{id}/results:
+    get:
+      summary: Get analysis results
+      description: Retrieve complete results from a finished analysis
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, xlsx]
+            default: json
+          description: Result format
+      responses:
+        '200':
+          description: Results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResults'
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Analysis not found or no results available
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/recommendations:
+    get:
+      summary: Get analysis recommendations
+      description: Retrieve generated recommendations from an analysis
+      tags:
+        - Recommendations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/RecommendationPriority'
+          description: Filter by recommendation priority
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/RecommendationType'
+          description: Filter by recommendation type
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recommendation'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/insights:
+    get:
+      summary: Get analysis insights
+      description: Retrieve generated insights and patterns from an analysis
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+        - name: insight_type
+          in: query
+          schema:
+            type: string
+          description: Filter by insight type
+      responses:
+        '200':
+          description: Insights retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightResults'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/artifacts:
+    get:
+      summary: List analysis artifacts
+      description: List all artifacts generated by an analysis
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      responses:
+        '200':
+          description: Artifacts listed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalysisArtifact'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/artifacts/{name}:
+    get:
+      summary: Download analysis artifact
+      description: Download a specific artifact from an analysis
+      tags:
+        - Results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Artifact name
+      responses:
+        '200':
+          description: Artifact download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Artifact not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Comparative Analysis
+  /api/v1/analyses/compare:
+    post:
+      summary: Compare analyses
+      description: Compare results from multiple analyses
+      tags:
+        - Comparative
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                analysis_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of analysis IDs to compare
+                comparison_criteria:
+                  type: array
+                  items:
+                    type: string
+                  description: Criteria for comparison
+                comparison_type:
+                  type: string
+                  enum: [scores, insights, recommendations, statistical]
+                  description: Type of comparison to perform
+              required:
+                - analysis_ids
+      responses:
+        '200':
+          description: Comparison completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonResult'
+        '400':
+          description: Invalid comparison request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/{id}/benchmark:
+    post:
+      summary: Benchmark analysis
+      description: Benchmark an analysis against a reference dataset
+      tags:
+        - Comparative
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Analysis ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                benchmark_dataset:
+                  type: string
+                  description: Reference dataset for benchmarking
+                benchmark_criteria:
+                  type: array
+                  items:
+                    type: string
+                  description: Criteria for benchmarking
+              required:
+                - benchmark_dataset
+      responses:
+        '200':
+          description: Benchmark completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkResult'
+        '404':
+          description: Analysis not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Search & Discovery
+  /api/v1/analyses/search:
+    get:
+      summary: Search analyses
+      description: Search analyses using text query and filters
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: analysis_type
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AnalysisType'
+          description: Filter by analysis types
+        - name: method_type
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by method types
+        - name: confidence_min
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Minimum confidence threshold
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalysisSearchResult'
+        '400':
+          description: Invalid search query
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/simulations/{id}/analyses:
+    get:
+      summary: Get simulation analyses
+      description: Get all analyses performed on a specific simulation
+      tags:
+        - Search
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Simulation ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: Simulation analyses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalysisSummary'
+        '404':
+          description: Simulation not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Method Management
+  /api/v1/methods:
+    get:
+      summary: List available methods
+      description: Get all available analysis methods
+      tags:
+        - Methods
+      parameters:
+        - name: method_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalysisType'
+          description: Filter by method type
+        - name: plugin_name
+          in: query
+          schema:
+            type: string
+          description: Filter by plugin name
+      responses:
+        '200':
+          description: Methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalysisMethod'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/methods/{id}:
+    get:
+      summary: Get method configuration
+      description: Get configuration schema and details for an analysis method
+      tags:
+        - Methods
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Method ID
+      responses:
+        '200':
+          description: Method configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MethodConfiguration'
+        '404':
+          description: Method not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/analyses/validate:
+    post:
+      summary: Validate analysis request
+      description: Validate an analysis request before execution
+      tags:
+        - Methods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Validation failed
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Plugin Management
+  /api/v1/plugins:
+    get:
+      summary: List analysis plugins
+      description: Get all available analysis plugins
+      tags:
+        - Plugins
+      parameters:
+        - name: enabled_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Show only enabled plugins
+      responses:
+        '200':
+          description: Plugins retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plugin'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    post:
+      summary: Register new plugin
+      description: Register a new analysis plugin
+      tags:
+        - Plugins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginDefinition'
+      responses:
+        '201':
+          description: Plugin registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginRegistration'
+        '400':
+          description: Invalid plugin definition
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/plugins/{id}:
+    get:
+      summary: Get plugin information
+      description: Get detailed information about a specific plugin
+      tags:
+        - Plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Plugin ID
+      responses:
+        '200':
+          description: Plugin information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginInfo'
+        '404':
+          description: Plugin not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    put:
+      summary: Update plugin
+      description: Update plugin configuration or status
+      tags:
+        - Plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Plugin ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginUpdate'
+      responses:
+        '200':
+          description: Plugin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginInfo'
+        '404':
+          description: Plugin not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Unregister plugin
+      description: Remove a plugin from the system
+      tags:
+        - Plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Plugin ID
+      responses:
+        '204':
+          description: Plugin unregistered successfully
+        '404':
+          description: Plugin not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Health & Monitoring
+  /health:
+    get:
+      summary: Health check
+      description: Service health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+  /metrics:
+    get:
+      summary: Service metrics
+      description: Prometheus-formatted service metrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Analysis Schemas
+    AnalysisReport:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUID for unique identification
+        name:
+          type: string
+          description: Human-readable analysis name
+        simulation_id:
+          type: string
+          description: Source simulation (if applicable)
+        data_source_ids:
+          type: array
+          items:
+            type: string
+          description: Input data source references
+        analysis_type:
+          $ref: '#/components/schemas/AnalysisType'
+        status:
+          $ref: '#/components/schemas/AnalysisStatus'
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisMethod'
+        parameters:
+          $ref: '#/components/schemas/AnalysisParameters'
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+        scores:
+          $ref: '#/components/schemas/ScoreResults'
+        insights:
+          $ref: '#/components/schemas/InsightResults'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        statistical_summary:
+          $ref: '#/components/schemas/StatisticalSummary'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisArtifact'
+        visualizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Visualization'
+        created_by:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        version:
+          type: string
+        parent_analysis_id:
+          type: string
+      required:
+        - id
+        - name
+        - analysis_type
+        - status
+
+    AnalysisType:
+      type: string
+      enum:
+        - scoring
+        - statistical
+        - comparative
+        - sensitivity
+        - game_theory
+        - machine_learning
+        - multi_objective
+        - risk_assessment
+        - custom
+      description: Type of analysis
+
+    AnalysisStatus:
+      type: string
+      enum:
+        - queued
+        - preparing
+        - running
+        - completed
+        - failed
+        - cancelled
+        - partial
+      description: Current analysis status
+
+    AnalysisMethod:
+      type: object
+      properties:
+        method_id:
+          type: string
+          description: Unique method identifier
+        method_type:
+          $ref: '#/components/schemas/AnalysisType'
+        method_name:
+          type: string
+          description: Human-readable method name
+        plugin_name:
+          type: string
+          description: Plugin providing the method
+        version:
+          type: string
+          description: Method version
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Method-specific parameters
+        weight:
+          type: number
+          description: Method weight in aggregation
+        enabled:
+          type: boolean
+          description: Whether method is active
+        execution_order:
+          type: integer
+          description: Execution priority order
+      required:
+        - method_id
+        - method_type
+        - method_name
+
+    AnalysisParameters:
+      type: object
+      properties:
+        data_preprocessing:
+          $ref: '#/components/schemas/PreprocessingConfig'
+        method_configuration:
+          type: object
+          additionalProperties: true
+        aggregation_strategy:
+          $ref: '#/components/schemas/AggregationStrategy'
+        confidence_level:
+          type: number
+          minimum: 0
+          maximum: 1
+        significance_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+        output_formats:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutputFormat'
+        quality_checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityCheck'
+
+    ScoreResults:
+      type: object
+      properties:
+        overall_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Aggregated overall score
+        method_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/MethodScore'
+        normalized_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/NormalizedScore'
+        confidence_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfidenceScore'
+        score_breakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        performance_metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerformanceMetric'
+
+    InsightResults:
+      type: object
+      properties:
+        key_findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyFinding'
+        patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pattern'
+        anomalies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Anomaly'
+        correlations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Correlation'
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trend'
+        risk_factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskFactor'
+        optimization_opportunities:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptimizationOpportunity'
+
+    Recommendation:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique recommendation ID
+        title:
+          type: string
+          description: Recommendation title
+        description:
+          type: string
+          description: Detailed description
+        recommendation_type:
+          $ref: '#/components/schemas/RecommendationType'
+        priority:
+          $ref: '#/components/schemas/RecommendationPriority'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence in recommendation
+        impact_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Expected impact
+        implementation_effort:
+          $ref: '#/components/schemas/EffortLevel'
+        supporting_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alternative'
+        next_steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/NextStep'
+      required:
+        - id
+        - title
+        - description
+        - recommendation_type
+        - priority
+
+    RecommendationType:
+      type: string
+      enum:
+        - optimize
+        - mitigate
+        - investigate
+        - implement
+        - avoid
+        - monitor
+      description: Type of recommendation
+
+    RecommendationPriority:
+      type: string
+      enum:
+        - critical
+        - high
+        - medium
+        - low
+        - informational
+      description: Recommendation priority level
+
+    # Request/Response Schemas
+    AnalysisRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Analysis name
+        description:
+          type: string
+          description: Analysis description
+        simulation_id:
+          type: string
+          description: Source simulation ID
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
+        analysis_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisMethod'
+        parameters:
+          $ref: '#/components/schemas/AnalysisParameters'
+        output_requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutputRequirement'
+        tags:
+          type: array
+          items:
+            type: string
+        project_id:
+          type: string
+      required:
+        - name
+        - data_sources
+        - analysis_methods
+
+    DataSource:
+      type: object
+      properties:
+        source_id:
+          type: string
+          description: Data source identifier
+        source_type:
+          $ref: '#/components/schemas/DataSourceType'
+        source_path:
+          type: string
+          description: Path to data
+        format:
+          $ref: '#/components/schemas/DataFormat'
+        schema:
+          type: object
+          description: Data schema validation
+        preprocessing:
+          $ref: '#/components/schemas/PreprocessingConfig'
+      required:
+        - source_id
+        - source_type
+        - format
+
+    DataSourceType:
+      type: string
+      enum:
+        - simulation_result
+        - model_output
+        - external_data
+        - historical_data
+        - real_time_data
+        - user_provided
+      description: Type of data source
+
+    BatchAnalysisRequest:
+      type: object
+      properties:
+        base_request:
+          $ref: '#/components/schemas/AnalysisRequest'
+        analysis_variations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisVariation'
+        execution_mode:
+          type: string
+          enum: [sequential, parallel, adaptive]
+        max_concurrent_analyses:
+          type: integer
+      required:
+        - base_request
+        - analysis_variations
+
+    AnalysisListResponse:
+      type: object
+      properties:
+        analyses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - analyses
+        - total
+
+    AnalysisSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        analysis_type:
+          $ref: '#/components/schemas/AnalysisType'
+        status:
+          $ref: '#/components/schemas/AnalysisStatus'
+        simulation_id:
+          type: string
+        overall_score:
+          type: number
+        confidence:
+          type: number
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+
+    # Support Schemas
+    MethodScore:
+      type: object
+      properties:
+        method_id:
+          type: string
+        method_name:
+          type: string
+        raw_score:
+          type: number
+        normalized_score:
+          type: number
+        weight:
+          type: number
+        confidence:
+          type: number
+        details:
+          type: object
+          additionalProperties: true
+
+    NormalizedScore:
+      type: object
+      properties:
+        criterion:
+          type: string
+        score:
+          type: number
+        percentile:
+          type: number
+        z_score:
+          type: number
+
+    ConfidenceScore:
+      type: object
+      properties:
+        method_id:
+          type: string
+        confidence_level:
+          type: number
+        confidence_interval:
+          type: object
+        uncertainty_factors:
+          type: array
+          items:
+            type: string
+
+    ScoreBreakdown:
+      type: object
+      properties:
+        criteria_scores:
+          type: object
+          additionalProperties:
+            type: number
+        weight_distribution:
+          type: object
+          additionalProperties:
+            type: number
+        contribution_analysis:
+          type: object
+
+    StatisticalSummary:
+      type: object
+      properties:
+        descriptive_statistics:
+          $ref: '#/components/schemas/DescriptiveStats'
+        inferential_statistics:
+          $ref: '#/components/schemas/InferentialStats'
+        distribution_analysis:
+          $ref: '#/components/schemas/DistributionAnalysis'
+        correlation_analysis:
+          $ref: '#/components/schemas/CorrelationAnalysis'
+
+    DescriptiveStats:
+      type: object
+      properties:
+        variable_statistics:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariableStats'
+        summary_measures:
+          $ref: '#/components/schemas/SummaryMeasures'
+        distribution_shape:
+          $ref: '#/components/schemas/DistributionShape'
+        outlier_analysis:
+          $ref: '#/components/schemas/OutlierAnalysis'
+
+    VariableStats:
+      type: object
+      properties:
+        variable_name:
+          type: string
+        count:
+          type: integer
+        mean:
+          type: number
+        median:
+          type: number
+        mode:
+          type: array
+          items:
+            type: number
+        std_dev:
+          type: number
+        variance:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        percentiles:
+          type: object
+          additionalProperties:
+            type: number
+        skewness:
+          type: number
+        kurtosis:
+          type: number
+
+    # Artifact & Output Schemas
+    AnalysisArtifact:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        hash:
+          type: string
+        mime_type:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Visualization:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [chart, graph, dashboard, plot, heatmap, scatter]
+        format:
+          type: string
+          enum: [png, svg, pdf, html, json]
+        data_source:
+          type: string
+        configuration:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    # Plugin Schemas
+    Plugin:
+      type: object
+      properties:
+        plugin_id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        author:
+          type: string
+        supported_analysis_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisType'
+        is_enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PluginDefinition:
+      type: object
+      properties:
+        plugin_id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        author:
+          type: string
+        supported_analysis_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisType'
+        configuration_schema:
+          type: object
+        output_schema:
+          type: object
+        dependencies:
+          type: array
+          items:
+            type: string
+      required:
+        - plugin_id
+        - name
+        - version
+        - supported_analysis_types
+
+    PluginInfo:
+      allOf:
+        - $ref: '#/components/schemas/Plugin'
+        - type: object
+          properties:
+            configuration_schema:
+              type: object
+            output_schema:
+              type: object
+            documentation_url:
+              type: string
+            usage_statistics:
+              type: object
+
+    PluginRegistration:
+      type: object
+      properties:
+        plugin_id:
+          type: string
+        registration_status:
+          type: string
+          enum: [registered, failed, pending]
+        message:
+          type: string
+        registered_at:
+          type: string
+          format: date-time
+
+    # Comparative Analysis Schemas
+    ComparisonResult:
+      type: object
+      properties:
+        analysis_ids:
+          type: array
+          items:
+            type: string
+        comparison_date:
+          type: string
+          format: date-time
+        comparison_type:
+          type: string
+        score_comparison:
+          type: object
+        insight_comparison:
+          type: object
+        recommendation_comparison:
+          type: object
+        statistical_comparison:
+          type: object
+
+    BenchmarkResult:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+        benchmark_dataset:
+          type: string
+        benchmark_date:
+          type: string
+          format: date-time
+        performance_vs_benchmark:
+          type: object
+        ranking:
+          type: integer
+        percentile:
+          type: number
+        improvement_opportunities:
+          type: array
+          items:
+            type: string
+
+    # Utility Schemas
+    PreprocessingConfig:
+      type: object
+      properties:
+        normalization:
+          type: string
+          enum: [none, min_max, z_score, robust, quantile]
+        outlier_handling:
+          type: string
+          enum: [ignore, remove, cap, transform]
+        missing_data_strategy:
+          type: string
+          enum: [ignore, remove, interpolate, fill_mean, fill_median]
+        feature_selection:
+          type: object
+        transformation_pipeline:
+          type: array
+          items:
+            type: object
+
+    AggregationStrategy:
+      type: string
+      enum:
+        - weighted_average
+        - consensus
+        - majority_vote
+        - ensemble
+        - hierarchical
+      description: Result aggregation approach
+
+    OutputFormat:
+      type: string
+      enum:
+        - json
+        - csv
+        - xlsx
+        - pdf
+        - html
+        - png
+        - svg
+      description: Output format
+
+    DataFormat:
+      type: string
+      enum:
+        - json
+        - csv
+        - xlsx
+        - parquet
+        - hdf5
+        - xml
+      description: Data format
+
+    QualityCheck:
+      type: object
+      properties:
+        check_type:
+          type: string
+        parameters:
+          type: object
+        threshold:
+          type: number
+        required:
+          type: boolean
+
+    EffortLevel:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - very_high
+      description: Implementation effort level
+
+    # Search & Discovery Schemas
+    AnalysisSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/AnalysisSummary'
+        - type: object
+          properties:
+            relevance_score:
+              type: number
+            matched_fields:
+              type: array
+              items:
+                type: string
+            highlight:
+              type: object
+
+    # Status & Progress Schemas
+    AnalysisStatusResponse:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/AnalysisStatus'
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        current_method:
+          type: string
+        methods_completed:
+          type: integer
+        total_methods:
+          type: integer
+        estimated_completion:
+          type: string
+          format: date-time
+        last_updated:
+          type: string
+          format: date-time
+
+    ProgressUpdate:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        current_phase:
+          type: string
+        phases_completed:
+          type: array
+          items:
+            type: string
+        current_method:
+          type: string
+        methods_completed:
+          type: array
+          items:
+            type: string
+        estimated_completion:
+          type: string
+          format: date-time
+        resource_usage:
+          type: object
+        last_updated:
+          type: string
+          format: date-time
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        estimated_duration:
+          type: integer
+        estimated_resources:
+          type: object
+
+    # Insight Type Schemas
+    KeyFinding:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        significance:
+          type: number
+        confidence:
+          type: number
+        supporting_data:
+          type: object
+
+    Pattern:
+      type: object
+      properties:
+        id:
+          type: string
+        pattern_type:
+          type: string
+        description:
+          type: string
+        frequency:
+          type: number
+        strength:
+          type: number
+        variables_involved:
+          type: array
+          items:
+            type: string
+
+    Anomaly:
+      type: object
+      properties:
+        id:
+          type: string
+        anomaly_type:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        affected_variables:
+          type: array
+          items:
+            type: string
+        detection_method:
+          type: string
+
+    Correlation:
+      type: object
+      properties:
+        variable_pair:
+          type: array
+          items:
+            type: string
+        correlation_coefficient:
+          type: number
+        correlation_type:
+          type: string
+          enum: [linear, nonlinear, partial, spurious]
+        p_value:
+          type: number
+        significance:
+          type: boolean
+
+    Trend:
+      type: object
+      properties:
+        variable:
+          type: string
+        trend_type:
+          type: string
+          enum: [increasing, decreasing, stable, cyclical, irregular]
+        slope:
+          type: number
+        r_squared:
+          type: number
+        confidence_interval:
+          type: object
+
+    RiskFactor:
+      type: object
+      properties:
+        factor:
+          type: string
+        risk_level:
+          type: string
+          enum: [low, medium, high, critical]
+        likelihood:
+          type: number
+        impact:
+          type: number
+        mitigation_strategies:
+          type: array
+          items:
+            type: string
+
+    OptimizationOpportunity:
+      type: object
+      properties:
+        opportunity:
+          type: string
+        potential_improvement:
+          type: number
+        implementation_complexity:
+          $ref: '#/components/schemas/EffortLevel'
+        resources_required:
+          type: array
+          items:
+            type: string
+
+    Evidence:
+      type: object
+      properties:
+        evidence_type:
+          type: string
+        description:
+          type: string
+        strength:
+          type: number
+        source:
+          type: string
+
+    Alternative:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        pros:
+          type: array
+          items:
+            type: string
+        cons:
+          type: array
+          items:
+            type: string
+        estimated_impact:
+          type: number
+
+    NextStep:
+      type: object
+      properties:
+        step:
+          type: string
+        priority:
+          type: integer
+        estimated_duration:
+          type: string
+        dependencies:
+          type: array
+          items:
+            type: string
+
+    # Configuration Schemas
+    MethodConfiguration:
+      type: object
+      properties:
+        method_id:
+          type: string
+        method_name:
+          type: string
+        description:
+          type: string
+        parameter_schema:
+          type: object
+        default_parameters:
+          type: object
+        validation_rules:
+          type: object
+        examples:
+          type: array
+          items:
+            type: object
+
+    RerunOptions:
+      type: object
+      properties:
+        new_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisMethod'
+        updated_parameters:
+          $ref: '#/components/schemas/AnalysisParameters'
+        reuse_preprocessing:
+          type: boolean
+        force_recompute:
+          type: boolean
+
+    AnalysisVariation:
+      type: object
+      properties:
+        variation_id:
+          type: string
+        name:
+          type: string
+        modified_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisMethod'
+        modified_parameters:
+          type: object
+
+    OutputRequirement:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [scores, insights, recommendations, statistical, visualizations, reports]
+        format:
+          $ref: '#/components/schemas/OutputFormat'
+        detail_level:
+          type: string
+          enum: [summary, detailed, comprehensive]
+        custom_fields:
+          type: array
+          items:
+            type: string
+
+    BatchAnalysisResult:
+      type: object
+      properties:
+        batch_id:
+          type: string
+        total_analyses:
+          type: integer
+        analysis_ids:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, partial]
+        created_at:
+          type: string
+          format: date-time
+
+    PluginUpdate:
+      type: object
+      properties:
+        is_enabled:
+          type: boolean
+        configuration:
+          type: object
+        version:
+          type: string
+
+    # Additional Statistical Schemas
+    InferentialStats:
+      type: object
+      properties:
+        hypothesis_tests:
+          type: array
+          items:
+            type: object
+        confidence_intervals:
+          type: object
+        effect_sizes:
+          type: object
+
+    DistributionAnalysis:
+      type: object
+      properties:
+        fitted_distributions:
+          type: array
+          items:
+            type: object
+        goodness_of_fit:
+          type: object
+        distribution_parameters:
+          type: object
+
+    CorrelationAnalysis:
+      type: object
+      properties:
+        correlation_matrix:
+          type: object
+        significant_correlations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Correlation'
+        correlation_networks:
+          type: object
+
+    SummaryMeasures:
+      type: object
+      properties:
+        central_tendency:
+          type: object
+        variability:
+          type: object
+        shape:
+          type: object
+
+    DistributionShape:
+      type: object
+      properties:
+        symmetry:
+          type: object
+        peakedness:
+          type: object
+        tail_behavior:
+          type: object
+
+    OutlierAnalysis:
+      type: object
+      properties:
+        outlier_count:
+          type: integer
+        outlier_methods:
+          type: array
+          items:
+            type: string
+        outlier_indices:
+          type: array
+          items:
+            type: integer
+
+    PerformanceMetric:
+      type: object
+      properties:
+        metric_name:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        benchmark_value:
+          type: number
+        performance_ratio:
+          type: number
+
+    # Health Schema
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            cache:
+              type: string
+              enum: [healthy, unhealthy]
+            object_storage:
+              type: string
+              enum: [healthy, unhealthy]
+            simulation_manager:
+              type: string
+              enum: [healthy, unhealthy]
+            event_manager:
+              type: string
+              enum: [healthy, unhealthy]
+        analysis_status:
+          type: object
+          properties:
+            active_analyses:
+              type: integer
+            queued_analyses:
+              type: integer
+            plugins_loaded:
+              type: integer
+            methods_available:
+              type: integer
+        performance_metrics:
+          type: object
+          properties:
+            average_analysis_time:
+              type: number
+            success_rate:
+              type: number
+            cache_hit_rate:
+              type: number
+      required:
+        - status
+        - timestamp 

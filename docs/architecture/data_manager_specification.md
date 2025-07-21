@@ -11,6 +11,7 @@ The `DataManager` serves as the central data gateway and processing hub for DADM
 - **Metadata Enrichment**: Apply comprehensive tagging, lineage tracking, and ontological mappings
 - **Real-time & Batch Processing**: Support both streaming ingestion and batch ETL/ELT patterns
 - **Data Quality Monitoring**: Detect anomalies, drift, and quality issues with automated alerting
+- **Units Management**: Comprehensive unit definitions, validation, conversion, and dimensional analysis
 - **Event-Driven Integration**: Publish data events to EventManager for downstream consumption
 - **Access Control**: Provide secure, role-based access to data assets and transformations
 
@@ -97,7 +98,541 @@ enum DataSourceType {
 }
 ```
 
-## 3. API Specification
+## 3. Units Management & Dimensional Analysis
+
+The Data Manager includes comprehensive units management capabilities to ensure data semantic correctness, enable automated unit conversions, and provide dimensional analysis for scientific and engineering data.
+
+### 3.1 Unit Definition Framework
+
+#### Unit Registry
+```typescript
+interface UnitDefinition {
+  id: string;                     // Unique unit identifier (e.g., "meter", "kilogram")
+  symbol: string;                 // Standard symbol (e.g., "m", "kg")
+  name: string;                   // Full name
+  aliases: string[];              // Alternative names/symbols (e.g., ["metre"])
+  unit_system: UnitSystem;        // SI, Imperial, CGS, etc.
+  base_unit: string;              // Base unit for this dimension
+  conversion_factor: number;      // Factor to convert to base unit
+  conversion_offset?: number;     // Offset for affine conversions (e.g., temperature)
+  dimension: Dimension;           // Physical dimension
+  category: UnitCategory;         // Grouping category
+  is_base_unit: boolean;          // Whether this is a base unit
+  is_derived: boolean;            // Whether derived from other units
+  derived_from?: DerivedUnitDef;  // Definition if derived
+  standards_compliance: string[]; // ISO, NIST, etc. compliance
+  description?: string;           // Unit description
+  created_at: Date;
+  updated_at: Date;
+}
+
+enum UnitSystem {
+  SI = "si",                      // International System of Units
+  IMPERIAL = "imperial",          // Imperial units
+  US_CUSTOMARY = "us_customary",  // US customary units
+  CGS = "cgs",                    // Centimeter-gram-second
+  ATOMIC = "atomic",              // Atomic units
+  NATURAL = "natural",            // Natural units
+  PLANCK = "planck",              // Planck units
+  CUSTOM = "custom"               // Custom unit system
+}
+
+enum UnitCategory {
+  LENGTH = "length",
+  MASS = "mass", 
+  TIME = "time",
+  ELECTRIC_CURRENT = "electric_current",
+  TEMPERATURE = "temperature",
+  AMOUNT_OF_SUBSTANCE = "amount_of_substance",
+  LUMINOUS_INTENSITY = "luminous_intensity",
+  AREA = "area",
+  VOLUME = "volume",
+  VELOCITY = "velocity",
+  ACCELERATION = "acceleration",
+  FORCE = "force",
+  ENERGY = "energy",
+  POWER = "power",
+  PRESSURE = "pressure",
+  FREQUENCY = "frequency",
+  ANGLE = "angle",
+  DIMENSIONLESS = "dimensionless"
+}
+
+interface Dimension {
+  length: number;                 // Exponent for length dimension
+  mass: number;                   // Exponent for mass dimension
+  time: number;                   // Exponent for time dimension
+  electric_current: number;       // Exponent for current dimension
+  temperature: number;            // Exponent for temperature dimension
+  amount_of_substance: number;    // Exponent for amount dimension
+  luminous_intensity: number;     // Exponent for luminous intensity
+}
+
+interface DerivedUnitDef {
+  base_units: {[unitId: string]: number}; // Base units with exponents
+  formula: string;                // Mathematical formula
+  scale_factor: number;           // Additional scaling factor
+}
+```
+
+#### Standard Unit Collections
+```typescript
+interface UnitCollection {
+  id: string;                     // Collection identifier
+  name: string;                   // Collection name
+  description: string;            // Collection description
+  unit_system: UnitSystem;        // Primary unit system
+  units: string[];                // Unit IDs in collection
+  is_complete: boolean;           // Whether collection covers all dimensions
+  is_coherent: boolean;           // Whether units form coherent system
+  authority: string;              // Standards authority (ISO, NIST, etc.)
+  version: string;                // Collection version
+  effective_date: Date;           // When collection became effective
+}
+
+// Built-in unit collections
+const STANDARD_COLLECTIONS = {
+  SI_BASE: "si_base_units",
+  SI_DERIVED: "si_derived_units", 
+  IMPERIAL: "imperial_units",
+  US_CUSTOMARY: "us_customary_units",
+  AVIATION: "aviation_units",
+  MARINE: "marine_units",
+  ENGINEERING: "engineering_units"
+};
+```
+
+### 3.2 Unit Metadata & Schema Integration
+
+#### Enhanced Data Metadata with Units
+```typescript
+interface DataMetadata {
+  projectId?: string;
+  userId?: string;
+  tags: string[];
+  domain: string;
+  source_config: SourceConfig;
+  lineage: DataLineage;
+  quality_score?: number;
+  sensitivity_level: string;
+  retention_policy?: string;
+  
+  // Units metadata
+  unit_metadata: UnitMetadata;    // Unit information for data fields
+}
+
+interface UnitMetadata {
+  field_units: {[fieldPath: string]: FieldUnitInfo}; // Units for each field
+  unit_consistency_score: number; // Unit consistency assessment
+  unit_validation_status: UnitValidationStatus; // Validation status
+  detected_unit_conflicts: UnitConflict[]; // Detected unit issues
+  unit_conversion_applied: UnitConversion[]; // Applied conversions
+  dimensional_analysis: DimensionalAnalysis; // Dimensional compatibility
+}
+
+interface FieldUnitInfo {
+  unit_id: string;                // Primary unit identifier
+  unit_symbol: string;            // Unit symbol
+  confidence: number;             // Confidence in unit detection
+  detection_method: UnitDetectionMethod; // How unit was determined
+  alternative_units?: string[];   // Possible alternative interpretations
+  unit_source: UnitSource;        // Where unit information came from
+  validation_status: FieldUnitValidationStatus; // Field validation status
+  conversion_target?: string;     // Target unit for normalization
+}
+
+enum UnitDetectionMethod {
+  EXPLICIT = "explicit",          // Explicitly provided in data
+  SCHEMA_DEFINED = "schema_defined", // Defined in schema
+  COLUMN_NAME = "column_name",    // Inferred from column name
+  PATTERN_MATCHING = "pattern_matching", // Pattern-based detection
+  ML_INFERENCE = "ml_inference",  // Machine learning inference
+  USER_SPECIFIED = "user_specified", // User override
+  DEFAULT_ASSUMED = "default_assumed" // Default assumption
+}
+
+enum UnitSource {
+  DATA_HEADER = "data_header",
+  SCHEMA_DEFINITION = "schema_definition", 
+  METADATA_ANNOTATION = "metadata_annotation",
+  FILENAME_PATTERN = "filename_pattern",
+  SOURCE_CONFIGURATION = "source_configuration",
+  HEURISTIC_DETECTION = "heuristic_detection",
+  USER_INPUT = "user_input"
+}
+
+enum UnitValidationStatus {
+  VALID = "valid",
+  INVALID = "invalid", 
+  WARNING = "warning",
+  MISSING = "missing",
+  CONFLICTED = "conflicted",
+  PENDING = "pending"
+}
+
+enum FieldUnitValidationStatus {
+  VALID = "valid",
+  INVALID_UNIT = "invalid_unit",
+  DIMENSION_MISMATCH = "dimension_mismatch",
+  UNIT_NOT_FOUND = "unit_not_found",
+  AMBIGUOUS_UNIT = "ambiguous_unit",
+  MISSING_UNIT = "missing_unit"
+}
+```
+
+#### Unit-Aware Schema Definition
+```typescript
+interface UnitAwareSchema extends JSONSchema {
+  properties: {
+    [field: string]: PropertySchema & {
+      unit?: UnitConstraint;      // Unit constraints for field
+    }
+  };
+  unit_requirements: UnitRequirement[]; // Global unit requirements
+  dimensional_constraints: DimensionalConstraint[]; // Dimensional analysis rules
+}
+
+interface UnitConstraint {
+  required_unit?: string;         // Specific required unit
+  allowed_units?: string[];       // List of allowed units
+  dimension?: Dimension;          // Required physical dimension
+  unit_system?: UnitSystem;       // Required unit system
+  conversion_target?: string;     // Target unit for normalization
+  validation_level: UnitValidationLevel; // Strictness level
+}
+
+enum UnitValidationLevel {
+  STRICT = "strict",              // Must match exactly
+  DIMENSIONAL = "dimensional",    // Must have compatible dimensions
+  CONVERTIBLE = "convertible",    // Must be convertible to target
+  FLEXIBLE = "flexible",          // Accept any valid unit
+  OPTIONAL = "optional"           // Unit not required
+}
+
+interface UnitRequirement {
+  field_pattern: string;          // Field pattern (regex or path)
+  required_dimension: Dimension;  // Required dimension
+  preferred_units: string[];      // Preferred units in order
+  auto_convert: boolean;          // Whether to auto-convert
+  validation_level: UnitValidationLevel;
+}
+
+interface DimensionalConstraint {
+  constraint_id: string;
+  description: string;
+  fields: string[];               // Fields involved in constraint
+  constraint_type: DimensionalConstraintType;
+  constraint_formula: string;     // Mathematical relationship
+  tolerance?: number;             // Allowed deviation
+}
+
+enum DimensionalConstraintType {
+  EQUALITY = "equality",          // Fields must have same dimension
+  RATIO = "ratio",                // Specific dimensional ratio
+  PRODUCT = "product",            // Product relationship
+  QUOTIENT = "quotient",          // Division relationship
+  CUSTOM = "custom"               // Custom formula
+}
+```
+
+### 3.3 Unit Validation & Conversion Engine
+
+#### Unit Validation Framework
+```typescript
+interface UnitValidator {
+  validateFieldUnits(data: any, schema: UnitAwareSchema): Promise<UnitValidationResult>;
+  validateDimensionalConsistency(data: any, constraints: DimensionalConstraint[]): Promise<DimensionalValidationResult>;
+  detectUnitConflicts(records: DataRecord[]): Promise<UnitConflictReport>;
+  suggestUnitCorrections(validationResult: UnitValidationResult): Promise<UnitCorrectionSuggestion[]>;
+}
+
+interface UnitValidationResult {
+  is_valid: boolean;
+  validation_summary: ValidationSummary;
+  field_validations: {[fieldPath: string]: FieldValidationResult};
+  dimensional_validations: DimensionalValidationResult[];
+  suggestions: UnitCorrectionSuggestion[];
+  validation_metadata: ValidationMetadata;
+}
+
+interface FieldValidationResult {
+  field_path: string;
+  detected_unit: string;
+  expected_unit?: string;
+  validation_status: FieldUnitValidationStatus;
+  error_message?: string;
+  confidence: number;
+  suggestions: string[];
+}
+
+interface DimensionalValidationResult {
+  constraint_id: string;
+  is_satisfied: boolean;
+  involved_fields: string[];
+  computed_dimensions: {[field: string]: Dimension};
+  error_description?: string;
+  suggested_corrections: string[];
+}
+
+interface UnitConflict {
+  conflict_id: string;
+  field_path: string;
+  conflicting_units: string[];
+  sources: UnitSource[];
+  severity: ConflictSeverity;
+  recommendation: string;
+}
+
+enum ConflictSeverity {
+  CRITICAL = "critical",          // Incompatible dimensions
+  HIGH = "high",                  // Different units, same dimension
+  MEDIUM = "medium",              // Different systems
+  LOW = "low",                    // Minor notation differences
+  INFO = "info"                   // Information only
+}
+```
+
+#### Unit Conversion Engine
+```typescript
+interface UnitConverter {
+  convert(value: number, fromUnit: string, toUnit: string): Promise<ConversionResult>;
+  convertArray(values: number[], fromUnit: string, toUnit: string): Promise<ConversionResult[]>;
+  convertRecord(record: DataRecord, conversionMap: {[field: string]: string}): Promise<DataRecord>;
+  getConversionFactor(fromUnit: string, toUnit: string): Promise<number>;
+  isConvertible(fromUnit: string, toUnit: string): Promise<boolean>;
+  suggestConversions(unit: string, targetSystem?: UnitSystem): Promise<string[]>;
+}
+
+interface ConversionResult {
+  original_value: number;
+  converted_value: number;
+  from_unit: string;
+  to_unit: string;
+  conversion_factor: number;
+  conversion_offset?: number;
+  precision_loss?: number;
+  conversion_metadata: ConversionMetadata;
+}
+
+interface ConversionMetadata {
+  conversion_path: ConversionStep[];
+  total_uncertainty: number;
+  significant_figures: number;
+  conversion_timestamp: Date;
+  converter_version: string;
+}
+
+interface ConversionStep {
+  from_unit: string;
+  to_unit: string;
+  operation: ConversionOperation;
+  factor?: number;
+  offset?: number;
+  description: string;
+}
+
+enum ConversionOperation {
+  MULTIPLY = "multiply",
+  DIVIDE = "divide",
+  ADD = "add",
+  SUBTRACT = "subtract",
+  FUNCTION = "function",
+  LOOKUP = "lookup"
+}
+
+// Automatic conversion policies
+interface ConversionPolicy {
+  policy_id: string;
+  name: string;
+  description: string;
+  target_unit_system: UnitSystem;
+  field_patterns: string[];
+  conversion_rules: ConversionRule[];
+  auto_apply: boolean;
+  preserve_original: boolean;
+}
+
+interface ConversionRule {
+  rule_id: string;
+  source_units: string[];
+  target_unit: string;
+  condition?: string;             // When to apply rule
+  priority: number;
+}
+```
+
+### 3.4 Dimensional Analysis Engine
+
+#### Dimensional Analysis Framework
+```typescript
+interface DimensionalAnalyzer {
+  analyzeDimensions(data: any, unitMetadata: UnitMetadata): Promise<DimensionalAnalysis>;
+  checkDimensionalConsistency(fields: {[field: string]: string}): Promise<ConsistencyResult>;
+  deriveUnitFromFormula(formula: string, inputUnits: {[variable: string]: string}): Promise<string>;
+  validatePhysicalRelationships(data: any, relationships: PhysicalRelationship[]): Promise<ValidationResult>;
+}
+
+interface DimensionalAnalysis {
+  analysis_id: string;
+  field_dimensions: {[field: string]: AnalyzedDimension};
+  dimensional_relationships: DimensionalRelationship[];
+  consistency_score: number;
+  identified_patterns: DimensionalPattern[];
+  anomalies: DimensionalAnomaly[];
+  suggestions: DimensionalSuggestion[];
+}
+
+interface AnalyzedDimension {
+  field_path: string;
+  detected_dimension: Dimension;
+  confidence: number;
+  supporting_evidence: string[];
+  alternative_interpretations: Dimension[];
+}
+
+interface DimensionalRelationship {
+  relationship_id: string;
+  involved_fields: string[];
+  relationship_type: RelationshipType;
+  mathematical_expression: string;
+  confidence: number;
+  validation_status: string;
+}
+
+enum RelationshipType {
+  PRODUCT = "product",
+  QUOTIENT = "quotient", 
+  SUM = "sum",
+  DIFFERENCE = "difference",
+  POWER = "power",
+  ROOT = "root",
+  LOGARITHMIC = "logarithmic",
+  EXPONENTIAL = "exponential",
+  TRIGONOMETRIC = "trigonometric"
+}
+
+interface PhysicalRelationship {
+  relationship_id: string;
+  name: string;
+  description: string;
+  formula: string;
+  variables: {[variable: string]: VariableInfo};
+  domain_constraints: DomainConstraint[];
+  reference: string;              // Scientific reference
+}
+
+interface VariableInfo {
+  description: string;
+  expected_dimension: Dimension;
+  typical_range?: {min: number, max: number};
+  typical_units: string[];
+}
+
+interface DomainConstraint {
+  constraint_type: string;
+  description: string;
+  validation_formula: string;
+}
+```
+
+### 3.5 Unit Intelligence & Machine Learning
+
+#### Unit Detection & Learning
+```typescript
+interface UnitIntelligence {
+  detectUnitsFromData(data: any, context?: DetectionContext): Promise<UnitDetectionResult>;
+  learnUnitsFromPatterns(historicalData: DataRecord[]): Promise<UnitLearningResult>;
+  suggestUnitsFromContext(fieldName: string, dataType: string, domain: string): Promise<UnitSuggestion[]>;
+  improveDetectionAccuracy(feedbackData: UnitFeedback[]): Promise<void>;
+}
+
+interface DetectionContext {
+  source_type: string;
+  domain: string;
+  file_extension?: string;
+  column_names?: string[];
+  data_patterns?: string[];
+  previous_detections?: UnitDetectionResult[];
+}
+
+interface UnitDetectionResult {
+  detection_id: string;
+  field_detections: {[field: string]: FieldUnitDetection};
+  overall_confidence: number;
+  detection_metadata: DetectionMetadata;
+  improvement_suggestions: string[];
+}
+
+interface FieldUnitDetection {
+  field_path: string;
+  detected_units: UnitCandidate[];
+  recommended_unit: string;
+  confidence: number;
+  detection_method: UnitDetectionMethod;
+  supporting_evidence: Evidence[];
+}
+
+interface UnitCandidate {
+  unit_id: string;
+  unit_symbol: string;
+  confidence: number;
+  evidence_score: number;
+  likelihood_factors: string[];
+}
+
+interface Evidence {
+  evidence_type: EvidenceType;
+  description: string;
+  confidence_contribution: number;
+  source: string;
+}
+
+enum EvidenceType {
+  COLUMN_NAME_MATCH = "column_name_match",
+  VALUE_RANGE_MATCH = "value_range_match",
+  PATTERN_MATCH = "pattern_match",
+  CONTEXT_CLUE = "context_clue",
+  SIMILAR_DATA_HISTORY = "similar_data_history",
+  DOMAIN_KNOWLEDGE = "domain_knowledge",
+  UNIT_SYMBOL_PRESENT = "unit_symbol_present"
+}
+
+// Unit learning and feedback
+interface UnitLearningResult {
+  learned_patterns: LearnedPattern[];
+  improved_rules: DetectionRule[];
+  confidence_improvements: {[field: string]: number};
+  new_unit_discoveries: string[];
+}
+
+interface LearnedPattern {
+  pattern_id: string;
+  pattern_type: string;
+  description: string;
+  applicability_score: number;
+  training_data_size: number;
+}
+
+interface UnitFeedback {
+  detection_id: string;
+  field_path: string;
+  correct_unit: string;
+  incorrect_detection: string;
+  feedback_type: FeedbackType;
+  confidence: number;
+  user_id: string;
+  timestamp: Date;
+}
+
+enum FeedbackType {
+  CORRECTION = "correction",
+  CONFIRMATION = "confirmation",
+  REFINEMENT = "refinement",
+  REJECTION = "rejection"
+}
+```
+
+## 4. API Specification
 
 ### Core DataManager Interface
 ```typescript
@@ -131,6 +666,35 @@ interface DataManager {
   // Data Quality
   assessQuality(recordId: string): Promise<QualityReport>;
   detectAnomalies(sourceId: string): Promise<AnomalyReport>;
+  
+  // Units Management
+  registerUnit(unitDef: UnitDefinition): Promise<UnitDefinition>;
+  updateUnit(unitId: string, updates: Partial<UnitDefinition>): Promise<UnitDefinition>;
+  deleteUnit(unitId: string): Promise<void>;
+  getUnit(unitId: string): Promise<UnitDefinition>;
+  listUnits(filters?: UnitFilters): Promise<UnitDefinition[]>;
+  searchUnits(query: string): Promise<UnitDefinition[]>;
+  
+  // Unit Collections
+  createUnitCollection(collection: UnitCollection): Promise<UnitCollection>;
+  getUnitCollection(collectionId: string): Promise<UnitCollection>;
+  listUnitCollections(): Promise<UnitCollection[]>;
+  
+  // Unit Validation & Conversion
+  validateUnits(data: any, schema: UnitAwareSchema): Promise<UnitValidationResult>;
+  convertUnits(value: number, fromUnit: string, toUnit: string): Promise<ConversionResult>;
+  convertRecord(record: DataRecord, conversionMap: {[field: string]: string}): Promise<DataRecord>;
+  suggestUnitCorrections(validationResult: UnitValidationResult): Promise<UnitCorrectionSuggestion[]>;
+  
+  // Dimensional Analysis
+  analyzeDimensions(data: any, unitMetadata: UnitMetadata): Promise<DimensionalAnalysis>;
+  validateDimensionalConsistency(data: any, constraints: DimensionalConstraint[]): Promise<DimensionalValidationResult>;
+  deriveUnitFromFormula(formula: string, inputUnits: {[variable: string]: string}): Promise<string>;
+  
+  // Unit Intelligence
+  detectUnitsFromData(data: any, context?: DetectionContext): Promise<UnitDetectionResult>;
+  provideFeedback(feedback: UnitFeedback): Promise<void>;
+  suggestUnitsFromContext(fieldName: string, dataType: string, domain: string): Promise<UnitSuggestion[]>;
 }
 
 interface QueryFilters {
