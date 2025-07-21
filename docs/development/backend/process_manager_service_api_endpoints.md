@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Process Manager Service provides comprehensive BPMN process management capabilities including process definitions, instances, deployment, monitoring, and lifecycle management. It serves as the central interface for managing workflow processes in DADMS.
+The Process Manager Service provides comprehensive BPMN process management capabilities including process definitions, instances, deployment, monitoring, and lifecycle management. It serves as the execution engine for business processes in DADMS 2.0, handling workflow orchestration, task management, incident resolution, and process analytics with seamless integration across the DADMS ecosystem.
 
 ## Base URL
 ```

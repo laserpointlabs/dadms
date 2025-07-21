@@ -173,6 +173,31 @@ services:
   #       condition: service_healthy
   #     minio:
   #       condition: service_healthy
+
+  # process-manager-service:
+  #   build: 
+  #     context: ../dadms-services/process-manager
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3007:3007"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://dadms_user:dadms_password@postgres:5432/dadms
+  #     - REDIS_URL=redis://redis:6379
+  #     - CAMUNDA_REST_URL=http://camunda:8080/engine-rest
+  #     - CAMUNDA_ADMIN_USER=demo
+  #     - CAMUNDA_ADMIN_PASSWORD=demo
+  #     - ENGINE_TYPE=camunda
+  #     - ANALYTICS_ENABLED=true
+  #     - AUDIT_ENABLED=true
+  #     - INCIDENT_AUTO_RESOLUTION=true
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     camunda:
+  #       condition: service_healthy
   #   networks:
   #     - default
 
@@ -235,6 +260,29 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+
+  # camunda:
+  #   image: camunda/camunda-bpm-platform:latest
+  #   container_name: dadms-camunda
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - DB_DRIVER=org.postgresql.Driver
+  #     - DB_URL=jdbc:postgresql://postgres:5432/dadms
+  #     - DB_USERNAME=dadms_user
+  #     - DB_PASSWORD=dadms_password
+  #     - WAIT_FOR=postgres:5432
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/camunda/app/admin/"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+  #   networks:
+  #     - default
 
 volumes:
   postgres_data:

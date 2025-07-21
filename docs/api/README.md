@@ -41,7 +41,8 @@ This directory contains API documentation for all DADMS services.
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **📋 SPECIFICATION: Interactive LLM testing & experimentation platform**
   - **[Detailed API Endpoints](../development/backend/llm_playground_service_api_endpoints.md)** - Comprehensive API reference with examples
-- **[Process Manager Service API](process_manager_service_openapi.yaml)** (Port 3007) - **NEW: BPMN workflow management**
+- **[Process Manager Service API](process_manager_service_openapi.yaml)** (Port 3007) - **📋 SPECIFICATION: Comprehensive BPMN process execution engine**
+  - **[Detailed API Endpoints](../development/backend/process_manager_service_api_endpoints.md)** - Comprehensive API reference with examples
 - **[Thread Manager Service API](thread_manager_service_openapi.yaml)** (Port 3008) - **NEW: Process traceability & feedback**
 - **[BPMN Workspace Service API](bpmn_workspace_service_openapi.yaml)** (Port 3021) - **📋 SPECIFICATION: AI-enhanced BPMN workflow design environment**
   - **[Detailed API Endpoints](../development/backend/bpmn_workspace_service_api_endpoints.md)** - Comprehensive API reference with examples

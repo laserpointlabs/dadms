@@ -3,7 +3,7 @@ info:
   title: Process Manager Service API
   description: |
     Comprehensive BPMN process management capabilities including process definitions, instances, deployment, monitoring, and lifecycle management.
-    Serves as the central interface for managing workflow processes in DADMS.
+    Serves as the execution engine for business processes in DADMS 2.0, handling workflow orchestration, task management, and incident resolution.
   version: 1.0.0
   contact:
     name: DADMS Development Team
