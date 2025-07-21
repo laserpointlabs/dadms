@@ -42,6 +42,8 @@ flowchart TD
         AnalysisManager["Analysis Manager<br/>(Port 3012)"]
         ParameterManager["Parameter Manager<br/>(Port 3013)"]
         RequirementsExtractor["Requirements Extractor<br/>(Port 3014)"]
+        MemoryManager["Memory Manager<br/>(Port 3015)"]
+        OntologyWorkspace["Ontology Workspace<br/>(Port 3016)"]
     end
     
     %% UI connections
@@ -63,6 +65,8 @@ flowchart TD
     AnalysisManager --> EventManager
     ParameterManager --> EventManager
     RequirementsExtractor --> EventManager
+    MemoryManager --> EventManager
+    OntologyWorkspace --> EventManager
     
     %% EventManager back to services
     EventManager --> AAS
@@ -72,6 +76,8 @@ flowchart TD
     EventManager --> AnalysisManager
     EventManager --> ParameterManager
     EventManager --> RequirementsExtractor
+    EventManager --> MemoryManager
+    EventManager --> OntologyWorkspace
     
     %% Service interconnections
     ProcessManager --> LLMService
@@ -91,6 +97,12 @@ flowchart TD
     RequirementsExtractor --> DataManager
     RequirementsExtractor --> ModelManager
     RequirementsExtractor --> ProcessManager
+    MemoryManager --> AAS
+    MemoryManager --> KnowledgeService
+    MemoryManager --> ProcessManager
+    OntologyWorkspace --> KnowledgeService
+    OntologyWorkspace --> ModelManager
+    OntologyWorkspace --> RequirementsExtractor
     
     classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
     classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -100,15 +112,15 @@ flowchart TD
     class WebUI,Playground ui;
     class ProjectService,LLMService,KnowledgeService,AAS core;
     class EventManager event;
-    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor process;
+    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor,MemoryManager,OntologyWorkspace process;
 ```
 
 **Port Allocation:**
 - **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
 - **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
 - **Event System**: 3004 (EventManager)
-- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements)
-- **Future Services**: 3015+
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements), 3015 (Memory), 3016 (Ontology Workspace)
+- **Future Services**: 3017+
 
 ### Data Architecture
 
@@ -151,6 +163,13 @@ flowchart TD
         RequirementsExtractor --> Qdrant
         RequirementsExtractor --> Neo4j
         RequirementsExtractor --> MinIO
+        MemoryManager --> PostgreSQL
+        MemoryManager --> Qdrant
+        MemoryManager --> Redis
+        MemoryManager --> MinIO
+        OntologyWorkspace --> PostgreSQL
+        OntologyWorkspace --> MinIO
+        OntologyWorkspace --> Redis
     end
     
     classDef primary fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -179,6 +198,7 @@ flowchart TD
 - **[Parameter Manager Service](./parameter_manager_specification.md)** - Centralized parameter lifecycle management and validation hub
 - **[Requirements Extractor & Conceptualizer Service](./requirements_extractor_specification.md)** - Intelligent automation for requirements extraction and conceptual modeling
 - **[Memory Manager Service](./memory_manager_specification.md)** - Sophisticated memory management with categorization, lifecycle intelligence, and semantic retrieval
+- **[Ontology Workspace Service](./ontology_workspace_specification.md)** - Visual, collaborative environment for authoring, editing, and validating ontologies
 
 ### Future Services (Planned)
 - **OntologyManager Service** - Domain knowledge and semantic modeling

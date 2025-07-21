@@ -25,6 +25,8 @@ This directory contains API documentation for all DADMS services.
   - **[Detailed API Endpoints](../development/backend/requirements_extractor_service_api_endpoints.md)** - Human-readable documentation
 - **[Memory Manager Service API](memory_manager_service_openapi.yaml)** (Port 3015) - **NEW: Sophisticated memory management with lifecycle intelligence**
   - **[Detailed API Endpoints](../development/backend/memory_manager_service_api_endpoints.md)** - Human-readable documentation
+- **[Ontology Workspace Service API](ontology_workspace_service_openapi.yaml)** (Port 3016) - **NEW: Visual, collaborative environment for ontology authoring & validation**
+  - **[Detailed API Endpoints](../development/backend/ontology_workspace_service_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -140,6 +142,7 @@ flowchart LR
 - [x] **Parameter Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Requirements Extractor & Conceptualizer Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Memory Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Ontology Workspace Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE

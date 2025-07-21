@@ -1,0 +1,2088 @@
+openapi: 3.0.3
+info:
+  title: DADMS 2.0 - Ontology Workspace Service API
+  description: |
+    Ontology Workspace service provides a visual, collaborative environment for authoring, editing, and validating ontologies.
+
+    ## Key Features
+    - Visual drag-and-drop ontology editing
+    - Multi-format import/export (OWL, Turtle, RDF/XML, ROBOT)
+    - Real-time collaborative editing with conflict resolution
+    - Live validation with OWL reasoners (HermiT, Pellet, ELK)
+    - Publishing to Fuseki triple stores and web documentation
+    - Integration with Cemento, draw.io, and other ontology tools
+
+    ## Supported Formats
+    - **OWL/XML**: Standard OWL XML syntax
+    - **Turtle**: Terse RDF Triple Language
+    - **RDF/XML**: RDF XML syntax
+    - **JSON-LD**: JSON-based linked data
+    - **ROBOT**: ROBOT ontology format
+    - **N-Triples**: N-Triples format
+
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3016
+    description: Development server
+  - url: https://api.dadms.example.com/ontology-workspace
+    description: Production server
+
+tags:
+  - name: Workspaces
+    description: Workspace management operations
+  - name: Ontologies
+    description: Ontology management within workspaces
+  - name: Visual Editing
+    description: Visual layout and styling operations
+  - name: Validation
+    description: Ontology validation and quality checking
+  - name: Collaboration
+    description: Comments, discussions, and change requests
+  - name: Import/Export
+    description: Import and export operations
+  - name: Publishing
+    description: Publishing to Fuseki and web platforms
+  - name: Integration
+    description: External tool integrations
+  - name: Analytics
+    description: Workspace analytics and metrics
+  - name: Health & Monitoring
+    description: Service health and monitoring
+
+paths:
+  # Workspace Management
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List ontology workspaces
+      description: Retrieve a list of ontology workspaces with optional filtering
+      operationId: listWorkspaces
+      parameters:
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+        - name: name_contains
+          in: query
+          description: Filter by workspace name (partial match)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of workspaces to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of workspaces to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Workspaces retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceListResponse'
+
+    post:
+      tags: [Workspaces]
+      summary: Create new ontology workspace
+      description: Create a new ontology workspace for collaborative editing
+      operationId: createWorkspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkspaceResponse'
+        '400':
+          description: Invalid request
+        '409':
+          description: Workspace with same name already exists
+
+  /workspaces/{workspaceId}:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace details
+      description: Retrieve detailed information about a specific workspace
+      operationId: getWorkspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          description: Workspace found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OntologyWorkspace'
+        '404':
+          description: Workspace not found
+
+    put:
+      tags: [Workspaces]
+      summary: Update workspace
+      description: Update workspace configuration and settings
+      operationId: updateWorkspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
+      responses:
+        '200':
+          description: Workspace updated successfully
+        '404':
+          description: Workspace not found
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      description: Delete an ontology workspace and all its contents
+      operationId: deleteWorkspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '204':
+          description: Workspace deleted successfully
+        '404':
+          description: Workspace not found
+
+  # Ontology Management
+  /workspaces/{workspaceId}/ontologies:
+    get:
+      tags: [Ontologies]
+      summary: List ontologies in workspace
+      description: Retrieve all ontologies within a specific workspace
+      operationId: listOntologies
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          description: Ontologies retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OntologyListResponse'
+
+    post:
+      tags: [Ontologies]
+      summary: Add ontology to workspace
+      description: Add a new ontology to the workspace or import existing ontology
+      operationId: addOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddOntologyRequest'
+      responses:
+        '201':
+          description: Ontology added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddOntologyResponse'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}:
+    get:
+      tags: [Ontologies]
+      summary: Get ontology details
+      description: Retrieve detailed information about a specific ontology
+      operationId: getOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      responses:
+        '200':
+          description: Ontology found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OntologyDocument'
+
+    put:
+      tags: [Ontologies]
+      summary: Update ontology
+      description: Update ontology content, metadata, or visual layout
+      operationId: updateOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOntologyRequest'
+      responses:
+        '200':
+          description: Ontology updated successfully
+
+    delete:
+      tags: [Ontologies]
+      summary: Remove ontology from workspace
+      description: Remove an ontology from the workspace
+      operationId: removeOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      responses:
+        '204':
+          description: Ontology removed successfully
+
+  # Visual Editing
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/visual-layout:
+    get:
+      tags: [Visual Editing]
+      summary: Get visual layout
+      description: Retrieve the visual layout configuration for an ontology
+      operationId: getVisualLayout
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      responses:
+        '200':
+          description: Visual layout retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisualLayout'
+
+    put:
+      tags: [Visual Editing]
+      summary: Update visual layout
+      description: Update the visual layout configuration for an ontology
+      operationId: updateVisualLayout
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisualLayout'
+      responses:
+        '200':
+          description: Visual layout updated successfully
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/auto-layout:
+    post:
+      tags: [Visual Editing]
+      summary: Apply auto-layout
+      description: Apply automatic layout algorithm to organize ontology elements
+      operationId: autoLayout
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoLayoutRequest'
+      responses:
+        '200':
+          description: Auto-layout applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisualLayout'
+
+  # Validation
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/validate:
+    post:
+      tags: [Validation]
+      summary: Validate ontology
+      description: Perform validation on an ontology using specified reasoner
+      operationId: validateOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  /workspaces/{workspaceId}/validate:
+    post:
+      tags: [Validation]
+      summary: Validate entire workspace
+      description: Perform validation on all ontologies in the workspace
+      operationId: validateWorkspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Workspace validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceValidationResponse'
+
+  # Collaboration
+  /workspaces/{workspaceId}/comments:
+    get:
+      tags: [Collaboration]
+      summary: Get comments
+      description: Retrieve comments for workspace or specific ontology elements
+      operationId: getComments
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: element_iri
+          in: query
+          description: Filter comments by specific element IRI
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+
+    post:
+      tags: [Collaboration]
+      summary: Add comment
+      description: Add a comment to workspace or specific ontology element
+      operationId: addComment
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCommentRequest'
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddCommentResponse'
+
+  /workspaces/{workspaceId}/discussions:
+    get:
+      tags: [Collaboration]
+      summary: Get discussions
+      description: Retrieve discussions within the workspace
+      operationId: getDiscussions
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          description: Discussions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscussionListResponse'
+
+    post:
+      tags: [Collaboration]
+      summary: Create discussion
+      description: Create a new discussion within the workspace
+      operationId: createDiscussion
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDiscussionRequest'
+      responses:
+        '201':
+          description: Discussion created successfully
+
+  # Import/Export
+  /workspaces/{workspaceId}/import:
+    post:
+      tags: [Import/Export]
+      summary: Import ontology
+      description: Import ontology from various sources and formats
+      operationId: importOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportFromURLRequest'
+      responses:
+        '200':
+          description: Import completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '400':
+          description: Invalid import format or data
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/export:
+    post:
+      tags: [Import/Export]
+      summary: Export ontology
+      description: Export ontology in specified format
+      operationId: exportOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export completed successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            text/turtle:
+              schema:
+                type: string
+            application/rdf+xml:
+              schema:
+                type: string
+            application/ld+json:
+              schema:
+                type: string
+
+  # Publishing
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/publish:
+    post:
+      tags: [Publishing]
+      summary: Publish ontology
+      description: Publish ontology to Fuseki triple store or web platform
+      operationId: publishOntology
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+      responses:
+        '200':
+          description: Published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResponse'
+
+  /workspaces/{workspaceId}/publish:
+    post:
+      tags: [Publishing]
+      summary: Publish entire workspace
+      description: Publish all ontologies in workspace to specified targets
+      operationId: publishWorkspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspacePublishRequest'
+      responses:
+        '200':
+          description: Workspace published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePublishResponse'
+
+  # Integration
+  /workspaces/{workspaceId}/integrations/cemento:
+    post:
+      tags: [Integration]
+      summary: Sync with Cemento
+      description: Synchronize workspace with Cemento ontology editor
+      operationId: syncWithCemento
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CementoSyncRequest'
+      responses:
+        '200':
+          description: Sync completed successfully
+
+  /workspaces/{workspaceId}/integrations/drawio:
+    post:
+      tags: [Integration]
+      summary: Import from draw.io
+      description: Import ontology diagram from draw.io
+      operationId: importFromDrawIO
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DrawIOImportRequest'
+      responses:
+        '200':
+          description: Import from draw.io completed
+
+  # Analytics
+  /workspaces/{workspaceId}/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get workspace analytics
+      description: Retrieve analytics and metrics for the workspace
+      operationId: getWorkspaceAnalytics
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceAnalytics'
+
+  /analytics/usage:
+    get:
+      tags: [Analytics]
+      summary: Get service usage analytics
+      description: Retrieve overall service usage analytics
+      operationId: getUsageAnalytics
+      responses:
+        '200':
+          description: Usage analytics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageAnalytics'
+
+  # Health & Monitoring
+  /health:
+    get:
+      tags: [Health & Monitoring]
+      summary: Health check
+      description: Check service health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+components:
+  parameters:
+    WorkspaceIdParam:
+      name: workspaceId
+      in: path
+      required: true
+      description: Unique identifier for the workspace
+      schema:
+        type: string
+        format: uuid
+
+    OntologyIdParam:
+      name: ontologyId
+      in: path
+      required: true
+      description: Unique identifier for the ontology
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Core Data Models
+    OntologyWorkspace:
+      type: object
+      required:
+        - id
+        - name
+        - project_id
+        - created_at
+        - updated_at
+        - settings
+        - ontologies
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Human-readable workspace name
+        description:
+          type: string
+          description: Optional workspace description
+        project_id:
+          type: string
+          format: uuid
+          description: Associated project ID
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          description: User ID who created the workspace
+        settings:
+          $ref: '#/components/schemas/WorkspaceSettings'
+        ontologies:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyCollection'
+        collaboration:
+          $ref: '#/components/schemas/CollaborationData'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    WorkspaceSettings:
+      type: object
+      properties:
+        auto_save_enabled:
+          type: boolean
+          default: true
+        auto_layout_enabled:
+          type: boolean
+          default: false
+        validation_on_save:
+          type: boolean
+          default: true
+        default_reasoner:
+          type: string
+          enum: [hermit, pellet, elk]
+          default: hermit
+        color_scheme:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
+        grid_enabled:
+          type: boolean
+          default: true
+        snap_to_grid:
+          type: boolean
+          default: false
+
+    OntologyCollection:
+      type: object
+      required:
+        - id
+        - name
+        - ontologies
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ontologies:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyDocument'
+
+    OntologyDocument:
+      type: object
+      required:
+        - id
+        - name
+        - format
+        - content
+        - version
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        iri:
+          type: string
+          format: uri
+          description: Ontology IRI
+        format:
+          $ref: '#/components/schemas/OntologyFormat'
+        content:
+          type: object
+          description: Ontology content in native format
+        version:
+          type: string
+          description: Ontology version
+        status:
+          $ref: '#/components/schemas/OntologyStatus'
+        classes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OWLClass'
+        object_properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectProperty'
+        data_properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataProperty'
+        individuals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Individual'
+        visual_layout:
+          $ref: '#/components/schemas/VisualLayout'
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OntologyFormat:
+      type: string
+      enum:
+        - owl_xml
+        - turtle
+        - rdf_xml
+        - json_ld
+        - n_triples
+        - n_quads
+        - robot
+
+    OntologyStatus:
+      type: string
+      enum:
+        - draft
+        - validating
+        - valid
+        - invalid
+        - publishing
+        - published
+
+    # OWL Elements
+    OWLClass:
+      type: object
+      required:
+        - iri
+        - label
+      properties:
+        iri:
+          type: string
+          format: uri
+        label:
+          type: string
+        description:
+          type: string
+        super_classes:
+          type: array
+          items:
+            type: string
+            format: uri
+        equivalent_classes:
+          type: array
+          items:
+            type: string
+            format: uri
+        disjoint_classes:
+          type: array
+          items:
+            type: string
+            format: uri
+        restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Restriction'
+        annotations:
+          type: object
+          additionalProperties: true
+
+    ObjectProperty:
+      type: object
+      required:
+        - iri
+        - label
+      properties:
+        iri:
+          type: string
+          format: uri
+        label:
+          type: string
+        description:
+          type: string
+        domain:
+          type: array
+          items:
+            type: string
+            format: uri
+        range:
+          type: array
+          items:
+            type: string
+            format: uri
+        super_properties:
+          type: array
+          items:
+            type: string
+            format: uri
+        inverse_of:
+          type: string
+          format: uri
+        characteristics:
+          type: array
+          items:
+            type: string
+            enum: [functional, inverse_functional, transitive, symmetric, asymmetric, reflexive, irreflexive]
+        annotations:
+          type: object
+          additionalProperties: true
+
+    DataProperty:
+      type: object
+      required:
+        - iri
+        - label
+      properties:
+        iri:
+          type: string
+          format: uri
+        label:
+          type: string
+        description:
+          type: string
+        domain:
+          type: array
+          items:
+            type: string
+            format: uri
+        range:
+          type: array
+          items:
+            type: string
+            format: uri
+        super_properties:
+          type: array
+          items:
+            type: string
+            format: uri
+        characteristics:
+          type: array
+          items:
+            type: string
+            enum: [functional]
+        annotations:
+          type: object
+          additionalProperties: true
+
+    Individual:
+      type: object
+      required:
+        - iri
+        - label
+      properties:
+        iri:
+          type: string
+          format: uri
+        label:
+          type: string
+        description:
+          type: string
+        types:
+          type: array
+          items:
+            type: string
+            format: uri
+        same_as:
+          type: array
+          items:
+            type: string
+            format: uri
+        different_from:
+          type: array
+          items:
+            type: string
+            format: uri
+        property_assertions:
+          type: object
+          additionalProperties: true
+        annotations:
+          type: object
+          additionalProperties: true
+
+    Restriction:
+      type: object
+      required:
+        - type
+        - property
+      properties:
+        type:
+          type: string
+          enum: [some_values_from, all_values_from, has_value, min_cardinality, max_cardinality, exact_cardinality]
+        property:
+          type: string
+          format: uri
+        value:
+          type: string
+        cardinality:
+          type: integer
+          minimum: 0
+
+    # Visual Layout
+    VisualLayout:
+      type: object
+      required:
+        - elements
+        - layout_algorithm
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisualElement'
+        layout_algorithm:
+          type: string
+          enum: [manual, hierarchical, force_directed, circular, grid]
+        viewport:
+          $ref: '#/components/schemas/Viewport'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ElementGroup'
+
+    VisualElement:
+      type: object
+      required:
+        - id
+        - type
+        - position
+        - size
+      properties:
+        id:
+          type: string
+          description: Element IRI or identifier
+        type:
+          type: string
+          enum: [class, object_property, data_property, individual, annotation]
+        position:
+          $ref: '#/components/schemas/Position'
+        size:
+          $ref: '#/components/schemas/Size'
+        style:
+          $ref: '#/components/schemas/ElementStyle'
+        label:
+          type: string
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Connection'
+
+    Position:
+      type: object
+      required:
+        - x
+        - y
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+
+    Size:
+      type: object
+      required:
+        - width
+        - height
+      properties:
+        width:
+          type: number
+          minimum: 0
+        height:
+          type: number
+          minimum: 0
+
+    ElementStyle:
+      type: object
+      properties:
+        fill_color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        border_color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        border_width:
+          type: number
+          minimum: 0
+        opacity:
+          type: number
+          minimum: 0
+          maximum: 1
+        font_size:
+          type: number
+          minimum: 6
+        font_family:
+          type: string
+        shape:
+          type: string
+          enum: [rectangle, ellipse, diamond, hexagon]
+
+    Connection:
+      type: object
+      required:
+        - target_id
+        - type
+      properties:
+        target_id:
+          type: string
+        type:
+          type: string
+          enum: [subclass_of, instance_of, object_property, data_property, equivalent, disjoint]
+        style:
+          $ref: '#/components/schemas/ConnectionStyle'
+        label:
+          type: string
+
+    ConnectionStyle:
+      type: object
+      properties:
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        width:
+          type: number
+          minimum: 1
+        style:
+          type: string
+          enum: [solid, dashed, dotted]
+        arrow_type:
+          type: string
+          enum: [none, arrow, diamond, circle]
+
+    Viewport:
+      type: object
+      properties:
+        zoom:
+          type: number
+          minimum: 0.1
+          maximum: 5.0
+          default: 1.0
+        center:
+          $ref: '#/components/schemas/Position'
+
+    ElementGroup:
+      type: object
+      required:
+        - id
+        - name
+        - elements
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        elements:
+          type: array
+          items:
+            type: string
+        style:
+          $ref: '#/components/schemas/GroupStyle'
+
+    GroupStyle:
+      type: object
+      properties:
+        background_color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        border_color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        border_style:
+          type: string
+          enum: [solid, dashed, dotted]
+
+    # Collaboration
+    CollaborationData:
+      type: object
+      properties:
+        active_users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveUser'
+        permissions:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [read, write, admin]
+        change_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangeRecord'
+
+    ActiveUser:
+      type: object
+      required:
+        - user_id
+        - joined_at
+      properties:
+        user_id:
+          type: string
+        user_name:
+          type: string
+        joined_at:
+          type: string
+          format: date-time
+        cursor_position:
+          $ref: '#/components/schemas/Position'
+        current_element:
+          type: string
+
+    ChangeRecord:
+      type: object
+      required:
+        - id
+        - user_id
+        - timestamp
+        - action
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum: [create, update, delete, move, style_change]
+        element_id:
+          type: string
+        before:
+          type: object
+        after:
+          type: object
+        description:
+          type: string
+
+    # Validation
+    ValidationResult:
+      type: object
+      required:
+        - is_valid
+        - reasoner_used
+        - timestamp
+      properties:
+        is_valid:
+          type: boolean
+        reasoner_used:
+          type: string
+          enum: [hermit, pellet, elk]
+        timestamp:
+          type: string
+          format: date-time
+        consistency_check:
+          $ref: '#/components/schemas/ConsistencyResult'
+        satisfiability_check:
+          $ref: '#/components/schemas/SatisfiabilityResult'
+        profile_compliance:
+          $ref: '#/components/schemas/ProfileCompliance'
+        quality_metrics:
+          $ref: '#/components/schemas/QualityMetrics'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+
+    ConsistencyResult:
+      type: object
+      required:
+        - is_consistent
+      properties:
+        is_consistent:
+          type: boolean
+        inconsistent_classes:
+          type: array
+          items:
+            type: string
+            format: uri
+        explanation:
+          type: string
+
+    SatisfiabilityResult:
+      type: object
+      required:
+        - all_satisfiable
+      properties:
+        all_satisfiable:
+          type: boolean
+        unsatisfiable_classes:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    ProfileCompliance:
+      type: object
+      properties:
+        profile:
+          type: string
+          enum: [owl_full, owl_dl, owl_el, owl_ql, owl_rl]
+        is_compliant:
+          type: boolean
+        violations:
+          type: array
+          items:
+            type: string
+
+    QualityMetrics:
+      type: object
+      properties:
+        class_count:
+          type: integer
+        property_count:
+          type: integer
+        individual_count:
+          type: integer
+        axiom_count:
+          type: integer
+        depth:
+          type: integer
+        breadth:
+          type: integer
+        tangledness:
+          type: number
+
+    ValidationError:
+      type: object
+      required:
+        - code
+        - message
+        - severity
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning, info]
+        element_iri:
+          type: string
+          format: uri
+        location:
+          type: string
+
+    ValidationWarning:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        element_iri:
+          type: string
+          format: uri
+        suggestion:
+          type: string
+
+    # Request/Response Models
+    CreateWorkspaceRequest:
+      type: object
+      required:
+        - name
+        - project_id
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+        settings:
+          $ref: '#/components/schemas/WorkspaceSettings'
+
+    CreateWorkspaceResponse:
+      type: object
+      required:
+        - workspace_id
+        - message
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        settings:
+          $ref: '#/components/schemas/WorkspaceSettings'
+
+    WorkspaceListResponse:
+      type: object
+      required:
+        - workspaces
+        - total
+      properties:
+        workspaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WorkspaceSummary:
+      type: object
+      required:
+        - id
+        - name
+        - project_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        ontology_count:
+          type: integer
+        status:
+          type: string
+          enum: [active, archived]
+
+    AddOntologyRequest:
+      type: object
+      required:
+        - name
+        - action
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        action:
+          type: string
+          enum: [create_new, import_existing]
+        iri:
+          type: string
+          format: uri
+        format:
+          $ref: '#/components/schemas/OntologyFormat'
+        content:
+          type: string
+          description: Ontology content (for import)
+        collection_id:
+          type: string
+          format: uuid
+
+    AddOntologyResponse:
+      type: object
+      required:
+        - ontology_id
+        - message
+      properties:
+        ontology_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    UpdateOntologyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        content:
+          type: object
+        visual_layout:
+          $ref: '#/components/schemas/VisualLayout'
+
+    OntologyListResponse:
+      type: object
+      required:
+        - ontologies
+      properties:
+        ontologies:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyDocument'
+
+    AutoLayoutRequest:
+      type: object
+      required:
+        - algorithm
+      properties:
+        algorithm:
+          type: string
+          enum: [hierarchical, force_directed, circular, grid]
+        options:
+          type: object
+          properties:
+            spacing:
+              type: number
+              minimum: 10
+            direction:
+              type: string
+              enum: [top_to_bottom, left_to_right, bottom_to_top, right_to_left]
+            preserve_groups:
+              type: boolean
+              default: true
+
+    ValidationRequest:
+      type: object
+      properties:
+        reasoner:
+          type: string
+          enum: [hermit, pellet, elk]
+          default: hermit
+        profile:
+          type: string
+          enum: [owl_full, owl_dl, owl_el, owl_ql, owl_rl]
+        include_quality_metrics:
+          type: boolean
+          default: true
+
+    WorkspaceValidationResponse:
+      type: object
+      required:
+        - overall_valid
+        - results
+      properties:
+        overall_valid:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              ontology_id:
+                type: string
+                format: uuid
+              validation_result:
+                $ref: '#/components/schemas/ValidationResult'
+
+    # Comments and Discussions
+    CommentListResponse:
+      type: object
+      required:
+        - comments
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    Comment:
+      type: object
+      required:
+        - id
+        - user_id
+        - content
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        user_name:
+          type: string
+        content:
+          type: string
+        element_iri:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    AddCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        element_iri:
+          type: string
+          format: uri
+        parent_comment_id:
+          type: string
+          format: uuid
+
+    AddCommentResponse:
+      type: object
+      required:
+        - comment_id
+        - message
+      properties:
+        comment_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    DiscussionListResponse:
+      type: object
+      required:
+        - discussions
+      properties:
+        discussions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Discussion'
+
+    Discussion:
+      type: object
+      required:
+        - id
+        - title
+        - created_by
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [open, closed, resolved]
+        participants:
+          type: array
+          items:
+            type: string
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    CreateDiscussionRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        element_iri:
+          type: string
+          format: uri
+
+    # Import/Export
+    ImportRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        format:
+          $ref: '#/components/schemas/OntologyFormat'
+        options:
+          $ref: '#/components/schemas/ImportOptions'
+
+    ImportFromURLRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+        format:
+          $ref: '#/components/schemas/OntologyFormat'
+        options:
+          $ref: '#/components/schemas/ImportOptions'
+
+    ImportOptions:
+      type: object
+      properties:
+        merge_with_existing:
+          type: boolean
+          default: false
+        preserve_namespaces:
+          type: boolean
+          default: true
+        auto_generate_layout:
+          type: boolean
+          default: true
+        validate_on_import:
+          type: boolean
+          default: true
+
+    ImportResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        ontology_id:
+          type: string
+          format: uuid
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    ExportRequest:
+      type: object
+      required:
+        - format
+      properties:
+        format:
+          $ref: '#/components/schemas/OntologyFormat'
+        options:
+          $ref: '#/components/schemas/ExportOptions'
+
+    ExportOptions:
+      type: object
+      properties:
+        include_visual_layout:
+          type: boolean
+          default: false
+        include_comments:
+          type: boolean
+          default: false
+        minify:
+          type: boolean
+          default: false
+        namespace_prefix_mapping:
+          type: object
+          additionalProperties:
+            type: string
+
+    # Publishing
+    PublishRequest:
+      type: object
+      required:
+        - targets
+      properties:
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublishTarget'
+        options:
+          $ref: '#/components/schemas/PublishOptions'
+
+    PublishTarget:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [fuseki, web_documentation, file_system]
+        config:
+          type: object
+          additionalProperties: true
+
+    PublishOptions:
+      type: object
+      properties:
+        include_version:
+          type: boolean
+          default: true
+        generate_documentation:
+          type: boolean
+          default: true
+        notify_subscribers:
+          type: boolean
+          default: true
+
+    PublishResponse:
+      type: object
+      required:
+        - success
+        - results
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublishResult'
+
+    PublishResult:
+      type: object
+      required:
+        - target_type
+        - success
+      properties:
+        target_type:
+          type: string
+        success:
+          type: boolean
+        url:
+          type: string
+          format: uri
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    WorkspacePublishRequest:
+      type: object
+      required:
+        - targets
+      properties:
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublishTarget'
+        options:
+          $ref: '#/components/schemas/PublishOptions'
+        filter:
+          $ref: '#/components/schemas/OntologyFilter'
+
+    OntologyFilter:
+      type: object
+      properties:
+        ontology_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyStatus'
+        exclude_drafts:
+          type: boolean
+          default: true
+
+    WorkspacePublishResponse:
+      type: object
+      required:
+        - success
+        - results
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              ontology_id:
+                type: string
+                format: uuid
+              publish_result:
+                $ref: '#/components/schemas/PublishResult'
+
+    # Integration
+    CementoSyncRequest:
+      type: object
+      required:
+        - cemento_project_id
+      properties:
+        cemento_project_id:
+          type: string
+        direction:
+          type: string
+          enum: [import_from_cemento, export_to_cemento, bidirectional]
+          default: bidirectional
+        options:
+          type: object
+          properties:
+            preserve_layout:
+              type: boolean
+              default: true
+            merge_conflicts:
+              type: string
+              enum: [overwrite_local, overwrite_remote, manual_resolution]
+              default: manual_resolution
+
+    DrawIOImportRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        options:
+          type: object
+          properties:
+            interpretation_mode:
+              type: string
+              enum: [strict_owl, flexible_mapping, custom_rules]
+              default: flexible_mapping
+            generate_iris:
+              type: boolean
+              default: true
+
+    # Analytics
+    WorkspaceAnalytics:
+      type: object
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        ontology_count:
+          type: integer
+        total_classes:
+          type: integer
+        total_properties:
+          type: integer
+        total_individuals:
+          type: integer
+        user_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserActivity'
+        validation_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationHistoryEntry'
+        collaboration_metrics:
+          $ref: '#/components/schemas/CollaborationMetrics'
+
+    UserActivity:
+      type: object
+      properties:
+        user_id:
+          type: string
+        user_name:
+          type: string
+        actions_count:
+          type: integer
+        last_active:
+          type: string
+          format: date-time
+        most_edited_ontology:
+          type: string
+          format: uuid
+
+    ValidationHistoryEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        ontology_id:
+          type: string
+          format: uuid
+        is_valid:
+          type: boolean
+        error_count:
+          type: integer
+        warning_count:
+          type: integer
+
+    CollaborationMetrics:
+      type: object
+      properties:
+        active_sessions:
+          type: integer
+        comments_count:
+          type: integer
+        discussions_count:
+          type: integer
+        average_resolution_time:
+          type: number
+          description: Average time to resolve discussions in hours
+
+    UsageAnalytics:
+      type: object
+      properties:
+        total_workspaces:
+          type: integer
+        total_ontologies:
+          type: integer
+        active_users:
+          type: integer
+        most_used_formats:
+          type: array
+          items:
+            type: object
+            properties:
+              format:
+                $ref: '#/components/schemas/OntologyFormat'
+              usage_count:
+                type: integer
+        validation_stats:
+          type: object
+          properties:
+            total_validations:
+              type: integer
+            success_rate:
+              type: number
+            most_common_errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  error_code:
+                    type: string
+                  count:
+                    type: integer
+
+    # Health Check
+    HealthCheckResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        services:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ServiceHealth'
+            fuseki:
+              $ref: '#/components/schemas/ServiceHealth'
+            ontology_manager:
+              $ref: '#/components/schemas/ServiceHealth'
+            event_manager:
+              $ref: '#/components/schemas/ServiceHealth'
+
+    ServiceHealth:
+      type: object
+      required:
+        - status
+        - response_time_ms
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        response_time_ms:
+          type: number
+        last_check:
+          type: string
+          format: date-time
+        error_message:
+          type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: [] 
