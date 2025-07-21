@@ -45,6 +45,7 @@ flowchart TD
         MemoryManager["Memory Manager<br/>(Port 3015)"]
         OntologyWorkspace["Ontology Workspace<br/>(Port 3016)"]
         TaskOrchestrator["Task Orchestrator<br/>(Port 3017)"]
+        DecisionAnalytics["Decision Analytics<br/>(Port 3018)"]
     end
     
     %% UI connections
@@ -69,6 +70,7 @@ flowchart TD
     MemoryManager --> EventManager
     OntologyWorkspace --> EventManager
     TaskOrchestrator --> EventManager
+    DecisionAnalytics --> EventManager
     
     %% EventManager back to services
     EventManager --> AAS
@@ -81,6 +83,7 @@ flowchart TD
     EventManager --> MemoryManager
     EventManager --> OntologyWorkspace
     EventManager --> TaskOrchestrator
+    EventManager --> DecisionAnalytics
     
     %% Service interconnections
     ProcessManager --> LLMService
@@ -113,6 +116,12 @@ flowchart TD
     TaskOrchestrator --> DataManager
     TaskOrchestrator --> SimulationManager
     TaskOrchestrator --> AnalysisManager
+    DecisionAnalytics --> AnalysisManager
+    DecisionAnalytics --> SimulationManager
+    DecisionAnalytics --> MemoryManager
+    DecisionAnalytics --> ParameterManager
+    DecisionAnalytics --> TaskOrchestrator
+    DecisionAnalytics --> AAS
     
     classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
     classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -122,15 +131,15 @@ flowchart TD
     class WebUI,Playground ui;
     class ProjectService,LLMService,KnowledgeService,AAS core;
     class EventManager event;
-    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor,MemoryManager,OntologyWorkspace,TaskOrchestrator process;
+    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor,MemoryManager,OntologyWorkspace,TaskOrchestrator,DecisionAnalytics process;
 ```
 
 **Port Allocation:**
 - **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
 - **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
 - **Event System**: 3004 (EventManager)
-- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements), 3015 (Memory), 3016 (Ontology Workspace), 3017 (Task Orchestrator)
-- **Future Services**: 3018+
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements), 3015 (Memory), 3016 (Ontology Workspace), 3017 (Task Orchestrator), 3018 (Decision Analytics)
+- **Future Services**: 3019+
 
 ### Data Architecture
 
@@ -183,6 +192,11 @@ flowchart TD
         TaskOrchestrator --> PostgreSQL
         TaskOrchestrator --> Redis
         TaskOrchestrator --> MinIO
+        DecisionAnalytics --> PostgreSQL
+        DecisionAnalytics --> Qdrant
+        DecisionAnalytics --> Redis
+        DecisionAnalytics --> Neo4j
+        DecisionAnalytics --> MinIO
     end
     
     classDef primary fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -213,6 +227,7 @@ flowchart TD
 - **[Memory Manager Service](./memory_manager_specification.md)** - Sophisticated memory management with categorization, lifecycle intelligence, and semantic retrieval
 - **[Ontology Workspace Service](./ontology_workspace_specification.md)** - Visual, collaborative environment for authoring, editing, and validating ontologies
 - **[Task Orchestrator Service](./task_orchestrator_specification.md)** - Central execution engine for workflow orchestration and task management across the EDS ecosystem
+- **[Decision Analytics Service](./decision_analytics_specification.md)** - Comprehensive decision intelligence engine for decision space analysis, impact assessment, and performance scoring
 
 ### Future Services (Planned)
 - **OntologyManager Service** - Domain knowledge and semantic modeling
