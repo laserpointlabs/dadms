@@ -1,562 +1,221 @@
 openapi: 3.0.3
 info:
-  title: DADMS Knowledge Service API
-  version: 1.0.0
+  title: DADMS Knowledge Manager Service API
   description: |
-    OpenAPI specification for the DADMS 2.0 Knowledge Service. Defines endpoints for document management, 
-    semantic search, RAG capabilities, domain management, and vector store integration. Supports advanced 
-    knowledge discovery and retrieval for decision intelligence workflows.
+    Comprehensive document management, semantic search, and Retrieval-Augmented Generation (RAG) 
+    service for DADMS 2.0. Enables intelligent knowledge discovery and retrieval for decision-making 
+    workflows with advanced analytics and multi-tier storage.
+    
+    ## Core Capabilities
+    - **Document Management**: Upload, storage, processing, and retrieval of multiple document formats
+    - **Semantic Search**: Vector-based similarity search using state-of-the-art embeddings
+    - **RAG Operations**: Context-aware retrieval for LLM integration and generation
+    - **Organization**: Hierarchical domains and flexible tagging system
+    - **Analytics**: Usage insights, search patterns, and knowledge utilization metrics
+    
+    ## Current Implementation Status
+    📋 **SPECIFICATION** - Ready for implementation with UI components available
+    
+    ## Key Features
+    - **Multi-Format Support**: PDF, DOCX, TXT, Markdown, and more
+    - **Intelligent Chunking**: Context-aware document segmentation
+    - **Vector Embeddings**: Qdrant integration for semantic similarity
+    - **Knowledge Graph**: Entity and relationship extraction (Neo4j)
+    - **Real-time Processing**: Asynchronous document processing pipeline
+    - **Event Integration**: EventManager integration for proactive insights
+    
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
 
 servers:
   - url: http://localhost:3003
-    description: Local development server
-
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    # Core Models
-    Document:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique document identifier
-        name:
-          type: string
-          description: Document name/title
-        description:
-          type: string
-          description: Document description
-        domain_id:
-          type: string
-          description: Associated domain ID
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
-        url:
-          type: string
-          description: Document storage URL
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        size:
-          type: integer
-          description: File size in bytes
-        content_type:
-          type: string
-          description: MIME type
-        chunk_count:
-          type: integer
-          description: Number of chunks created
-        embedding_status:
-          type: string
-          enum: [pending, processing, completed, failed]
-          description: Vector embedding status
-        metadata:
-          type: object
-          description: Additional document metadata
-
-    DocumentUpload:
-      type: object
-      required: [name, file]
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        domain_id:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        file:
-          type: string
-          format: binary
-        chunk_size:
-          type: integer
-          default: 500
-          description: Token count per chunk
-        chunk_overlap:
-          type: integer
-          default: 50
-          description: Token overlap between chunks
-
-    DocumentSearch:
-      type: object
-      properties:
-        query:
-          type: string
-          description: Search query (text or semantic)
-        domain_ids:
-          type: array
-          items:
-            type: string
-          description: Filter by domain IDs
-        tags:
-          type: array
-          items:
-            type: string
-          description: Filter by tag IDs
-        search_type:
-          type: string
-          enum: [text, semantic, hybrid]
-          default: hybrid
-        similarity_threshold:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 1
-          default: 0.7
-        limit:
-          type: integer
-          default: 20
-        offset:
-          type: integer
-          default: 0
-        include_chunks:
-          type: boolean
-          default: false
-          description: Include document chunks in results
-
-    SearchResult:
-      type: object
-      properties:
-        document:
-          $ref: '#/components/schemas/Document'
-        score:
-          type: number
-          format: float
-          description: Search relevance score
-        chunks:
-          type: array
-          items:
-            $ref: '#/components/schemas/DocumentChunk'
-        highlights:
-          type: array
-          items:
-            type: string
-          description: Highlighted text snippets
-
-    DocumentChunk:
-      type: object
-      properties:
-        id:
-          type: string
-        document_id:
-          type: string
-        chunk_index:
-          type: integer
-        text:
-          type: string
-        embedding_model:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        metadata:
-          type: object
-        created_at:
-          type: string
-          format: date-time
-
-    # Domain Models
-    Domain:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        document_count:
-          type: integer
-        parent_domain_id:
-          type: string
-          nullable: true
-
-    DomainCreate:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        parent_domain_id:
-          type: string
-
-    DomainUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        parent_domain_id:
-          type: string
-
-    # Tag Models
-    Tag:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        domain_id:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        usage_count:
-          type: integer
-
-    TagCreate:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        domain_id:
-          type: string
-
-    TagUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        color:
-          type: string
-        domain_id:
-          type: string
-
-    # RAG Models
-    RAGQuery:
-      type: object
-      required: [query]
-      properties:
-        query:
-          type: string
-          description: Natural language query
-        domain_ids:
-          type: array
-          items:
-            type: string
-        tags:
-          type: array
-          items:
-            type: string
-        max_chunks:
-          type: integer
-          default: 5
-        similarity_threshold:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 1
-          default: 0.7
-        include_metadata:
-          type: boolean
-          default: true
-
-    RAGResponse:
-      type: object
-      properties:
-        query:
-          type: string
-        chunks:
-          type: array
-          items:
-            $ref: '#/components/schemas/RAGChunk'
-        total_chunks:
-          type: integer
-        search_time_ms:
-          type: integer
-        embedding_model:
-          type: string
-
-    RAGChunk:
-      type: object
-      properties:
-        chunk_id:
-          type: string
-        document_id:
-          type: string
-        document_name:
-          type: string
-        text:
-          type: string
-        similarity_score:
-          type: number
-          format: float
-        metadata:
-          type: object
-
-    # Analytics Models
-    SearchAnalytics:
-      type: object
-      properties:
-        period:
-          $ref: '#/components/schemas/AnalyticsPeriod'
-        summary:
-          type: object
-          properties:
-            total_searches:
-              type: integer
-            unique_users:
-              type: integer
-            average_response_time:
-              type: number
-              format: float
-            most_searched_terms:
-              type: array
-              items:
-                type: object
-                properties:
-                  term:
-                    type: string
-                  count:
-                    type: integer
-        by_domain:
-          type: array
-          items:
-            $ref: '#/components/schemas/DomainAnalytics'
-
-    DomainAnalytics:
-      type: object
-      properties:
-        domain_id:
-          type: string
-        domain_name:
-          type: string
-        document_count:
-          type: integer
-        search_count:
-          type: integer
-        average_search_score:
-          type: number
-          format: float
-
-    AnalyticsPeriod:
-      type: object
-      properties:
-        start_date:
-          type: string
-          format: date-time
-        end_date:
-          type: string
-          format: date-time
-
-    # Error Models
-    Error:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            details:
-              type: object
-            timestamp:
-              type: string
-              format: date-time
-
-
-    ErrorResponse:
-      type: object
-      required: [error]
-      properties:
-        error:
-          type: object
-          required: [code, message]
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            details:
-              type: string
-
-    HealthStatus:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [healthy, unhealthy, degraded]
-        timestamp:
-          type: string
-          format: date-time
-        version:
-          type: string
-        dependencies:
-          type: object
-          additionalProperties:
-            type: string
+    description: Development server
+  - url: https://api.dadms.com/knowledge
+    description: Production server
 
 security:
   - bearerAuth: []
 
 paths:
-  # Health Check
   /health:
     get:
-      summary: Service health/readiness check
-      description: Returns service health status, uptime, version, and vector store connectivity.
+      summary: Service health check
+      description: Returns service health status, dependencies, and performance metrics
       tags: [Health]
+      security: []
       responses:
         '200':
-          description: Health status
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service unhealthy
+
+  /api:
+    get:
+      summary: Service information
+      description: Get service information and available endpoints
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service information
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  service:
                     type: string
-                  uptime:
-                    type: integer
+                    example: "DADMS Knowledge Manager Service"
                   version:
                     type: string
-                  vector_store_status:
+                    example: "1.0.0"
+                  port:
+                    type: integer
+                    example: 3003
+                  status:
                     type: string
-                  embedding_model:
-                    type: string
+                    example: "operational"
+                  capabilities:
+                    type: array
+                    items:
+                      type: string
+                    example: ["document_management", "semantic_search", "rag_operations"]
 
   # Document Management
   /documents:
     get:
-      summary: Search documents
-      description: Search documents using text, semantic, or hybrid search with filtering and pagination.
+      summary: Search and list documents
+      description: Search documents using text, semantic, or hybrid search with advanced filtering
       tags: [Documents]
       parameters:
-        - in: query
-          name: query
+        - name: query
+          in: query
+          description: Search query (text or semantic)
           schema:
             type: string
-          description: Search query (text or semantic)
-        - in: query
-          name: domain_ids
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by domain IDs
-        - in: query
-          name: tags
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by tag IDs
-        - in: query
-          name: search_type
+            example: "UAV risk assessment"
+        - name: search_type
+          in: query
+          description: Search method
           schema:
             type: string
             enum: [text, semantic, hybrid]
             default: hybrid
-          description: Search type
-        - in: query
-          name: similarity_threshold
+        - name: domain_ids
+          in: query
+          description: Filter by domain IDs
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+          style: form
+          explode: false
+        - name: tag_ids
+          in: query
+          description: Filter by tag IDs
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+          style: form
+          explode: false
+        - name: file_types
+          in: query
+          description: Filter by file types
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["pdf", "docx"]
+          style: form
+          explode: false
+        - name: date_from
+          in: query
+          description: Filter documents from date
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          description: Filter documents to date
+          schema:
+            type: string
+            format: date
+        - name: similarity_threshold
+          in: query
+          description: Minimum similarity score for semantic search
           schema:
             type: number
             format: float
             minimum: 0
             maximum: 1
             default: 0.7
-          description: Minimum similarity score for semantic search
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 20
+        - name: limit
+          in: query
           description: Number of results to return
-        - in: query
-          name: offset
           schema:
             type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of results to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
             default: 0
-          description: Number of results to skip
-        - in: query
-          name: include_chunks
+        - name: include_chunks
+          in: query
+          description: Include document chunks in results
           schema:
             type: boolean
             default: false
-          description: Include document chunks in results
+        - name: include_highlights
+          in: query
+          description: Include text highlights in results
+          schema:
+            type: boolean
+            default: true
+        - name: sort_by
+          in: query
+          description: Sort results by field
+          schema:
+            type: string
+            enum: [relevance, created_at, updated_at, name, size]
+            default: relevance
+        - name: sort_order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
           description: Search results
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/SearchResult'
-                  total:
-                    type: integer
-                  limit:
-                    type: integer
-                  offset:
-                    type: integer
-                  search_time_ms:
-                    type: integer
+                $ref: '#/components/schemas/SearchResponse'
         '400':
-          description: Bad request
+          description: Invalid search parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
 
     post:
       summary: Upload a new document
-      description: Upload a document with automatic chunking and vector embedding.
+      description: Upload and process a document with automatic chunking and embedding generation
       tags: [Documents]
       requestBody:
         required: true
@@ -566,71 +225,134 @@ paths:
               $ref: '#/components/schemas/DocumentUpload'
       responses:
         '201':
-          description: Document uploaded and processed
+          description: Document uploaded and processing started
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Document'
         '400':
-          description: Bad request
+          description: Invalid upload request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large
+        '415':
+          description: Unsupported file type
 
   /documents/{id}:
     get:
-      summary: Get document metadata by ID
+      summary: Get document by ID
+      description: Retrieve document metadata and processing status
       tags: [Documents]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
+          required: true
+          description: Document UUID
+          schema:
+            type: string
+            format: uuid
+        - name: include_chunks
+          in: query
+          description: Include document chunks in response
+          schema:
+            type: boolean
+            default: false
+        - name: include_analytics
+          in: query
+          description: Include usage analytics
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetailed'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update document metadata
+      description: Update document name, description, domain, or tags
+      tags: [Documents]
+      parameters:
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdate'
       responses:
         '200':
-          description: Document metadata
+          description: Document updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Document'
         '404':
           description: Document not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid update data
 
     delete:
-      summary: Delete document by ID
+      summary: Delete document
+      description: Delete document and all associated chunks and embeddings
       tags: [Documents]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+        - name: force
+          in: query
+          description: Force delete even if referenced elsewhere
+          schema:
+            type: boolean
+            default: false
       responses:
         '204':
-          description: Document deleted
+          description: Document deleted successfully
         '404':
           description: Document not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '409':
+          description: Document cannot be deleted (referenced elsewhere)
 
   /documents/{id}/download:
     get:
       summary: Download document file
+      description: Download the original document file
       tags: [Documents]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+        - name: disposition
+          in: query
+          description: Download disposition
+          schema:
+            type: string
+            enum: [attachment, inline]
+            default: attachment
       responses:
         '200':
           description: Document file
@@ -639,30 +361,43 @@ paths:
               schema:
                 type: string
                 format: binary
-        '404':
-          description: Document not found
-          content:
-            application/json:
+          headers:
+            Content-Disposition:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: string
+            Content-Type:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+        '404':
+          description: Document or file not found
 
   /documents/{id}/chunks:
     get:
       summary: Get document chunks
-      description: Retrieve all chunks for a document with their embeddings and metadata.
+      description: Retrieve all chunks for a document with optional embeddings
       tags: [Documents]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
-        - in: query
-          name: include_embeddings
+            format: uuid
+        - name: include_embeddings
+          in: query
+          description: Include embedding vectors (warning: large response)
           schema:
             type: boolean
             default: false
-          description: Include embedding vectors in response
+        - name: chunk_range
+          in: query
+          description: Range of chunks to retrieve (e.g., "0-10")
+          schema:
+            type: string
+            pattern: '^\d+-\d+$'
       responses:
         '200':
           description: Document chunks
@@ -673,6 +408,9 @@ paths:
                 properties:
                   document_id:
                     type: string
+                    format: uuid
+                  total_chunks:
+                    type: integer
                   chunks:
                     type: array
                     items:
@@ -681,46 +419,114 @@ paths:
   /documents/{id}/reprocess:
     post:
       summary: Reprocess document
-      description: Re-chunk and re-embed a document with new parameters.
+      description: Re-chunk and re-embed document with new parameters or model
       tags: [Documents]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                chunk_size:
-                  type: integer
-                  default: 500
-                chunk_overlap:
-                  type: integer
-                  default: 50
-                embedding_model:
-                  type: string
+              $ref: '#/components/schemas/ProcessingConfig'
       responses:
-        '200':
-          description: Document reprocessed
+        '202':
+          description: Reprocessing started
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Document'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Document reprocessing started"
+                  job_id:
+                    type: string
+                    format: uuid
+                  estimated_time_seconds:
+                    type: integer
+        '404':
+          description: Document not found
+        '409':
+          description: Document is already being processed
+
+  /documents/{id}/similar:
+    get:
+      summary: Find similar documents
+      description: Find documents similar to the specified document
+      tags: [Documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: similarity_threshold
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 1
+            default: 0.7
+        - name: same_domain_only
+          in: query
+          description: Only return documents from the same domain
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Similar documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reference_document_id:
+                    type: string
+                    format: uuid
+                  similar_documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResult'
 
   # Domain Management
   /domains:
     get:
       summary: List all domains
-      description: Get all domains with document counts and hierarchy information.
+      description: Get domain hierarchy with document counts
       tags: [Domains]
+      parameters:
+        - name: include_empty
+          in: query
+          description: Include domains with no documents
+          schema:
+            type: boolean
+            default: true
+        - name: max_depth
+          in: query
+          description: Maximum hierarchy depth to return
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
       responses:
         '200':
-          description: List of domains
+          description: Domain hierarchy
           content:
             application/json:
               schema:
@@ -729,7 +535,8 @@ paths:
                   $ref: '#/components/schemas/Domain'
 
     post:
-      summary: Create a new domain
+      summary: Create new domain
+      description: Create a new knowledge domain with optional parent
       tags: [Domains]
       requestBody:
         required: true
@@ -744,34 +551,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Domain'
+        '400':
+          description: Invalid domain data
+        '409':
+          description: Domain name already exists in parent
 
   /domains/{id}:
     get:
-      summary: Get domain by ID
+      summary: Get domain details
+      description: Get detailed domain information including statistics
       tags: [Domains]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+        - name: include_children
+          in: query
+          description: Include child domains in response
+          schema:
+            type: boolean
+            default: true
+        - name: include_statistics
+          in: query
+          description: Include usage statistics
+          schema:
+            type: boolean
+            default: true
       responses:
         '200':
           description: Domain details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Domain'
+                $ref: '#/components/schemas/DomainDetailed'
+        '404':
+          description: Domain not found
 
     put:
-      summary: Update domain by ID
+      summary: Update domain
+      description: Update domain metadata, hierarchy, or configuration
       tags: [Domains]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -785,41 +614,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Domain'
+        '404':
+          description: Domain not found
+        '400':
+          description: Invalid update data
+        '409':
+          description: Update would create circular hierarchy
 
     delete:
-      summary: Delete domain by ID
+      summary: Delete domain
+      description: Delete domain and optionally move documents to parent
       tags: [Domains]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+        - name: cascade
+          in: query
+          description: Delete all child domains
+          schema:
+            type: boolean
+            default: false
+        - name: move_documents_to
+          in: query
+          description: Domain ID to move documents to (if not cascading)
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Domain deleted
+        '404':
+          description: Domain not found
+        '409':
+          description: Domain has children or documents (use cascade or move_documents_to)
 
   /domains/{id}/documents:
     get:
-      summary: Get documents in domain
-      description: Get all documents belonging to a specific domain.
+      summary: Get domain documents
+      description: List all documents in a domain with pagination
       tags: [Domains]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
-        - in: query
-          name: limit
+            format: uuid
+        - name: include_subdomain_documents
+          in: query
+          description: Include documents from child domains
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
           schema:
             type: integer
+            minimum: 1
+            maximum: 100
             default: 20
-        - in: query
-          name: offset
+        - name: offset
+          in: query
           schema:
             type: integer
+            minimum: 0
             default: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, created_at, updated_at, size]
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
           description: Domain documents
@@ -830,25 +705,48 @@ paths:
                 properties:
                   domain_id:
                     type: string
+                    format: uuid
                   documents:
                     type: array
                     items:
                       $ref: '#/components/schemas/Document'
                   total:
                     type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
 
   # Tag Management
   /tags:
     get:
       summary: List all tags
-      description: Get all tags with usage counts and domain information.
+      description: Get tags with usage statistics and domain filtering
       tags: [Tags]
       parameters:
-        - in: query
-          name: domain_id
+        - name: domain_id
+          in: query
+          description: Filter tags by domain
           schema:
             type: string
-          description: Filter by domain ID
+            format: uuid
+        - name: category
+          in: query
+          description: Filter tags by category
+          schema:
+            type: string
+        - name: include_unused
+          in: query
+          description: Include tags with zero usage
+          schema:
+            type: boolean
+            default: true
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, usage_count, created_at]
+            default: name
       responses:
         '200':
           description: List of tags
@@ -860,7 +758,8 @@ paths:
                   $ref: '#/components/schemas/Tag'
 
     post:
-      summary: Create a new tag
+      summary: Create new tag
+      description: Create a new tag with optional domain association
       tags: [Tags]
       requestBody:
         required: true
@@ -875,34 +774,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tag'
+        '400':
+          description: Invalid tag data
+        '409':
+          description: Tag name already exists in domain
 
   /tags/{id}:
     get:
-      summary: Get tag by ID
+      summary: Get tag details
+      description: Get tag information with usage statistics
       tags: [Tags]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: Tag details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tag'
+                $ref: '#/components/schemas/TagDetailed'
+        '404':
+          description: Tag not found
 
     put:
-      summary: Update tag by ID
+      summary: Update tag
+      description: Update tag metadata or domain association
       tags: [Tags]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -916,25 +825,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tag'
+        '404':
+          description: Tag not found
+        '400':
+          description: Invalid update data
 
     delete:
-      summary: Delete tag by ID
+      summary: Delete tag
+      description: Delete tag and remove from all documents
       tags: [Tags]
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: string
+            format: uuid
+        - name: replace_with
+          in: query
+          description: Tag ID to replace this tag with on documents
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Tag deleted
+        '404':
+          description: Tag not found
+
+  /tags/{id}/documents:
+    get:
+      summary: Get documents with tag
+      description: List all documents that have this tag
+      tags: [Tags]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Tagged documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tag_id:
+                    type: string
+                    format: uuid
+                  documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  total:
+                    type: integer
 
   # RAG Operations
   /rag/query:
     post:
       summary: RAG query
-      description: Perform Retrieval-Augmented Generation query to find relevant document chunks.
+      description: Perform Retrieval-Augmented Generation query for LLM context
       tags: [RAG]
       requestBody:
         required: true
@@ -944,16 +907,18 @@ paths:
               $ref: '#/components/schemas/RAGQuery'
       responses:
         '200':
-          description: RAG results
+          description: RAG results with ranked chunks
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RAGResponse'
+        '400':
+          description: Invalid query parameters
 
   /rag/similar:
     post:
       summary: Find similar chunks
-      description: Find chunks similar to the provided text using semantic similarity.
+      description: Find chunks semantically similar to provided text
       tags: [RAG]
       requestBody:
         required: true
@@ -966,8 +931,11 @@ paths:
                 text:
                   type: string
                   description: Text to find similar chunks for
+                  example: "risk assessment methodology for UAV systems"
                 max_results:
                   type: integer
+                  minimum: 1
+                  maximum: 50
                   default: 10
                 similarity_threshold:
                   type: number
@@ -979,9 +947,21 @@ paths:
                   type: array
                   items:
                     type: string
+                    format: uuid
+                  description: Limit search to specific domains
+                tag_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Limit search to documents with specific tags
+                include_context:
+                  type: boolean
+                  default: false
+                  description: Include surrounding context for each chunk
       responses:
         '200':
-          description: Similar chunks
+          description: Similar chunks with relevance scores
           content:
             application/json:
               schema:
@@ -989,48 +969,118 @@ paths:
                 properties:
                   query_text:
                     type: string
+                  embedding_model:
+                    type: string
                   similar_chunks:
                     type: array
                     items:
                       $ref: '#/components/schemas/RAGChunk'
+                  search_time_ms:
+                    type: integer
+                  total_chunks_searched:
+                    type: integer
 
   # Analytics
   /analytics/search:
     get:
       summary: Get search analytics
-      description: Get analytics about search usage and performance.
+      description: Analytics about search usage patterns and performance
       tags: [Analytics]
       parameters:
-        - in: query
-          name: start_date
+        - name: start_date
+          in: query
+          description: Start date for analytics period
           schema:
             type: string
-            format: date-time
-          description: Start date for analytics
-        - in: query
-          name: end_date
+            format: date
+        - name: end_date
+          in: query
+          description: End date for analytics period
           schema:
             type: string
-            format: date-time
-          description: End date for analytics
-        - in: query
-          name: domain_id
+            format: date
+        - name: domain_id
+          in: query
+          description: Filter analytics by domain
           schema:
             type: string
-          description: Filter by domain ID
+            format: uuid
+        - name: user_id
+          in: query
+          description: Filter analytics by user (admin only)
+          schema:
+            type: string
+            format: uuid
+        - name: granularity
+          in: query
+          description: Time granularity for metrics
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
       responses:
         '200':
-          description: Search analytics
+          description: Search analytics data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchAnalytics'
 
+  /analytics/documents:
+    get:
+      summary: Get document analytics
+      description: Analytics about document usage and performance
+      tags: [Analytics]
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: domain_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentAnalytics'
+
+  /analytics/usage:
+    get:
+      summary: Get usage metrics
+      description: Overall service usage metrics and trends
+      tags: [Analytics]
+      parameters:
+        - name: period
+          in: query
+          description: Analytics period
+          schema:
+            type: string
+            enum: [today, week, month, quarter, year]
+            default: month
+      responses:
+        '200':
+          description: Usage metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageMetrics'
+
   # Bulk Operations
   /bulk/documents:
     post:
       summary: Bulk upload documents
-      description: Upload multiple documents in a single request.
+      description: Upload multiple documents in a single operation
       tags: [Bulk Operations]
       requestBody:
         required: true
@@ -1044,38 +1094,25 @@ paths:
                   items:
                     type: string
                     format: binary
-                domain_id:
+                  description: Multiple files to upload
+                config:
                   type: string
-                tags:
-                  type: array
-                  items:
-                    type: string
+                  description: JSON configuration for bulk upload
+                  example: '{"domain_id": "uuid", "default_tags": ["tag1", "tag2"]}'
       responses:
         '201':
-          description: Documents uploaded
+          description: Bulk upload results
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  uploaded:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Document'
-                  failed:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        filename:
-                          type: string
-                        error:
-                          type: string
+                $ref: '#/components/schemas/BulkUploadResponse'
+        '400':
+          description: Invalid bulk upload request
 
   /bulk/tags:
     post:
       summary: Bulk tag documents
-      description: Apply tags to multiple documents.
+      description: Apply or remove tags from multiple documents
       tags: [Bulk Operations]
       requestBody:
         required: true
@@ -1083,23 +1120,25 @@ paths:
           application/json:
             schema:
               type: object
-              required: [document_ids, tag_ids]
+              required: [document_ids, tag_ids, operation]
               properties:
                 document_ids:
                   type: array
                   items:
                     type: string
+                    format: uuid
                 tag_ids:
                   type: array
                   items:
                     type: string
+                    format: uuid
                 operation:
                   type: string
                   enum: [add, remove, replace]
-                  default: add
+                  description: Tag operation to perform
       responses:
         '200':
-          description: Tags applied
+          description: Bulk tagging results
           content:
             application/json:
               schema:
@@ -1107,7 +1146,1212 @@ paths:
                 properties:
                   updated_documents:
                     type: integer
+                  skipped_documents:
+                    type: integer
                   errors:
                     type: array
                     items:
-                      type: object 
+                      type: object
+                      properties:
+                        document_id:
+                          type: string
+                          format: uuid
+                        error:
+                          type: string
+
+  /bulk/delete:
+    post:
+      summary: Bulk delete documents
+      description: Delete multiple documents in a single operation
+      tags: [Bulk Operations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [document_ids]
+              properties:
+                document_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                force:
+                  type: boolean
+                  default: false
+                  description: Force delete even if referenced
+      responses:
+        '200':
+          description: Bulk delete results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                  skipped_count:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        document_id:
+                          type: string
+                          format: uuid
+                        error:
+                          type: string
+
+  # Processing Status
+  /processing/status:
+    get:
+      summary: Get processing queue status
+      description: Check status of document processing queue
+      tags: [Processing]
+      responses:
+        '200':
+          description: Processing queue status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue_length:
+                    type: integer
+                  active_jobs:
+                    type: integer
+                  completed_today:
+                    type: integer
+                  failed_today:
+                    type: integer
+                  average_processing_time_ms:
+                    type: number
+                    format: float
+                  current_embedding_model:
+                    type: string
+
+  /processing/jobs/{jobId}:
+    get:
+      summary: Get processing job status
+      description: Check status of a specific processing job
+      tags: [Processing]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                    format: uuid
+                  document_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [queued, processing, completed, failed]
+                  progress_percent:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  started_at:
+                    type: string
+                    format: date-time
+                  completed_at:
+                    type: string
+                    format: date-time
+                  error_message:
+                    type: string
+        '404':
+          description: Job not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Models
+    Document:
+      type: object
+      required: [id, name, url, content_type, size, embedding_status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique document identifier
+        name:
+          type: string
+          description: Document name/title
+          maxLength: 500
+        description:
+          type: string
+          description: Document description
+        domain_id:
+          type: string
+          format: uuid
+          description: Associated domain UUID
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+          description: Associated tags
+        url:
+          type: string
+          description: Document storage URL
+        content_type:
+          type: string
+          description: MIME type
+          example: "application/pdf"
+        size:
+          type: integer
+          description: File size in bytes
+          minimum: 0
+        checksum:
+          type: string
+          description: SHA256 hash of file content
+        embedding_status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Vector embedding processing status
+        chunk_count:
+          type: integer
+          description: Number of chunks created
+          minimum: 0
+        word_count:
+          type: integer
+          description: Estimated word count
+        page_count:
+          type: integer
+          description: Number of pages (if applicable)
+        language:
+          type: string
+          description: Detected document language
+          example: "en"
+        version:
+          type: integer
+          description: Document version number
+          minimum: 1
+        metadata:
+          type: object
+          description: Additional document metadata
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        uploaded_by:
+          type: string
+          format: uuid
+          description: User who uploaded the document
+
+    DocumentDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            chunks:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentChunk'
+            analytics:
+              type: object
+              properties:
+                total_views:
+                  type: integer
+                unique_viewers:
+                  type: integer
+                last_accessed:
+                  type: string
+                  format: date-time
+                search_appearances:
+                  type: integer
+                avg_relevance_score:
+                  type: number
+                  format: float
+
+    DocumentUpload:
+      type: object
+      required: [name, file]
+      properties:
+        name:
+          type: string
+          description: Document name
+          maxLength: 500
+        description:
+          type: string
+          description: Document description
+          maxLength: 2000
+        domain_id:
+          type: string
+          format: uuid
+          description: Target domain for document
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Tag IDs to apply to document
+        file:
+          type: string
+          format: binary
+          description: Document file to upload
+        chunk_size:
+          type: integer
+          minimum: 100
+          maximum: 2000
+          default: 500
+          description: Token count per chunk
+        chunk_overlap:
+          type: integer
+          minimum: 0
+          maximum: 500
+          default: 50
+          description: Token overlap between chunks
+        embedding_model:
+          type: string
+          description: Embedding model to use
+          example: "text-embedding-ada-002"
+        custom_metadata:
+          type: object
+          description: Custom metadata key-value pairs
+
+    DocumentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          maxLength: 2000
+        domain_id:
+          type: string
+          format: uuid
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        custom_metadata:
+          type: object
+
+    DocumentChunk:
+      type: object
+      required: [id, document_id, chunk_index, text]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique chunk identifier
+        document_id:
+          type: string
+          format: uuid
+          description: Parent document UUID
+        chunk_index:
+          type: integer
+          description: Order in document (0-based)
+          minimum: 0
+        text:
+          type: string
+          description: Chunk text content
+        title:
+          type: string
+          description: Section title (if available)
+        start_char:
+          type: integer
+          description: Character position in document
+          minimum: 0
+        end_char:
+          type: integer
+          description: End character position
+          minimum: 0
+        page_number:
+          type: integer
+          description: Page number (if applicable)
+          minimum: 1
+        embedding_model:
+          type: string
+          description: Model used for embedding
+        embedding_dimensions:
+          type: integer
+          description: Vector dimensions
+        vector_id:
+          type: string
+          format: uuid
+          description: Reference to vector in Qdrant
+        confidence_score:
+          type: number
+          format: float
+          description: Content quality confidence
+          minimum: 0
+          maximum: 1
+        entities:
+          type: array
+          items:
+            type: string
+          description: Extracted named entities
+        keywords:
+          type: array
+          items:
+            type: string
+          description: Key terms and phrases
+        section_type:
+          type: string
+          description: Type of document section
+          example: "paragraph"
+        language:
+          type: string
+          description: Detected language
+        metadata:
+          type: object
+          description: Additional chunk metadata
+        created_at:
+          type: string
+          format: date-time
+
+    # Domain Models
+    Domain:
+      type: object
+      required: [id, name, level, document_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Domain name
+          maxLength: 255
+        description:
+          type: string
+          description: Domain description
+        color:
+          type: string
+          description: UI color code
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          example: "#3498db"
+        parent_domain_id:
+          type: string
+          format: uuid
+          description: Parent domain UUID
+        level:
+          type: integer
+          description: Hierarchy level (0 = root)
+          minimum: 0
+        path:
+          type: string
+          description: Full hierarchical path
+          example: "Engineering/Software/Backend"
+        document_count:
+          type: integer
+          description: Direct document count
+          minimum: 0
+        total_document_count:
+          type: integer
+          description: Including subdomain documents
+          minimum: 0
+        child_domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/Domain'
+          description: Child domains
+        default_chunk_size:
+          type: integer
+          description: Default chunk size for domain
+        default_embedding_model:
+          type: string
+          description: Preferred embedding model
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+
+    DomainDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Domain'
+        - type: object
+          properties:
+            statistics:
+              type: object
+              properties:
+                recent_uploads:
+                  type: integer
+                total_searches:
+                  type: integer
+                avg_search_relevance:
+                  type: number
+                  format: float
+                most_used_tags:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tag_name:
+                        type: string
+                      usage_count:
+                        type: integer
+
+    DomainCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        color:
+          type: string
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          default: "#3498db"
+        parent_domain_id:
+          type: string
+          format: uuid
+        default_chunk_size:
+          type: integer
+          minimum: 100
+          maximum: 2000
+          default: 500
+        default_embedding_model:
+          type: string
+          default: "text-embedding-ada-002"
+
+    DomainUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        color:
+          type: string
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+        parent_domain_id:
+          type: string
+          format: uuid
+        default_chunk_size:
+          type: integer
+          minimum: 100
+          maximum: 2000
+        default_embedding_model:
+          type: string
+
+    # Tag Models
+    Tag:
+      type: object
+      required: [id, name, usage_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Tag name
+          maxLength: 255
+        description:
+          type: string
+          description: Tag description
+        color:
+          type: string
+          description: UI color code
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          example: "#e74c3c"
+        domain_id:
+          type: string
+          format: uuid
+          description: Associated domain (optional)
+        category:
+          type: string
+          description: Tag category
+          maxLength: 100
+        usage_count:
+          type: integer
+          description: Number of documents using this tag
+          minimum: 0
+        last_used:
+          type: string
+          format: date-time
+          description: Last usage timestamp
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+
+    TagDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Tag'
+        - type: object
+          properties:
+            recent_documents:
+              type: array
+              items:
+                type: object
+                properties:
+                  document_id:
+                    type: string
+                    format: uuid
+                  document_name:
+                    type: string
+                  tagged_at:
+                    type: string
+                    format: date-time
+
+    TagCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        color:
+          type: string
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          default: "#e74c3c"
+        domain_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          maxLength: 100
+
+    TagUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        color:
+          type: string
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+        domain_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          maxLength: 100
+
+    # Search & RAG Models
+    SearchResult:
+      type: object
+      required: [document, score]
+      properties:
+        document:
+          $ref: '#/components/schemas/Document'
+        score:
+          type: number
+          format: float
+          description: Search relevance score (0-1)
+          minimum: 0
+          maximum: 1
+        match_type:
+          type: string
+          enum: [title, content, metadata, tag]
+          description: Where the match was found
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentChunk'
+          description: Relevant chunks (if requested)
+        highlights:
+          type: array
+          items:
+            type: string
+          description: Highlighted text snippets
+        search_terms_found:
+          type: array
+          items:
+            type: string
+          description: Which search terms matched
+        context_snippet:
+          type: string
+          description: Contextual snippet around match
+
+    SearchResponse:
+      type: object
+      required: [results, total, search_time_ms]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        total:
+          type: integer
+          description: Total matching documents
+        limit:
+          type: integer
+        offset:
+          type: integer
+        search_time_ms:
+          type: integer
+          description: Search execution time in milliseconds
+        query_interpretation:
+          type: string
+          description: How the query was interpreted
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Search suggestions for improvement
+        filters_applied:
+          type: object
+          description: Filters that were applied
+        embedding_model:
+          type: string
+          description: Embedding model used (for semantic search)
+
+    RAGQuery:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Natural language query
+          example: "What are the safety considerations for UAV operations?"
+        domain_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Limit search to specific domains
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Limit search to documents with specific tags
+        max_chunks:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Maximum chunks to retrieve
+        similarity_threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          default: 0.7
+          description: Minimum similarity score
+        context_window:
+          type: integer
+          minimum: 1000
+          maximum: 10000
+          default: 4000
+          description: Target total context length in tokens
+        include_metadata:
+          type: boolean
+          default: true
+          description: Include chunk metadata
+        diversify_sources:
+          type: boolean
+          default: true
+          description: Ensure chunks from different documents
+        rank_by_relevance:
+          type: boolean
+          default: true
+          description: Rank results by relevance vs. similarity
+
+    RAGResponse:
+      type: object
+      required: [query, chunks, search_time_ms]
+      properties:
+        query:
+          type: string
+          description: Original query
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/RAGChunk'
+          description: Retrieved and ranked chunks
+        total_chunks_found:
+          type: integer
+          description: Total matching chunks before limit
+        search_time_ms:
+          type: integer
+          description: Search duration in milliseconds
+        embedding_model:
+          type: string
+          description: Embedding model used
+        context_length_tokens:
+          type: integer
+          description: Total context length in tokens
+        query_id:
+          type: string
+          format: uuid
+          description: Unique query identifier for analytics
+        timestamp:
+          type: string
+          format: date-time
+
+    RAGChunk:
+      type: object
+      required: [chunk_id, document_id, text, similarity_score, rank]
+      properties:
+        chunk_id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        document_name:
+          type: string
+          description: Source document name
+        text:
+          type: string
+          description: Chunk text content
+        title:
+          type: string
+          description: Section title (if available)
+        similarity_score:
+          type: number
+          format: float
+          description: Cosine similarity score
+          minimum: 0
+          maximum: 1
+        rank:
+          type: integer
+          description: Result ranking (1 = best)
+          minimum: 1
+        context_before:
+          type: string
+          description: Previous chunk text for context
+        context_after:
+          type: string
+          description: Next chunk text for context
+        page_number:
+          type: integer
+          description: Page number in source document
+        tags:
+          type: array
+          items:
+            type: string
+          description: Associated tags
+        metadata:
+          type: object
+          description: Additional chunk metadata
+        relevance_explanation:
+          type: string
+          description: Why this chunk was selected
+
+    # Processing Models
+    ProcessingConfig:
+      type: object
+      properties:
+        chunk_size:
+          type: integer
+          minimum: 100
+          maximum: 2000
+          default: 500
+          description: Tokens per chunk
+        chunk_overlap:
+          type: integer
+          minimum: 0
+          maximum: 500
+          default: 50
+          description: Overlap tokens between chunks
+        embedding_model:
+          type: string
+          description: Embedding model to use
+          example: "text-embedding-ada-002"
+        preserve_formatting:
+          type: boolean
+          default: false
+          description: Preserve original formatting
+        extract_tables:
+          type: boolean
+          default: true
+          description: Extract table content
+        extract_images:
+          type: boolean
+          default: false
+          description: Extract image descriptions
+        extract_entities:
+          type: boolean
+          default: true
+          description: Extract named entities
+        extract_relationships:
+          type: boolean
+          default: false
+          description: Extract entity relationships
+        generate_summary:
+          type: boolean
+          default: false
+          description: Generate document summary
+
+    # Analytics Models
+    SearchAnalytics:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+        summary:
+          type: object
+          properties:
+            total_searches:
+              type: integer
+            unique_users:
+              type: integer
+            average_response_time_ms:
+              type: number
+              format: float
+            average_relevance_score:
+              type: number
+              format: float
+            most_searched_terms:
+              type: array
+              items:
+                type: object
+                properties:
+                  term:
+                    type: string
+                  count:
+                    type: integer
+                  avg_relevance:
+                    type: number
+                    format: float
+        by_domain:
+          type: array
+          items:
+            type: object
+            properties:
+              domain_id:
+                type: string
+                format: uuid
+              domain_name:
+                type: string
+              search_count:
+                type: integer
+              avg_relevance:
+                type: number
+                format: float
+        trends:
+          type: object
+          properties:
+            daily_searches:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  count:
+                    type: integer
+
+    DocumentAnalytics:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+        summary:
+          type: object
+          properties:
+            total_documents:
+              type: integer
+            total_uploads:
+              type: integer
+            total_downloads:
+              type: integer
+            avg_document_size:
+              type: number
+              format: float
+            processing_success_rate:
+              type: number
+              format: float
+        most_accessed:
+          type: array
+          items:
+            type: object
+            properties:
+              document_id:
+                type: string
+                format: uuid
+              document_name:
+                type: string
+              access_count:
+                type: integer
+              last_accessed:
+                type: string
+                format: date-time
+        by_file_type:
+          type: array
+          items:
+            type: object
+            properties:
+              file_type:
+                type: string
+              count:
+                type: integer
+              total_size:
+                type: integer
+
+    UsageMetrics:
+      type: object
+      properties:
+        period:
+          type: string
+          enum: [today, week, month, quarter, year]
+        metrics:
+          type: object
+          properties:
+            total_documents:
+              type: integer
+            total_domains:
+              type: integer
+            total_tags:
+              type: integer
+            total_chunks:
+              type: integer
+            active_users:
+              type: integer
+            searches_per_day:
+              type: number
+              format: float
+            uploads_per_day:
+              type: number
+              format: float
+            storage_used_gb:
+              type: number
+              format: float
+            avg_processing_time_ms:
+              type: number
+              format: float
+        growth:
+          type: object
+          properties:
+            document_growth_rate:
+              type: number
+              format: float
+            search_growth_rate:
+              type: number
+              format: float
+            user_growth_rate:
+              type: number
+              format: float
+
+    # Bulk Operation Models
+    BulkUploadResponse:
+      type: object
+      required: [total_files, successful, failed_count, processing_time_ms]
+      properties:
+        uploaded:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          description: Successfully uploaded documents
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+              reason:
+                type: string
+              original_path:
+                type: string
+          description: Skipped files with reasons
+        failed:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+              error:
+                type: string
+              original_path:
+                type: string
+          description: Failed uploads with error messages
+        total_files:
+          type: integer
+          description: Total files in upload
+        successful:
+          type: integer
+          description: Successfully processed files
+        skipped_count:
+          type: integer
+          description: Number of skipped files
+        failed_count:
+          type: integer
+          description: Number of failed files
+        processing_time_ms:
+          type: integer
+          description: Total processing time
+
+    # Standard Response Models
+    SuccessResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The provided document ID is invalid"
+        details:
+          type: string
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+          format: uuid
+          description: Request identifier for tracking
+
+    HealthStatus:
+      type: object
+      required: [status, timestamp, version]
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+          description: Overall service health
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        uptime:
+          type: integer
+          description: Service uptime in seconds
+        dependencies:
+          type: object
+          properties:
+            postgresql:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            qdrant:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            minio:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            neo4j:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            redis:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            event_manager:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+        metrics:
+          type: object
+          properties:
+            total_documents:
+              type: integer
+            total_chunks:
+              type: integer
+            processing_queue_length:
+              type: integer
+            cache_hit_rate:
+              type: number
+              format: float
+            avg_search_time_ms:
+              type: number
+              format: float
+            storage_used_gb:
+              type: number
+              format: float
+        current_config:
+          type: object
+          properties:
+            default_embedding_model:
+              type: string
+            default_chunk_size:
+              type: integer
+            max_file_size_mb:
+              type: integer
+            supported_file_types:
+              type: array
+              items:
+                type: string
+
+tags:
+  - name: Health
+    description: Service health and status endpoints
+  - name: Documents
+    description: Document upload, management, and retrieval
+  - name: Domains
+    description: Knowledge domain organization and hierarchy
+  - name: Tags
+    description: Document tagging and categorization
+  - name: RAG
+    description: Retrieval-Augmented Generation operations
+  - name: Analytics
+    description: Usage analytics and insights
+  - name: Bulk Operations
+    description: Bulk document and tag operations
+  - name: Processing
+    description: Document processing status and configuration 
