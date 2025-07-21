@@ -1,0 +1,3067 @@
+openapi: 3.0.3
+info:
+  title: DADMS Requirements Extractor & Conceptualizer Service API
+  description: |
+    Requirements Extractor & Conceptualizer Service API for DADMS 2.0 - Intelligent automation for 
+    transforming unstructured knowledge artifacts into actionable requirements and conceptual system models.
+    
+    The service provides comprehensive capabilities for:
+    - Automated requirements extraction from diverse document formats
+    - Semantic enrichment with ontology-aligned tagging
+    - Conceptual model generation from requirement sets
+    - Traceability maintenance and lineage tracking
+    - Human-AI collaborative refinement workflows
+    - Multi-format export and visualization
+    
+    **Key Features:**
+    - Multi-format document processing (PDF, Word, Markdown, plaintext)
+    - Advanced NLP and LLM-powered requirement extraction
+    - Ontology-driven semantic tagging and validation
+    - Automated conceptual model generation
+    - Visual model representations and export
+    - Comprehensive traceability and audit trails
+    
+  version: "1.0.0"
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3014
+    description: Local development
+  - url: https://api.dadms.dev/requirements-extractor
+    description: Development environment
+  - url: https://api.dadms.com/requirements-extractor
+    description: Production environment
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Document Processing
+    description: Document ingestion and text processing operations
+  - name: Requirements Extraction
+    description: Requirements identification and extraction operations
+  - name: Requirements Management
+    description: Requirements CRUD and lifecycle management
+  - name: Semantic Tagging
+    description: Ontology-based semantic annotation operations
+  - name: Conceptual Modeling
+    description: System conceptual model generation and management
+  - name: Visualization
+    description: Model visualization and diagram generation
+  - name: Export & Import
+    description: Model and requirements export/import operations
+  - name: Search & Discovery
+    description: Requirements and model search operations
+  - name: Traceability
+    description: Requirement lineage and traceability operations
+  - name: Validation & Quality
+    description: Validation and quality assurance operations
+  - name: Health & Monitoring
+    description: Service health and performance monitoring
+  - name: LLM Review & Suggestions
+    description: LLM-powered requirement review and improvement suggestions
+  - name: Constraint Management
+    description: Constraint extraction, validation, and management
+  - name: Concept Clustering
+    description: Concept clustering and entity resolution operations
+  - name: Similarity Analysis
+    description: Requirement similarity and cross-domain analysis
+  - name: Iterative Extraction
+    description: Iterative extraction with convergence analysis
+  - name: Enhanced Traceability
+    description: Comprehensive traceability and impact analysis
+  - name: Graph & Vector Integration
+    description: Integration with GraphDB and Vector Store systems
+  - name: Ontology Constraints
+    description: Ontology-constrained conceptualization and validation
+
+paths:
+  # Document Processing
+  /documents/{docId}/process:
+    post:
+      tags:
+        - Document Processing
+      summary: Process document for requirement extraction
+      description: Initiate processing of a document to extract requirements
+      operationId: processDocument
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          description: Document ID from Knowledge Service
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionOptions'
+            example:
+              extraction_methods: ["nlp_analysis", "pattern_matching"]
+              confidence_threshold: 0.7
+              language: "en"
+              sections_to_include: ["requirements", "specifications"]
+              enable_human_validation: true
+              include_context: true
+      responses:
+        '202':
+          description: Processing job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingJob'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /processing-jobs/{jobId}:
+    get:
+      tags:
+        - Document Processing
+      summary: Get processing job status
+      operationId: getProcessingStatus
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Processing status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingJobStatus'
+
+  # Requirements Extraction
+  /documents/{docId}/requirements:
+    get:
+      tags:
+        - Requirements Extraction
+      summary: Get extracted requirements for document
+      operationId: getDocumentRequirements
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: filter
+          in: query
+          description: Filter requirements
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Requirements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requirements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Requirement'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      tags:
+        - Requirements Extraction
+      summary: Extract requirements from document
+      operationId: extractRequirements
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionOptions'
+      responses:
+        '201':
+          description: Requirements extracted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  extraction_job_id:
+                    type: string
+                    format: uuid
+                  requirements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Requirement'
+                  extraction_summary:
+                    $ref: '#/components/schemas/ExtractionSummary'
+
+  # Requirements Management
+  /requirements:
+    get:
+      tags:
+        - Requirements Management
+      summary: List requirements with filtering
+      operationId: listRequirements
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: requirement_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/RequirementType'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/RequirementPriority'
+        - name: validation_status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ValidationStatus'
+        - name: domain
+          in: query
+          schema:
+            type: string
+        - name: search_term
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Requirements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requirements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequirementSummary'
+                  total:
+                    type: integer
+
+    post:
+      tags:
+        - Requirements Management
+      summary: Create new requirement manually
+      operationId: createRequirement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequirementInput'
+      responses:
+        '201':
+          description: Requirement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+
+  /requirements/{requirementId}:
+    get:
+      tags:
+        - Requirements Management
+      summary: Get specific requirement
+      operationId: getRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Requirement retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+
+    put:
+      tags:
+        - Requirements Management
+      summary: Update requirement
+      operationId: updateRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequirementUpdate'
+      responses:
+        '200':
+          description: Requirement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+
+    delete:
+      tags:
+        - Requirements Management
+      summary: Delete requirement
+      operationId: deleteRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Requirement deleted successfully
+
+  # Semantic Tagging
+  /requirements/{requirementId}/tags:
+    post:
+      tags:
+        - Semantic Tagging
+      summary: Add semantic tags to requirement
+      operationId: tagRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ontology_tags:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OntologyTag'
+      responses:
+        '201':
+          description: Tags added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added_tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OntologyTag'
+
+    get:
+      tags:
+        - Semantic Tagging
+      summary: Get semantic tags for requirement
+      operationId: getRequirementTags
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ontology_tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OntologyTag'
+                  semantic_concepts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SemanticConcept'
+
+  # Conceptual Modeling
+  /conceptual-models:
+    post:
+      tags:
+        - Conceptual Modeling
+      summary: Generate conceptual model from requirements
+      operationId: generateConceptualModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requirements:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array of requirement IDs
+                modeling_options:
+                  $ref: '#/components/schemas/ModelingOptions'
+                model_name:
+                  type: string
+                model_description:
+                  type: string
+              required:
+                - requirements
+                - model_name
+            example:
+              requirements: ["req-123", "req-456", "req-789"]
+              model_name: "User Authentication System"
+              model_description: "Conceptual model for user authentication requirements"
+              modeling_options:
+                modeling_methodology: "service_oriented"
+                abstraction_level: "logical"
+                component_granularity: "medium"
+      responses:
+        '201':
+          description: Conceptual model generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptualModel'
+
+    get:
+      tags:
+        - Conceptual Modeling
+      summary: List conceptual models
+      operationId: listConceptualModels
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: model_type
+          in: query
+          schema:
+            type: string
+        - name: validation_status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Models retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConceptualModelSummary'
+                  total:
+                    type: integer
+
+  /conceptual-models/{modelId}:
+    get:
+      tags:
+        - Conceptual Modeling
+      summary: Get specific conceptual model
+      operationId: getConceptualModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Model retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptualModel'
+
+    put:
+      tags:
+        - Conceptual Modeling
+      summary: Update conceptual model
+      operationId: updateConceptualModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelUpdate'
+      responses:
+        '200':
+          description: Model updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptualModel'
+
+    delete:
+      tags:
+        - Conceptual Modeling
+      summary: Delete conceptual model
+      operationId: deleteConceptualModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Model deleted successfully
+
+  # Model Analysis
+  /conceptual-models/{modelId}/coverage:
+    get:
+      tags:
+        - Conceptual Modeling
+      summary: Analyze requirement coverage in model
+      operationId: analyzeRequirementCoverage
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Coverage analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageAnalysis'
+
+  /conceptual-models/{modelId}/gaps:
+    get:
+      tags:
+        - Conceptual Modeling
+      summary: Identify gaps in conceptual model
+      operationId: identifyModelGaps
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Gap analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GapAnalysis'
+
+  # Visualization
+  /conceptual-models/{modelId}/visualizations:
+    post:
+      tags:
+        - Visualization
+      summary: Generate model visualization
+      operationId: generateModelVisualization
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                view_type:
+                  $ref: '#/components/schemas/VisualizationType'
+                format:
+                  type: string
+                  enum: [svg, png, pdf, html]
+                options:
+                  type: object
+                  additionalProperties: true
+              required:
+                - view_type
+      responses:
+        '201':
+          description: Visualization generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisualizationResult'
+
+    get:
+      tags:
+        - Visualization
+      summary: List available visualizations for model
+      operationId: getModelVisualizations
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Visualizations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  visualizations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VisualizationSummary'
+
+  # Export & Import
+  /conceptual-models/{modelId}/export:
+    get:
+      tags:
+        - Export & Import
+      summary: Export conceptual model
+      operationId: exportConceptualModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ExportFormat'
+        - name: include_requirements
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: include_traceability
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Model exported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResult'
+            application/xml:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: string
+
+  /requirements/export:
+    get:
+      tags:
+        - Export & Import
+      summary: Export requirements
+      operationId: exportRequirements
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: document_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [json, csv, excel, xml]
+        - name: include_tags
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Requirements exported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResult'
+
+  # Search & Discovery
+  /search/requirements:
+    get:
+      tags:
+        - Search & Discovery
+      summary: Search requirements
+      operationId: searchRequirements
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+        - name: search_type
+          in: query
+          schema:
+            type: string
+            enum: [text, semantic, hybrid]
+            default: hybrid
+        - name: filters
+          in: query
+          description: JSON-encoded filter object
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequirementSearchResult'
+                  total:
+                    type: integer
+                  query_time_ms:
+                    type: integer
+
+  /search/models:
+    get:
+      tags:
+        - Search & Discovery
+      summary: Search conceptual models
+      operationId: searchConceptualModels
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: model_type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelSearchResult'
+                  total:
+                    type: integer
+
+  /requirements/{requirementId}/similar:
+    get:
+      tags:
+        - Search & Discovery
+      summary: Find similar requirements
+      operationId: findSimilarRequirements
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: similarity_threshold
+          in: query
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.7
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Similar requirements found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimilarityResult'
+
+  # Traceability
+  /requirements/{requirementId}/lineage:
+    get:
+      tags:
+        - Traceability
+      summary: Get requirement lineage
+      operationId: getRequirementLineage
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: depth
+          in: query
+          description: Lineage depth (default: 3)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 3
+      responses:
+        '200':
+          description: Lineage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementLineage'
+
+  /conceptual-models/{modelId}/traceability:
+    get:
+      tags:
+        - Traceability
+      summary: Get model traceability matrix
+      operationId: getModelTraceability
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Traceability matrix retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceabilityMatrix'
+
+  # Validation & Quality
+  /requirements/{requirementId}/validate:
+    post:
+      tags:
+        - Validation & Quality
+      summary: Validate requirement
+      operationId: validateRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                validation_rules:
+                  type: array
+                  items:
+                    type: string
+                include_semantic_validation:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  /documents/{docId}/extraction-quality:
+    get:
+      tags:
+        - Validation & Quality
+      summary: Get extraction quality report
+      operationId: getExtractionQuality
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quality report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionQualityReport'
+
+  # Health & Monitoring
+  /health:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Service health check
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /metrics:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Service metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceMetrics'
+
+  # Enhanced Intelligence Capabilities
+  # LLM Review & Suggestions
+  /requirements/{requirementId}/review:
+    post:
+      tags:
+        - LLM Review & Suggestions
+      summary: Review requirement with LLM
+      description: Generate intelligent review and improvement suggestions for a requirement
+      operationId: reviewRequirement
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewOptions'
+      responses:
+        '200':
+          description: Review completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requirements/{requirementId}/suggestions:
+    get:
+      tags:
+        - LLM Review & Suggestions
+      summary: Get improvement suggestions
+      description: Retrieve LLM-generated improvement suggestions for a requirement
+      operationId: getImprovementSuggestions
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImprovementSuggestion'
+
+  # Constraint Management
+  /requirements/{requirementId}/constraints:
+    post:
+      tags:
+        - Constraint Management
+      summary: Extract constraints from requirement
+      description: Extract and classify constraints from a requirement text
+      operationId: extractConstraints
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Constraints extracted successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtractedConstraint'
+
+  /constraints:
+    get:
+      tags:
+        - Constraint Management
+      summary: List constraints
+      description: Retrieve constraints with filtering options
+      operationId: getConstraints
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [performance, capacity, timing, security, safety, regulatory]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [functional, non_functional, business, technical, physical]
+      responses:
+        '200':
+          description: Constraints retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtractedConstraint'
+
+  # Concept Clustering
+  /concepts/cluster:
+    post:
+      tags:
+        - Concept Clustering
+      summary: Cluster concepts
+      description: Group similar concepts into clusters with master concept identification
+      operationId: clusterConcepts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                concept_ids:
+                  type: array
+                  items:
+                    type: string
+                clustering_options:
+                  $ref: '#/components/schemas/ClusteringOptions'
+      responses:
+        '200':
+          description: Clustering completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptCluster'
+
+  /concepts/clusters:
+    get:
+      tags:
+        - Concept Clustering
+      summary: List concept clusters
+      description: Retrieve existing concept clusters with filtering
+      operationId: getConceptClusters
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+        - name: confidence_threshold
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+      responses:
+        '200':
+          description: Clusters retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConceptCluster'
+
+  # Similarity Analysis
+  /requirements/{requirementId}/similarity:
+    post:
+      tags:
+        - Similarity Analysis
+      summary: Analyze requirement similarity
+      description: Find similar requirements across domains with detailed analysis
+      operationId: analyzeSimilarity
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimilarityOptions'
+      responses:
+        '200':
+          description: Similarity analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarityAnalysis'
+
+  # Iterative Extraction
+  /documents/{docId}/extraction/start:
+    post:
+      tags:
+        - Iterative Extraction
+      summary: Start iterative extraction
+      description: Begin iterative requirement extraction with convergence tracking
+      operationId: startIterativeExtraction
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IterativeExtractionConfig'
+      responses:
+        '201':
+          description: Extraction session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionSession'
+
+  /extraction-sessions/{sessionId}/continue:
+    post:
+      tags:
+        - Iterative Extraction
+      summary: Continue extraction iteration
+      description: Continue to next iteration in the extraction process
+      operationId: continueExtraction
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Iteration completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionIteration'
+
+  # Enhanced Traceability
+  /requirements/{requirementId}/full-trace:
+    get:
+      tags:
+        - Enhanced Traceability
+      summary: Get comprehensive traceability
+      description: Retrieve complete traceability information for a requirement
+      operationId: getFullTraceability
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Traceability information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComprehensiveTrace'
+
+  /requirements/{requirementId}/impact:
+    get:
+      tags:
+        - Enhanced Traceability
+      summary: Analyze requirement impact
+      description: Analyze the impact of a requirement on the overall system
+      operationId: getImpactAnalysis
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Impact analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementImpactAnalysis'
+
+  # Graph & Vector Integration
+  /requirements/sync/graph:
+    post:
+      tags:
+        - Graph & Vector Integration
+      summary: Sync to GraphDB
+      description: Synchronize requirements and relationships to GraphDB
+      operationId: syncToGraphDB
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requirement_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Synchronization completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphSyncResult'
+
+  /requirements/{requirementId}/semantic-neighbors:
+    get:
+      tags:
+        - Graph & Vector Integration
+      summary: Get semantic neighbors
+      description: Find semantically related requirements using vector embeddings
+      operationId: getSemanticNeighbors
+      parameters:
+        - name: requirementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: neighborhood_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Semantic neighbors retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SemanticNeighbor'
+
+  # Ontology Constraints
+  /ontology-constraints:
+    post:
+      tags:
+        - Ontology Constraints
+      summary: Create ontology constraint
+      description: Create a new ontology constraint for conceptualization
+      operationId: createOntologyConstraint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OntologyConstraint'
+      responses:
+        '201':
+          description: Ontology constraint created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  constraint_id:
+                    type: string
+                    format: uuid
+
+  /concepts/{conceptId}/validate-ontology:
+    post:
+      tags:
+        - Ontology Constraints
+      summary: Validate concept against ontology
+      description: Validate an extracted concept against specified ontology constraints
+      operationId: validateConceptAgainstOntology
+      parameters:
+        - name: conceptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ontology_id:
+                  type: string
+                  format: uuid
+                validation_mode:
+                  type: string
+                  enum: [strict, permissive, guided, best_effort]
+      responses:
+        '200':
+          description: Concept validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptValidationResult'
+
+  /conceptual-models/{modelId}/generate-with-ontology:
+    post:
+      tags:
+        - Ontology Constraints
+      summary: Generate model with ontology constraints
+      description: Generate conceptual model constrained by specified ontology
+      operationId: generateConceptualModelWithOntology
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requirement_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                ontology_id:
+                  type: string
+                  format: uuid
+                modeling_options:
+                  $ref: '#/components/schemas/OntologyModelingOptions'
+      responses:
+        '201':
+          description: Ontology-constrained model generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConceptualModel'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Models
+    Requirement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        normalized_text:
+          type: string
+        requirement_type:
+          $ref: '#/components/schemas/RequirementType'
+        priority:
+          $ref: '#/components/schemas/RequirementPriority'
+        domain:
+          type: string
+        category:
+          type: string
+        ontology_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyTag'
+        semantic_concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticConcept'
+        source_document:
+          $ref: '#/components/schemas/DocumentReference'
+        extraction_context:
+          $ref: '#/components/schemas/ExtractionContext'
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        validation_status:
+          $ref: '#/components/schemas/ValidationStatus'
+        extracted_by:
+          type: string
+        extracted_at:
+          type: string
+          format: date-time
+        last_updated_at:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - id
+        - requirement_text
+        - requirement_type
+        - priority
+        - validation_status
+        - extracted_at
+
+    RequirementType:
+      type: string
+      enum:
+        - functional
+        - non_functional
+        - business
+        - user
+        - technical
+        - regulatory
+        - interface
+        - data
+        - security
+        - operational
+
+    RequirementPriority:
+      type: string
+      enum:
+        - critical
+        - high
+        - medium
+        - low
+        - undefined
+
+    ValidationStatus:
+      type: string
+      enum:
+        - unvalidated
+        - validated
+        - rejected
+        - modified
+        - duplicate
+        - incomplete
+
+    OntologyTag:
+      type: object
+      properties:
+        ontology_id:
+          type: string
+        class_uri:
+          type: string
+          format: uri
+        property_uri:
+          type: string
+          format: uri
+        label:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        context:
+          type: string
+        tagged_by:
+          type: string
+        tagged_at:
+          type: string
+          format: date-time
+      required:
+        - ontology_id
+        - class_uri
+        - label
+        - confidence
+
+    SemanticConcept:
+      type: object
+      properties:
+        concept_id:
+          type: string
+        concept_label:
+          type: string
+        concept_type:
+          type: string
+          enum: [entity, process, function, attribute, relationship, constraint, goal, stakeholder]
+        definition:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        domain_relevance:
+          type: number
+          minimum: 0
+          maximum: 1
+      required:
+        - concept_id
+        - concept_label
+        - concept_type
+
+    ConceptualModel:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        model_name:
+          type: string
+        model_description:
+          type: string
+        model_type:
+          type: string
+        version:
+          type: string
+        validation_status:
+          type: string
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        source_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+        system_components:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemComponent'
+        system_behaviors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemBehavior'
+        system_interfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemInterface'
+        generated_by:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        last_updated_at:
+          type: string
+          format: date-time
+      required:
+        - model_id
+        - model_name
+        - model_type
+        - version
+        - validation_status
+
+    SystemComponent:
+      type: object
+      properties:
+        component_id:
+          type: string
+          format: uuid
+        component_name:
+          type: string
+        component_description:
+          type: string
+        component_type:
+          type: string
+          enum: [service, module, database, interface, external_system, hardware, framework, utility]
+        responsibilities:
+          type: array
+          items:
+            type: string
+        allocated_functions:
+          type: array
+          items:
+            type: string
+        interfaces:
+          type: array
+          items:
+            type: string
+        derived_from_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - component_id
+        - component_name
+        - component_type
+
+    SystemBehavior:
+      type: object
+      properties:
+        behavior_id:
+          type: string
+          format: uuid
+        behavior_name:
+          type: string
+        behavior_description:
+          type: string
+        behavior_type:
+          type: string
+          enum: [normal_flow, alternative_flow, exception_flow, initialization, shutdown, maintenance]
+        trigger_conditions:
+          type: array
+          items:
+            type: string
+        behavior_steps:
+          type: array
+          items:
+            type: object
+        participating_components:
+          type: array
+          items:
+            type: string
+        derived_from_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - behavior_id
+        - behavior_name
+        - behavior_type
+
+    SystemInterface:
+      type: object
+      properties:
+        interface_id:
+          type: string
+          format: uuid
+        interface_name:
+          type: string
+        interface_description:
+          type: string
+        interface_type:
+          type: string
+          enum: [api, ui, database, message, file, network, hardware]
+        provider_component:
+          type: string
+        consumer_components:
+          type: array
+          items:
+            type: string
+        operations:
+          type: array
+          items:
+            type: object
+        derived_from_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - interface_id
+        - interface_name
+        - interface_type
+
+    # Processing Models
+    ProcessingJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        job_type:
+          type: string
+        document_id:
+          type: string
+          format: uuid
+        processing_status:
+          type: string
+          enum: [pending, processing, completed, failed, cancelled]
+        progress_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        started_by:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+        processing_options:
+          type: object
+      required:
+        - job_id
+        - job_type
+        - processing_status
+
+    ProcessingJobStatus:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        processing_status:
+          type: string
+        progress_percentage:
+          type: integer
+        current_stage:
+          type: string
+        stages_completed:
+          type: array
+          items:
+            type: string
+        results_preview:
+          type: object
+        error_message:
+          type: string
+        completed_at:
+          type: string
+          format: date-time
+
+    ExtractionOptions:
+      type: object
+      properties:
+        extraction_methods:
+          type: array
+          items:
+            type: string
+            enum: [pattern_matching, nlp_analysis, llm_extraction, hybrid]
+        confidence_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+        language:
+          type: string
+          default: "en"
+        sections_to_include:
+          type: array
+          items:
+            type: string
+        sections_to_exclude:
+          type: array
+          items:
+            type: string
+        enable_human_validation:
+          type: boolean
+          default: true
+        include_context:
+          type: boolean
+          default: true
+        preserve_formatting:
+          type: boolean
+          default: false
+        generate_summaries:
+          type: boolean
+          default: true
+
+    ModelingOptions:
+      type: object
+      properties:
+        modeling_methodology:
+          type: string
+          enum: [structured_analysis, object_oriented, service_oriented, domain_driven, microservices, event_driven]
+        abstraction_level:
+          type: string
+          enum: [conceptual, logical, physical]
+        decomposition_depth:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+        component_granularity:
+          type: string
+          enum: [fine, medium, coarse]
+        include_exception_flows:
+          type: boolean
+          default: true
+        generate_sequence_diagrams:
+          type: boolean
+          default: false
+
+    # Analysis Models
+    CoverageAnalysis:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        total_requirements:
+          type: integer
+        covered_requirements:
+          type: integer
+        coverage_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        coverage_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequirementCoverage'
+        gaps_identified:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    RequirementCoverage:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        coverage_type:
+          type: string
+          enum: [fully_covered, partially_covered, not_covered, over_specified]
+        covering_elements:
+          type: array
+          items:
+            type: object
+            properties:
+              element_type:
+                type: string
+              element_id:
+                type: string
+              coverage_contribution:
+                type: number
+        coverage_completeness:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    GapAnalysis:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        identified_gaps:
+          type: array
+          items:
+            type: object
+            properties:
+              gap_type:
+                type: string
+              gap_description:
+                type: string
+              severity:
+                type: string
+                enum: [low, medium, high, critical]
+              recommendations:
+                type: array
+                items:
+                  type: string
+        completeness_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        consistency_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    # Visualization Models
+    VisualizationType:
+      type: string
+      enum:
+        - component_diagram
+        - behavior_diagram
+        - interface_diagram
+        - system_overview
+        - requirements_map
+        - traceability_matrix
+
+    VisualizationResult:
+      type: object
+      properties:
+        visualization_id:
+          type: string
+          format: uuid
+        view_type:
+          $ref: '#/components/schemas/VisualizationType'
+        format:
+          type: string
+        content:
+          type: string
+          description: Base64 encoded content or URL
+        download_url:
+          type: string
+          format: uri
+        metadata:
+          type: object
+        generated_at:
+          type: string
+          format: date-time
+
+    VisualizationSummary:
+      type: object
+      properties:
+        visualization_id:
+          type: string
+          format: uuid
+        view_type:
+          $ref: '#/components/schemas/VisualizationType'
+        format:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # Export Models
+    ExportFormat:
+      type: string
+      enum:
+        - json
+        - xml
+        - bpmn
+        - graphml
+        - sysml
+        - csv
+        - excel
+
+    ExportResult:
+      type: object
+      properties:
+        export_id:
+          type: string
+          format: uuid
+        format:
+          $ref: '#/components/schemas/ExportFormat'
+        content:
+          type: string
+        download_url:
+          type: string
+          format: uri
+        metadata:
+          type: object
+        exported_at:
+          type: string
+          format: date-time
+
+    # Search Models
+    RequirementSearchResult:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        requirement_type:
+          $ref: '#/components/schemas/RequirementType'
+        priority:
+          $ref: '#/components/schemas/RequirementPriority'
+        domain:
+          type: string
+        relevance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        matched_fields:
+          type: array
+          items:
+            type: string
+        source_document:
+          type: string
+
+    ModelSearchResult:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        model_name:
+          type: string
+        model_description:
+          type: string
+        model_type:
+          type: string
+        component_count:
+          type: integer
+        behavior_count:
+          type: integer
+        relevance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    SimilarityResult:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        similarity_reasons:
+          type: array
+          items:
+            type: string
+
+    # Traceability Models
+    RequirementLineage:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        source_documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentReference'
+        derived_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+        implementing_components:
+          type: array
+          items:
+            type: string
+        implementing_behaviors:
+          type: array
+          items:
+            type: string
+        related_models:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    TraceabilityMatrix:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        requirements_to_components:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        components_to_behaviors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        requirements_to_behaviors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    # Validation Models
+    ValidationResult:
+      type: object
+      properties:
+        is_valid:
+          type: boolean
+        validation_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        validation_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error_code:
+                type: string
+              error_message:
+                type: string
+              severity:
+                type: string
+                enum: [low, medium, high, critical]
+        validation_warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              warning_code:
+                type: string
+              warning_message:
+                type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    ExtractionQualityReport:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        extraction_method:
+          type: string
+        requirements_extracted:
+          type: integer
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidence_distribution:
+          type: object
+          properties:
+            high_confidence:
+              type: integer
+            medium_confidence:
+              type: integer
+            low_confidence:
+              type: integer
+        extraction_issues:
+          type: array
+          items:
+            type: object
+            properties:
+              issue_type:
+                type: string
+              description:
+                type: string
+              recommendations:
+                type: array
+                items:
+                  type: string
+
+    # Utility Models
+    DocumentReference:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        document_name:
+          type: string
+        section:
+          type: string
+        page_number:
+          type: integer
+        line_range:
+          type: object
+          properties:
+            start:
+              type: integer
+            end:
+              type: integer
+      required:
+        - document_id
+        - document_name
+
+    ExtractionContext:
+      type: object
+      properties:
+        surrounding_text:
+          type: string
+        section_heading:
+          type: string
+        extraction_method:
+          type: string
+        linguistic_features:
+          type: array
+          items:
+            type: object
+
+    ExtractionSummary:
+      type: object
+      properties:
+        total_extracted:
+          type: integer
+        by_type:
+          type: object
+          additionalProperties:
+            type: integer
+        by_priority:
+          type: object
+          additionalProperties:
+            type: integer
+        average_confidence:
+          type: number
+        processing_time_ms:
+          type: integer
+
+    RequirementSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        requirement_type:
+          $ref: '#/components/schemas/RequirementType'
+        priority:
+          $ref: '#/components/schemas/RequirementPriority'
+        validation_status:
+          $ref: '#/components/schemas/ValidationStatus'
+        confidence_score:
+          type: number
+        extracted_at:
+          type: string
+          format: date-time
+
+    ConceptualModelSummary:
+      type: object
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        model_name:
+          type: string
+        model_description:
+          type: string
+        model_type:
+          type: string
+        validation_status:
+          type: string
+        component_count:
+          type: integer
+        behavior_count:
+          type: integer
+        interface_count:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
+
+    RequirementInput:
+      type: object
+      properties:
+        requirement_text:
+          type: string
+        requirement_type:
+          $ref: '#/components/schemas/RequirementType'
+        priority:
+          $ref: '#/components/schemas/RequirementPriority'
+        domain:
+          type: string
+        category:
+          type: string
+        source_document_id:
+          type: string
+          format: uuid
+        custom_attributes:
+          type: object
+      required:
+        - requirement_text
+        - requirement_type
+        - priority
+
+    RequirementUpdate:
+      type: object
+      properties:
+        requirement_text:
+          type: string
+        requirement_type:
+          $ref: '#/components/schemas/RequirementType'
+        priority:
+          $ref: '#/components/schemas/RequirementPriority'
+        domain:
+          type: string
+        category:
+          type: string
+        validation_status:
+          $ref: '#/components/schemas/ValidationStatus'
+        custom_attributes:
+          type: object
+
+    ModelUpdate:
+      type: object
+      properties:
+        model_name:
+          type: string
+        model_description:
+          type: string
+        validation_status:
+          type: string
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    # Health & Monitoring
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime:
+          type: integer
+        components:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+            nlp_engine:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+            semantic_tagger:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+            llm_service:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+            document_processor:
+              type: string
+              enum: [healthy, degraded, unhealthy]
+      required:
+        - status
+        - timestamp
+        - version
+        - uptime
+
+    ServiceMetrics:
+      type: object
+      properties:
+        documents_processed:
+          type: object
+          properties:
+            total:
+              type: integer
+            last_24h:
+              type: integer
+            success_rate:
+              type: number
+            average_processing_time_ms:
+              type: number
+        requirements_extracted:
+          type: object
+          properties:
+            total:
+              type: integer
+            last_24h:
+              type: integer
+            by_type:
+              type: object
+              additionalProperties:
+                type: integer
+            average_confidence:
+              type: number
+        models_generated:
+          type: object
+          properties:
+            total:
+              type: integer
+            last_24h:
+              type: integer
+            average_quality_score:
+              type: number
+        performance:
+          type: object
+          properties:
+            avg_response_time_ms:
+              type: number
+            p95_response_time_ms:
+              type: number
+            requests_per_second:
+              type: number
+            error_rate:
+              type: number
+        collected_at:
+          type: string
+          format: date-time
+
+    # Common Response Models
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - success
+        - error
+        - message
+        - timestamp
+
+    # Enhanced Intelligence Schemas
+    # LLM Review & Suggestions
+    RequirementReview:
+      type: object
+      properties:
+        review_id:
+          type: string
+          format: uuid
+        requirement_id:
+          type: string
+          format: uuid
+        review_timestamp:
+          type: string
+          format: date-time
+        reviewer_agent:
+          type: string
+        quality_score:
+          $ref: '#/components/schemas/QualityScore'
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImprovementSuggestion'
+        identified_constraints:
+          type: array
+          items:
+            type: string
+        review_status:
+          type: string
+          enum: [pending, completed, validated, rejected]
+
+    QualityScore:
+      type: object
+      properties:
+        overall_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        completeness_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        clarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        testability_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        consistency_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        scoring_rationale:
+          type: string
+        improvement_potential:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    ImprovementSuggestion:
+      type: object
+      properties:
+        suggestion_id:
+          type: string
+          format: uuid
+        suggestion_type:
+          type: string
+          enum: [clarity_improvement, completeness_enhancement, consistency_fix, testability_enhancement]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        current_text:
+          type: string
+        suggested_text:
+          type: string
+        rationale:
+          type: string
+
+    ReviewOptions:
+      type: object
+      properties:
+        review_depth:
+          type: string
+          enum: [quick, standard, comprehensive]
+          default: standard
+        include_suggestions:
+          type: boolean
+          default: true
+
+    # Constraint Management
+    ExtractedConstraint:
+      type: object
+      properties:
+        constraint_id:
+          type: string
+          format: uuid
+        constraint_text:
+          type: string
+        constraint_type:
+          type: string
+          enum: [performance, capacity, timing, security, safety, regulatory]
+        source_requirement_id:
+          type: string
+          format: uuid
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        bounds:
+          $ref: '#/components/schemas/ConstraintBounds'
+        validation_status:
+          $ref: '#/components/schemas/ValidationStatus'
+
+    ConstraintBounds:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [exact, minimum, maximum, range, target]
+        min_value:
+          type: number
+        max_value:
+          type: number
+        units:
+          type: string
+
+    # Concept Clustering
+    ConceptCluster:
+      type: object
+      properties:
+        cluster_id:
+          type: string
+          format: uuid
+        master_concept:
+          $ref: '#/components/schemas/MasterConcept'
+        variant_concepts:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantConcept'
+        cluster_confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        clustering_method:
+          type: string
+          enum: [semantic_similarity, lexical_similarity, ontology_mapping, context_analysis, hybrid]
+
+    MasterConcept:
+      type: object
+      properties:
+        preferred_label:
+          type: string
+        definition:
+          type: string
+        concept_type:
+          type: string
+          enum: [entity, process, function, attribute, relationship, constraint]
+        domain:
+          type: string
+
+    VariantConcept:
+      type: object
+      properties:
+        variant_label:
+          type: string
+        frequency:
+          type: integer
+        similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    ClusteringOptions:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [semantic_similarity, lexical_similarity, ontology_mapping]
+        similarity_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.8
+
+    # Similarity Analysis
+    SimilarityAnalysis:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+        target_requirement_id:
+          type: string
+          format: uuid
+        similar_requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarRequirement'
+        highest_similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    SimilarRequirement:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        source_domain:
+          type: string
+
+    SimilarityOptions:
+      type: object
+      properties:
+        similarity_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+        include_cross_domain:
+          type: boolean
+          default: true
+
+    # Iterative Extraction
+    ExtractionSession:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        session_status:
+          type: string
+          enum: [active, converged, terminated]
+        total_iterations:
+          type: integer
+        requirements_found:
+          type: integer
+
+    ExtractionIteration:
+      type: object
+      properties:
+        iteration_id:
+          type: string
+          format: uuid
+        iteration_number:
+          type: integer
+        new_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+        convergence_metrics:
+          $ref: '#/components/schemas/ConvergenceMetrics'
+
+    ConvergenceMetrics:
+      type: object
+      properties:
+        new_requirement_rate:
+          type: number
+        novelty_score:
+          type: number
+        convergence_threshold_met:
+          type: boolean
+
+    IterativeExtractionConfig:
+      type: object
+      properties:
+        max_iterations:
+          type: integer
+          default: 10
+        convergence_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.95
+
+    # Enhanced Traceability
+    ComprehensiveTrace:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        source_lineage:
+          type: object
+        downstream_impact:
+          type: object
+
+    RequirementImpactAnalysis:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        impact_scope:
+          type: object
+        risk_assessment:
+          type: object
+
+    # Graph & Vector Integration
+    GraphSyncResult:
+      type: object
+      properties:
+        sync_id:
+          type: string
+          format: uuid
+        synced_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+        nodes_created:
+          type: integer
+        sync_status:
+          type: string
+          enum: [success, partial, failed]
+
+    VectorSyncResult:
+      type: object
+      properties:
+        sync_id:
+          type: string
+          format: uuid
+        synced_requirements:
+          type: array
+          items:
+            type: string
+            format: uuid
+        embeddings_created:
+          type: integer
+
+    SemanticNeighbor:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+          format: uuid
+        requirement_text:
+          type: string
+        semantic_similarity:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    KnowledgeGraphView:
+      type: object
+      properties:
+        root_requirement_id:
+          type: string
+          format: uuid
+        nodes:
+          type: array
+          items:
+            type: object
+        edges:
+          type: array
+          items:
+            type: object
+
+    # Ontology Constraint Schemas
+    OntologyConstraint:
+      type: object
+      properties:
+        constraint_id:
+          type: string
+          format: uuid
+        ontology_id:
+          type: string
+          format: uuid
+        ontology_version:
+          type: string
+        constraint_type:
+          type: string
+          enum: [class_membership, relationship_existence, property_value, inheritance_compliance]
+        validation_mode:
+          type: string
+          enum: [strict, permissive, guided, best_effort]
+        fallback_strategy:
+          type: string
+          enum: [reject, warn, adapt, extend, manual_review]
+        required_classes:
+          type: array
+          items:
+            type: string
+        forbidden_classes:
+          type: array
+          items:
+            type: string
+        is_active:
+          type: boolean
+
+    ConceptValidationResult:
+      type: object
+      properties:
+        validation_id:
+          type: string
+          format: uuid
+        concept_id:
+          type: string
+          format: uuid
+        ontology_id:
+          type: string
+          format: uuid
+        is_valid:
+          type: boolean
+        validation_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        compliance_level:
+          type: string
+          enum: [full_compliance, partial_compliance, semantic_compliance, structural_compliance, no_compliance]
+        validation_issues:
+          type: array
+          items:
+            type: object
+            properties:
+              issue_type:
+                type: string
+              severity:
+                type: string
+                enum: [critical, high, medium, low, info]
+              description:
+                type: string
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              recommendation_type:
+                type: string
+              priority:
+                type: string
+              description:
+                type: string
+
+    OntologyModelingOptions:
+      type: object
+      properties:
+        ontology_binding:
+          $ref: '#/components/schemas/OntologyBinding'
+        concept_mapping_strategy:
+          type: string
+          enum: [exact_match, semantic_similarity, lexical_similarity, hybrid_approach]
+        validation_frequency:
+          type: string
+          enum: [real_time, batch_validation, on_completion, on_demand]
+        enable_compliance_monitoring:
+          type: boolean
+        generate_compliance_reports:
+          type: boolean
+
+    OntologyBinding:
+      type: object
+      properties:
+        ontology_id:
+          type: string
+          format: uuid
+        ontology_version:
+          type: string
+        binding_mode:
+          type: string
+          enum: [strict, guided, permissive, advisory]
+        constraint_scope:
+          type: string
+          enum: [all_concepts, system_concepts, component_concepts, behavior_concepts]
+        minimum_compliance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        allow_class_extension:
+          type: boolean
+        allow_property_extension:
+          type: boolean
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "BAD_REQUEST"
+            message: "Invalid request parameters"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "NOT_FOUND"
+            message: "Resource not found"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2025-01-15T14:35:12Z" 

@@ -31,6 +31,8 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 - **[Simulation Manager API](api/simulation_manager_api_endpoints.md)**: Comprehensive simulation execution and orchestration API
 - **[Analysis Manager API](api/analysis_manager_api_endpoints.md)**: Comprehensive intelligent analysis and decision-support API
 - **[Parameter Manager API](development/backend/parameter_manager_service_api_endpoints.md)**: Comprehensive parameter lifecycle management and validation API
+- **[Requirements Extractor & Conceptualizer API](development/backend/requirements_extractor_service_api_endpoints.md)**: Comprehensive intelligent requirements extraction and conceptual modeling API
+- **[Memory Manager API](development/backend/memory_manager_service_api_endpoints.md)**: Comprehensive memory management with categorization, lifecycle intelligence, and semantic retrieval API
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides

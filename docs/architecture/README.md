@@ -41,6 +41,7 @@ flowchart TD
         SimulationManager["Simulation Manager<br/>(Port 3011)"]
         AnalysisManager["Analysis Manager<br/>(Port 3012)"]
         ParameterManager["Parameter Manager<br/>(Port 3013)"]
+        RequirementsExtractor["Requirements Extractor<br/>(Port 3014)"]
     end
     
     %% UI connections
@@ -61,6 +62,7 @@ flowchart TD
     SimulationManager --> EventManager
     AnalysisManager --> EventManager
     ParameterManager --> EventManager
+    RequirementsExtractor --> EventManager
     
     %% EventManager back to services
     EventManager --> AAS
@@ -69,6 +71,7 @@ flowchart TD
     EventManager --> SimulationManager
     EventManager --> AnalysisManager
     EventManager --> ParameterManager
+    EventManager --> RequirementsExtractor
     
     %% Service interconnections
     ProcessManager --> LLMService
@@ -84,6 +87,10 @@ flowchart TD
     AnalysisManager --> AAS
     AnalysisManager --> ParameterManager
     ParameterManager --> DataManager
+    RequirementsExtractor --> KnowledgeService
+    RequirementsExtractor --> DataManager
+    RequirementsExtractor --> ModelManager
+    RequirementsExtractor --> ProcessManager
     
     classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
     classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -93,15 +100,15 @@ flowchart TD
     class WebUI,Playground ui;
     class ProjectService,LLMService,KnowledgeService,AAS core;
     class EventManager event;
-    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager process;
+    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor process;
 ```
 
 **Port Allocation:**
 - **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
 - **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
 - **Event System**: 3004 (EventManager)
-- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter)
-- **Future Services**: 3014+
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements)
+- **Future Services**: 3015+
 
 ### Data Architecture
 
@@ -140,6 +147,10 @@ flowchart TD
         EventManager --> Redis
         AAS --> Qdrant
         AAS --> Neo4j
+        RequirementsExtractor --> PostgreSQL
+        RequirementsExtractor --> Qdrant
+        RequirementsExtractor --> Neo4j
+        RequirementsExtractor --> MinIO
     end
     
     classDef primary fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -166,6 +177,8 @@ flowchart TD
 - **[Simulation Manager Service](./simulation_manager_specification.md)** - Scalable simulation execution and orchestration hub
 - **[Analysis Manager Service](./analysis_manager_specification.md)** - Intelligent evaluation and decision-support analytics hub
 - **[Parameter Manager Service](./parameter_manager_specification.md)** - Centralized parameter lifecycle management and validation hub
+- **[Requirements Extractor & Conceptualizer Service](./requirements_extractor_specification.md)** - Intelligent automation for requirements extraction and conceptual modeling
+- **[Memory Manager Service](./memory_manager_specification.md)** - Sophisticated memory management with categorization, lifecycle intelligence, and semantic retrieval
 
 ### Future Services (Planned)
 - **OntologyManager Service** - Domain knowledge and semantic modeling
