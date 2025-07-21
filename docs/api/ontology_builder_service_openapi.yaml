@@ -1,0 +1,1851 @@
+openapi: 3.0.3
+info:
+  title: DADMS Ontology Builder Service API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for the DADMS 2.0 Ontology Builder Service. Defines endpoints for probabilistic 
+    ontology extraction using LLM teams, entity clustering, quality assessment, and integration with 
+    semantic web technologies. Supports advanced knowledge engineering workflows with statistical analysis 
+    and version management.
+
+servers:
+  - url: http://localhost:3009
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Models
+    Ontology:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique ontology identifier
+        name:
+          type: string
+          description: Ontology name/title
+        description:
+          type: string
+          description: Ontology description
+        version:
+          type: string
+          description: Ontology version (semantic versioning)
+        domain:
+          type: string
+          description: Domain classification
+        scope:
+          type: string
+          enum: [general, domain, project]
+          description: Ontology scope
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relationship'
+        metadata:
+          $ref: '#/components/schemas/OntologyMetadata'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - version
+        - scope
+
+    OntologyCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Ontology name/title
+        description:
+          type: string
+          description: Ontology description
+        domain:
+          type: string
+          description: Domain classification
+        scope:
+          type: string
+          enum: [general, domain, project]
+          description: Ontology scope
+      required:
+        - name
+        - scope
+
+    OntologyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Ontology name/title
+        description:
+          type: string
+          description: Ontology description
+        domain:
+          type: string
+          description: Domain classification
+
+    OntologyMetadata:
+      type: object
+      properties:
+        extraction_job:
+          type: string
+          description: Source extraction job ID
+        quality_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        completeness:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        consistency:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    Entity:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique entity identifier
+        name:
+          type: string
+          description: Entity name
+        label:
+          type: string
+          description: Human-readable label
+        description:
+          type: string
+          description: Entity description
+        type:
+          type: string
+          enum: [concept, individual, property]
+          description: Entity type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityProperty'
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
+        aliases:
+          type: array
+          items:
+            type: string
+        metadata:
+          $ref: '#/components/schemas/EntityMetadata'
+      required:
+        - id
+        - name
+        - type
+        - confidence
+
+    EntityCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Entity name
+        label:
+          type: string
+          description: Human-readable label
+        description:
+          type: string
+          description: Entity description
+        type:
+          type: string
+          enum: [concept, individual, property]
+          description: Entity type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityPropertyCreate'
+        aliases:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - type
+
+    EntityUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Entity name
+        label:
+          type: string
+          description: Human-readable label
+        description:
+          type: string
+          description: Entity description
+        type:
+          type: string
+          enum: [concept, individual, property]
+          description: Entity type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityPropertyCreate'
+        aliases:
+          type: array
+          items:
+            type: string
+
+    EntityProperty:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Property name
+        value:
+          type: string
+          description: Property value
+        data_type:
+          type: string
+          enum: [string, number, boolean, date]
+          description: Property data type
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+      required:
+        - name
+        - value
+        - data_type
+        - confidence
+
+    EntityPropertyCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Property name
+        value:
+          type: string
+          description: Property value
+        data_type:
+          type: string
+          enum: [string, number, boolean, date]
+          description: Property data type
+      required:
+        - name
+        - value
+        - data_type
+
+    EntityMetadata:
+      type: object
+      properties:
+        extraction_run:
+          type: integer
+          description: Extraction run number
+        cluster_id:
+          type: string
+          description: Cluster identifier
+        validated_by:
+          type: string
+          enum: [human, llm, automatic]
+          description: Validation method
+
+    Relationship:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique relationship identifier
+        name:
+          type: string
+          description: Relationship name
+        label:
+          type: string
+          description: Human-readable label
+        source_entity:
+          type: string
+          description: Source entity ID
+        target_entity:
+          type: string
+          description: Target entity ID
+        type:
+          type: string
+          enum: [hasA, isA, partOf, relatedTo, dependsOn, causes]
+          description: Relationship type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationshipProperty'
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
+        metadata:
+          $ref: '#/components/schemas/RelationshipMetadata'
+      required:
+        - id
+        - name
+        - source_entity
+        - target_entity
+        - type
+        - confidence
+
+    RelationshipCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Relationship name
+        label:
+          type: string
+          description: Human-readable label
+        source_entity:
+          type: string
+          description: Source entity ID
+        target_entity:
+          type: string
+          description: Target entity ID
+        type:
+          type: string
+          enum: [hasA, isA, partOf, relatedTo, dependsOn, causes]
+          description: Relationship type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationshipPropertyCreate'
+      required:
+        - name
+        - source_entity
+        - target_entity
+        - type
+
+    RelationshipUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Relationship name
+        label:
+          type: string
+          description: Human-readable label
+        type:
+          type: string
+          enum: [hasA, isA, partOf, relatedTo, dependsOn, causes]
+          description: Relationship type
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationshipPropertyCreate'
+
+    RelationshipProperty:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Property name
+        value:
+          type: string
+          description: Property value
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+      required:
+        - name
+        - value
+        - confidence
+
+    RelationshipPropertyCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Property name
+        value:
+          type: string
+          description: Property value
+      required:
+        - name
+        - value
+
+    RelationshipMetadata:
+      type: object
+      properties:
+        extraction_run:
+          type: integer
+          description: Extraction run number
+        validated_by:
+          type: string
+          enum: [human, llm, automatic]
+          description: Validation method
+
+    DataSource:
+      type: object
+      properties:
+        document_id:
+          type: string
+          description: Source document ID
+        chunk:
+          type: string
+          description: Document chunk
+        context:
+          type: string
+          description: Extraction context
+      required:
+        - document_id
+
+    ExtractionJob:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique job identifier
+        name:
+          type: string
+          description: Job name/title
+        status:
+          type: string
+          enum: [pending, running, completed, failed, paused]
+          description: Job status
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage
+        configuration:
+          $ref: '#/components/schemas/ExtractionConfiguration'
+        results:
+          $ref: '#/components/schemas/ExtractionResults'
+        statistics:
+          $ref: '#/components/schemas/ExtractionStatistics'
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - status
+        - configuration
+
+    ExtractionJobCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Job name/title
+        description:
+          type: string
+          description: Job description
+        configuration:
+          $ref: '#/components/schemas/ExtractionConfigurationCreate'
+      required:
+        - name
+        - configuration
+
+    ExtractionConfiguration:
+      type: object
+      properties:
+        data_sources:
+          type: array
+          items:
+            type: string
+          description: Source document IDs
+        llm_team:
+          $ref: '#/components/schemas/LLMTeam'
+        questions:
+          type: array
+          items:
+            type: string
+          description: Question IDs
+        runs:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of extraction runs
+        convergence_criteria:
+          $ref: '#/components/schemas/ConvergenceCriteria'
+      required:
+        - data_sources
+        - llm_team
+        - runs
+
+    ExtractionConfigurationCreate:
+      type: object
+      properties:
+        data_sources:
+          type: array
+          items:
+            type: string
+          description: Source document IDs
+        llm_team_id:
+          type: string
+          description: LLM team identifier
+        question_ids:
+          type: array
+          items:
+            type: string
+          description: Question IDs
+        runs:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of extraction runs
+        convergence_criteria:
+          $ref: '#/components/schemas/ConvergenceCriteriaCreate'
+        scope:
+          type: string
+          enum: [general, domain, project]
+          description: Extraction scope
+        domain:
+          type: string
+          description: Domain classification
+      required:
+        - data_sources
+        - llm_team_id
+        - runs
+
+    ConvergenceCriteria:
+      type: object
+      properties:
+        threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Convergence threshold
+        min_runs:
+          type: integer
+          minimum: 1
+          description: Minimum runs before convergence check
+        max_runs:
+          type: integer
+          minimum: 1
+          description: Maximum runs allowed
+      required:
+        - threshold
+        - min_runs
+        - max_runs
+
+    ConvergenceCriteriaCreate:
+      type: object
+      properties:
+        threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Convergence threshold
+        min_runs:
+          type: integer
+          minimum: 1
+          description: Minimum runs before convergence check
+        max_runs:
+          type: integer
+          minimum: 1
+          description: Maximum runs allowed
+      required:
+        - threshold
+        - min_runs
+        - max_runs
+
+    LLMTeam:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Team identifier
+        name:
+          type: string
+          description: Team name
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/LLMTeamMember'
+      required:
+        - id
+        - name
+        - members
+
+    LLMTeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Member identifier
+        role:
+          type: string
+          description: Member role
+        persona_id:
+          type: string
+          description: Persona identifier
+      required:
+        - id
+        - role
+
+    ExtractionResults:
+      type: object
+      properties:
+        completed_runs:
+          type: integer
+          description: Number of completed runs
+        entity_count:
+          type: integer
+          description: Total entities extracted
+        relationship_count:
+          type: integer
+          description: Total relationships extracted
+        candidate_count:
+          type: integer
+          description: Number of candidate ontologies
+      required:
+        - completed_runs
+        - entity_count
+        - relationship_count
+        - candidate_count
+
+    ExtractionStatistics:
+      type: object
+      properties:
+        total_runs:
+          type: integer
+          description: Total runs configured
+        completed_runs:
+          type: integer
+          description: Completed runs
+        convergence_reached:
+          type: boolean
+          description: Whether convergence was reached
+        convergence_run:
+          type: integer
+          description: Run at which convergence occurred
+        entity_count:
+          type: integer
+          description: Total entities extracted
+        relationship_count:
+          type: integer
+          description: Total relationships extracted
+        confidence_distribution:
+          $ref: '#/components/schemas/ConfidenceDistribution'
+        quality_metrics:
+          $ref: '#/components/schemas/QualityMetrics'
+        cluster_statistics:
+          $ref: '#/components/schemas/ClusterStatistics'
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+      required:
+        - total_runs
+        - completed_runs
+        - convergence_reached
+        - entity_count
+        - relationship_count
+
+    ConfidenceDistribution:
+      type: object
+      properties:
+        high:
+          type: integer
+          description: Count of high-confidence items (>0.8)
+        medium:
+          type: integer
+          description: Count of medium-confidence items (0.5-0.8)
+        low:
+          type: integer
+          description: Count of low-confidence items (<0.5)
+      required:
+        - high
+        - medium
+        - low
+
+    QualityMetrics:
+      type: object
+      properties:
+        overall:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        completeness:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        consistency:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        coherence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        coverage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        precision:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        recall:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        f1_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        details:
+          $ref: '#/components/schemas/QualityDetails'
+        trends:
+          $ref: '#/components/schemas/QualityTrends'
+      required:
+        - overall
+        - completeness
+        - consistency
+        - coherence
+        - coverage
+
+    QualityDetails:
+      type: object
+      properties:
+        entities_with_properties:
+          type: integer
+        entities_with_descriptions:
+          type: integer
+        relationships_validated:
+          type: integer
+        duplicate_entities:
+          type: integer
+        orphan_entities:
+          type: integer
+        inconsistent_relationships:
+          type: integer
+
+    QualityTrends:
+      type: object
+      properties:
+        improvement_over_versions:
+          type: number
+          format: float
+        stability_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    ClusterStatistics:
+      type: object
+      properties:
+        total_clusters:
+          type: integer
+          description: Number of entity clusters
+        merged_entities:
+          type: integer
+          description: Number of merged entities
+        average_cluster_size:
+          type: number
+          format: float
+          description: Average entities per cluster
+        cluster_quality:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Overall cluster quality score
+      required:
+        - total_clusters
+        - merged_entities
+        - average_cluster_size
+        - cluster_quality
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        total_duration:
+          type: string
+          description: Total processing duration
+        average_run_time:
+          type: string
+          description: Average time per run
+        tokens_used:
+          type: integer
+          description: Total LLM tokens consumed
+        cost:
+          type: number
+          format: float
+          description: Total processing cost
+      required:
+        - total_duration
+        - tokens_used
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique question identifier
+        text:
+          type: string
+          description: Question text
+        category:
+          type: string
+          enum: [entity, relationship, property]
+          description: Question category
+        domain:
+          type: string
+          description: Domain classification
+        purpose:
+          type: string
+          description: Question purpose
+        examples:
+          type: array
+          items:
+            type: string
+          description: Example answers
+        is_template:
+          type: boolean
+          description: Whether this is a template question
+        usage_count:
+          type: integer
+          description: Number of times used
+        effectiveness_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Question effectiveness score
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - text
+        - category
+
+    QuestionCreate:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Question text
+        category:
+          type: string
+          enum: [entity, relationship, property]
+          description: Question category
+        domain:
+          type: string
+          description: Domain classification
+        purpose:
+          type: string
+          description: Question purpose
+        examples:
+          type: array
+          items:
+            type: string
+          description: Example answers
+        is_template:
+          type: boolean
+          description: Whether this is a template question
+      required:
+        - text
+        - category
+
+    QuestionUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Question text
+        category:
+          type: string
+          enum: [entity, relationship, property]
+          description: Question category
+        domain:
+          type: string
+          description: Domain classification
+        purpose:
+          type: string
+          description: Question purpose
+        examples:
+          type: array
+          items:
+            type: string
+          description: Example answers
+        is_template:
+          type: boolean
+          description: Whether this is a template question
+
+    ClusterResults:
+      type: object
+      properties:
+        clusters:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityCluster'
+        statistics:
+          $ref: '#/components/schemas/ClusteringStatistics'
+        parameters:
+          $ref: '#/components/schemas/ClusteringParameters'
+      required:
+        - clusters
+        - statistics
+        - parameters
+
+    EntityCluster:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Cluster identifier
+        entities:
+          type: array
+          items:
+            type: string
+          description: Entity IDs in cluster
+        center_entity:
+          type: string
+          description: Central entity ID
+        similarity_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Average similarity score
+        recommended_merge:
+          type: boolean
+          description: Whether merge is recommended
+        merge_strategy:
+          type: string
+          description: Recommended merge strategy
+      required:
+        - id
+        - entities
+        - similarity_score
+
+    ClusteringStatistics:
+      type: object
+      properties:
+        total_clusters:
+          type: integer
+        entities_processed:
+          type: integer
+        merge_recommendations:
+          type: integer
+        average_similarity:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+      required:
+        - total_clusters
+        - entities_processed
+        - merge_recommendations
+        - average_similarity
+
+    ClusteringParameters:
+      type: object
+      properties:
+        algorithm:
+          type: string
+          description: Clustering algorithm used
+        threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Similarity threshold
+        max_cluster_size:
+          type: integer
+          description: Maximum entities per cluster
+      required:
+        - algorithm
+        - threshold
+
+    ValidationReport:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Overall validation result
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Validation score
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+        metrics:
+          $ref: '#/components/schemas/QualityMetrics'
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Improvement recommendations
+      required:
+        - valid
+        - score
+        - issues
+        - metrics
+
+    ValidationIssue:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [error, warning, info]
+          description: Issue type
+        category:
+          type: string
+          description: Issue category
+        message:
+          type: string
+          description: Issue description
+        entity_id:
+          type: string
+          description: Related entity ID (if applicable)
+        severity:
+          type: string
+          enum: [high, medium, low]
+          description: Issue severity
+        suggestion:
+          type: string
+          description: Suggested fix
+      required:
+        - type
+        - category
+        - message
+        - severity
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+          description: Service status
+        uptime:
+          type: integer
+          description: Service uptime in seconds
+        version:
+          type: string
+          description: Service version
+        dependencies:
+          type: object
+          properties:
+            postgres:
+              type: string
+              enum: [connected, disconnected, error]
+            vectordb:
+              type: string
+              enum: [connected, disconnected, error]
+            graphdb:
+              type: string
+              enum: [connected, disconnected, error]
+            llm_service:
+              type: string
+              enum: [connected, disconnected, error]
+            knowledge_service:
+              type: string
+              enum: [connected, disconnected, error]
+        metrics:
+          type: object
+          properties:
+            active_jobs:
+              type: integer
+            queued_jobs:
+              type: integer
+            total_ontologies:
+              type: integer
+            average_job_time:
+              type: string
+      required:
+        - status
+        - uptime
+        - version
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Error message
+            details:
+              type: object
+              description: Additional error details
+            timestamp:
+              type: string
+              format: date-time
+              description: Error timestamp
+          required:
+            - code
+            - message
+            - timestamp
+      required:
+        - error
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+            total:
+              type: integer
+              minimum: 0
+            total_pages:
+              type: integer
+              minimum: 0
+            has_next:
+              type: boolean
+            has_prev:
+              type: boolean
+          required:
+            - page
+            - limit
+            - total
+            - total_pages
+            - has_next
+            - has_prev
+      required:
+        - data
+        - pagination
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Ontology Management
+  /ontologies:
+    get:
+      summary: List all ontologies
+      description: Retrieve a paginated list of ontologies with optional filtering
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+          description: Filter by domain
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [general, domain, project]
+          description: Filter by scope
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: created_at
+          description: Sort field
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      responses:
+        '200':
+          description: List of ontologies
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Ontology'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a new ontology
+      description: Create a new ontology manually
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OntologyCreate'
+      responses:
+        '201':
+          description: Ontology created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ontology'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ontologies/{id}:
+    get:
+      summary: Get ontology by ID
+      description: Retrieve a specific ontology by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ontology ID
+      responses:
+        '200':
+          description: Ontology details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ontology'
+        '404':
+          description: Ontology not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update ontology
+      description: Update an existing ontology
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ontology ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OntologyUpdate'
+      responses:
+        '200':
+          description: Ontology updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ontology'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ontology not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete ontology
+      description: Delete an ontology by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ontology ID
+      responses:
+        '204':
+          description: Ontology deleted successfully
+        '404':
+          description: Ontology not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Extraction Jobs
+  /extractions:
+    get:
+      summary: List extraction jobs
+      description: Retrieve a paginated list of extraction jobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, paused]
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        '200':
+          description: List of extraction jobs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExtractionJob'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Start new extraction job
+      description: Create and start a new ontology extraction job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionJobCreate'
+      responses:
+        '201':
+          description: Extraction job created and started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJob'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /extractions/{id}:
+    get:
+      summary: Get extraction job status
+      description: Get the current status and details of an extraction job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Extraction job ID
+      responses:
+        '200':
+          description: Extraction job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJob'
+        '404':
+          description: Extraction job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete extraction job
+      description: Delete an extraction job and its results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Extraction job ID
+      responses:
+        '204':
+          description: Extraction job deleted successfully
+        '404':
+          description: Extraction job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /extractions/{id}/stop:
+    post:
+      summary: Stop running extraction
+      description: Stop a currently running extraction job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Extraction job ID
+      responses:
+        '200':
+          description: Extraction job stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Extraction job stopped successfully"
+        '400':
+          description: Job cannot be stopped (not running)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Extraction job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /extractions/{id}/statistics:
+    get:
+      summary: Get extraction statistics
+      description: Get detailed statistics for an extraction job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Extraction job ID
+      responses:
+        '200':
+          description: Extraction statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionStatistics'
+        '404':
+          description: Extraction job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Questions
+  /questions:
+    get:
+      summary: List extraction questions
+      description: Retrieve a list of extraction questions with optional filtering
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+          description: Filter by domain
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [entity, relationship, property]
+          description: Filter by category
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Question'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create extraction question
+      description: Create a new extraction question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreate'
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Validation
+  /ontologies/{id}/validate:
+    post:
+      summary: Validate ontology consistency
+      description: Perform consistency validation on an ontology
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ontology ID
+      responses:
+        '200':
+          description: Validation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationReport'
+        '404':
+          description: Ontology not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Clustering
+  /ontologies/{id}/cluster:
+    post:
+      summary: Trigger entity clustering
+      description: Start entity clustering analysis for an ontology
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ontology ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                algorithm:
+                  type: string
+                  default: "semantic_similarity"
+                threshold:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 1
+                  default: 0.8
+                max_cluster_size:
+                  type: integer
+                  default: 5
+      responses:
+        '200':
+          description: Clustering results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterResults'
+        '404':
+          description: Ontology not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Health Check
+  /ontology/health:
+    get:
+      summary: Service health check
+      description: Get the health status of the ontology builder service
+      security: []
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus' 
