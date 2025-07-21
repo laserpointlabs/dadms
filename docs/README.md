@@ -35,6 +35,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 - **[Memory Manager API](development/backend/memory_manager_service_api_endpoints.md)**: Comprehensive memory management with categorization, lifecycle intelligence, and semantic retrieval API
 - **[Ontology Workspace API](development/backend/ontology_workspace_service_api_endpoints.md)**: Comprehensive visual, collaborative environment for ontology authoring, editing, and validation API
 - **[Task Orchestrator API](development/backend/task_orchestrator_service_api_endpoints.md)**: Comprehensive workflow orchestration and task management API for the EDS ecosystem
+- **[Decision Analytics API](development/backend/decision_analytics_service_api_endpoints.md)**: Comprehensive decision intelligence engine for decision space analysis, impact assessment, and performance scoring
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides

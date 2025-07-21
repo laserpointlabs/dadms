@@ -29,6 +29,8 @@ This directory contains API documentation for all DADMS services.
   - **[Detailed API Endpoints](../development/backend/ontology_workspace_service_api_endpoints.md)** - Human-readable documentation
 - **[Task Orchestrator Service API](task_orchestrator_service_openapi.yaml)** (Port 3017) - **NEW: Central execution engine for workflow orchestration & task management**
   - **[Detailed API Endpoints](../development/backend/task_orchestrator_service_api_endpoints.md)** - Human-readable documentation
+- **[Decision Analytics Service API](decision_analytics_service_openapi.yaml)** (Port 3018) - **NEW: Comprehensive decision intelligence engine for decision space analysis, impact assessment & performance scoring**
+  - **[Detailed API Endpoints](../development/backend/decision_analytics_service_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -146,6 +148,7 @@ flowchart LR
 - [x] **Memory Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Ontology Workspace Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Task Orchestrator Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Decision Analytics Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE
