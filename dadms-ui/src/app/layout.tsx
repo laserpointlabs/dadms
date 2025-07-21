@@ -32,6 +32,13 @@ const dadmsPages = [
         type: 'folder'
     },
     {
+        name: 'Ontology Builder',
+        href: '/ontology',
+        icon: 'type-hierarchy',
+        description: 'Extract & manage domain ontologies',
+        type: 'folder'
+    },
+    {
         name: 'LLM Playground',
         href: '/llm',
         icon: 'robot',

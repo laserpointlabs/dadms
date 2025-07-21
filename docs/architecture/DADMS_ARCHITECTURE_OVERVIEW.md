@@ -7,6 +7,7 @@ flowchart TD
       UI["Modern React UI (TypeScript)"]
       ProjectService["Project Service"]
       KnowledgeService["Knowledge Service"]
+      OntologyService["Ontology Builder Service"]
       LLMService["LLM Service"]
       AAS["Agent Assistance Service (AAS)"]
       API["API Gateway / Backend for Frontend"]
@@ -23,6 +24,7 @@ flowchart TD
       GraphDB["Neo4j (Graph DB)"]
       Postgres["PostgreSQL (Primary DB)"]
       MinIO["MinIO (Object Store)"]
+      Fuseki["Apache Jena Fuseki (RDF Store)"]
       Ollama["Ollama / LLM Server"]
     end
 
@@ -35,6 +37,7 @@ flowchart TD
     UI --> API
     API --> ProjectService
     API --> KnowledgeService
+    API --> OntologyService
     API --> LLMService
     API --> AAS
     API --> TaskOrchestrator
@@ -49,6 +52,12 @@ flowchart TD
     KnowledgeService --> MinIO
     KnowledgeService --> VectorDB
     KnowledgeService --> GraphDB
+    OntologyService --> Postgres
+    OntologyService --> VectorDB
+    OntologyService --> GraphDB
+    OntologyService --> Fuseki
+    OntologyService --> KnowledgeService
+    OntologyService --> LLMService
     LLMService --> VectorDB
     LLMService --> AAS
     LLMService --> Ollama
@@ -67,6 +76,7 @@ flowchart TD
     BPMN --> AAS
     TaskOrchestrator --> ProjectService
     TaskOrchestrator --> KnowledgeService
+    TaskOrchestrator --> OntologyService
     TaskOrchestrator --> LLMService
     TaskOrchestrator --> AAS
     TaskOrchestrator --> VectorDB
@@ -80,6 +90,7 @@ flowchart TD
     EventBus --> Postgres
     EventLog --> Postgres
     EventBus --> KnowledgeService
+    EventBus --> OntologyService
     EventBus --> ProjectService
     EventBus --> LLMService
     MinIO -.-> VectorDB
@@ -88,8 +99,8 @@ flowchart TD
     classDef pm2 fill:#e0f7fa,stroke:#00796b,stroke-width:2px;
     classDef external fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
     classDef cloud fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
-    class UI,ProjectService,KnowledgeService,LLMService,AAS,API,TaskOrchestrator,EventBus,EventLog pm2;
-    class BPMN,VectorDB,GraphDB,Postgres,MinIO,Traefik,MessageBroker,Ollama external;
+    class UI,ProjectService,KnowledgeService,OntologyService,LLMService,AAS,API,TaskOrchestrator,EventBus,EventLog pm2;
+    class BPMN,VectorDB,GraphDB,Postgres,MinIO,Fuseki,Traefik,MessageBroker,Ollama external;
     class OpenAI,Claude,OtherCloudLLM cloud;
 ```
 
@@ -97,17 +108,20 @@ flowchart TD
 
 This diagram illustrates the high-level architecture of DADMS 2.0:
 - **pm2-managed (blue):** Node.js-based services typically managed by pm2 in local/dev environments.
-- **External/Containerized (purple):** Databases, BPMN engine, object stores, reverse proxy (Traefik/Nginx), message brokers, and LLM servers (Ollama, etc.) managed outside pm2 (e.g., via Docker Compose, Kubernetes).
+- **External/Containerized (purple):** Databases, BPMN engine, object stores, RDF store (Apache Jena Fuseki), reverse proxy (Traefik/Nginx), message brokers, and LLM servers (Ollama, etc.) managed outside pm2 (e.g., via Docker Compose, Kubernetes).
 - **External Cloud (orange):** Cloud-based LLM providers such as OpenAI, Claude, and others, accessed via API for advanced AI capabilities.
 - **Task Orchestrator (TEM):** The core backend service that receives tasks from the BPMN Engine, determines and invokes the appropriate microservice/LLM/tool (local or cloud), manages context/results, and emits events to the Event Bus. It is the critical link between BPMN execution and the rest of the system.
 - **Event Bus & Event Log:** The Event Bus handles orchestration and automation, while the Event Log provides audit and traceability. Both are watched by the AAS for oversight and user assistance.
 - **AAS Oversight:** The AAS observes all major services, the event bus, and the event log, providing real-time feedback, risk alerts, and recommendations to users.
 - **Reverse Proxy:** Traefik or Nginx routes external traffic to the API and UI.
 - **Message Broker:** Kafka, RabbitMQ, or NATS can be used for scalable, decoupled event/message handling.
+- **RDF Store (Apache Jena Fuseki):** Semantic web triple store for ontology storage, SPARQL queries, and RDF data management.
 - **LLM Server (Ollama, etc.):** Pluggable local or remote LLM providers for AI-powered features and orchestration.
 
+**Current Services:**
+- **Ontology Builder Service:** For probabilistic extraction, management, and integration of ontologies across domains and projects using LLM teams.
+
 **Future Services (Planned for Extensibility):**
-- **Ontology Service:** For extraction, management, and integration of ontologies across domains and projects.
 - **Data Management Service:** For connecting, mapping, and synchronizing external, live, or historical datasets.
 - **Requirements & Conceptualization Service:** For extracting requirements, constraints, and conceptual models from project documents.
 - **Event Management Service:** For advanced event capture, logging, and reaction (beyond the core event bus/log).
