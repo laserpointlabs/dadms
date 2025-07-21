@@ -21,6 +21,10 @@ This directory contains API documentation for all DADMS services.
   - **[Detailed API Endpoints](analysis_manager_api_endpoints.md)** - Human-readable documentation
 - **[Parameter Manager Service API](parameter_manager_service_openapi.yaml)** (Port 3013) - **NEW: Parameter lifecycle management & validation**
   - **[Detailed API Endpoints](../development/backend/parameter_manager_service_api_endpoints.md)** - Human-readable documentation
+- **[Requirements Extractor & Conceptualizer Service API](requirements_extractor_service_openapi.yaml)** (Port 3014) - **NEW: Intelligent requirements extraction & conceptual modeling**
+  - **[Detailed API Endpoints](../development/backend/requirements_extractor_service_api_endpoints.md)** - Human-readable documentation
+- **[Memory Manager Service API](memory_manager_service_openapi.yaml)** (Port 3015) - **NEW: Sophisticated memory management with lifecycle intelligence**
+  - **[Detailed API Endpoints](../development/backend/memory_manager_service_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -134,6 +138,8 @@ flowchart LR
 - [x] **Simulation Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Analysis Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Parameter Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Requirements Extractor & Conceptualizer Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Memory Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE

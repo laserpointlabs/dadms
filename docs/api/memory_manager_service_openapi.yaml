@@ -1,0 +1,2870 @@
+openapi: 3.0.3
+info:
+  title: DADMS 2.0 - Memory Manager Service API
+  description: |
+    Memory Manager service provides sophisticated, categorized memory management capabilities for the DADMS ecosystem.
+    Enables persistent, contextual, and semantic memory retention across decision workflows, agents, and user personas.
+    
+    ## Key Features
+    - Dynamic memory categorization (short-term, long-term, cached, persona-specific)
+    - Semantic and temporal memory search with relevance scoring
+    - Memory lifecycle management with automated expiration and archival
+    - Cross-entity memory sharing with security controls
+    - Memory intelligence with pattern detection and insights
+    
+    ## Memory Types
+    - **Short-term**: Ephemeral, session-based memory
+    - **Long-term**: Persistent across sessions
+    - **Cached**: Recently accessed content blocks
+    - **Human-entered**: Manually input knowledge
+    - **Persona-specific**: Role/agent archetype memory
+    - **Team-specific**: Shared team context
+    
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3015
+    description: Development server
+  - url: https://api.dadms.example.com/memory
+    description: Production server
+
+tags:
+  - name: Memory Operations
+    description: Core memory storage and retrieval operations
+  - name: Memory Search
+    description: Search and discovery operations
+  - name: Memory Relationships
+    description: Memory linking and relationship management
+  - name: Memory Clusters
+    description: Memory clustering and grouping operations
+  - name: Memory Lifecycle
+    description: Memory lifecycle and archival management
+  - name: Memory Analytics
+    description: Usage analytics and insights
+  - name: Memory Snapshots
+    description: Context snapshot operations
+  - name: Import/Export
+    description: Memory import and export operations
+  - name: Health & Monitoring
+    description: Service health and monitoring endpoints
+
+paths:
+  # Core Memory Operations
+  /memories:
+    post:
+      tags: [Memory Operations]
+      summary: Store a new memory entry
+      description: Creates a new memory entry with specified scope and content
+      operationId: storeMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryRequest'
+      responses:
+        '201':
+          description: Memory successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMemoryResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    get:
+      tags: [Memory Operations]
+      summary: Retrieve memories with filters
+      description: Query memories using various filters and search criteria
+      operationId: retrieveMemories
+      parameters:
+        - $ref: '#/components/parameters/ScopeTypeFilter'
+        - $ref: '#/components/parameters/EntityIdFilter'
+        - $ref: '#/components/parameters/ContextIdFilter'
+        - $ref: '#/components/parameters/ImportanceFilter'
+        - $ref: '#/components/parameters/CreatedAfterFilter'
+        - $ref: '#/components/parameters/CreatedBeforeFilter'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Memories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+
+  /memories/batch:
+    post:
+      tags: [Memory Operations]
+      summary: Store multiple memories in batch
+      description: Creates multiple memory entries in a single operation
+      operationId: storeMemories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateMemoryRequest'
+      responses:
+        '201':
+          description: Memories successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCreateMemoryResponse'
+
+  /memories/{memoryId}:
+    get:
+      tags: [Memory Operations]
+      summary: Get specific memory by ID
+      description: Retrieve a specific memory entry by its unique identifier
+      operationId: getMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      responses:
+        '200':
+          description: Memory found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEntry'
+        '404':
+          description: Memory not found
+
+    put:
+      tags: [Memory Operations]
+      summary: Update memory entry
+      description: Update an existing memory entry
+      operationId: updateMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemoryRequest'
+      responses:
+        '200':
+          description: Memory successfully updated
+        '404':
+          description: Memory not found
+
+    delete:
+      tags: [Memory Operations]
+      summary: Delete memory entry
+      description: Delete a memory entry (soft delete by default)
+      operationId: deleteMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+        - name: permanent
+          in: query
+          description: Whether to permanently delete the memory
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '204':
+          description: Memory successfully deleted
+        '404':
+          description: Memory not found
+
+  # Memory Search Operations
+  /memories/search:
+    post:
+      tags: [Memory Search]
+      summary: Advanced memory search
+      description: Perform complex memory searches with multiple criteria
+      operationId: searchMemories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemorySearchRequest'
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemorySearchResponse'
+
+  /memories/search/semantic:
+    post:
+      tags: [Memory Search]
+      summary: Semantic memory search
+      description: Search memories using semantic similarity
+      operationId: semanticSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SemanticSearchRequest'
+      responses:
+        '200':
+          description: Semantic search completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+
+  /memories/search/temporal:
+    post:
+      tags: [Memory Search]
+      summary: Temporal memory query
+      description: Query memories within specific time ranges
+      operationId: temporalQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemporalQueryRequest'
+      responses:
+        '200':
+          description: Temporal query completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+
+  # Memory Relationships
+  /memories/{memoryId}/relationships:
+    get:
+      tags: [Memory Relationships]
+      summary: Get memory relationships
+      description: Retrieve all relationships for a specific memory
+      operationId: getMemoryRelationships
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+        - name: relationshipTypes
+          in: query
+          description: Filter by relationship types
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RelationshipType'
+      responses:
+        '200':
+          description: Relationships retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipListResponse'
+
+    post:
+      tags: [Memory Relationships]
+      summary: Create memory relationship
+      description: Link two memories with a specific relationship
+      operationId: linkMemories
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRelationshipRequest'
+      responses:
+        '201':
+          description: Relationship created successfully
+
+  /memories/{memoryId}/relationships/{targetMemoryId}:
+    delete:
+      tags: [Memory Relationships]
+      summary: Remove memory relationship
+      description: Remove relationship between two memories
+      operationId: unlinkMemories
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+        - name: targetMemoryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: relationshipType
+          in: query
+          description: Specific relationship type to remove
+          schema:
+            $ref: '#/components/schemas/RelationshipType'
+      responses:
+        '204':
+          description: Relationship removed successfully
+
+  /memories/{memoryId}/similar:
+    get:
+      tags: [Memory Relationships]
+      summary: Find similar memories
+      description: Find memories similar to the specified memory
+      operationId: findSimilarMemories
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+        - name: threshold
+          in: query
+          description: Similarity threshold (0-1)
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+            default: 0.7
+        - name: limit
+          in: query
+          description: Maximum number of similar memories to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Similar memories found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarMemoriesResponse'
+
+  # Memory Clusters
+  /clusters:
+    get:
+      tags: [Memory Clusters]
+      summary: List memory clusters
+      description: Retrieve all memory clusters with optional filtering
+      operationId: listClusters
+      parameters:
+        - name: clusterType
+          in: query
+          description: Filter by cluster type
+          schema:
+            $ref: '#/components/schemas/ClusterType'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Clusters retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterListResponse'
+
+    post:
+      tags: [Memory Clusters]
+      summary: Create memory cluster
+      description: Create a new memory cluster with specified memories
+      operationId: createCluster
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClusterRequest'
+      responses:
+        '201':
+          description: Cluster created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateClusterResponse'
+
+  /clusters/{clusterId}:
+    get:
+      tags: [Memory Clusters]
+      summary: Get cluster details
+      description: Retrieve detailed information about a specific cluster
+      operationId: getCluster
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+      responses:
+        '200':
+          description: Cluster found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryCluster'
+
+    put:
+      tags: [Memory Clusters]
+      summary: Update cluster
+      description: Update cluster metadata and properties
+      operationId: updateCluster
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClusterRequest'
+      responses:
+        '200':
+          description: Cluster updated successfully
+
+    delete:
+      tags: [Memory Clusters]
+      summary: Delete cluster
+      description: Delete a memory cluster (does not delete memories)
+      operationId: deleteCluster
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+      responses:
+        '204':
+          description: Cluster deleted successfully
+
+  /clusters/{clusterId}/memories:
+    get:
+      tags: [Memory Clusters]
+      summary: Get cluster memories
+      description: Retrieve all memories in a specific cluster
+      operationId: getClusterMemories
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Cluster memories retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+
+    post:
+      tags: [Memory Clusters]
+      summary: Add memories to cluster
+      description: Add one or more memories to an existing cluster
+      operationId: addToCluster
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterMembershipRequest'
+      responses:
+        '204':
+          description: Memories added to cluster successfully
+
+    delete:
+      tags: [Memory Clusters]
+      summary: Remove memories from cluster
+      description: Remove one or more memories from a cluster
+      operationId: removeFromCluster
+      parameters:
+        - $ref: '#/components/parameters/ClusterIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterMembershipRequest'
+      responses:
+        '204':
+          description: Memories removed from cluster successfully
+
+  # Memory Lifecycle
+  /memories/{memoryId}/promote:
+    post:
+      tags: [Memory Lifecycle]
+      summary: Promote memory importance
+      description: Increase the importance level of a memory
+      operationId: promoteMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteMemoryRequest'
+      responses:
+        '200':
+          description: Memory promoted successfully
+
+  /memories/{memoryId}/demote:
+    post:
+      tags: [Memory Lifecycle]
+      summary: Demote memory importance
+      description: Decrease the importance level of a memory
+      operationId: demoteMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoteMemoryRequest'
+      responses:
+        '200':
+          description: Memory demoted successfully
+
+  /memories/{memoryId}/archive:
+    post:
+      tags: [Memory Lifecycle]
+      summary: Archive memory
+      description: Move memory to archived state
+      operationId: archiveMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArchiveMemoryRequest'
+      responses:
+        '200':
+          description: Memory archived successfully
+
+  /memories/{memoryId}/restore:
+    post:
+      tags: [Memory Lifecycle]
+      summary: Restore archived memory
+      description: Restore a memory from archived state
+      operationId: restoreMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      responses:
+        '200':
+          description: Memory restored successfully
+
+  /memories/{memoryId}/refresh-ttl:
+    post:
+      tags: [Memory Lifecycle]
+      summary: Refresh memory TTL
+      description: Update the time-to-live for a memory
+      operationId: refreshMemoryTTL
+      parameters:
+        - $ref: '#/components/parameters/MemoryIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTTLRequest'
+      responses:
+        '200':
+          description: TTL refreshed successfully
+
+  # Analytics
+  /analytics/stats:
+    get:
+      tags: [Memory Analytics]
+      summary: Get memory statistics
+      description: Retrieve comprehensive memory statistics
+      operationId: getMemoryStats
+      parameters:
+        - name: scopeType
+          in: query
+          description: Filter statistics by scope type
+          schema:
+            $ref: '#/components/schemas/MemoryScopeType'
+        - name: entityId
+          in: query
+          description: Filter statistics by entity ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryStatistics'
+
+  /analytics/usage:
+    get:
+      tags: [Memory Analytics]
+      summary: Get usage analytics
+      description: Retrieve memory usage analytics for a time range
+      operationId: getUsageAnalytics
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start date for analytics period
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: true
+          description: End date for analytics period
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Usage analytics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageAnalytics'
+
+  /analytics/health:
+    get:
+      tags: [Memory Analytics]
+      summary: Get memory health report
+      description: Retrieve comprehensive memory system health report
+      operationId: getMemoryHealth
+      responses:
+        '200':
+          description: Health report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryHealthReport'
+
+  # Health & Monitoring
+  /health:
+    get:
+      tags: [Health & Monitoring]
+      summary: Service health check
+      description: Check the health status of the Memory Manager service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /metrics:
+    get:
+      tags: [Health & Monitoring]
+      summary: Service metrics
+      description: Retrieve service performance metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceMetrics'
+
+components:
+  parameters:
+    MemoryIdParam:
+      name: memoryId
+      in: path
+      required: true
+      description: Unique memory identifier
+      schema:
+        type: string
+        format: uuid
+
+    ClusterIdParam:
+      name: clusterId
+      in: path
+      required: true
+      description: Unique cluster identifier
+      schema:
+        type: string
+        format: uuid
+
+    ScopeTypeFilter:
+      name: scopeType
+      in: query
+      description: Filter by memory scope type
+      schema:
+        $ref: '#/components/schemas/MemoryScopeType'
+
+    EntityIdFilter:
+      name: entityId
+      in: query
+      description: Filter by entity ID
+      schema:
+        type: string
+
+    ContextIdFilter:
+      name: contextId
+      in: query
+      description: Filter by context ID
+      schema:
+        type: string
+
+    ImportanceFilter:
+      name: importance
+      in: query
+      description: Filter by importance level
+      schema:
+        $ref: '#/components/schemas/ImportanceLevel'
+
+    CreatedAfterFilter:
+      name: createdAfter
+      in: query
+      description: Filter memories created after this date
+      schema:
+        type: string
+        format: date-time
+
+    CreatedBeforeFilter:
+      name: createdBefore
+      in: query
+      description: Filter memories created before this date
+      schema:
+        type: string
+        format: date-time
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 50
+
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of items to skip
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+    # Core Memory Models
+    MemoryEntry:
+      type: object
+      required:
+        - id
+        - scope
+        - content
+        - metadata
+        - lifecycle
+        - security_context
+        - created_at
+        - updated_at
+        - accessed_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique memory identifier
+        scope:
+          $ref: '#/components/schemas/MemoryScope'
+        content:
+          $ref: '#/components/schemas/MemoryContent'
+        metadata:
+          $ref: '#/components/schemas/MemoryMetadata'
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryRelationship'
+        lifecycle:
+          $ref: '#/components/schemas/MemoryLifecycle'
+        security_context:
+          $ref: '#/components/schemas/MemorySecurityContext'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        accessed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    MemoryScope:
+      type: object
+      required:
+        - type
+        - entity_id
+        - entity_type
+      properties:
+        type:
+          $ref: '#/components/schemas/MemoryScopeType'
+        subtype:
+          type: string
+          description: Additional categorization
+        entity_id:
+          type: string
+          description: Associated entity identifier
+        entity_type:
+          $ref: '#/components/schemas/EntityType'
+        context_id:
+          type: string
+          description: Decision/workflow context
+        thread_id:
+          type: string
+          description: Conversation/interaction thread
+        project_id:
+          type: string
+          description: Associated project
+
+    MemoryScopeType:
+      type: string
+      enum:
+        - short_term
+        - long_term
+        - cached
+        - human_entered
+        - persona_specific
+        - team_specific
+        - decision_context
+        - system_state
+        - feedback_derived
+        - learned_patterns
+
+    EntityType:
+      type: string
+      enum:
+        - human_user
+        - ai_agent
+        - team
+        - system
+        - decision_workflow
+        - project
+
+    MemoryContent:
+      type: object
+      required:
+        - primary_content
+        - content_type
+      properties:
+        primary_content:
+          type: string
+          description: Main memory content
+        content_type:
+          $ref: '#/components/schemas/ContentType'
+        structured_data:
+          type: object
+          additionalProperties: true
+          description: Additional structured data
+        embeddings:
+          type: array
+          items:
+            type: number
+          description: Vector embeddings for semantic search
+        language:
+          type: string
+          description: Content language
+        encoding:
+          type: string
+          description: Content encoding
+        compressed:
+          type: boolean
+          description: Whether content is compressed
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentReference'
+
+    ContentType:
+      type: string
+      enum:
+        - text
+        - json
+        - markdown
+        - code
+        - decision_state
+        - conversation
+        - annotation
+        - insight
+        - pattern
+        - multimedia_ref
+
+    ContentReference:
+      type: object
+      required:
+        - type
+        - uri
+      properties:
+        type:
+          $ref: '#/components/schemas/ReferenceType'
+        uri:
+          type: string
+          format: uri
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ReferenceType:
+      type: string
+      enum:
+        - document
+        - url
+        - file
+        - database_record
+        - context_thread
+
+    MemoryMetadata:
+      type: object
+      required:
+        - source
+        - confidence
+        - importance
+        - tags
+        - categories
+        - usage_stats
+        - quality_score
+        - provenance
+      properties:
+        source:
+          $ref: '#/components/schemas/MemorySource'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score
+        importance:
+          $ref: '#/components/schemas/ImportanceLevel'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Searchable tags
+        categories:
+          type: array
+          items:
+            type: string
+          description: Hierarchical categories
+        sentiment:
+          $ref: '#/components/schemas/SentimentScore'
+        temporal_context:
+          $ref: '#/components/schemas/TemporalContext'
+        usage_stats:
+          $ref: '#/components/schemas/MemoryUsageStats'
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Content quality assessment
+        provenance:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryProvenance'
+
+    MemorySource:
+      type: object
+      required:
+        - type
+        - identifier
+        - timestamp
+        - reliability_score
+      properties:
+        type:
+          $ref: '#/components/schemas/SourceType'
+        identifier:
+          type: string
+          description: Source entity identifier
+        timestamp:
+          type: string
+          format: date-time
+        context:
+          type: string
+          description: Additional source context
+        reliability_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Source reliability
+
+    SourceType:
+      type: string
+      enum:
+        - agent_interaction
+        - human_input
+        - system_event
+        - decision_outcome
+        - feedback_loop
+        - pattern_discovery
+        - external_import
+
+    ImportanceLevel:
+      type: string
+      enum:
+        - critical
+        - high
+        - medium
+        - low
+        - ephemeral
+
+    SentimentScore:
+      type: object
+      required:
+        - polarity
+        - subjectivity
+      properties:
+        polarity:
+          type: number
+          minimum: -1
+          maximum: 1
+          description: Negative to positive sentiment
+        subjectivity:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Objective to subjective
+        emotions:
+          $ref: '#/components/schemas/EmotionScores'
+
+    EmotionScores:
+      type: object
+      properties:
+        joy:
+          type: number
+          minimum: 0
+          maximum: 1
+        anger:
+          type: number
+          minimum: 0
+          maximum: 1
+        fear:
+          type: number
+          minimum: 0
+          maximum: 1
+        sadness:
+          type: number
+          minimum: 0
+          maximum: 1
+        surprise:
+          type: number
+          minimum: 0
+          maximum: 1
+        trust:
+          type: number
+          minimum: 0
+          maximum: 1
+        anticipation:
+          type: number
+          minimum: 0
+          maximum: 1
+        disgust:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    TemporalContext:
+      type: object
+      required:
+        - creation_phase
+        - temporal_relevance
+        - expiry_strategy
+        - access_pattern
+      properties:
+        creation_phase:
+          $ref: '#/components/schemas/DecisionPhase'
+        temporal_relevance:
+          $ref: '#/components/schemas/TemporalRelevance'
+        expiry_strategy:
+          $ref: '#/components/schemas/ExpiryStrategy'
+        access_pattern:
+          $ref: '#/components/schemas/AccessPattern'
+
+    DecisionPhase:
+      type: string
+      enum:
+        - problem_definition
+        - requirements_gathering
+        - alternative_generation
+        - evaluation
+        - decision_making
+        - implementation
+        - monitoring
+        - reflection
+
+    TemporalRelevance:
+      type: string
+      enum:
+        - immediate
+        - short_term
+        - medium_term
+        - long_term
+        - contextual
+        - evergreen
+
+    ExpiryStrategy:
+      type: string
+      enum:
+        - ttl_based
+        - access_based
+        - usage_based
+        - manual
+        - smart_decay
+        - never
+
+    AccessPattern:
+      type: string
+      enum:
+        - frequent
+        - periodic
+        - burst
+        - declining
+        - sporadic
+        - dormant
+
+    MemoryUsageStats:
+      type: object
+      required:
+        - access_count
+        - last_accessed
+        - access_frequency
+        - modification_count
+        - referral_count
+        - search_hits
+        - usage_trend
+      properties:
+        access_count:
+          type: integer
+          minimum: 0
+          description: Total access count
+        last_accessed:
+          type: string
+          format: date-time
+          description: Last access timestamp
+        access_frequency:
+          type: number
+          minimum: 0
+          description: Accesses per time period
+        modification_count:
+          type: integer
+          minimum: 0
+          description: Number of modifications
+        referral_count:
+          type: integer
+          minimum: 0
+          description: Times referenced by other memories
+        search_hits:
+          type: integer
+          minimum: 0
+          description: Times found in searches
+        usage_trend:
+          $ref: '#/components/schemas/UsageTrend'
+
+    UsageTrend:
+      type: string
+      enum:
+        - increasing
+        - stable
+        - decreasing
+        - volatile
+        - seasonal
+
+    MemoryProvenance:
+      type: object
+      required:
+        - operation
+        - timestamp
+        - actor_id
+        - actor_type
+      properties:
+        operation:
+          $ref: '#/components/schemas/ProvenanceOperation'
+        timestamp:
+          type: string
+          format: date-time
+        actor_id:
+          type: string
+        actor_type:
+          $ref: '#/components/schemas/EntityType'
+        changes:
+          type: object
+          additionalProperties: true
+          description: What changed
+        reason:
+          type: string
+          description: Why the change was made
+        context:
+          type: string
+          description: Additional context
+
+    ProvenanceOperation:
+      type: string
+      enum:
+        - created
+        - modified
+        - accessed
+        - tagged
+        - linked
+        - archived
+        - restored
+        - merged
+        - split
+
+    MemoryRelationship:
+      type: object
+      required:
+        - id
+        - source_memory_id
+        - target_memory_id
+        - relationship_type
+        - strength
+        - confidence
+        - created_at
+        - created_by
+        - creator_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_memory_id:
+          type: string
+          format: uuid
+        target_memory_id:
+          type: string
+          format: uuid
+        relationship_type:
+          $ref: '#/components/schemas/RelationshipType'
+        strength:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Relationship strength
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence in relationship
+        context:
+          type: string
+          description: Relationship context
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        creator_type:
+          $ref: '#/components/schemas/EntityType'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    RelationshipType:
+      type: string
+      enum:
+        - causal
+        - temporal
+        - similarity
+        - contradiction
+        - elaboration
+        - dependency
+        - replacement
+        - confirmation
+        - context
+        - alternative
+        - hierarchy
+        - reference
+
+    MemoryLifecycle:
+      type: object
+      required:
+        - stage
+        - transitions
+        - retention_policy
+      properties:
+        stage:
+          $ref: '#/components/schemas/LifecycleStage'
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleTransition'
+        retention_policy:
+          $ref: '#/components/schemas/RetentionPolicy'
+        archival_info:
+          $ref: '#/components/schemas/ArchivalInfo'
+
+    LifecycleStage:
+      type: string
+      enum:
+        - active
+        - warm
+        - cold
+        - frozen
+        - deprecated
+        - deleted
+
+    LifecycleTransition:
+      type: object
+      required:
+        - from_stage
+        - to_stage
+        - timestamp
+        - reason
+        - triggered_by
+        - automatic
+      properties:
+        from_stage:
+          $ref: '#/components/schemas/LifecycleStage'
+        to_stage:
+          $ref: '#/components/schemas/LifecycleStage'
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          $ref: '#/components/schemas/TransitionReason'
+        triggered_by:
+          $ref: '#/components/schemas/EntityType'
+        automatic:
+          type: boolean
+
+    TransitionReason:
+      type: string
+      enum:
+        - ttl_expired
+        - usage_decline
+        - storage_pressure
+        - manual_decision
+        - policy_change
+        - quality_degradation
+        - superseded
+        - importance_upgrade
+
+    RetentionPolicy:
+      type: object
+      required:
+        - policy_id
+        - policy_name
+        - storage_tier_rules
+      properties:
+        policy_id:
+          type: string
+        policy_name:
+          type: string
+        max_age:
+          type: string
+          description: ISO 8601 duration format
+        min_access_frequency:
+          type: number
+          minimum: 0
+        importance_threshold:
+          $ref: '#/components/schemas/ImportanceLevel'
+        storage_tier_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageTierRule'
+
+    StorageTierRule:
+      type: object
+      required:
+        - tier
+        - conditions
+        - action
+      properties:
+        tier:
+          $ref: '#/components/schemas/StorageTier'
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TierCondition'
+        action:
+          $ref: '#/components/schemas/TierAction'
+
+    StorageTier:
+      type: string
+      enum:
+        - hot
+        - warm
+        - cold
+        - frozen
+
+    TierCondition:
+      type: object
+      required:
+        - type
+        - operator
+        - value
+      properties:
+        type:
+          $ref: '#/components/schemas/ConditionType'
+        operator:
+          $ref: '#/components/schemas/ComparisonOperator'
+        value:
+          description: Condition value (type varies based on condition type)
+
+    ConditionType:
+      type: string
+      enum:
+        - age
+        - access_frequency
+        - importance
+        - size
+        - usage_trend
+
+    ComparisonOperator:
+      type: string
+      enum:
+        - equals
+        - greater_than
+        - less_than
+        - greater_equal
+        - less_equal
+        - in
+        - not_in
+
+    TierAction:
+      type: string
+      enum:
+        - promote
+        - demote
+        - maintain
+        - archive
+        - delete
+
+    ArchivalInfo:
+      type: object
+      required:
+        - archived_at
+        - archived_by
+        - archive_location
+        - original_size
+        - checksum
+      properties:
+        archived_at:
+          type: string
+          format: date-time
+        archived_by:
+          $ref: '#/components/schemas/EntityType'
+        archive_location:
+          type: string
+        compression_type:
+          $ref: '#/components/schemas/CompressionType'
+        original_size:
+          type: integer
+          minimum: 0
+        compressed_size:
+          type: integer
+          minimum: 0
+        checksum:
+          type: string
+        retrieval_cost:
+          type: number
+          minimum: 0
+
+    CompressionType:
+      type: string
+      enum:
+        - none
+        - gzip
+        - lz4
+        - zstd
+        - custom
+
+    MemorySecurityContext:
+      type: object
+      required:
+        - access_level
+        - visibility_scope
+        - privacy_tags
+        - compliance_requirements
+        - audit_settings
+      properties:
+        access_level:
+          $ref: '#/components/schemas/AccessLevel'
+        visibility_scope:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisibilityScope'
+        encryption_info:
+          $ref: '#/components/schemas/EncryptionInfo'
+        privacy_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivacyTag'
+        compliance_requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceRequirement'
+        audit_settings:
+          $ref: '#/components/schemas/AuditSettings'
+
+    AccessLevel:
+      type: string
+      enum:
+        - public
+        - project
+        - team
+        - personal
+        - agent_only
+        - admin
+        - restricted
+
+    VisibilityScope:
+      type: object
+      required:
+        - scope_type
+        - scope_id
+        - permissions
+      properties:
+        scope_type:
+          $ref: '#/components/schemas/ScopeType'
+        scope_id:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+
+    ScopeType:
+      type: string
+      enum:
+        - user
+        - team
+        - role
+        - project
+        - organization
+
+    Permission:
+      type: string
+      enum:
+        - read
+        - write
+        - delete
+        - share
+        - export
+        - admin
+
+    EncryptionInfo:
+      type: object
+      required:
+        - encrypted
+        - encrypted_fields
+      properties:
+        encrypted:
+          type: boolean
+        algorithm:
+          type: string
+        key_id:
+          type: string
+        encrypted_fields:
+          type: array
+          items:
+            type: string
+
+    PrivacyTag:
+      type: string
+      enum:
+        - pii
+        - sensitive
+        - confidential
+        - public
+        - internal
+
+    ComplianceRequirement:
+      type: object
+      required:
+        - framework
+        - requirement_id
+      properties:
+        framework:
+          $ref: '#/components/schemas/ComplianceFramework'
+        requirement_id:
+          type: string
+        retention_period:
+          type: string
+          description: ISO 8601 duration format
+        deletion_required:
+          type: boolean
+        anonymization_required:
+          type: boolean
+
+    ComplianceFramework:
+      type: string
+      enum:
+        - gdpr
+        - ccpa
+        - hipaa
+        - sox
+        - internal
+
+    AuditSettings:
+      type: object
+      required:
+        - audit_enabled
+        - audit_level
+        - retention_period
+        - include_content
+      properties:
+        audit_enabled:
+          type: boolean
+        audit_level:
+          $ref: '#/components/schemas/AuditLevel'
+        retention_period:
+          type: string
+          description: ISO 8601 duration format
+        include_content:
+          type: boolean
+
+    AuditLevel:
+      type: string
+      enum:
+        - none
+        - basic
+        - standard
+        - detailed
+        - forensic
+
+    # Memory Clusters
+    MemoryCluster:
+      type: object
+      required:
+        - id
+        - name
+        - cluster_type
+        - coherence_score
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        cluster_type:
+          $ref: '#/components/schemas/ClusterType'
+        coherence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ClusterType:
+      type: string
+      enum:
+        - topical
+        - temporal
+        - contextual
+        - semantic
+        - persona
+        - decision
+        - project
+
+    # Request/Response Models
+    CreateMemoryRequest:
+      type: object
+      required:
+        - scope
+        - content
+      properties:
+        scope:
+          $ref: '#/components/schemas/MemoryScope'
+        content:
+          $ref: '#/components/schemas/MemoryContent'
+        metadata:
+          $ref: '#/components/schemas/MemoryMetadata'
+        lifecycle:
+          $ref: '#/components/schemas/MemoryLifecycle'
+        security_context:
+          $ref: '#/components/schemas/MemorySecurityContext'
+        expires_at:
+          type: string
+          format: date-time
+
+    CreateMemoryResponse:
+      type: object
+      required:
+        - memory_id
+        - status
+        - created_at
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created]
+        created_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          items:
+            type: string
+
+    BatchCreateMemoryRequest:
+      type: object
+      required:
+        - memories
+      properties:
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateMemoryRequest'
+          maxItems: 100
+
+    BatchCreateMemoryResponse:
+      type: object
+      required:
+        - created_count
+        - failed_count
+        - memory_ids
+      properties:
+        created_count:
+          type: integer
+          minimum: 0
+        failed_count:
+          type: integer
+          minimum: 0
+        memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    BatchError:
+      type: object
+      required:
+        - index
+        - error
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+
+    UpdateMemoryRequest:
+      type: object
+      properties:
+        scope:
+          $ref: '#/components/schemas/MemoryScope'
+        content:
+          $ref: '#/components/schemas/MemoryContent'
+        metadata:
+          $ref: '#/components/schemas/MemoryMetadata'
+        lifecycle:
+          $ref: '#/components/schemas/MemoryLifecycle'
+        security_context:
+          $ref: '#/components/schemas/MemorySecurityContext'
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    MemoryListResponse:
+      type: object
+      required:
+        - memories
+        - total_count
+        - page_info
+      properties:
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryEntry'
+        total_count:
+          type: integer
+          minimum: 0
+        page_info:
+          $ref: '#/components/schemas/PageInfo'
+
+    PageInfo:
+      type: object
+      required:
+        - limit
+        - offset
+        - has_next
+        - has_previous
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        has_next:
+          type: boolean
+        has_previous:
+          type: boolean
+
+    # Search Models
+    MemorySearchRequest:
+      type: object
+      properties:
+        scope_filters:
+          $ref: '#/components/schemas/MemoryScopeFilter'
+        content_filters:
+          $ref: '#/components/schemas/ContentFilter'
+        temporal_filters:
+          $ref: '#/components/schemas/TemporalFilter'
+        metadata_filters:
+          $ref: '#/components/schemas/MetadataFilter'
+        relationship_filters:
+          $ref: '#/components/schemas/RelationshipFilter'
+        search_options:
+          $ref: '#/components/schemas/SearchOptions'
+        result_options:
+          $ref: '#/components/schemas/ResultOptions'
+
+    MemoryScopeFilter:
+      type: object
+      properties:
+        scope_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryScopeType'
+        entity_ids:
+          type: array
+          items:
+            type: string
+        entity_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityType'
+        context_ids:
+          type: array
+          items:
+            type: string
+        thread_ids:
+          type: array
+          items:
+            type: string
+        project_ids:
+          type: array
+          items:
+            type: string
+
+    ContentFilter:
+      type: object
+      properties:
+        content_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentType'
+        text_search:
+          $ref: '#/components/schemas/TextSearchFilter'
+        semantic_search:
+          $ref: '#/components/schemas/SemanticSearchFilter'
+        structured_filters:
+          type: object
+          additionalProperties: true
+        language:
+          type: array
+          items:
+            type: string
+
+    TextSearchFilter:
+      type: object
+      required:
+        - query
+        - search_type
+      properties:
+        query:
+          type: string
+        search_type:
+          $ref: '#/components/schemas/TextSearchType'
+        case_sensitive:
+          type: boolean
+          default: false
+        whole_words_only:
+          type: boolean
+          default: false
+        fuzzy_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    TextSearchType:
+      type: string
+      enum:
+        - exact
+        - contains
+        - starts_with
+        - ends_with
+        - regex
+        - fuzzy
+        - full_text
+
+    SemanticSearchFilter:
+      type: object
+      properties:
+        query_text:
+          type: string
+        query_embedding:
+          type: array
+          items:
+            type: number
+        similarity_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+        max_results:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 50
+        algorithm:
+          $ref: '#/components/schemas/SimilarityAlgorithm'
+
+    SimilarityAlgorithm:
+      type: string
+      enum:
+        - cosine
+        - euclidean
+        - dot_product
+        - manhattan
+
+    TemporalFilter:
+      type: object
+      properties:
+        created_after:
+          type: string
+          format: date-time
+        created_before:
+          type: string
+          format: date-time
+        updated_after:
+          type: string
+          format: date-time
+        updated_before:
+          type: string
+          format: date-time
+        accessed_after:
+          type: string
+          format: date-time
+        accessed_before:
+          type: string
+          format: date-time
+        expires_after:
+          type: string
+          format: date-time
+        expires_before:
+          type: string
+          format: date-time
+        temporal_relevance:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemporalRelevance'
+
+    MetadataFilter:
+      type: object
+      properties:
+        importance_levels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportanceLevel'
+        tags:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          items:
+            type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceType'
+        confidence_min:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidence_max:
+          type: number
+          minimum: 0
+          maximum: 1
+        quality_score_min:
+          type: number
+          minimum: 0
+          maximum: 1
+        quality_score_max:
+          type: number
+          minimum: 0
+          maximum: 1
+        access_count_min:
+          type: integer
+          minimum: 0
+        access_count_max:
+          type: integer
+          minimum: 0
+
+    RelationshipFilter:
+      type: object
+      properties:
+        relationship_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationshipType'
+        related_memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        relationship_strength_min:
+          type: number
+          minimum: 0
+          maximum: 1
+        relationship_confidence_min:
+          type: number
+          minimum: 0
+          maximum: 1
+        cluster_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    SearchOptions:
+      type: object
+      properties:
+        include_deleted:
+          type: boolean
+          default: false
+        include_archived:
+          type: boolean
+          default: false
+        search_mode:
+          $ref: '#/components/schemas/SearchMode'
+        ranking_algorithm:
+          $ref: '#/components/schemas/RankingAlgorithm'
+        boost_factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoostFactor'
+
+    SearchMode:
+      type: string
+      enum:
+        - comprehensive
+        - fast
+        - recent
+        - historical
+        - intelligent
+
+    RankingAlgorithm:
+      type: string
+      enum:
+        - relevance
+        - recency
+        - importance
+        - popularity
+        - hybrid
+        - custom
+
+    BoostFactor:
+      type: object
+      required:
+        - factor_type
+        - multiplier
+      properties:
+        factor_type:
+          $ref: '#/components/schemas/BoostFactorType'
+        multiplier:
+          type: number
+          minimum: 0
+        condition:
+          type: string
+
+    BoostFactorType:
+      type: string
+      enum:
+        - recency
+        - importance
+        - access_frequency
+        - confidence
+        - relationship_strength
+        - semantic_similarity
+
+    ResultOptions:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 50
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        include_content:
+          type: boolean
+          default: true
+        include_metadata:
+          type: boolean
+          default: true
+        include_relationships:
+          type: boolean
+          default: false
+        include_provenance:
+          type: boolean
+          default: false
+        include_embeddings:
+          type: boolean
+          default: false
+        format:
+          $ref: '#/components/schemas/ResultFormat'
+        sort_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortOption'
+
+    ResultFormat:
+      type: string
+      enum:
+        - full
+        - summary
+        - minimal
+        - custom
+
+    SortOption:
+      type: object
+      required:
+        - field
+        - direction
+      properties:
+        field:
+          $ref: '#/components/schemas/SortField'
+        direction:
+          $ref: '#/components/schemas/SortDirection'
+
+    SortField:
+      type: string
+      enum:
+        - relevance
+        - created_at
+        - updated_at
+        - accessed_at
+        - importance
+        - confidence
+        - access_count
+
+    SortDirection:
+      type: string
+      enum:
+        - asc
+        - desc
+
+    MemorySearchResponse:
+      type: object
+      required:
+        - memories
+        - total_count
+        - search_metadata
+      properties:
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryEntry'
+        total_count:
+          type: integer
+          minimum: 0
+        search_metadata:
+          $ref: '#/components/schemas/SearchMetadata'
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchSuggestion'
+
+    SearchMetadata:
+      type: object
+      required:
+        - query_time_ms
+        - search_strategy
+        - tiers_searched
+        - total_scanned
+      properties:
+        query_time_ms:
+          type: number
+          minimum: 0
+        search_strategy:
+          $ref: '#/components/schemas/SearchMode'
+        tiers_searched:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageTier'
+        total_scanned:
+          type: integer
+          minimum: 0
+
+    SearchSuggestion:
+      type: object
+      required:
+        - type
+        - suggestion
+        - reasoning
+      properties:
+        type:
+          $ref: '#/components/schemas/SuggestionType'
+        suggestion:
+          type: string
+        reasoning:
+          type: string
+
+    SuggestionType:
+      type: string
+      enum:
+        - query_expansion
+        - filter_recommendation
+        - scope_adjustment
+        - temporal_adjustment
+
+    SemanticSearchRequest:
+      type: object
+      required:
+        - query_text
+      properties:
+        query_text:
+          type: string
+          minLength: 1
+        options:
+          $ref: '#/components/schemas/SemanticSearchOptions'
+
+    SemanticSearchOptions:
+      type: object
+      properties:
+        similarity_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+        max_results:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        include_related:
+          type: boolean
+          default: false
+        boost_recent:
+          type: boolean
+          default: false
+
+    TemporalQueryRequest:
+      type: object
+      required:
+        - time_range
+      properties:
+        time_range:
+          $ref: '#/components/schemas/TimeRange'
+        filters:
+          $ref: '#/components/schemas/MemorySearchRequest'
+
+    TimeRange:
+      type: object
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+
+    # Relationship Models
+    CreateRelationshipRequest:
+      type: object
+      required:
+        - target_memory_id
+        - relationship_type
+      properties:
+        target_memory_id:
+          type: string
+          format: uuid
+        relationship_type:
+          $ref: '#/components/schemas/RelationshipType'
+        strength:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 1.0
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 1.0
+        context:
+          type: string
+
+    RelationshipListResponse:
+      type: object
+      required:
+        - relationships
+        - total_count
+      properties:
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryRelationship'
+        total_count:
+          type: integer
+          minimum: 0
+
+    SimilarMemoriesResponse:
+      type: object
+      required:
+        - similar_memories
+        - similarity_scores
+      properties:
+        similar_memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryEntry'
+        similarity_scores:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+
+    # Cluster Models
+    CreateClusterRequest:
+      type: object
+      required:
+        - name
+        - memory_ids
+        - cluster_type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+        cluster_type:
+          $ref: '#/components/schemas/ClusterType'
+
+    CreateClusterResponse:
+      type: object
+      required:
+        - cluster_id
+        - status
+        - coherence_score
+      properties:
+        cluster_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created]
+        coherence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    UpdateClusterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ClusterListResponse:
+      type: object
+      required:
+        - clusters
+        - total_count
+        - page_info
+      properties:
+        clusters:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryCluster'
+        total_count:
+          type: integer
+          minimum: 0
+        page_info:
+          $ref: '#/components/schemas/PageInfo'
+
+    ClusterMembershipRequest:
+      type: object
+      required:
+        - memory_ids
+      properties:
+        memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+
+    # Lifecycle Models
+    PromoteMemoryRequest:
+      type: object
+      required:
+        - new_importance
+      properties:
+        new_importance:
+          $ref: '#/components/schemas/ImportanceLevel'
+        reason:
+          type: string
+
+    DemoteMemoryRequest:
+      type: object
+      required:
+        - new_importance
+      properties:
+        new_importance:
+          $ref: '#/components/schemas/ImportanceLevel'
+        reason:
+          type: string
+
+    ArchiveMemoryRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        compression_type:
+          $ref: '#/components/schemas/CompressionType'
+
+    RefreshTTLRequest:
+      type: object
+      properties:
+        new_ttl:
+          type: string
+          description: ISO 8601 duration format
+        reason:
+          type: string
+
+    # Analytics Models
+    MemoryStatistics:
+      type: object
+      required:
+        - total_memories
+        - by_scope_type
+        - by_importance
+        - by_storage_tier
+        - average_age
+        - total_size_bytes
+        - relationship_count
+        - cluster_count
+      properties:
+        total_memories:
+          type: integer
+          minimum: 0
+        by_scope_type:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        by_importance:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        by_storage_tier:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        average_age:
+          type: string
+          description: ISO 8601 duration format
+        total_size_bytes:
+          type: integer
+          minimum: 0
+        relationship_count:
+          type: integer
+          minimum: 0
+        cluster_count:
+          type: integer
+          minimum: 0
+
+    UsageAnalytics:
+      type: object
+      required:
+        - time_range
+        - total_accesses
+        - unique_memories_accessed
+        - top_accessed_memories
+        - access_patterns
+        - performance_metrics
+      properties:
+        time_range:
+          $ref: '#/components/schemas/TimeRange'
+        total_accesses:
+          type: integer
+          minimum: 0
+        unique_memories_accessed:
+          type: integer
+          minimum: 0
+        top_accessed_memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryAccessStat'
+        access_patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessPatternStat'
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+
+    MemoryAccessStat:
+      type: object
+      required:
+        - memory_id
+        - access_count
+        - last_accessed
+        - average_session_length
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+        access_count:
+          type: integer
+          minimum: 0
+        last_accessed:
+          type: string
+          format: date-time
+        average_session_length:
+          type: string
+          description: ISO 8601 duration format
+
+    AccessPatternStat:
+      type: object
+      required:
+        - pattern_name
+        - frequency
+        - typical_times
+        - associated_contexts
+      properties:
+        pattern_name:
+          type: string
+        frequency:
+          type: integer
+          minimum: 0
+        typical_times:
+          type: array
+          items:
+            type: string
+        associated_contexts:
+          type: array
+          items:
+            type: string
+
+    PerformanceMetrics:
+      type: object
+      required:
+        - average_retrieval_time_ms
+        - cache_hit_rate
+        - storage_efficiency
+        - index_performance
+      properties:
+        average_retrieval_time_ms:
+          type: number
+          minimum: 0
+        cache_hit_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        storage_efficiency:
+          type: number
+          minimum: 0
+          maximum: 1
+        index_performance:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    MemoryHealthReport:
+      type: object
+      required:
+        - overall_health_score
+        - issues
+        - recommendations
+        - metrics
+      properties:
+        overall_health_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthIssue'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthRecommendation'
+        metrics:
+          $ref: '#/components/schemas/HealthMetrics'
+
+    HealthIssue:
+      type: object
+      required:
+        - severity
+        - category
+        - description
+        - affected_count
+        - suggested_action
+      properties:
+        severity:
+          $ref: '#/components/schemas/IssueSeverity'
+        category:
+          $ref: '#/components/schemas/IssueCategory'
+        description:
+          type: string
+        affected_count:
+          type: integer
+          minimum: 0
+        suggested_action:
+          type: string
+
+    IssueSeverity:
+      type: string
+      enum:
+        - critical
+        - high
+        - medium
+        - low
+        - info
+
+    IssueCategory:
+      type: string
+      enum:
+        - performance
+        - storage
+        - integrity
+        - security
+        - lifecycle
+
+    HealthRecommendation:
+      type: object
+      required:
+        - priority
+        - action
+        - description
+        - expected_impact
+        - implementation_effort
+      properties:
+        priority:
+          $ref: '#/components/schemas/RecommendationPriority'
+        action:
+          $ref: '#/components/schemas/RecommendationAction'
+        description:
+          type: string
+        expected_impact:
+          type: string
+        implementation_effort:
+          $ref: '#/components/schemas/EffortLevel'
+
+    RecommendationPriority:
+      type: string
+      enum:
+        - urgent
+        - high
+        - medium
+        - low
+
+    RecommendationAction:
+      type: string
+      enum:
+        - cleanup
+        - optimization
+        - archival
+        - policy_update
+        - capacity_increase
+
+    EffortLevel:
+      type: string
+      enum:
+        - minimal
+        - low
+        - medium
+        - high
+        - major
+
+    HealthMetrics:
+      type: object
+      required:
+        - storage_utilization
+        - index_efficiency
+        - retrieval_performance
+        - data_quality_score
+        - security_compliance
+      properties:
+        storage_utilization:
+          type: number
+          minimum: 0
+          maximum: 1
+        index_efficiency:
+          type: number
+          minimum: 0
+          maximum: 1
+        retrieval_performance:
+          type: number
+          minimum: 0
+          maximum: 1
+        data_quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        security_compliance:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    # Health & Monitoring Models
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - uptime
+        - dependencies
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime:
+          type: string
+          description: ISO 8601 duration format
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/DependencyStatus'
+
+    DependencyStatus:
+      type: object
+      required:
+        - name
+        - status
+        - response_time_ms
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        response_time_ms:
+          type: number
+          minimum: 0
+        error:
+          type: string
+
+    ServiceMetrics:
+      type: object
+      required:
+        - request_count
+        - average_response_time_ms
+        - error_rate
+        - active_connections
+        - memory_usage
+        - cpu_usage
+      properties:
+        request_count:
+          type: integer
+          minimum: 0
+        average_response_time_ms:
+          type: number
+          minimum: 0
+        error_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        active_connections:
+          type: integer
+          minimum: 0
+        memory_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+        cpu_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+
+    ResourceUsage:
+      type: object
+      required:
+        - current
+        - peak
+        - average
+      properties:
+        current:
+          type: number
+          minimum: 0
+          maximum: 1
+        peak:
+          type: number
+          minimum: 0
+          maximum: 1
+        average:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    # Error Models
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: true
+        trace_id:
+          type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: [] 
