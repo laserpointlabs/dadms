@@ -102,16 +102,16 @@ flowchart TD
     J -->|<b>Evaluate & Expand</b>| A
     H -->|<b>Trigger Next</b>| A
 
-    classDef event fill:#f9f,stroke:#333,stroke-width:4px,color:#222;
-    classDef objective fill:#bbf,stroke:#333,stroke-width:2px,color:#222;
-    classDef ontology fill:#bfb,stroke:#333,stroke-width:2px,color:#222;
-    classDef model fill:#ffb,stroke:#333,stroke-width:2px,color:#222;
-    classDef simulate fill:#fbb,stroke:#333,stroke-width:2px,color:#222;
-    classDef analyze fill:#bff,stroke:#333,stroke-width:2px,color:#222;
-    classDef decide fill:#fbf,stroke:#333,stroke-width:2px,color:#222;
-    classDef emit fill:#fdb,stroke:#333,stroke-width:2px,color:#222;
-    classDef log fill:#dfd,stroke:#333,stroke-width:2px,color:#222;
-    classDef sandbox fill:#eee,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:#222;
+    classDef event stroke:#333,stroke-width:4px,color:#222;
+    classDef objective stroke:#333,stroke-width:2px,color:#222;
+    classDef ontology stroke:#333,stroke-width:2px,color:#222;
+    classDef model stroke:#333,stroke-width:2px,color:#222;
+    classDef simulate stroke:#333,stroke-width:2px,color:#222;
+    classDef analyze stroke:#333,stroke-width:2px,color:#222;
+    classDef decide stroke:#333,stroke-width:2px,color:#222;
+    classDef emit stroke:#333,stroke-width:2px,color:#222;
+    classDef log stroke:#333,stroke-width:2px,color:#222;
+    classDef sandbox stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:#222;
     class A event;
     class B objective;
     class C ontology;
