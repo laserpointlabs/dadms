@@ -1,0 +1,1952 @@
+openapi: 3.0.3
+info:
+  title: DADMS DataManager Service API
+  description: |
+    DataManager Service API for DADMS 2.0 - Central data gateway and processing hub
+    
+    The DataManager enables seamless integration of diverse data sources with intelligent 
+    transformation, validation, and real-time streaming capabilities. It serves as the 
+    primary gateway for external data integration into the DADMS ecosystem.
+    
+    **Key Features:**
+    - Multi-source data ingestion (databases, APIs, webhooks, files)
+    - Schema validation and data normalization
+    - Real-time streaming and batch processing
+    - Ontology tagging and metadata enrichment
+    - Data quality monitoring and lineage tracking
+    - Event-driven integration with DADMS services
+    
+  version: "1.0.0"
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3009
+    description: Local development
+  - url: https://api.dadms.dev/data-manager
+    description: Development environment
+  - url: https://api.dadms.com/data-manager
+    description: Production environment
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Data Ingestion Endpoints
+  /data/ingest:
+    post:
+      tags:
+        - Data Ingestion
+      summary: Ingest single data record
+      description: Ingest a single data record from any configured source
+      operationId: ingestData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataIngestRequest'
+            examples:
+              customer_record:
+                summary: Customer data record
+                value:
+                  source_id: "external-db-prod"
+                  external_id: "customer-12345"
+                  data_type: "structured"
+                  content:
+                    customer_id: "12345"
+                    name: "John Doe"
+                    email: "john.doe@example.com"
+                    status: "active"
+                  metadata:
+                    projectId: "proj-uuid"
+                    domain: "customer_management"
+                    tags: ["customer", "crm"]
+                    sensitivity_level: "internal"
+                  source_timestamp: "2025-01-15T10:30:00Z"
+      responses:
+        '201':
+          description: Data record successfully ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataIngestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /data/ingest/batch:
+    post:
+      tags:
+        - Data Ingestion
+      summary: Ingest multiple data records
+      description: Ingest multiple data records in a single batch operation
+      operationId: batchIngestData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchIngestRequest'
+      responses:
+        '201':
+          description: Batch ingestion completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchIngestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Data Querying Endpoints
+  /data/query:
+    get:
+      tags:
+        - Data Querying
+      summary: Query data records
+      description: Query data records with comprehensive filtering options
+      operationId: queryData
+      parameters:
+        - name: source_ids
+          in: query
+          description: Filter by data source IDs
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: project_id
+          in: query
+          description: Filter by DADMS project ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: data_types
+          in: query
+          description: Filter by data types
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/DataType'
+        - name: tags
+          in: query
+          description: Filter by metadata tags
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: start_time
+          in: query
+          description: Start of time range (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End of time range (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: time_field
+          in: query
+          description: Time field to filter on
+          required: false
+          schema:
+            type: string
+            enum: [ingestion_timestamp, source_timestamp]
+            default: ingestion_timestamp
+        - name: limit
+          in: query
+          description: Maximum records to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          description: Number of records to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          required: false
+          schema:
+            type: string
+            default: ingestion_timestamp
+        - name: sort_order
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /data/stream:
+    get:
+      tags:
+        - Data Streaming
+      summary: Real-time data streaming
+      description: WebSocket endpoint for real-time data streaming
+      operationId: streamData
+      parameters:
+        - name: source_ids
+          in: query
+          description: Filter by data source IDs
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: data_types
+          in: query
+          description: Filter by data types
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/DataType'
+        - name: tags
+          in: query
+          description: Filter by metadata tags
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: projects
+          in: query
+          description: Filter by project IDs
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+      responses:
+        '101':
+          description: WebSocket connection established
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Data Source Management Endpoints
+  /sources:
+    post:
+      tags:
+        - Data Sources
+      summary: Register new data source
+      description: Register a new data source for ingestion
+      operationId: createDataSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataSourceConfig'
+            examples:
+              database_source:
+                summary: Database data source
+                value:
+                  name: "Production Customer Database"
+                  type: "database"
+                  connection_config:
+                    host: "db.example.com"
+                    port: 5432
+                    database: "customers"
+                    username: "readonly_user"
+                    password: "encrypted_password"
+                    ssl: true
+                  schema_config:
+                    expected_tables: ["customers", "orders"]
+                    schema_validation: "strict"
+                  ingestion_config:
+                    mode: "realtime"
+                    batch_size: 1000
+                    sync_frequency: "5m"
+                    change_detection: "timestamp"
+                  metadata_mapping:
+                    domain: "customer_management"
+                    default_tags: ["crm", "production"]
+                    field_mappings:
+                      customer_id: "entity.customer.id"
+                      email: "contact.email"
+      responses:
+        '201':
+          description: Data source created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Data Sources
+      summary: List data sources
+      description: List all registered data sources
+      operationId: listDataSources
+      parameters:
+        - name: type
+          in: query
+          description: Filter by data source type
+          required: false
+          schema:
+            $ref: '#/components/schemas/DataSourceType'
+        - name: enabled
+          in: query
+          description: Filter by enabled status
+          required: false
+          schema:
+            type: boolean
+        - name: health_status
+          in: query
+          description: Filter by health status
+          required: false
+          schema:
+            $ref: '#/components/schemas/HealthStatus'
+      responses:
+        '200':
+          description: List of data sources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DataSource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /sources/{id}:
+    get:
+      tags:
+        - Data Sources
+      summary: Get specific data source
+      description: Get details of a specific data source
+      operationId: getDataSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data source ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data source details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Data Sources
+      summary: Update data source
+      description: Update data source configuration
+      operationId: updateDataSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data source ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataSourceConfig'
+      responses:
+        '200':
+          description: Data source updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Data Sources
+      summary: Delete data source
+      description: Delete a data source and stop all ingestion
+      operationId: deleteDataSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data source ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data source deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /sources/{id}/test:
+    post:
+      tags:
+        - Data Sources
+      summary: Test data source connection
+      description: Test connection to a data source
+      operationId: testDataSource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data source ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Connection test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Schema Management Endpoints
+  /schemas:
+    post:
+      tags:
+        - Schema Management
+      summary: Register data schema
+      description: Register a data schema for validation
+      operationId: createSchema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaDefinition'
+      responses:
+        '201':
+          description: Schema registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Schema Management
+      summary: List registered schemas
+      description: List all registered data schemas
+      operationId: listSchemas
+      parameters:
+        - name: domain
+          in: query
+          description: Filter by domain
+          required: false
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: Filter by version
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of schemas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SchemaDefinition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Data Validation Endpoints
+  /data/{id}/validate:
+    post:
+      tags:
+        - Data Validation
+      summary: Validate data record
+      description: Validate data record against registered schema
+      operationId: validateData
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data record ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Data Lineage Endpoints
+  /data/{id}/lineage:
+    get:
+      tags:
+        - Data Lineage
+      summary: Get data lineage
+      description: Get complete data lineage for a record
+      operationId: getDataLineage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data record ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data lineage information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataLineageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Metadata Management Endpoints
+  /data/{id}/metadata:
+    put:
+      tags:
+        - Metadata Management
+      summary: Update data metadata
+      description: Update metadata for a data record
+      operationId: updateDataMetadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data record ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetadataUpdateRequest'
+      responses:
+        '200':
+          description: Metadata updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataRecordResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Ontology Tagging Endpoints
+  /data/{id}/tags:
+    post:
+      tags:
+        - Ontology Tagging
+      summary: Apply ontology tags
+      description: Apply ontology tags to a data record
+      operationId: applyOntologyTags
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data record ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaggingRequest'
+      responses:
+        '200':
+          description: Tags applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaggingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Data Quality Endpoints
+  /data/{id}/quality:
+    get:
+      tags:
+        - Data Quality
+      summary: Assess data quality
+      description: Assess data quality for a record
+      operationId: assessDataQuality
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Data record ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data quality assessment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityAssessmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # External Integration Endpoints
+  /external/webhooks/{source_id}:
+    post:
+      tags:
+        - External Integration
+      summary: External webhook endpoint
+      description: Receive data from external systems via webhook
+      operationId: receiveWebhook
+      security: []  # No auth required, uses webhook secrets
+      parameters:
+        - name: source_id
+          in: path
+          required: true
+          description: External data source ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Variable format depending on external system
+            examples:
+              database_change:
+                summary: Database change event
+                value:
+                  event_type: "record_updated"
+                  table: "customers"
+                  record_id: "12345"
+                  timestamp: "2025-01-15T10:30:00Z"
+                  changes:
+                    status:
+                      from: "active"
+                      to: "inactive"
+      responses:
+        '200':
+          description: Webhook received successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Webhook authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Health and Monitoring Endpoints
+  /health:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Service health check
+      description: Get service health status
+      operationId: getHealth
+      security: []  # No auth required for health checks
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /metrics:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Service metrics
+      description: Get service performance metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Service metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Data Models
+    DataRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique record identifier
+        source_id:
+          type: string
+          description: Data source identifier
+        external_id:
+          type: string
+          description: Original external identifier
+          nullable: true
+        data_type:
+          $ref: '#/components/schemas/DataType'
+        content:
+          type: object
+          additionalProperties: true
+          description: Actual data content
+        metadata:
+          $ref: '#/components/schemas/DataMetadata'
+        schema_version:
+          type: string
+          description: Data schema version
+        ingestion_timestamp:
+          type: string
+          format: date-time
+          description: When data was ingested
+        source_timestamp:
+          type: string
+          format: date-time
+          description: Original timestamp from source
+          nullable: true
+        hash:
+          type: string
+          description: Content hash for deduplication
+        status:
+          $ref: '#/components/schemas/DataStatus'
+      required:
+        - id
+        - source_id
+        - data_type
+        - content
+        - metadata
+        - schema_version
+        - ingestion_timestamp
+        - hash
+        - status
+
+    DataType:
+      type: string
+      enum:
+        - structured
+        - unstructured
+        - time_series
+        - graph
+        - document
+        - media
+      description: Type of data
+
+    DataStatus:
+      type: string
+      enum:
+        - ingesting
+        - validated
+        - transformed
+        - indexed
+        - failed
+        - archived
+      description: Processing status of data
+
+    DataMetadata:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+          description: Linked DADMS project
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          description: User who ingested data
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          description: Ontological and custom tags
+        domain:
+          type: string
+          description: Knowledge domain
+        source_config:
+          type: object
+          additionalProperties: true
+          description: Source configuration
+        lineage:
+          $ref: '#/components/schemas/DataLineage'
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Data quality assessment
+          nullable: true
+        sensitivity_level:
+          type: string
+          enum: [public, internal, confidential, restricted]
+          description: Data sensitivity classification
+        retention_policy:
+          type: string
+          description: Retention policy identifier
+          nullable: true
+      required:
+        - tags
+        - domain
+        - source_config
+        - lineage
+        - sensitivity_level
+
+    DataLineage:
+      type: object
+      properties:
+        source_path:
+          type: string
+          description: Original data path/location
+        transformations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transformation'
+          description: Applied transformations
+        parent_records:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Parent record IDs if derived
+          nullable: true
+        downstream_usage:
+          type: array
+          items:
+            type: string
+          description: Services/processes using this data
+      required:
+        - source_path
+        - transformations
+        - downstream_usage
+
+    Transformation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Transformation identifier
+        name:
+          type: string
+          description: Transformation name
+        type:
+          type: string
+          enum: [filter, map, aggregate, join, normalize]
+          description: Transformation type
+        config:
+          type: object
+          additionalProperties: true
+          description: Transformation configuration
+        order:
+          type: integer
+          description: Execution order
+        applied_at:
+          type: string
+          format: date-time
+          description: When transformation was applied
+      required:
+        - id
+        - name
+        - type
+        - config
+        - order
+
+    # Data Source Models
+    DataSource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique source identifier
+        name:
+          type: string
+          description: Human-readable name
+        type:
+          $ref: '#/components/schemas/DataSourceType'
+        connection_config:
+          type: object
+          additionalProperties: true
+          description: Connection details (sensitive data excluded)
+        schema_config:
+          type: object
+          additionalProperties: true
+          description: Expected schema configuration
+        ingestion_config:
+          type: object
+          additionalProperties: true
+          description: Ingestion settings
+        metadata_mapping:
+          type: object
+          additionalProperties: true
+          description: Metadata extraction rules
+        enabled:
+          type: boolean
+          description: Source activation status
+        health_status:
+          $ref: '#/components/schemas/HealthStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - type
+        - connection_config
+        - enabled
+        - health_status
+        - created_at
+        - updated_at
+
+    DataSourceType:
+      type: string
+      enum:
+        - database
+        - rest_api
+        - webhook
+        - file_system
+        - message_queue
+        - streaming
+        - third_party_api
+      description: Type of data source
+
+    DataSourceConfig:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Human-readable name
+        type:
+          $ref: '#/components/schemas/DataSourceType'
+        connection_config:
+          type: object
+          additionalProperties: true
+          description: Connection configuration
+        schema_config:
+          type: object
+          additionalProperties: true
+          description: Schema configuration
+        ingestion_config:
+          type: object
+          additionalProperties: true
+          description: Ingestion configuration
+        metadata_mapping:
+          type: object
+          additionalProperties: true
+          description: Metadata mapping configuration
+      required:
+        - name
+        - type
+        - connection_config
+
+    HealthStatus:
+      type: string
+      enum:
+        - healthy
+        - degraded
+        - unhealthy
+        - unknown
+      description: Health status
+
+    # Request/Response Models
+    DataIngestRequest:
+      type: object
+      properties:
+        source_id:
+          type: string
+          description: Data source identifier
+        external_id:
+          type: string
+          description: External record identifier
+          nullable: true
+        data_type:
+          $ref: '#/components/schemas/DataType'
+        content:
+          type: object
+          additionalProperties: true
+          description: Data content
+        metadata:
+          type: object
+          properties:
+            projectId:
+              type: string
+              format: uuid
+              nullable: true
+            domain:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            sensitivity_level:
+              type: string
+              enum: [public, internal, confidential, restricted]
+          required:
+            - domain
+            - tags
+            - sensitivity_level
+        source_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - source_id
+        - data_type
+        - content
+        - metadata
+
+    DataIngestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/DataRecord'
+      required:
+        - success
+        - data
+
+    BatchIngestRequest:
+      type: object
+      properties:
+        source_id:
+          type: string
+          description: Data source identifier
+        records:
+          type: array
+          items:
+            type: object
+            properties:
+              external_id:
+                type: string
+                nullable: true
+              data_type:
+                $ref: '#/components/schemas/DataType'
+              content:
+                type: object
+                additionalProperties: true
+              source_timestamp:
+                type: string
+                format: date-time
+                nullable: true
+            required:
+              - data_type
+              - content
+        metadata:
+          type: object
+          properties:
+            projectId:
+              type: string
+              format: uuid
+              nullable: true
+            domain:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            sensitivity_level:
+              type: string
+              enum: [public, internal, confidential, restricted]
+          required:
+            - domain
+            - tags
+            - sensitivity_level
+      required:
+        - source_id
+        - records
+        - metadata
+
+    BatchIngestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            total_records:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  external_id:
+                    type: string
+                    nullable: true
+                  record_id:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/DataStatus'
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  external_id:
+                    type: string
+                    nullable: true
+                  error:
+                    type: string
+          required:
+            - total_records
+            - successful
+            - failed
+            - results
+            - errors
+      required:
+        - success
+        - data
+
+    DataQueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            records:
+              type: array
+              items:
+                $ref: '#/components/schemas/DataRecord'
+            pagination:
+              type: object
+              properties:
+                total:
+                  type: integer
+                limit:
+                  type: integer
+                offset:
+                  type: integer
+                has_more:
+                  type: boolean
+              required:
+                - total
+                - limit
+                - offset
+                - has_more
+            query_time_ms:
+              type: integer
+          required:
+            - records
+            - pagination
+            - query_time_ms
+      required:
+        - success
+        - data
+
+    DataSourceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/DataSource'
+      required:
+        - success
+        - data
+
+    ConnectionTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            source_id:
+              type: string
+              format: uuid
+            connection_status:
+              $ref: '#/components/schemas/HealthStatus'
+            response_time_ms:
+              type: integer
+            test_results:
+              type: object
+              properties:
+                connectivity:
+                  type: string
+                  enum: [pass, fail]
+                authentication:
+                  type: string
+                  enum: [pass, fail]
+                permissions:
+                  type: string
+                  enum: [pass, fail]
+                schema_access:
+                  type: string
+                  enum: [pass, fail]
+              required:
+                - connectivity
+                - authentication
+                - permissions
+                - schema_access
+            tested_at:
+              type: string
+              format: date-time
+          required:
+            - source_id
+            - connection_status
+            - response_time_ms
+            - test_results
+            - tested_at
+      required:
+        - success
+        - data
+
+    SchemaDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Schema name
+        domain:
+          type: string
+          description: Knowledge domain
+        schema:
+          type: object
+          description: JSON Schema definition
+          additionalProperties: true
+        version:
+          type: string
+          description: Schema version
+      required:
+        - name
+        - domain
+        - schema
+        - version
+
+    SchemaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          allOf:
+            - $ref: '#/components/schemas/SchemaDefinition'
+            - type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                created_at:
+                  type: string
+                  format: date-time
+              required:
+                - id
+                - created_at
+      required:
+        - success
+        - data
+
+    ValidationRequest:
+      type: object
+      properties:
+        schema_id:
+          type: string
+          format: uuid
+          description: Schema to validate against
+        data:
+          type: object
+          additionalProperties: true
+          description: Data to validate
+      required:
+        - schema_id
+        - data
+
+    ValidationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+                  value:
+                    type: string
+                    nullable: true
+            warnings:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+          required:
+            - valid
+            - errors
+            - warnings
+      required:
+        - success
+        - data
+
+    DataLineageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            record_id:
+              type: string
+              format: uuid
+            lineage:
+              $ref: '#/components/schemas/DataLineage'
+          required:
+            - record_id
+            - lineage
+      required:
+        - success
+        - data
+
+    MetadataUpdateRequest:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+        domain:
+          type: string
+        sensitivity_level:
+          type: string
+          enum: [public, internal, confidential, restricted]
+        retention_policy:
+          type: string
+          nullable: true
+      additionalProperties: false
+
+    DataRecordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/DataRecord'
+      required:
+        - success
+        - data
+
+    TaggingRequest:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              concept:
+                type: string
+                description: Ontology concept URI
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+                description: Confidence score
+            required:
+              - concept
+              - confidence
+        applied_by:
+          type: string
+          enum: [system, human]
+        auto_approve:
+          type: boolean
+          default: false
+      required:
+        - tags
+        - applied_by
+
+    TaggingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            record_id:
+              type: string
+              format: uuid
+            tags_applied:
+              type: integer
+            pending_approval:
+              type: integer
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  concept:
+                    type: string
+                  confidence:
+                    type: number
+                  status:
+                    type: string
+                    enum: [approved, pending_approval, rejected]
+          required:
+            - record_id
+            - tags_applied
+            - pending_approval
+            - tags
+      required:
+        - success
+        - data
+
+    QualityAssessmentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            record_id:
+              type: string
+              format: uuid
+            quality_score:
+              type: number
+              minimum: 0
+              maximum: 1
+            assessment:
+              type: object
+              properties:
+                completeness:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                accuracy:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                consistency:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                timeliness:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+              required:
+                - completeness
+                - accuracy
+                - consistency
+                - timeliness
+            issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  field:
+                    type: string
+                  severity:
+                    type: string
+                    enum: [low, medium, high, critical]
+                  message:
+                    type: string
+            assessed_at:
+              type: string
+              format: date-time
+          required:
+            - record_id
+            - quality_score
+            - assessment
+            - issues
+            - assessed_at
+      required:
+        - success
+        - data
+
+    WebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Event received and queued for processing"
+        event_id:
+          type: string
+          format: uuid
+      required:
+        - success
+        - message
+        - event_id
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatus'
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        components:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/HealthStatus'
+            redis:
+              $ref: '#/components/schemas/HealthStatus'
+            event_manager:
+              $ref: '#/components/schemas/HealthStatus'
+            data_sources:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/HealthStatus'
+          required:
+            - database
+            - redis
+            - event_manager
+            - data_sources
+      required:
+        - status
+        - timestamp
+        - version
+        - uptime
+        - components
+
+    MetricsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            ingestion:
+              type: object
+              properties:
+                records_ingested_total:
+                  type: integer
+                records_per_second:
+                  type: number
+                ingestion_latency_p95_ms:
+                  type: number
+                ingestion_errors_total:
+                  type: integer
+            processing:
+              type: object
+              properties:
+                validation_duration_p95_ms:
+                  type: number
+                transformation_duration_p95_ms:
+                  type: number
+                quality_score_avg:
+                  type: number
+            storage:
+              type: object
+              properties:
+                total_records_stored:
+                  type: integer
+                storage_size_bytes:
+                  type: integer
+                deduplication_ratio:
+                  type: number
+            sources:
+              type: object
+              properties:
+                active_data_sources:
+                  type: integer
+                healthy_sources:
+                  type: integer
+                connection_errors_total:
+                  type: integer
+          required:
+            - ingestion
+            - processing
+            - storage
+            - sources
+        collected_at:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - collected_at
+
+    # Common Response Models
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - success
+        - error
+        - message
+        - timestamp
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "BAD_REQUEST"
+            message: "Invalid request parameters"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "UNAUTHORIZED"
+            message: "Authentication required"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "NOT_FOUND"
+            message: "Resource not found"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "CONFLICT"
+            message: "Resource already exists"
+            timestamp: "2025-01-15T14:35:12Z"
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  validation_errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        message:
+                          type: string
+                        value:
+                          type: string
+                          nullable: true
+          example:
+            success: false
+            error: "VALIDATION_ERROR"
+            message: "Request validation failed"
+            validation_errors:
+              - field: "source_id"
+                message: "source_id is required"
+                value: null
+            timestamp: "2025-01-15T14:35:12Z"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2025-01-15T14:35:12Z"
+
+tags:
+  - name: Data Ingestion
+    description: Endpoints for ingesting data from various sources
+  - name: Data Querying
+    description: Endpoints for querying and retrieving data
+  - name: Data Streaming
+    description: Real-time data streaming capabilities
+  - name: Data Sources
+    description: Management of data source configurations
+  - name: Schema Management
+    description: Data schema registration and management
+  - name: Data Validation
+    description: Data validation against registered schemas
+  - name: Data Lineage
+    description: Data lineage tracking and retrieval
+  - name: Metadata Management
+    description: Data metadata management
+  - name: Ontology Tagging
+    description: Ontological tagging and classification
+  - name: Data Quality
+    description: Data quality assessment and monitoring
+  - name: External Integration
+    description: External system integration via webhooks
+  - name: Health & Monitoring
+    description: Service health and performance monitoring
