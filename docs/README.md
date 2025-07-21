@@ -28,6 +28,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 ### 🌐 API Documentation
 - **[API Overview](api/README.md)**: Service APIs, authentication, and integration guides
 - **[Project Service API](development/backend/project_service_api_endpoints.md)**: ✅ **OPERATIONAL** - Complete project lifecycle management API with React UI integration
+- **[Agent Assistance Service API](development/backend/agent_assistance_service_api_endpoints.md)**: 📋 **SPECIFICATION** - Comprehensive proactive intelligent assistant API with real-time context awareness, natural language interaction, and action execution
 - **[Model Manager API](api/model_manager_api_endpoints.md)**: Comprehensive model registry API documentation
 - **[Simulation Manager API](api/simulation_manager_api_endpoints.md)**: Comprehensive simulation execution and orchestration API
 - **[Analysis Manager API](api/analysis_manager_api_endpoints.md)**: Comprehensive intelligent analysis and decision-support API
