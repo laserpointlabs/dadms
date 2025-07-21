@@ -30,6 +30,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 - **[Model Manager API](api/model_manager_api_endpoints.md)**: Comprehensive model registry API documentation
 - **[Simulation Manager API](api/simulation_manager_api_endpoints.md)**: Comprehensive simulation execution and orchestration API
 - **[Analysis Manager API](api/analysis_manager_api_endpoints.md)**: Comprehensive intelligent analysis and decision-support API
+- **[Parameter Manager API](development/backend/parameter_manager_service_api_endpoints.md)**: Comprehensive parameter lifecycle management and validation API
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides

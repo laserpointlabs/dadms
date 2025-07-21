@@ -19,6 +19,8 @@ This directory contains API documentation for all DADMS services.
   - **[Detailed API Endpoints](simulation_manager_api_endpoints.md)** - Human-readable documentation
 - **[Analysis Manager Service API](analysis_manager_service_openapi.yaml)** (Port 3012) - **NEW: Intelligent analysis & decision support**
   - **[Detailed API Endpoints](analysis_manager_api_endpoints.md)** - Human-readable documentation
+- **[Parameter Manager Service API](parameter_manager_service_openapi.yaml)** (Port 3013) - **NEW: Parameter lifecycle management & validation**
+  - **[Detailed API Endpoints](../development/backend/parameter_manager_service_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -131,6 +133,7 @@ flowchart LR
 - [x] **Model Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Simulation Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Analysis Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Parameter Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE
