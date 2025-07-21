@@ -1,274 +1,49 @@
 openapi: 3.0.3
 info:
   title: DADMS Agent Assistance Service (AAS) API
-  description: Intelligent, proactive assistant that monitors system events and provides context-aware help to users
+  description: |
+    Proactive, context-aware intelligent assistant that monitors system events and provides 
+    real-time assistance to enhance productivity and decision-making efficiency.
+    
+    ## Core Capabilities
+    - **Context Awareness**: Monitor user navigation, project context, and system state
+    - **Proactive Suggestions**: Provide intelligent recommendations based on current context
+    - **Natural Language Interface**: Accept and respond to user questions in natural language
+    - **Action Execution**: Execute authorized actions on behalf of users
+    - **Learning & Adaptation**: Learn from user feedback to improve assistance quality
+    
+    ## Current Implementation Status
+    📋 **SPECIFICATION** - Ready for implementation
+    
+    ## Key Features
+    - **Real-time Context Monitoring**: Continuous awareness of user and system state
+    - **Event-Driven Intelligence**: Proactive responses to system events
+    - **Natural Language Processing**: Conversational interaction capability
+    - **Cross-Service Integration**: Seamless integration with all DADMS services
+    - **Learning & Personalization**: Adaptive assistance based on user behavior
+    
   version: 1.0.0
   contact:
     name: DADMS Development Team
     email: dev@dadms.com
 
 servers:
-  - url: http://localhost:3005
+  - url: http://localhost:3006
     description: Development server
   - url: https://api.dadms.com/aas
     description: Production server
 
+security:
+  - bearerAuth: []
+
 paths:
-  /aas/observe-context:
-    post:
-      summary: Update AAS with current user context
-      description: Updates AAS with current user context to enable proactive assistance
-      tags:
-        - Context
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AASContextRequest'
-            example:
-              current_page: "process-manager"
-              current_project: "uav-design-2024"
-              user_id: "user123"
-              session_data:
-                session_start: "2024-01-15T10:00:00Z"
-                actions_taken: ["created_project", "uploaded_documents"]
-                time_on_page: 300
-              user_preferences:
-                preferred_assistance_level: "proactive"
-                notification_preferences: ["suggestions", "warnings"]
-                learning_enabled: true
-      responses:
-        '200':
-          description: Context updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASContextResponse'
-        '400':
-          description: Invalid context data
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /aas/ask:
-    post:
-      summary: Ask AAS a natural language question
-      description: Ask AAS a natural language question about the system, current context, or request assistance
-      tags:
-        - Interaction
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AASAskRequest'
-            example:
-              question: "What's happening with my UAV project?"
-              context:
-                current_page: "process-manager"
-                current_project: "uav-design-2024"
-                user_id: "user123"
-              include_suggestions: true
-              include_actions: true
-      responses:
-        '200':
-          description: AAS response received
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASAskResponse'
-        '400':
-          description: Invalid question or context
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /aas/suggestions:
-    get:
-      summary: Get proactive suggestions
-      description: Get proactive suggestions based on current context without being asked
-      tags:
-        - Suggestions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: context
-          in: query
-          description: Comma-separated context elements to consider
-          schema:
-            type: string
-          example: "current_page,current_project"
-        - name: limit
-          in: query
-          description: Number of suggestions to return
-          schema:
-            type: integer
-            default: 5
-        - name: priority
-          in: query
-          description: Filter by priority level
-          schema:
-            type: string
-            enum: [low, medium, high]
-      responses:
-        '200':
-          description: Suggestions retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASSuggestionsResponse'
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /aas/execute-action:
-    post:
-      summary: Execute an action on user's behalf
-      description: Execute an action on the user's behalf with optional confirmation
-      tags:
-        - Actions
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AASActionRequest'
-            example:
-              action_id: "create_uav_workflow"
-              parameters:
-                template_type: "uav_design"
-                include_cost_analysis: true
-                include_risk_assessment: true
-              context:
-                current_page: "process-manager"
-                current_project: "uav-design-2024"
-                user_id: "user123"
-              confirmation: true
-      responses:
-        '200':
-          description: Action executed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASActionResponse'
-        '400':
-          description: Invalid action or parameters
-        '401':
-          description: Unauthorized
-        '403':
-          description: Action not permitted
-        '500':
-          description: Internal server error
-
-  /aas/learn:
-    post:
-      summary: Provide feedback to improve AAS
-      description: Provide feedback to help AAS learn and improve its assistance
-      tags:
-        - Learning
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AASLearnRequest'
-            example:
-              feedback_type: "suggestion_helpful"
-              suggestion_id: "sug-001"
-              user_rating: 5
-              user_comment: "This was exactly what I needed!"
-              context:
-                current_page: "process-manager"
-                current_project: "uav-design-2024"
-                user_id: "user123"
-      responses:
-        '200':
-          description: Learning applied successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASLearnResponse'
-        '400':
-          description: Invalid feedback data
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /aas/status:
-    get:
-      summary: Get current AAS status and context
-      description: Get current AAS status and context information
-      tags:
-        - Status
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Status retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASStatusResponse'
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /aas/events/webhook:
-    post:
-      summary: Receive events from Event Bus
-      description: Receive events from the Event Bus for proactive monitoring and assistance
-      tags:
-        - Events
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Event'
-            example:
-              id: "evt-123"
-              event_type: "process.stuck"
-              source_service: "process-service"
-              data:
-                process_id: "proc-abc123"
-                process_name: "UAV Cost Analysis"
-                stuck_duration: 1800
-                last_activity: "2024-01-15T10:00:00Z"
-              user_id: "user123"
-              project_id: "uav-design-2024"
-              timestamp: "2024-01-15T10:30:00Z"
-      responses:
-        '200':
-          description: Event processed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AASWebhookResponse'
-        '400':
-          description: Invalid event data
-        '500':
-          description: Internal server error
-
   /health:
     get:
       summary: Service health check
       description: Service health and readiness check
       tags:
         - Health
+      security: []
       responses:
         '200':
           description: Service is healthy
@@ -279,6 +54,466 @@ paths:
         '503':
           description: Service is unhealthy
 
+  /api:
+    get:
+      summary: Service information
+      description: Get service information and available endpoints
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "DADMS Agent Assistance Service"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  port:
+                    type: integer
+                    example: 3006
+                  status:
+                    type: string
+                    example: "operational"
+                  endpoints:
+                    type: object
+                    properties:
+                      context:
+                        type: string
+                        example: "/context"
+                      ask:
+                        type: string
+                        example: "/ask"
+                      suggestions:
+                        type: string
+                        example: "/suggestions"
+                      actions:
+                        type: string
+                        example: "/actions"
+
+  /context:
+    post:
+      summary: Update user context
+      description: Update AAS with current user context to enable proactive assistance
+      tags:
+        - Context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextUpdateRequest'
+      responses:
+        '200':
+          description: Context updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextResponse'
+        '400':
+          description: Invalid context data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /context/{userId}:
+    get:
+      summary: Get user context
+      description: Retrieve current context for a user
+      tags:
+        - Context
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User context retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASContext'
+        '404':
+          description: User context not found
+        '401':
+          description: Unauthorized
+
+  /ask:
+    post:
+      summary: Ask assistant a question
+      description: Ask AAS a natural language question about the system, current context, or request assistance
+      tags:
+        - Interaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: Assistant response received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantResponse'
+        '400':
+          description: Invalid question or context
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /suggestions:
+    get:
+      summary: Get proactive suggestions
+      description: Get proactive suggestions based on current context
+      tags:
+        - Suggestions
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of suggestions to return
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+            maximum: 20
+        - name: priority
+          in: query
+          description: Filter by priority level
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: category
+          in: query
+          description: Filter by suggestion category
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /suggestions/{suggestionId}/respond:
+    post:
+      summary: Respond to suggestion
+      description: Accept, dismiss, or provide feedback on a suggestion
+      tags:
+        - Suggestions
+      parameters:
+        - name: suggestionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuggestionResponse'
+      responses:
+        '200':
+          description: Response recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Suggestion not found
+        '401':
+          description: Unauthorized
+
+  /actions:
+    get:
+      summary: Get available actions
+      description: Get list of actions available in current context
+      tags:
+        - Actions
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: category
+          in: query
+          description: Filter by action category
+          schema:
+            type: string
+            enum: [navigation, process, data, knowledge, system]
+        - name: riskLevel
+          in: query
+          description: Filter by risk level
+          schema:
+            type: string
+            enum: [low, medium, high]
+      responses:
+        '200':
+          description: Available actions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AASAction'
+                  total:
+                    type: integer
+
+  /actions/{actionId}/execute:
+    post:
+      summary: Execute an action
+      description: Execute an action on user's behalf with optional confirmation
+      tags:
+        - Actions
+      parameters:
+        - name: actionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionExecutionRequest'
+      responses:
+        '200':
+          description: Action executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          description: Invalid action or parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Action not permitted
+        '500':
+          description: Internal server error
+
+  /actions/{actionId}/validate:
+    post:
+      summary: Validate action
+      description: Validate an action before execution
+      tags:
+        - Actions
+      parameters:
+        - name: actionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionValidationRequest'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Invalid action or parameters
+
+  /feedback:
+    post:
+      summary: Provide feedback
+      description: Provide feedback to help AAS learn and improve
+      tags:
+        - Learning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserFeedback'
+      responses:
+        '200':
+          description: Feedback recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningResponse'
+        '400':
+          description: Invalid feedback data
+        '401':
+          description: Unauthorized
+
+  /user/{userId}/profile:
+    get:
+      summary: Get user profile
+      description: Get user's assistance profile and preferences
+      tags:
+        - Profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          description: User profile not found
+
+    put:
+      summary: Update user preferences
+      description: Update user's assistance preferences
+      tags:
+        - Profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistancePreferences'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid preferences data
+
+  /insights:
+    get:
+      summary: Get system insights
+      description: Get AI-generated insights about system state and user patterns
+      tags:
+        - Intelligence
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: scope
+          in: query
+          description: Scope of insights
+          schema:
+            type: string
+            enum: [personal, project, system]
+            default: personal
+      responses:
+        '200':
+          description: System insights retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SystemInsight'
+
+  /anomalies:
+    get:
+      summary: Get anomaly detections
+      description: Get detected anomalies and potential issues
+      tags:
+        - Intelligence
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: severity
+          in: query
+          description: Filter by anomaly severity
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+      responses:
+        '200':
+          description: Anomalies retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anomalies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnomalyReport'
+
+  /events/webhook:
+    post:
+      summary: Receive system events
+      description: Webhook endpoint for receiving events from EventManager
+      tags:
+        - Events
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemEvent'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventProcessingResult'
+        '400':
+          description: Invalid event data
+
 components:
   securitySchemes:
     bearerAuth:
@@ -287,85 +522,123 @@ components:
       bearerFormat: JWT
 
   schemas:
+    # Core Context Models
     AASContext:
       type: object
       required:
-        - current_page
         - user_id
+        - current_page
+        - timestamp
       properties:
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier
         current_page:
           type: string
           description: Current page user is on
         current_project:
           type: string
+          format: uuid
           description: Current project (if applicable)
-        user_id:
+        session_start:
           type: string
-          description: User identifier
-        recent_events:
+          format: date-time
+          description: Session start time
+        actions_taken:
           type: array
           items:
-            $ref: '#/components/schemas/Event'
-          description: Recent system events
+            type: string
+          description: Actions taken in current session
+        time_on_page:
+          type: integer
+          description: Time spent on current page (seconds)
         system_state:
-          type: object
-          properties:
-            active_processes:
-              type: integer
-              description: Number of active processes
-            pending_tasks:
-              type: integer
-              description: Number of pending tasks
-            system_health:
-              type: string
-              enum: [healthy, degraded, unhealthy]
-              description: Overall system health
+          $ref: '#/components/schemas/SystemState'
         user_preferences:
-          type: object
-          properties:
-            preferred_assistance_level:
-              type: string
-              enum: [minimal, moderate, proactive]
-              description: User's preferred assistance level
-            notification_preferences:
-              type: array
-              items:
-                type: string
-              description: Types of notifications user wants
-            learning_enabled:
-              type: boolean
-              description: Whether learning is enabled
-        session_data:
-          type: object
-          properties:
-            session_start:
-              type: string
-              format: date-time
-              description: Session start time
-            actions_taken:
-              type: array
-              items:
-                type: string
-              description: Actions taken in this session
-            time_on_page:
-              type: integer
-              description: Time spent on current page (seconds)
+          $ref: '#/components/schemas/AssistancePreferences'
+        timestamp:
+          type: string
+          format: date-time
+          description: Context timestamp
+        context_version:
+          type: integer
+          description: Context version number
 
-    AASContextRequest:
+    SystemState:
+      type: object
+      properties:
+        active_processes:
+          type: integer
+          description: Number of active processes
+        pending_tasks:
+          type: integer
+          description: Number of pending tasks
+        system_health:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall system health
+        service_status:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [online, offline, degraded]
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        response_time_avg:
+          type: number
+          format: float
+          description: Average response time in milliseconds
+        error_rate:
+          type: number
+          format: float
+          description: Error rate percentage
+        throughput:
+          type: number
+          format: float
+          description: Requests per second
+        resource_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+
+    ResourceUsage:
+      type: object
+      properties:
+        cpu_percent:
+          type: number
+          format: float
+          description: CPU usage percentage
+        memory_percent:
+          type: number
+          format: float
+          description: Memory usage percentage
+        disk_usage:
+          type: number
+          format: float
+          description: Disk usage in GB
+        network_io:
+          type: number
+          format: float
+          description: Network I/O in MB/s
+
+    # Request/Response Models
+    ContextUpdateRequest:
       type: object
       required:
-        - current_page
         - user_id
+        - current_page
       properties:
-        current_page:
-          type: string
-          description: Current page user is on
-        current_project:
-          type: string
-          description: Current project (if applicable)
         user_id:
           type: string
-          description: User identifier
+          format: uuid
+        current_page:
+          type: string
+        current_project:
+          type: string
+          format: uuid
         session_data:
           type: object
           properties:
@@ -379,19 +652,13 @@ components:
             time_on_page:
               type: integer
         user_preferences:
-          type: object
-          properties:
-            preferred_assistance_level:
-              type: string
-              enum: [minimal, moderate, proactive]
-            notification_preferences:
-              type: array
-              items:
-                type: string
-            learning_enabled:
-              type: boolean
+          $ref: '#/components/schemas/AssistancePreferences'
+        system_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEvent'
 
-    AASContextResponse:
+    ContextResponse:
       type: object
       required:
         - context_updated
@@ -410,31 +677,28 @@ components:
             $ref: '#/components/schemas/AASSuggestion'
           description: Proactive suggestions based on context
         system_insights:
-          type: object
-          properties:
-            project_status:
-              type: string
-              description: Current project status
-            recommended_next_steps:
-              type: array
-              items:
-                type: string
-              description: Recommended next steps
-            potential_issues:
-              type: array
-              items:
-                type: string
-              description: Potential issues detected
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemInsight'
+          description: Relevant system insights
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: General recommendations
 
-    AASAskRequest:
+    AskRequest:
       type: object
       required:
         - question
-        - context
+        - user_id
       properties:
         question:
           type: string
           description: Natural language question
+        user_id:
+          type: string
+          format: uuid
         context:
           $ref: '#/components/schemas/AASContext'
         include_suggestions:
@@ -444,18 +708,25 @@ components:
         include_actions:
           type: boolean
           default: true
-          description: Whether to include available actions in response
+          description: Whether to include available actions
 
-    AASAskResponse:
+    AssistantResponse:
       type: object
       required:
         - answer
         - confidence
         - context_used
+        - response_time
       properties:
         answer:
           type: string
           description: Human-readable response
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence level (0-1)
         suggestions:
           type: array
           items:
@@ -466,39 +737,22 @@ components:
           items:
             $ref: '#/components/schemas/AASAction'
           description: Available actions
-        confidence:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 1
-          description: Confidence level (0-1)
         context_used:
           type: array
           items:
             type: string
           description: Context sources used
-
-    AASSuggestionsResponse:
-      type: object
-      required:
-        - suggestions
-        - timestamp
-      properties:
-        suggestions:
-          type: array
-          items:
-            $ref: '#/components/schemas/AASSuggestion'
-          description: Proactive suggestions
-        timestamp:
-          type: string
-          format: date-time
-          description: Response timestamp
-        context_analyzed:
+        response_time:
+          type: number
+          format: float
+          description: Response time in seconds
+        follow_up_questions:
           type: array
           items:
             type: string
-          description: Context elements analyzed
+          description: Suggested follow-up questions
 
+    # Suggestion Models
     AASSuggestion:
       type: object
       required:
@@ -507,10 +761,12 @@ components:
         - description
         - action_type
         - priority
+        - confidence
         - can_execute
       properties:
         id:
           type: string
+          format: uuid
           description: Unique suggestion ID
         title:
           type: string
@@ -520,28 +776,174 @@ components:
           description: Detailed description
         action_type:
           type: string
-          enum: [info, suggestion, warning, action]
+          enum: [info, suggestion, warning, critical, action]
           description: Type of suggestion
         priority:
           type: string
-          enum: [low, medium, high]
+          enum: [low, medium, high, critical]
           description: Priority level
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence level
         can_execute:
           type: boolean
           description: Whether AAS can execute this action
         action_id:
           type: string
           description: Associated action ID (if applicable)
+        requires_confirmation:
+          type: boolean
+          description: Whether user confirmation is required
+        estimated_time:
+          type: integer
+          description: Estimated execution time in seconds
+        context_source:
+          type: array
+          items:
+            type: string
+          description: Context sources that generated this suggestion
+        relevance_score:
+          type: number
+          format: float
+          description: Relevance score (0-1)
+        expiry_time:
+          type: string
+          format: date-time
+          description: When suggestion expires
+        created_at:
+          type: string
+          format: date-time
+        category:
+          type: string
+          description: Suggestion category
+        tags:
+          type: array
+          items:
+            type: string
 
-    AASActionRequest:
+    SuggestionsResponse:
       type: object
       required:
-        - action_id
-        - context
+        - suggestions
+        - timestamp
       properties:
-        action_id:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+        timestamp:
           type: string
-          description: Action to execute
+          format: date-time
+        context_analyzed:
+          type: array
+          items:
+            type: string
+          description: Context elements analyzed
+        total_available:
+          type: integer
+          description: Total suggestions available
+
+    SuggestionResponse:
+      type: object
+      required:
+        - response_type
+      properties:
+        response_type:
+          type: string
+          enum: [accepted, dismissed, executed, feedback]
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: User rating (1-5)
+        comment:
+          type: string
+          description: User comment
+
+    # Action Models
+    AASAction:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - category
+        - requires_confirmation
+        - estimated_time
+        - risk_level
+      properties:
+        id:
+          type: string
+          description: Action ID
+        name:
+          type: string
+          description: Action name
+        description:
+          type: string
+          description: Action description
+        category:
+          type: string
+          enum: [navigation, process, data, knowledge, system]
+          description: Action category
+        parameters:
+          type: object
+          description: Required parameters
+        requires_confirmation:
+          type: boolean
+          description: Whether user confirmation is required
+        estimated_time:
+          type: integer
+          description: Estimated execution time in seconds
+        permissions_required:
+          type: array
+          items:
+            type: string
+          description: Required permissions
+        reversible:
+          type: boolean
+          description: Whether action can be reversed
+        risk_level:
+          type: string
+          enum: [low, medium, high]
+          description: Risk level
+        validation_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRule'
+        implementation:
+          type: string
+          description: Implementation reference (service.method)
+        success_rate:
+          type: number
+          format: float
+          description: Historical success rate (0-1)
+        usage_count:
+          type: integer
+          description: Number of times used
+
+    ValidationRule:
+      type: object
+      properties:
+        rule_type:
+          type: string
+          enum: [parameter, context, permission, state]
+        condition:
+          type: string
+        error_message:
+          type: string
+
+    ActionExecutionRequest:
+      type: object
+      required:
+        - user_id
+        - parameters
+      properties:
+        user_id:
+          type: string
+          format: uuid
         parameters:
           type: object
           description: Action parameters
@@ -552,12 +954,27 @@ components:
           default: false
           description: Whether user confirmed the action
 
-    AASActionResponse:
+    ActionValidationRequest:
+      type: object
+      required:
+        - user_id
+        - parameters
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        parameters:
+          type: object
+        context:
+          $ref: '#/components/schemas/AASContext'
+
+    ActionResult:
       type: object
       required:
         - action_executed
         - action_id
         - message
+        - execution_time
       properties:
         action_executed:
           type: boolean
@@ -571,70 +988,83 @@ components:
         message:
           type: string
           description: Human-readable message about the action
+        execution_time:
+          type: number
+          format: float
+          description: Execution time in seconds
+        side_effects:
+          type: array
+          items:
+            type: object
+          description: Any side effects of the action
         next_suggestions:
           type: array
           items:
             $ref: '#/components/schemas/AASSuggestion'
           description: Suggestions for next steps
-        execution_time:
-          type: number
-          format: float
-          description: Execution time in seconds
 
-    AASAction:
+    ValidationResult:
       type: object
       required:
-        - id
-        - name
-        - description
-        - parameters
-        - requires_confirmation
-        - estimated_time
+        - valid
+        - checks_passed
       properties:
-        id:
-          type: string
-          description: Action ID
-        name:
-          type: string
-          description: Action name
-        description:
-          type: string
-          description: Action description
-        parameters:
-          type: object
-          description: Required parameters
-        requires_confirmation:
+        valid:
           type: boolean
-          description: Whether user confirmation is required
-        estimated_time:
-          type: integer
-          description: Estimated execution time in seconds
+          description: Whether action is valid for execution
+        checks_passed:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        risk_assessment:
+          type: object
+          properties:
+            risk_level:
+              type: string
+              enum: [low, medium, high]
+            risk_factors:
+              type: array
+              items:
+                type: string
 
-    AASLearnRequest:
+    # Learning Models
+    UserFeedback:
       type: object
       required:
         - feedback_type
-        - context
+        - target_id
+        - user_id
       properties:
         feedback_type:
           type: string
-          enum: [suggestion_helpful, suggestion_not_helpful, action_successful, action_failed, user_correction]
+          enum: [suggestion_helpful, suggestion_not_helpful, action_successful, action_failed, correction]
           description: Type of feedback
-        suggestion_id:
+        target_id:
           type: string
-          description: Associated suggestion ID (if applicable)
-        user_rating:
+          description: ID of suggestion or action being rated
+        user_id:
+          type: string
+          format: uuid
+        rating:
           type: integer
           minimum: 1
           maximum: 5
           description: User rating (1-5)
-        user_comment:
+        comment:
           type: string
           description: User comment
         context:
           $ref: '#/components/schemas/AASContext'
 
-    AASLearnResponse:
+    LearningResponse:
       type: object
       required:
         - learning_applied
@@ -646,6 +1076,7 @@ components:
           description: Whether learning was applied successfully
         feedback_id:
           type: string
+          format: uuid
           description: Feedback ID
         message:
           type: string
@@ -656,70 +1087,183 @@ components:
             type: string
           description: Specific improvements made
 
-    AASStatusResponse:
+    # User Profile Models
+    UserProfile:
       type: object
-      required:
-        - status
-        - current_context
       properties:
-        status:
+        user_id:
           type: string
-          enum: [active, inactive, learning]
-          description: AAS status
-        current_context:
-          $ref: '#/components/schemas/AASContext'
-        active_monitoring:
-          type: object
-          properties:
-            processes_watched:
-              type: integer
-              description: Number of processes being monitored
-            alerts_active:
-              type: integer
-              description: Number of active alerts
-            suggestions_pending:
-              type: integer
-              description: Number of pending suggestions
-        user_preferences:
-          type: object
-          properties:
-            assistance_level:
-              type: string
-              enum: [minimal, moderate, proactive]
-            learning_enabled:
-              type: boolean
-        system_health:
-          type: object
-          properties:
-            event_bus_connected:
-              type: boolean
-            llm_service_available:
-              type: boolean
-            knowledge_service_available:
-              type: boolean
-
-    AASWebhookResponse:
-      type: object
-      required:
-        - event_processed
-      properties:
-        event_processed:
-          type: boolean
-          description: Whether event was processed successfully
-        actions_taken:
+          format: uuid
+        assistance_preferences:
+          $ref: '#/components/schemas/AssistancePreferences'
+        usage_patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsagePattern'
+        skill_level:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        frequent_tasks:
           type: array
           items:
             type: string
-          description: Actions taken in response to event
-        proactive_response:
-          type: object
-          properties:
-            suggestion_id:
-              type: string
-            message:
-              type: string
+        preferred_workflows:
+          type: array
+          items:
+            type: string
+        learning_insights:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningInsight'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
-    Event:
+    AssistancePreferences:
+      type: object
+      properties:
+        proactivity_level:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: How proactive assistance should be (0-1)
+        notification_frequency:
+          type: string
+          enum: [minimal, normal, frequent]
+        explanation_detail:
+          type: string
+          enum: [brief, detailed]
+        auto_execute_permissions:
+          type: array
+          items:
+            type: string
+          description: Actions that can be auto-executed
+        quiet_hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+        learning_enabled:
+          type: boolean
+          default: true
+
+    TimeRange:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        timezone:
+          type: string
+
+    UsagePattern:
+      type: object
+      properties:
+        pattern_type:
+          type: string
+          enum: [daily, weekly, project_based]
+        time_distribution:
+          type: object
+          additionalProperties:
+            type: number
+        common_sequences:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        peak_activity_hours:
+          type: array
+          items:
+            type: integer
+
+    LearningInsight:
+      type: object
+      properties:
+        insight_type:
+          type: string
+          enum: [preference, pattern, efficiency, error]
+        description:
+          type: string
+        confidence:
+          type: number
+          format: float
+        impact_score:
+          type: number
+          format: float
+        applied_date:
+          type: string
+          format: date-time
+
+    # Intelligence Models
+    SystemInsight:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        insight_type:
+          type: string
+          enum: [performance, usage, anomaly, opportunity]
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        confidence:
+          type: number
+          format: float
+        data_sources:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AnomalyReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        anomaly_type:
+          type: string
+          enum: [performance, behavior, system, data]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        affected_components:
+          type: array
+          items:
+            type: string
+        detection_time:
+          type: string
+          format: date-time
+        confidence:
+          type: number
+          format: float
+        suggested_actions:
+          type: array
+          items:
+            type: string
+
+    # Event Models
+    SystemEvent:
       type: object
       required:
         - id
@@ -730,6 +1274,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
           description: Unique event identifier
         event_type:
           type: string
@@ -746,10 +1291,73 @@ components:
           description: Event timestamp
         user_id:
           type: string
+          format: uuid
           description: Associated user
         project_id:
           type: string
+          format: uuid
           description: Associated project
+        severity:
+          type: string
+          enum: [info, warning, error, critical]
+
+    EventProcessingResult:
+      type: object
+      required:
+        - event_processed
+      properties:
+        event_processed:
+          type: boolean
+          description: Whether event was processed successfully
+        actions_taken:
+          type: array
+          items:
+            type: string
+          description: Actions taken in response to event
+        suggestions_generated:
+          type: array
+          items:
+            $ref: '#/components/schemas/AASSuggestion'
+        notifications_sent:
+          type: integer
+          description: Number of notifications sent
+        processing_time:
+          type: number
+          format: float
+          description: Processing time in milliseconds
+
+    # Standard Response Models
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
 
     HealthStatus:
       type: object
@@ -760,7 +1368,7 @@ components:
       properties:
         status:
           type: string
-          enum: [healthy, unhealthy]
+          enum: [healthy, unhealthy, degraded]
           description: Service health status
         timestamp:
           type: string
@@ -769,32 +1377,53 @@ components:
         version:
           type: string
           description: Service version
+        port:
+          type: integer
+          description: Service port
         dependencies:
           type: object
           description: Dependency health status
           properties:
-            event_bus:
+            event_manager:
               type: string
-              enum: [healthy, unhealthy]
+              enum: [healthy, unhealthy, unknown]
             llm_service:
               type: string
-              enum: [healthy, unhealthy]
+              enum: [healthy, unhealthy, unknown]
             knowledge_service:
               type: string
-              enum: [healthy, unhealthy]
+              enum: [healthy, unhealthy, unknown]
             project_service:
               type: string
-              enum: [healthy, unhealthy]
-        active_users:
-          type: integer
-          description: Number of active users
-        suggestions_generated_today:
-          type: integer
-          description: Number of suggestions generated today
+              enum: [healthy, unhealthy, unknown]
+            database:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+            cache:
+              type: string
+              enum: [healthy, unhealthy, unknown]
+        metrics:
+          type: object
+          properties:
+            active_users:
+              type: integer
+              description: Number of active users
+            suggestions_generated_today:
+              type: integer
+              description: Suggestions generated today
+            actions_executed_today:
+              type: integer
+              description: Actions executed today
+            average_response_time:
+              type: number
+              format: float
+              description: Average response time in milliseconds
 
 tags:
+  - name: Health
+    description: Service health and status endpoints
   - name: Context
-    description: Context management and observation
+    description: User and system context management
   - name: Interaction
     description: Natural language interaction with AAS
   - name: Suggestions
@@ -803,9 +1432,9 @@ tags:
     description: Action execution and management
   - name: Learning
     description: Learning and feedback mechanisms
-  - name: Status
-    description: AAS status and monitoring
+  - name: Profile
+    description: User profile and preferences management
+  - name: Intelligence
+    description: AI-powered insights and anomaly detection
   - name: Events
-    description: Event processing and webhooks
-  - name: Health
-    description: Service health and status 
+    description: System event processing and webhooks 
