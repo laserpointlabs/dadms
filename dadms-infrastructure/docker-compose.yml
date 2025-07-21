@@ -225,6 +225,33 @@ services:
   #       condition: service_healthy
   #     qdrant:
   #       condition: service_healthy
+
+  # aads-service:
+  #   build: 
+  #     context: ../dadms-services/aads
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3005:3005"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://dadms_user:dadms_password@postgres:5432/dadms
+  #     - REDIS_URL=redis://redis:6379
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - AI_ASSISTANT_ENABLED=true
+  #     - REAL_TIME_COLLABORATION=true
+  #     - WEBSOCKET_ENABLED=true
+  #     - BPMN_ENGINE_URL=http://camunda:8080/engine-rest
+  #     - DEFAULT_APPROVAL_TIMEOUT=72
+  #     - ESCALATION_ENABLED=true
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     camunda:
+  #       condition: service_healthy
   #   networks:
   #     - default
 
