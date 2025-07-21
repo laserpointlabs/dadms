@@ -1,0 +1,2196 @@
+openapi: 3.0.3
+info:
+  title: DADMS 2.0 - Error Manager Service API
+  description: |
+    Error Manager service serves as DADMS 2.0's intelligent error detection, analysis, and autonomous correction engine, 
+    providing proactive error management capabilities that enhance system reliability and self-healing.
+
+    ## Key Features
+    - **Intelligent Error Detection**: Real-time monitoring and classification of errors across all DADMS services
+    - **Autonomous Analysis**: ML-driven root cause analysis with historical correlation and pattern recognition
+    - **Agent-Assisted Resolution**: Deep integration with AAS for intelligent error investigation and correction
+    - **Predictive Capabilities**: Machine learning models for error prediction and prevention
+    - **Self-Healing**: Automated correction implementation with rollback capabilities
+    - **Continuous Learning**: Feedback integration and model improvement from resolution outcomes
+
+    ## Error Management Capabilities
+    - **Multi-Source Detection**: Monitor workflows, agents, models, simulations, data flows, and service integrations
+    - **Intelligent Classification**: Categorize errors by type, severity, impact, and origin with ML-based classification
+    - **Root Cause Analysis**: Automated investigation with causal chain analysis and contributing factor identification
+    - **Correction Planning**: Generate actionable remediation plans with risk assessment and rollback strategies
+    - **Agent Orchestration**: Deploy AAS agents for complex error resolution requiring intelligent intervention
+    - **Pattern Learning**: Identify recurring patterns and build knowledge base for improved future handling
+
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3019
+    description: Development server
+  - url: https://api.dadms.example.com/error-manager
+    description: Production server
+
+tags:
+  - name: Error Reporting
+    description: Error detection, reporting, and classification
+  - name: Error Analysis
+    description: Root cause analysis and impact assessment
+  - name: Correction Management
+    description: Correction planning, execution, and validation
+  - name: Agent Integration
+    description: AAS agent assignment and coordination
+  - name: Monitoring & Tracking
+    description: Error tracking, metrics, and system health
+  - name: Learning & Prediction
+    description: Machine learning models and pattern recognition
+  - name: Configuration
+    description: Thresholds, rules, and policy management
+  - name: Health & Monitoring
+    description: Service health and performance monitoring
+
+paths:
+  # Error Reporting & Detection Endpoints
+  /errors/report:
+    post:
+      tags:
+        - Error Reporting
+      summary: Report error
+      description: Report a new error for detection, classification, and analysis
+      operationId: reportError
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorReportRequest'
+      responses:
+        '201':
+          description: Error reported and accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /errors/{errorId}:
+    get:
+      tags:
+        - Error Reporting
+      summary: Get error details
+      description: Retrieve detailed information about a specific error
+      operationId: getError
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeAnalysis
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeCorrections
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Error details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorObject'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Error Reporting
+      summary: Update error
+      description: Update error details or classification
+      operationId: updateError
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorUpdateRequest'
+      responses:
+        '200':
+          description: Error updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorObject'
+
+  /errors/{errorId}/classify:
+    post:
+      tags:
+        - Error Reporting
+      summary: Classify error
+      description: Perform or update classification of an error
+      operationId: classifyError
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationRequest'
+      responses:
+        '200':
+          description: Error classification completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorClassification'
+
+  /errors/anomalies/detect:
+    post:
+      tags:
+        - Error Reporting
+      summary: Detect anomalies
+      description: Detect anomalies in system behavior and error patterns
+      operationId: detectAnomalies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnomalyDetectionRequest'
+      responses:
+        '200':
+          description: Anomaly detection completed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnomalyDetection'
+
+  # Error Analysis Endpoints
+  /errors/{errorId}/analyze:
+    post:
+      tags:
+        - Error Analysis
+      summary: Analyze error
+      description: Perform comprehensive error analysis including root cause determination
+      operationId: analyzeError
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisOptions'
+      responses:
+        '200':
+          description: Error analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorAnalysis'
+        '202':
+          description: Analysis started and will complete asynchronously
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisStatus'
+
+  /errors/{errorId}/root-cause:
+    get:
+      tags:
+        - Error Analysis
+      summary: Get root cause analysis
+      description: Retrieve root cause analysis for specific error
+      operationId: getRootCause
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Root cause analysis retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootCauseAnalysis'
+
+  /errors/{errorId}/impact:
+    get:
+      tags:
+        - Error Analysis
+      summary: Get impact assessment
+      description: Retrieve impact assessment for specific error
+      operationId: getImpactAssessment
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Impact assessment retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactAssessment'
+
+  /errors/{errorId}/correlate:
+    get:
+      tags:
+        - Error Analysis
+      summary: Get historical correlation
+      description: Retrieve historical correlation analysis for error
+      operationId: getHistoricalCorrelation
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [1d, 1w, 1m, 3m, 6m, 1y]
+        - name: similarityThreshold
+          in: query
+          schema:
+            type: number
+            format: float
+            default: 0.8
+      responses:
+        '200':
+          description: Historical correlation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalCorrelation'
+
+  # Correction Management Endpoints
+  /errors/{errorId}/correction/suggest:
+    post:
+      tags:
+        - Correction Management
+      summary: Suggest correction
+      description: Generate correction plan for specific error
+      operationId: suggestCorrection
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectionPreferences'
+      responses:
+        '200':
+          description: Correction plan generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionPlan'
+
+  /errors/{errorId}/correction/apply:
+    post:
+      tags:
+        - Correction Management
+      summary: Apply correction
+      description: Execute correction plan for error
+      operationId: applyCorrection
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectionExecutionRequest'
+      responses:
+        '202':
+          description: Correction execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionExecution'
+
+  /corrections/{executionId}:
+    get:
+      tags:
+        - Correction Management
+      summary: Get correction execution
+      description: Retrieve correction execution status and results
+      operationId: getCorrectionExecution
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Correction execution details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionExecution'
+
+  /corrections/{executionId}/validate:
+    post:
+      tags:
+        - Correction Management
+      summary: Validate correction
+      description: Validate the success of a correction execution
+      operationId: validateCorrection
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Correction validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  /corrections/{executionId}/rollback:
+    post:
+      tags:
+        - Correction Management
+      summary: Rollback correction
+      description: Rollback a correction execution
+      operationId: rollbackCorrection
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackRequest'
+      responses:
+        '200':
+          description: Rollback completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackResult'
+
+  # Agent Integration Endpoints
+  /errors/{errorId}/agents/assign:
+    post:
+      tags:
+        - Agent Integration
+      summary: Assign agent to error
+      description: Assign AAS agent to investigate or resolve error
+      operationId: assignAgent
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentAssignmentRequest'
+      responses:
+        '201':
+          description: Agent assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAssignment'
+
+  /errors/{errorId}/agents/recommendations:
+    get:
+      tags:
+        - Agent Integration
+      summary: Get agent recommendations
+      description: Get agent recommendations for error resolution
+      operationId: getAgentRecommendations
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent recommendations retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentRecommendation'
+
+  /errors/{errorId}/agents/delegate:
+    post:
+      tags:
+        - Agent Integration
+      summary: Delegate resolution to agent
+      description: Delegate error resolution to agent with specific capabilities
+      operationId: delegateResolution
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegationRequest'
+      responses:
+        '202':
+          description: Resolution delegated to agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationResult'
+
+  /agents/{agentId}/assignments:
+    get:
+      tags:
+        - Agent Integration
+      summary: Get agent assignments
+      description: Retrieve current error assignments for specific agent
+      operationId: getAgentAssignments
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AssignmentStatus'
+      responses:
+        '200':
+          description: Agent assignments retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentAssignment'
+
+  # Monitoring & Tracking Endpoints
+  /errors:
+    get:
+      tags:
+        - Monitoring & Tracking
+      summary: List errors
+      description: Retrieve error history with filtering capabilities
+      operationId: getErrorHistory
+      parameters:
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ErrorCategory'
+        - name: severity
+          in: query
+          schema:
+            $ref: '#/components/schemas/ErrorSeverity'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Error history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorHistoryResponse'
+
+  /system/health:
+    get:
+      tags:
+        - Monitoring & Tracking
+      summary: Get system health
+      description: Retrieve comprehensive system health report
+      operationId: getSystemHealth
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [all, services, workflows, agents]
+        - name: includeMetrics
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: System health report retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealthReport'
+
+  /errors/metrics:
+    get:
+      tags:
+        - Monitoring & Tracking
+      summary: Get error metrics
+      description: Retrieve error metrics and analytics
+      operationId: getErrorMetrics
+      parameters:
+        - name: timeRange
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d, 90d]
+        - name: aggregation
+          in: query
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: hour
+        - name: groupBy
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [category, severity, service, agent]
+      responses:
+        '200':
+          description: Error metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMetrics'
+
+  # Learning & Prediction Endpoints
+  /models/{modelType}/update:
+    post:
+      tags:
+        - Learning & Prediction
+      summary: Update learning model
+      description: Update machine learning model with new training data
+      operationId: updateLearningModel
+      parameters:
+        - name: modelType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ModelType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelUpdateRequest'
+      responses:
+        '202':
+          description: Model update initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelUpdate'
+
+  /predict/errors:
+    post:
+      tags:
+        - Learning & Prediction
+      summary: Predict errors
+      description: Generate error predictions based on current context
+      operationId: predictErrors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionContext'
+      responses:
+        '200':
+          description: Error predictions generated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErrorPrediction'
+
+  /patterns/insights:
+    get:
+      tags:
+        - Learning & Prediction
+      summary: Get pattern insights
+      description: Retrieve insights about error patterns and trends
+      operationId: getPatternInsights
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [1w, 1m, 3m, 6m, 1y]
+            default: 1m
+      responses:
+        '200':
+          description: Pattern insights retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PatternInsight'
+
+  /learning/feedback:
+    post:
+      tags:
+        - Learning & Prediction
+      summary: Submit learning feedback
+      description: Submit feedback about error resolution outcomes for learning
+      operationId: submitLearningFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LearningFeedbackRequest'
+      responses:
+        '201':
+          description: Learning feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningFeedback'
+
+  # Configuration Endpoints
+  /configuration/thresholds:
+    get:
+      tags:
+        - Configuration
+      summary: Get alert thresholds
+      description: Retrieve current alert threshold configurations
+      operationId: getAlertThresholds
+      responses:
+        '200':
+          description: Alert thresholds retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertThreshold'
+
+    post:
+      tags:
+        - Configuration
+      summary: Configure thresholds
+      description: Configure alert thresholds for error detection
+      operationId: configureThresholds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AlertThresholdRequest'
+      responses:
+        '200':
+          description: Thresholds configured successfully
+
+  /configuration/automation-rules:
+    get:
+      tags:
+        - Configuration
+      summary: Get automation rules
+      description: Retrieve current automation rule configurations
+      operationId: getAutomationRules
+      responses:
+        '200':
+          description: Automation rules retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AutomationRule'
+
+    post:
+      tags:
+        - Configuration
+      summary: Manage automation rules
+      description: Create or update automation rules for error handling
+      operationId: manageAutomationRules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AutomationRuleRequest'
+      responses:
+        '200':
+          description: Automation rules updated successfully
+
+  /configuration/escalation-policies:
+    get:
+      tags:
+        - Configuration
+      summary: Get escalation policies
+      description: Retrieve current escalation policy configurations
+      operationId: getEscalationPolicies
+      responses:
+        '200':
+          description: Escalation policies retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EscalationPolicy'
+
+    post:
+      tags:
+        - Configuration
+      summary: Set escalation policies
+      description: Configure escalation policies for error management
+      operationId: setEscalationPolicies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/EscalationPolicyRequest'
+      responses:
+        '200':
+          description: Escalation policies configured successfully
+
+  # Health & Monitoring
+  /health:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Health check
+      description: Comprehensive health check of Error Manager service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /metrics:
+    get:
+      tags:
+        - Health & Monitoring
+      summary: Service metrics
+      description: Retrieve Error Manager service performance metrics
+      operationId: getServiceMetrics
+      responses:
+        '200':
+          description: Service metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceMetrics'
+
+components:
+  schemas:
+    # Error Reporting Schemas
+    ErrorReportRequest:
+      type: object
+      required:
+        - source
+        - error
+      properties:
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        error:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+            details:
+              type: object
+            stackTrace:
+              type: string
+            errorCode:
+              type: string
+        context:
+          type: object
+          properties:
+            executionState:
+              type: object
+            inputData:
+              type: object
+            outputData:
+              type: object
+            environmentInfo:
+              type: object
+        severity:
+          $ref: '#/components/schemas/ErrorSeverity'
+        tags:
+          type: array
+          items:
+            type: string
+
+    ErrorObject:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        classification:
+          $ref: '#/components/schemas/ErrorClassification'
+        severity:
+          $ref: '#/components/schemas/ErrorSeverity'
+        context:
+          $ref: '#/components/schemas/ErrorContext'
+        details:
+          $ref: '#/components/schemas/ErrorDetails'
+        metadata:
+          $ref: '#/components/schemas/ErrorMetadata'
+
+    ErrorSource:
+      type: object
+      required:
+        - serviceId
+        - serviceName
+      properties:
+        serviceId:
+          type: string
+        serviceName:
+          type: string
+        componentId:
+          type: string
+        workflowId:
+          type: string
+        taskId:
+          type: string
+        agentId:
+          type: string
+        userId:
+          type: string
+        sessionId:
+          type: string
+
+    ErrorClassification:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/ErrorCategory'
+        type:
+          $ref: '#/components/schemas/ErrorType'
+        subtype:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+          format: float
+        isRecurring:
+          type: boolean
+        patternId:
+          type: string
+
+    ErrorContext:
+      type: object
+      properties:
+        executionState:
+          type: object
+        inputData:
+          type: object
+        outputData:
+          type: object
+        stackTrace:
+          type: string
+        environmentInfo:
+          $ref: '#/components/schemas/EnvironmentInfo'
+        dependencyStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/DependencyStatus'
+        resourceUtilization:
+          $ref: '#/components/schemas/ResourceUtilization'
+
+    ErrorDetails:
+      type: object
+      properties:
+        message:
+          type: string
+        description:
+          type: string
+        errorCode:
+          type: string
+        technicalDetails:
+          $ref: '#/components/schemas/TechnicalDetails'
+        businessImpact:
+          $ref: '#/components/schemas/BusinessImpact'
+        userImpact:
+          $ref: '#/components/schemas/UserImpact'
+
+    # Error Analysis Schemas
+    ErrorAnalysis:
+      type: object
+      properties:
+        errorId:
+          type: string
+        analysisId:
+          type: string
+        rootCauseAnalysis:
+          $ref: '#/components/schemas/RootCauseAnalysis'
+        impactAssessment:
+          $ref: '#/components/schemas/ImpactAssessment'
+        historicalCorrelation:
+          $ref: '#/components/schemas/HistoricalCorrelation'
+        predictiveInsights:
+          $ref: '#/components/schemas/PredictiveInsights'
+        recommendedActions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendedAction'
+        confidence:
+          type: number
+          format: float
+        analysisTimestamp:
+          type: string
+          format: date-time
+
+    RootCauseAnalysis:
+      type: object
+      properties:
+        primaryCause:
+          $ref: '#/components/schemas/CauseAnalysis'
+        contributingFactors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CauseAnalysis'
+        causalChain:
+          type: array
+          items:
+            $ref: '#/components/schemas/CausalChainLink'
+        hypothesis:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hypothesis'
+        confidence:
+          type: number
+          format: float
+        analysisMethod:
+          $ref: '#/components/schemas/AnalysisMethod'
+
+    ImpactAssessment:
+      type: object
+      properties:
+        overallImpact:
+          $ref: '#/components/schemas/ImpactLevel'
+        affectedSystems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AffectedSystem'
+        businessImpact:
+          $ref: '#/components/schemas/BusinessImpactDetails'
+        userImpact:
+          $ref: '#/components/schemas/UserImpactDetails'
+        cascadingEffects:
+          type: array
+          items:
+            $ref: '#/components/schemas/CascadingEffect'
+        recoveryTime:
+          $ref: '#/components/schemas/RecoveryTimeEstimate'
+
+    HistoricalCorrelation:
+      type: object
+      properties:
+        similarErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarError'
+        patternMatches:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatternMatch'
+        successfulResolutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolutionHistory'
+        learningInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningInsight'
+
+    # Correction Management Schemas
+    CorrectionPlan:
+      type: object
+      properties:
+        planId:
+          type: string
+        errorId:
+          type: string
+        strategy:
+          $ref: '#/components/schemas/CorrectionStrategy'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CorrectionAction'
+        executionOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionStep'
+        prerequisites:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prerequisite'
+        riskAssessment:
+          $ref: '#/components/schemas/RiskAssessment'
+        rollbackPlan:
+          $ref: '#/components/schemas/RollbackPlan'
+        authorization:
+          $ref: '#/components/schemas/AuthorizationRequirement'
+        estimatedDuration:
+          type: integer
+        confidence:
+          type: number
+          format: float
+
+    CorrectionAction:
+      type: object
+      properties:
+        actionId:
+          type: string
+        type:
+          $ref: '#/components/schemas/ActionType'
+        description:
+          type: string
+        target:
+          $ref: '#/components/schemas/ActionTarget'
+        parameters:
+          $ref: '#/components/schemas/ActionParameters'
+        automation:
+          $ref: '#/components/schemas/AutomationLevel'
+        agentAssignment:
+          $ref: '#/components/schemas/AgentAssignment'
+        verification:
+          $ref: '#/components/schemas/VerificationCriteria'
+        rollbackAction:
+          $ref: '#/components/schemas/RollbackAction'
+
+    CorrectionExecution:
+      type: object
+      properties:
+        executionId:
+          type: string
+        planId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        progress:
+          $ref: '#/components/schemas/ExecutionProgress'
+        currentStep:
+          $ref: '#/components/schemas/ExecutionStep'
+        estimatedCompletion:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionResult'
+
+    # Agent Integration Schemas
+    AgentAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+        errorId:
+          type: string
+        agentId:
+          type: string
+        role:
+          $ref: '#/components/schemas/AgentRole'
+        capabilities:
+          type: array
+          items:
+            type: string
+        assignmentReason:
+          type: string
+        status:
+          $ref: '#/components/schemas/AssignmentStatus'
+        progress:
+          type: object
+        results:
+          type: object
+        assignedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    AgentRecommendation:
+      type: object
+      properties:
+        agentId:
+          type: string
+        agentType:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        suitabilityScore:
+          type: number
+          format: float
+        availability:
+          type: string
+        recommendationReason:
+          type: string
+
+    # Learning & Prediction Schemas
+    ErrorPrediction:
+      type: object
+      properties:
+        predictionId:
+          type: string
+        predictedErrorType:
+          $ref: '#/components/schemas/ErrorType'
+        probability:
+          type: number
+          format: float
+        timeframe:
+          type: string
+        affectedComponents:
+          type: array
+          items:
+            type: string
+        preventiveActions:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+          format: float
+
+    PatternInsight:
+      type: object
+      properties:
+        patternId:
+          type: string
+        description:
+          type: string
+        frequency:
+          type: integer
+        trend:
+          type: string
+          enum: [increasing, decreasing, stable, emerging]
+        impact:
+          $ref: '#/components/schemas/ImpactLevel'
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    # Configuration Schemas
+    AlertThreshold:
+      type: object
+      properties:
+        id:
+          type: string
+        scope:
+          type: string
+        metric:
+          type: string
+        thresholdValue:
+          type: number
+          format: float
+        comparisonOperator:
+          type: string
+          enum: ['>', '>=', '<', '<=', '=', '!=']
+        severity:
+          $ref: '#/components/schemas/ErrorSeverity'
+        notificationChannels:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    AutomationRule:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleAction'
+        automationLevel:
+          $ref: '#/components/schemas/AutomationLevel'
+        riskThreshold:
+          type: number
+          format: float
+        approvalRequired:
+          type: boolean
+        maxExecutionsPerHour:
+          type: integer
+        isActive:
+          type: boolean
+
+    # Enumeration Types
+    ErrorCategory:
+      type: string
+      enum:
+        - system
+        - logic
+        - data
+        - external
+        - agent
+        - user
+        - process
+        - security
+        - performance
+
+    ErrorType:
+      type: string
+      enum:
+        - exception
+        - timeout
+        - validation
+        - authentication
+        - authorization
+        - resource_exhaustion
+        - network
+        - database
+        - integration
+        - configuration
+
+    ErrorSeverity:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+        - emergency
+
+    CorrectionStrategy:
+      type: string
+      enum:
+        - immediate_fix
+        - gradual_repair
+        - rollback
+        - workaround
+        - escalation
+        - preventive
+
+    ActionType:
+      type: string
+      enum:
+        - restart_service
+        - retry_operation
+        - repair_data
+        - update_configuration
+        - apply_patch
+        - retrain_model
+        - adjust_parameters
+        - escalate_human
+        - deploy_agent
+        - implement_workaround
+
+    AutomationLevel:
+      type: string
+      enum:
+        - fully_automated
+        - agent_assisted
+        - human_supervised
+        - manual_only
+
+    ExecutionStatus:
+      type: string
+      enum:
+        - planned
+        - in_progress
+        - completed
+        - failed
+        - cancelled
+        - rolled_back
+
+    AgentRole:
+      type: string
+      enum:
+        - investigator
+        - resolver
+        - validator
+        - escalator
+
+    AssignmentStatus:
+      type: string
+      enum:
+        - assigned
+        - in_progress
+        - completed
+        - failed
+        - cancelled
+
+    ModelType:
+      type: string
+      enum:
+        - classification
+        - regression
+        - clustering
+        - anomaly_detection
+        - time_series
+        - deep_learning
+
+    ImpactLevel:
+      type: string
+      enum:
+        - minimal
+        - low
+        - moderate
+        - high
+        - severe
+        - catastrophic
+
+    # Supporting Types
+    ErrorResponse:
+      type: object
+      properties:
+        errorId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProcessingStatus'
+        classification:
+          $ref: '#/components/schemas/ErrorClassification'
+        analysis:
+          $ref: '#/components/schemas/ErrorAnalysis'
+        correctionPlan:
+          $ref: '#/components/schemas/CorrectionPlan'
+        metadata:
+          $ref: '#/components/schemas/ResponseMetadata'
+
+    ProcessingStatus:
+      type: string
+      enum:
+        - received
+        - analyzing
+        - planning
+        - executing
+        - completed
+        - failed
+
+    AnalysisOptions:
+      type: object
+      properties:
+        depth:
+          $ref: '#/components/schemas/AnalysisDepth'
+        includeHistorical:
+          type: boolean
+          default: true
+        includePredictive:
+          type: boolean
+          default: false
+        agentAssistance:
+          type: boolean
+          default: false
+        timeoutMs:
+          type: integer
+          default: 30000
+
+    AnalysisDepth:
+      type: string
+      enum:
+        - basic
+        - standard
+        - comprehensive
+        - deep
+
+    CorrectionPreferences:
+      type: object
+      properties:
+        automationLevel:
+          $ref: '#/components/schemas/AutomationLevel'
+        riskTolerance:
+          $ref: '#/components/schemas/RiskTolerance'
+        timeConstraints:
+          $ref: '#/components/schemas/TimeConstraints'
+        resourceConstraints:
+          $ref: '#/components/schemas/ResourceConstraints'
+        approvalRequired:
+          type: boolean
+
+    RiskTolerance:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+
+    # Request Types
+    ErrorUpdateRequest:
+      type: object
+      properties:
+        severity:
+          $ref: '#/components/schemas/ErrorSeverity'
+        classification:
+          $ref: '#/components/schemas/ErrorClassification'
+        tags:
+          type: array
+          items:
+            type: string
+        additionalContext:
+          type: object
+
+    ClassificationRequest:
+      type: object
+      properties:
+        forceReclassification:
+          type: boolean
+          default: false
+        useMLModels:
+          type: boolean
+          default: true
+
+    AnomalyDetectionRequest:
+      type: object
+      required:
+        - scope
+      properties:
+        scope:
+          $ref: '#/components/schemas/MonitoringScope'
+        timeWindow:
+          type: string
+          default: "1h"
+        sensitivity:
+          type: number
+          format: float
+          default: 0.8
+
+    CorrectionExecutionRequest:
+      type: object
+      required:
+        - planId
+      properties:
+        planId:
+          type: string
+        overrides:
+          type: object
+        approvalToken:
+          type: string
+
+    AgentAssignmentRequest:
+      type: object
+      required:
+        - agentId
+        - role
+      properties:
+        agentId:
+          type: string
+        role:
+          $ref: '#/components/schemas/AgentRole'
+        capabilities:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+
+    DelegationRequest:
+      type: object
+      required:
+        - agentCapabilities
+      properties:
+        agentCapabilities:
+          $ref: '#/components/schemas/AgentCapabilities'
+        constraints:
+          type: object
+        deadline:
+          type: string
+          format: date-time
+
+    ModelUpdateRequest:
+      type: object
+      required:
+        - trainingData
+      properties:
+        trainingData:
+          $ref: '#/components/schemas/TrainingData'
+        updateStrategy:
+          type: string
+          enum: [incremental, full_retrain, transfer_learning]
+
+    PredictionContext:
+      type: object
+      required:
+        - context
+      properties:
+        context:
+          type: object
+        timeHorizon:
+          type: string
+          enum: [1h, 6h, 24h, 7d]
+        includeProbabilities:
+          type: boolean
+          default: true
+
+    LearningFeedbackRequest:
+      type: object
+      required:
+        - errorId
+        - feedbackType
+        - outcome
+      properties:
+        errorId:
+          type: string
+        correctionExecutionId:
+          type: string
+        feedbackType:
+          $ref: '#/components/schemas/FeedbackType'
+        outcome:
+          $ref: '#/components/schemas/FeedbackOutcome'
+        effectivenessScore:
+          type: number
+          format: float
+        lessonsLearned:
+          type: array
+          items:
+            type: string
+        improvementSuggestions:
+          type: array
+          items:
+            type: string
+
+    AlertThresholdRequest:
+      type: object
+      required:
+        - scope
+        - metric
+        - thresholdValue
+        - comparisonOperator
+        - severity
+      properties:
+        scope:
+          type: string
+        metric:
+          type: string
+        thresholdValue:
+          type: number
+          format: float
+        comparisonOperator:
+          type: string
+          enum: ['>', '>=', '<', '<=', '=', '!=']
+        severity:
+          $ref: '#/components/schemas/ErrorSeverity'
+        notificationChannels:
+          type: array
+          items:
+            type: string
+
+    AutomationRuleRequest:
+      type: object
+      required:
+        - name
+        - conditions
+        - actions
+        - automationLevel
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleAction'
+        automationLevel:
+          $ref: '#/components/schemas/AutomationLevel'
+        riskThreshold:
+          type: number
+          format: float
+        approvalRequired:
+          type: boolean
+        maxExecutionsPerHour:
+          type: integer
+
+    EscalationPolicyRequest:
+      type: object
+      required:
+        - name
+        - triggers
+        - escalationLevels
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EscalationTrigger'
+        escalationLevels:
+          type: array
+          items:
+            $ref: '#/components/schemas/EscalationLevel'
+
+    # Complex Supporting Types
+    ErrorMetadata:
+      type: object
+      properties:
+        correlationId:
+          type: string
+        traceId:
+          type: string
+        version:
+          type: string
+        detectionMethod:
+          type: string
+        processingTime:
+          type: integer
+
+    EnvironmentInfo:
+      type: object
+      properties:
+        hostname:
+          type: string
+        os:
+          type: string
+        runtime:
+          type: string
+        version:
+          type: string
+        region:
+          type: string
+        environment:
+          type: string
+
+    DependencyStatus:
+      type: object
+      properties:
+        serviceName:
+          type: string
+        status:
+          type: string
+        responseTime:
+          type: integer
+        lastCheck:
+          type: string
+          format: date-time
+
+    ResourceUtilization:
+      type: object
+      properties:
+        cpu:
+          type: number
+          format: float
+        memory:
+          type: number
+          format: float
+        disk:
+          type: number
+          format: float
+        network:
+          type: number
+          format: float
+
+    TechnicalDetails:
+      type: object
+      properties:
+        errorClass:
+          type: string
+        fileName:
+          type: string
+        lineNumber:
+          type: integer
+        methodName:
+          type: string
+        threadId:
+          type: string
+
+    BusinessImpact:
+      type: object
+      properties:
+        affectedProcesses:
+          type: array
+          items:
+            type: string
+        financialImpact:
+          type: number
+          format: float
+        customerImpact:
+          type: string
+        reputationalRisk:
+          type: string
+
+    UserImpact:
+      type: object
+      properties:
+        affectedUsers:
+          type: integer
+        impactSeverity:
+          type: string
+        functionalityLoss:
+          type: array
+          items:
+            type: string
+
+    # Additional response types
+    ErrorHistoryResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        summary:
+          $ref: '#/components/schemas/ErrorSummary'
+
+    SystemHealthReport:
+      type: object
+      properties:
+        overallHealth:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentHealth'
+        metrics:
+          $ref: '#/components/schemas/HealthMetrics'
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveAlert'
+
+    ErrorMetrics:
+      type: object
+      properties:
+        timeRange:
+          type: string
+        aggregation:
+          type: string
+        totalErrors:
+          type: integer
+        errorsByCategory:
+          type: object
+        errorsBySeverity:
+          type: object
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricDataPoint'
+        topErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopErrorEntry'
+
+    # Health & Monitoring Schemas
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime:
+          type: integer
+        checks:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ComponentHealth'
+            eventManager:
+              $ref: '#/components/schemas/ComponentHealth'
+            mlModels:
+              $ref: '#/components/schemas/ComponentHealth'
+            agentIntegration:
+              $ref: '#/components/schemas/ComponentHealth'
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        responseTimeMs:
+          type: number
+        details:
+          type: string
+
+    ServiceMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        requestMetrics:
+          $ref: '#/components/schemas/RequestMetrics'
+        errorMetrics:
+          $ref: '#/components/schemas/ErrorProcessingMetrics'
+        correctionMetrics:
+          $ref: '#/components/schemas/CorrectionMetrics'
+        agentMetrics:
+          $ref: '#/components/schemas/AgentMetrics'
+        resourceMetrics:
+          $ref: '#/components/schemas/ResourceMetrics'
+
+    RequestMetrics:
+      type: object
+      properties:
+        requestsTotal:
+          type: integer
+        requestsPerSecond:
+          type: number
+          format: float
+        averageResponseTimeMs:
+          type: number
+        errorRate:
+          type: number
+          format: float
+        successRate:
+          type: number
+          format: float
+
+    ErrorProcessingMetrics:
+      type: object
+      properties:
+        errorsDetected:
+          type: integer
+        errorsAnalyzed:
+          type: integer
+        errorsResolved:
+          type: integer
+        averageResolutionTime:
+          type: number
+        resolutionSuccessRate:
+          type: number
+          format: float
+
+    CorrectionMetrics:
+      type: object
+      properties:
+        correctionsPlanned:
+          type: integer
+        correctionsExecuted:
+          type: integer
+        correctionsSuccessful:
+          type: integer
+        averageExecutionTime:
+          type: number
+        rollbackRate:
+          type: number
+          format: float
+
+    AgentMetrics:
+      type: object
+      properties:
+        agentsAssigned:
+          type: integer
+        agentTasksCompleted:
+          type: integer
+        agentSuccessRate:
+          type: number
+          format: float
+        averageAgentResponseTime:
+          type: number
+
+    ResourceMetrics:
+      type: object
+      properties:
+        cpuUsagePercent:
+          type: number
+        memoryUsagePercent:
+          type: number
+        diskUsagePercent:
+          type: number
+        networkIoMbps:
+          type: number
+
+    # Additional supporting schemas (representative subset)
+    CauseAnalysis:
+      type: object
+      properties:
+        causeId:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        likelihood:
+          type: number
+          format: float
+        evidenceStrength:
+          type: number
+          format: float
+
+    MonitoringScope:
+      type: object
+      properties:
+        services:
+          type: array
+          items:
+            type: string
+        components:
+          type: array
+          items:
+            type: string
+        timeWindow:
+          type: string
+
+    AgentCapabilities:
+      type: object
+      properties:
+        skills:
+          type: array
+          items:
+            type: string
+        experience:
+          type: string
+        availability:
+          type: string
+        specializations:
+          type: array
+          items:
+            type: string
+
+    TrainingData:
+      type: object
+      properties:
+        datasetId:
+          type: string
+        features:
+          type: array
+          items:
+            type: object
+        labels:
+          type: array
+          items:
+            type: string
+        size:
+          type: integer
+
+    FeedbackType:
+      type: string
+      enum:
+        - resolution_success
+        - resolution_failure
+        - prevention_success
+        - false_positive
+        - missed_detection
+
+    FeedbackOutcome:
+      type: string
+      enum:
+        - success
+        - partial_success
+        - failure
+        - unknown
+
+    RuleCondition:
+      type: object
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+
+    RuleAction:
+      type: object
+      properties:
+        type:
+          type: string
+        parameters:
+          type: object
+        timeout:
+          type: integer
+
+    EscalationTrigger:
+      type: object
+      properties:
+        condition:
+          type: string
+        threshold:
+          type: number
+        timeWindow:
+          type: string
+
+    EscalationLevel:
+      type: object
+      properties:
+        level:
+          type: integer
+        contacts:
+          type: array
+          items:
+            type: string
+        delay:
+          type: integer
+        actions:
+          type: array
+          items:
+            type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: [] 

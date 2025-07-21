@@ -27,6 +27,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 
 ### 🌐 API Documentation
 - **[API Overview](api/README.md)**: Service APIs, authentication, and integration guides
+- **[Project Service API](development/backend/project_service_api_endpoints.md)**: ✅ **OPERATIONAL** - Complete project lifecycle management API with React UI integration
 - **[Model Manager API](api/model_manager_api_endpoints.md)**: Comprehensive model registry API documentation
 - **[Simulation Manager API](api/simulation_manager_api_endpoints.md)**: Comprehensive simulation execution and orchestration API
 - **[Analysis Manager API](api/analysis_manager_api_endpoints.md)**: Comprehensive intelligent analysis and decision-support API
@@ -36,6 +37,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 - **[Ontology Workspace API](development/backend/ontology_workspace_service_api_endpoints.md)**: Comprehensive visual, collaborative environment for ontology authoring, editing, and validation API
 - **[Task Orchestrator API](development/backend/task_orchestrator_service_api_endpoints.md)**: Comprehensive workflow orchestration and task management API for the EDS ecosystem
 - **[Decision Analytics API](development/backend/decision_analytics_service_api_endpoints.md)**: Comprehensive decision intelligence engine for decision space analysis, impact assessment, and performance scoring
+- **[Error Manager API](development/backend/error_manager_service_api_endpoints.md)**: Comprehensive intelligent error detection, analysis, and autonomous correction API with deep AAS integration
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides
