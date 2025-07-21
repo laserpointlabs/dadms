@@ -1,14 +1,14 @@
 # Agent Assistance & Documentation Service (AADS) – API Endpoint Specification
 
-This document details the API endpoints for the Agent Assistance & Documentation Service (AADS) in DADMS 2.0, which enables users to finalize decisions with AI assistance, generate formal documentation, and route decisions through approval workflows.
+This document details the API endpoints for the Agent Assistance & Documentation Service (AADS) in DADMS 2.0, which provides comprehensive decision finalization capabilities. AADS transforms raw decision analysis into polished, actionable outcomes through AI-powered assistance, stakeholder collaboration, structured documentation generation, and seamless approval workflows.
 
 ---
 
 ## Service Overview
 
-**Purpose**: Post-process tool for decision finalization with AI assistance, team collaboration, white paper generation, and BPMN-managed approval workflows
+**Purpose**: Comprehensive decision finalization service transforming raw decision analysis into polished, actionable outcomes ready for organizational implementation
 **Port**: 3005
-**Key Features**: Decision review, team collaboration, AI-assisted white paper generation, approval workflow integration
+**Key Features**: AI-powered decision assistance, stakeholder collaboration, structured documentation generation, BPMN-managed approval workflows, audit compliance
 
 ---
 

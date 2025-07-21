@@ -2,9 +2,10 @@ openapi: 3.0.3
 info:
   title: DADMS Agent Assistance & Documentation Service (AADS) API
   description: |
-    Post-process tool that enables users to finalize decisions with AI assistance, generate formal documentation,
-    and route decisions through approval workflows. Includes decision review, team collaboration, white paper
-    generation, and BPMN-managed approval processes.
+    Comprehensive decision finalization service that transforms raw decision analysis into polished, actionable outcomes. 
+    Provides AI-powered assistance, stakeholder collaboration, structured documentation generation, and seamless approval 
+    workflows. Serves as the critical final step in DADMS decision-making processes, ensuring high-quality, well-documented, 
+    and properly approved decisions ready for organizational implementation.
   version: 1.0.0
   contact:
     name: DADMS Development Team
