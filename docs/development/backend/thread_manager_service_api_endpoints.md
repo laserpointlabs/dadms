@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Thread Manager Service provides comprehensive process thread management, feedback collection, similarity analysis, and impact assessment capabilities. It enables full traceability and auditability of process runs and their tasks, supporting progressive process improvement through human and SME feedback.
+The Thread Manager Service provides comprehensive process thread management, feedback collection, similarity analysis, and impact assessment capabilities. It enables full traceability and auditability of process runs and their tasks, supporting progressive process improvement through human and SME feedback while maintaining complete execution context for each decision-making workflow. The service serves as the observability and continuous improvement backbone of DADMS 2.0's workflow automation capabilities.
 
 ## Base URL
 ```

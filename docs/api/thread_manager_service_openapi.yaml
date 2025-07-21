@@ -3,9 +3,10 @@ info:
   title: DADMS Thread Manager Service API
   version: 1.0.0
   description: |
-    OpenAPI specification for the DADMS 2.0 Thread Manager Service. Defines endpoints for process thread management, 
+    OpenAPI specification for the DADMS 2.0 Thread Manager Service. Provides comprehensive process thread management, 
     feedback collection, similarity analysis, and impact assessment capabilities. Enables full traceability and 
-    auditability of process runs and their tasks, supporting progressive process improvement through human and SME feedback.
+    auditability of process runs and their tasks, supporting progressive process improvement through human and SME feedback 
+    while maintaining complete execution context for each decision-making workflow.
 
 servers:
   - url: http://localhost:3008
