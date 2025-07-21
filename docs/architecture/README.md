@@ -44,6 +44,7 @@ flowchart TD
         RequirementsExtractor["Requirements Extractor<br/>(Port 3014)"]
         MemoryManager["Memory Manager<br/>(Port 3015)"]
         OntologyWorkspace["Ontology Workspace<br/>(Port 3016)"]
+        TaskOrchestrator["Task Orchestrator<br/>(Port 3017)"]
     end
     
     %% UI connections
@@ -67,6 +68,7 @@ flowchart TD
     RequirementsExtractor --> EventManager
     MemoryManager --> EventManager
     OntologyWorkspace --> EventManager
+    TaskOrchestrator --> EventManager
     
     %% EventManager back to services
     EventManager --> AAS
@@ -78,6 +80,7 @@ flowchart TD
     EventManager --> RequirementsExtractor
     EventManager --> MemoryManager
     EventManager --> OntologyWorkspace
+    EventManager --> TaskOrchestrator
     
     %% Service interconnections
     ProcessManager --> LLMService
@@ -103,6 +106,13 @@ flowchart TD
     OntologyWorkspace --> KnowledgeService
     OntologyWorkspace --> ModelManager
     OntologyWorkspace --> RequirementsExtractor
+    TaskOrchestrator --> ProcessManager
+    TaskOrchestrator --> AAS
+    TaskOrchestrator --> ThreadManager
+    TaskOrchestrator --> ModelManager
+    TaskOrchestrator --> DataManager
+    TaskOrchestrator --> SimulationManager
+    TaskOrchestrator --> AnalysisManager
     
     classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
     classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -112,15 +122,15 @@ flowchart TD
     class WebUI,Playground ui;
     class ProjectService,LLMService,KnowledgeService,AAS core;
     class EventManager event;
-    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor,MemoryManager,OntologyWorkspace process;
+    class ProcessManager,ThreadManager,DataManager,ModelManager,SimulationManager,AnalysisManager,ParameterManager,RequirementsExtractor,MemoryManager,OntologyWorkspace,TaskOrchestrator process;
 ```
 
 **Port Allocation:**
 - **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
 - **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
 - **Event System**: 3004 (EventManager)
-- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements), 3015 (Memory), 3016 (Ontology Workspace)
-- **Future Services**: 3017+
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model), 3011 (Simulation), 3012 (Analysis), 3013 (Parameter), 3014 (Requirements), 3015 (Memory), 3016 (Ontology Workspace), 3017 (Task Orchestrator)
+- **Future Services**: 3018+
 
 ### Data Architecture
 
@@ -170,6 +180,9 @@ flowchart TD
         OntologyWorkspace --> PostgreSQL
         OntologyWorkspace --> MinIO
         OntologyWorkspace --> Redis
+        TaskOrchestrator --> PostgreSQL
+        TaskOrchestrator --> Redis
+        TaskOrchestrator --> MinIO
     end
     
     classDef primary fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
@@ -199,6 +212,7 @@ flowchart TD
 - **[Requirements Extractor & Conceptualizer Service](./requirements_extractor_specification.md)** - Intelligent automation for requirements extraction and conceptual modeling
 - **[Memory Manager Service](./memory_manager_specification.md)** - Sophisticated memory management with categorization, lifecycle intelligence, and semantic retrieval
 - **[Ontology Workspace Service](./ontology_workspace_specification.md)** - Visual, collaborative environment for authoring, editing, and validating ontologies
+- **[Task Orchestrator Service](./task_orchestrator_specification.md)** - Central execution engine for workflow orchestration and task management across the EDS ecosystem
 
 ### Future Services (Planned)
 - **OntologyManager Service** - Domain knowledge and semantic modeling
