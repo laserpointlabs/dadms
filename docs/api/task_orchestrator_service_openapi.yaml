@@ -1,0 +1,3506 @@
+openapi: 3.0.3
+info:
+  title: DADMS 2.0 - Task Orchestrator Service API
+  description: |
+    Task Orchestrator service serves as the central execution engine for DADMS 2.0's Event-Driven System (EDS), 
+    orchestrating complex workflows and managing task execution across the entire service ecosystem.
+
+    ## Key Features
+    - **Workflow Orchestration**: Load, parse, and execute BPMN process models with full lifecycle management
+    - **Intelligent Task Assignment**: Dynamic assignment to agents (human/AI), services, tools, and external APIs
+    - **Robust Execution**: Fault-tolerant execution with retry policies, error recovery, and transaction management
+    - **Real-time Monitoring**: Comprehensive observability with execution tracking, performance metrics, and audit trails
+    - **Context-Aware Coordination**: Integration with Context Manager for situational awareness
+
+    ## Supported Workflow Types
+    - **BPMN 2.0 Workflows**: Standard business process modeling notation
+    - **Human Tasks**: User-driven activities requiring human intervention
+    - **Service Tasks**: Automated tasks executed by DADMS services
+    - **Script Tasks**: Custom script execution within workflows
+    - **Call Activities**: Sub-process invocation and coordination
+
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3017
+    description: Development server
+  - url: https://api.dadms.example.com/task-orchestrator
+    description: Production server
+
+tags:
+  - name: Workflow Definitions
+    description: Workflow definition management operations
+  - name: Workflow Instances
+    description: Workflow instance lifecycle management
+  - name: Task Management
+    description: Task execution and monitoring operations
+  - name: Execution Control
+    description: Workflow and task execution control
+  - name: Monitoring & Analytics
+    description: Performance monitoring and analytics
+  - name: Event Management
+    description: Workflow and task event management
+  - name: Resource Management
+    description: Resource allocation and management
+  - name: Health & Monitoring
+    description: Service health and monitoring
+
+paths:
+  # Workflow Definitions
+  /workflow-definitions:
+    get:
+      tags: [Workflow Definitions]
+      summary: List workflow definitions
+      description: Retrieve a list of workflow definitions with optional filtering
+      operationId: listWorkflowDefinitions
+      parameters:
+        - name: status
+          in: query
+          description: Filter by workflow definition status
+          schema:
+            $ref: '#/components/schemas/WorkflowDefinitionStatus'
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+        - name: created_by
+          in: query
+          description: Filter by creator
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of definitions to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of definitions to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Workflow definitions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitionListResponse'
+
+    post:
+      tags: [Workflow Definitions]
+      summary: Create workflow definition
+      description: Create a new workflow definition from BPMN content
+      operationId: createWorkflowDefinition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowDefinitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowDefinitionFileRequest'
+      responses:
+        '201':
+          description: Workflow definition created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkflowDefinitionResponse'
+        '400':
+          description: Invalid BPMN content or request data
+        '409':
+          description: Workflow definition with same name already exists
+
+  /workflow-definitions/{definitionId}:
+    get:
+      tags: [Workflow Definitions]
+      summary: Get workflow definition
+      description: Retrieve detailed information about a specific workflow definition
+      operationId: getWorkflowDefinition
+      parameters:
+        - $ref: '#/components/parameters/DefinitionIdParam'
+      responses:
+        '200':
+          description: Workflow definition found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinition'
+        '404':
+          description: Workflow definition not found
+
+    put:
+      tags: [Workflow Definitions]
+      summary: Update workflow definition
+      description: Update an existing workflow definition
+      operationId: updateWorkflowDefinition
+      parameters:
+        - $ref: '#/components/parameters/DefinitionIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowDefinitionRequest'
+      responses:
+        '200':
+          description: Workflow definition updated successfully
+        '404':
+          description: Workflow definition not found
+        '409':
+          description: Version conflict or validation error
+
+    delete:
+      tags: [Workflow Definitions]
+      summary: Delete workflow definition
+      description: Delete a workflow definition (only if no active instances)
+      operationId: deleteWorkflowDefinition
+      parameters:
+        - $ref: '#/components/parameters/DefinitionIdParam'
+      responses:
+        '204':
+          description: Workflow definition deleted successfully
+        '404':
+          description: Workflow definition not found
+        '409':
+          description: Cannot delete definition with active instances
+
+  /workflow-definitions/{definitionId}/validate:
+    post:
+      tags: [Workflow Definitions]
+      summary: Validate workflow definition
+      description: Validate BPMN content and workflow definition structure
+      operationId: validateWorkflowDefinition
+      parameters:
+        - $ref: '#/components/parameters/DefinitionIdParam'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  /workflow-definitions/{definitionId}/publish:
+    post:
+      tags: [Workflow Definitions]
+      summary: Publish workflow definition
+      description: Publish a validated workflow definition for execution
+      operationId: publishWorkflowDefinition
+      parameters:
+        - $ref: '#/components/parameters/DefinitionIdParam'
+      responses:
+        '200':
+          description: Workflow definition published successfully
+        '400':
+          description: Definition must be validated before publishing
+        '404':
+          description: Workflow definition not found
+
+  # Workflow Instances
+  /workflow-instances:
+    get:
+      tags: [Workflow Instances]
+      summary: List workflow instances
+      description: Retrieve a list of workflow instances with optional filtering
+      operationId: listWorkflowInstances
+      parameters:
+        - name: status
+          in: query
+          description: Filter by workflow instance status
+          schema:
+            $ref: '#/components/schemas/WorkflowInstanceStatus'
+        - name: workflow_definition_id
+          in: query
+          description: Filter by workflow definition ID
+          schema:
+            type: string
+            format: uuid
+        - name: initiated_by
+          in: query
+          description: Filter by initiator
+          schema:
+            type: string
+        - name: priority
+          in: query
+          description: Filter by priority
+          schema:
+            $ref: '#/components/schemas/TaskPriority'
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of instances to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of instances to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Workflow instances retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInstanceListResponse'
+
+    post:
+      tags: [Workflow Instances]
+      summary: Start workflow instance
+      description: Create and start a new workflow instance
+      operationId: startWorkflowInstance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartWorkflowInstanceRequest'
+      responses:
+        '201':
+          description: Workflow instance started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartWorkflowInstanceResponse'
+        '400':
+          description: Invalid request data or workflow definition
+        '404':
+          description: Workflow definition not found
+
+  /workflow-instances/{instanceId}:
+    get:
+      tags: [Workflow Instances]
+      summary: Get workflow instance
+      description: Retrieve detailed information about a specific workflow instance
+      operationId: getWorkflowInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+      responses:
+        '200':
+          description: Workflow instance found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowInstance'
+        '404':
+          description: Workflow instance not found
+
+    delete:
+      tags: [Workflow Instances]
+      summary: Cancel workflow instance
+      description: Cancel a running workflow instance
+      operationId: cancelWorkflowInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelWorkflowInstanceRequest'
+      responses:
+        '200':
+          description: Workflow instance cancelled successfully
+        '404':
+          description: Workflow instance not found
+        '409':
+          description: Cannot cancel workflow in current state
+
+  /workflow-instances/{instanceId}/suspend:
+    post:
+      tags: [Workflow Instances]
+      summary: Suspend workflow instance
+      description: Suspend execution of a running workflow instance
+      operationId: suspendWorkflowInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendWorkflowInstanceRequest'
+      responses:
+        '200':
+          description: Workflow instance suspended successfully
+        '404':
+          description: Workflow instance not found
+        '409':
+          description: Cannot suspend workflow in current state
+
+  /workflow-instances/{instanceId}/resume:
+    post:
+      tags: [Workflow Instances]
+      summary: Resume workflow instance
+      description: Resume execution of a suspended workflow instance
+      operationId: resumeWorkflowInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+      responses:
+        '200':
+          description: Workflow instance resumed successfully
+        '404':
+          description: Workflow instance not found
+        '409':
+          description: Cannot resume workflow in current state
+
+  /workflow-instances/{instanceId}/status:
+    get:
+      tags: [Workflow Instances]
+      summary: Get workflow execution status
+      description: Get detailed execution status and progress of a workflow instance
+      operationId: getWorkflowExecutionStatus
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+      responses:
+        '200':
+          description: Execution status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionStatus'
+        '404':
+          description: Workflow instance not found
+
+  # Task Management
+  /tasks:
+    get:
+      tags: [Task Management]
+      summary: List tasks
+      description: Retrieve a list of tasks with optional filtering
+      operationId: listTasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+        - name: type
+          in: query
+          description: Filter by task type
+          schema:
+            $ref: '#/components/schemas/TaskType'
+        - name: assignee
+          in: query
+          description: Filter by assignee identifier
+          schema:
+            type: string
+        - name: workflow_instance_id
+          in: query
+          description: Filter by workflow instance ID
+          schema:
+            type: string
+            format: uuid
+        - name: priority
+          in: query
+          description: Filter by priority
+          schema:
+            $ref: '#/components/schemas/TaskPriority'
+        - name: due_date_before
+          in: query
+          description: Filter tasks due before this date
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of tasks to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of tasks to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+  /tasks/{taskId}:
+    get:
+      tags: [Task Management]
+      summary: Get task details
+      description: Retrieve detailed information about a specific task
+      operationId: getTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      responses:
+        '200':
+          description: Task found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+
+    put:
+      tags: [Task Management]
+      summary: Update task
+      description: Update task metadata and configuration
+      operationId: updateTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Cannot update task in current state
+
+  /tasks/{taskId}/assign:
+    post:
+      tags: [Task Management]
+      summary: Assign task
+      description: Assign a task to a specific agent, service, or tool
+      operationId: assignTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssignmentRequest'
+      responses:
+        '200':
+          description: Task assigned successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Task already assigned or in incompatible state
+
+  /tasks/{taskId}/start:
+    post:
+      tags: [Task Management]
+      summary: Start task execution
+      description: Start execution of an assigned task
+      operationId: startTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTaskRequest'
+      responses:
+        '200':
+          description: Task execution started successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Task not ready for execution
+
+  /tasks/{taskId}/complete:
+    post:
+      tags: [Task Management]
+      summary: Complete task
+      description: Mark a task as completed with results
+      operationId: completeTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletionRequest'
+      responses:
+        '200':
+          description: Task completed successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Task not in executable state
+
+  /tasks/{taskId}/fail:
+    post:
+      tags: [Task Management]
+      summary: Fail task
+      description: Mark a task as failed with error information
+      operationId: failTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskFailureRequest'
+      responses:
+        '200':
+          description: Task marked as failed successfully
+        '404':
+          description: Task not found
+
+  /tasks/{taskId}/cancel:
+    post:
+      tags: [Task Management]
+      summary: Cancel task
+      description: Cancel task execution
+      operationId: cancelTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelTaskRequest'
+      responses:
+        '200':
+          description: Task cancelled successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Task cannot be cancelled in current state
+
+  /tasks/{taskId}/retry:
+    post:
+      tags: [Task Management]
+      summary: Retry task
+      description: Retry a failed task with optional configuration changes
+      operationId: retryTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryTaskRequest'
+      responses:
+        '200':
+          description: Task retry initiated successfully
+        '404':
+          description: Task not found
+        '409':
+          description: Task not eligible for retry
+
+  /tasks/{taskId}/escalate:
+    post:
+      tags: [Task Management]
+      summary: Escalate task
+      description: Escalate a task to higher priority or different assignee
+      operationId: escalateTask
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalateTaskRequest'
+      responses:
+        '200':
+          description: Task escalated successfully
+        '404':
+          description: Task not found
+
+  # Execution Control
+  /execution/pause:
+    post:
+      tags: [Execution Control]
+      summary: Pause execution
+      description: Pause execution of specified workflow instances or tasks
+      operationId: pauseExecution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseExecutionRequest'
+      responses:
+        '200':
+          description: Execution paused successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionControlResponse'
+
+  /execution/resume:
+    post:
+      tags: [Execution Control]
+      summary: Resume execution
+      description: Resume execution of paused workflow instances or tasks
+      operationId: resumeExecution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeExecutionRequest'
+      responses:
+        '200':
+          description: Execution resumed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionControlResponse'
+
+  /execution/batch-operations:
+    post:
+      tags: [Execution Control]
+      summary: Batch operations
+      description: Perform batch operations on multiple workflow instances or tasks
+      operationId: batchOperations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchOperationRequest'
+      responses:
+        '200':
+          description: Batch operations completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchOperationResponse'
+
+  # Monitoring & Analytics
+  /metrics/workflows:
+    get:
+      tags: [Monitoring & Analytics]
+      summary: Get workflow metrics
+      description: Retrieve performance metrics for workflows
+      operationId: getWorkflowMetrics
+      parameters:
+        - name: workflow_definition_id
+          in: query
+          description: Filter by workflow definition ID
+          schema:
+            type: string
+            format: uuid
+        - name: time_range
+          in: query
+          description: Time range for metrics (e.g., '7d', '30d', '90d')
+          schema:
+            type: string
+            default: '7d'
+        - name: aggregation
+          in: query
+          description: Metrics aggregation level
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Workflow metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowMetricsResponse'
+
+  /metrics/tasks:
+    get:
+      tags: [Monitoring & Analytics]
+      summary: Get task metrics
+      description: Retrieve performance metrics for tasks
+      operationId: getTaskMetrics
+      parameters:
+        - name: task_type
+          in: query
+          description: Filter by task type
+          schema:
+            $ref: '#/components/schemas/TaskType'
+        - name: assignee_type
+          in: query
+          description: Filter by assignee type
+          schema:
+            $ref: '#/components/schemas/AssignmentType'
+        - name: time_range
+          in: query
+          description: Time range for metrics
+          schema:
+            type: string
+            default: '7d'
+      responses:
+        '200':
+          description: Task metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskMetricsResponse'
+
+  /metrics/system:
+    get:
+      tags: [Monitoring & Analytics]
+      summary: Get system metrics
+      description: Retrieve overall system performance metrics
+      operationId: getSystemMetrics
+      responses:
+        '200':
+          description: System metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetricsResponse'
+
+  /analytics/bottlenecks:
+    get:
+      tags: [Monitoring & Analytics]
+      summary: Analyze bottlenecks
+      description: Identify performance bottlenecks in workflow execution
+      operationId: analyzeBottlenecks
+      parameters:
+        - name: workflow_definition_id
+          in: query
+          description: Analyze specific workflow definition
+          schema:
+            type: string
+            format: uuid
+        - name: time_range
+          in: query
+          description: Time range for analysis
+          schema:
+            type: string
+            default: '7d'
+      responses:
+        '200':
+          description: Bottleneck analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BottleneckAnalysisResponse'
+
+  /analytics/predictions:
+    get:
+      tags: [Monitoring & Analytics]
+      summary: Get predictive analytics
+      description: Retrieve predictive analytics for workflow performance
+      operationId: getPredictiveAnalytics
+      parameters:
+        - name: workflow_instance_id
+          in: query
+          description: Get predictions for specific instance
+          schema:
+            type: string
+            format: uuid
+        - name: prediction_type
+          in: query
+          description: Type of prediction to generate
+          schema:
+            type: string
+            enum: [completion_time, resource_usage, failure_probability]
+            default: completion_time
+      responses:
+        '200':
+          description: Predictive analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictiveAnalyticsResponse'
+
+  # Event Management
+  /events/workflows/{instanceId}:
+    get:
+      tags: [Event Management]
+      summary: Get workflow events
+      description: Retrieve events for a specific workflow instance
+      operationId: getWorkflowEvents
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdParam'
+        - name: event_type
+          in: query
+          description: Filter by event type
+          schema:
+            $ref: '#/components/schemas/WorkflowEventType'
+        - name: since
+          in: query
+          description: Get events since this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Workflow events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowEventListResponse'
+
+  /events/tasks/{taskId}:
+    get:
+      tags: [Event Management]
+      summary: Get task events
+      description: Retrieve events for a specific task
+      operationId: getTaskEvents
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+        - name: event_type
+          in: query
+          description: Filter by event type
+          schema:
+            $ref: '#/components/schemas/TaskEventType'
+        - name: since
+          in: query
+          description: Get events since this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of events to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Task events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEventListResponse'
+
+  /events/subscribe:
+    post:
+      tags: [Event Management]
+      summary: Subscribe to events
+      description: Create an event subscription for real-time notifications
+      operationId: subscribeToEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSubscriptionRequest'
+      responses:
+        '201':
+          description: Event subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSubscriptionResponse'
+
+  /events/subscriptions/{subscriptionId}:
+    delete:
+      tags: [Event Management]
+      summary: Unsubscribe from events
+      description: Remove an event subscription
+      operationId: unsubscribeFromEvents
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          description: Subscription ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Event subscription removed successfully
+        '404':
+          description: Subscription not found
+
+  # Resource Management
+  /resources/allocation:
+    get:
+      tags: [Resource Management]
+      summary: Get resource allocation
+      description: Retrieve current resource allocation and usage
+      operationId: getResourceAllocation
+      responses:
+        '200':
+          description: Resource allocation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceAllocationResponse'
+
+    post:
+      tags: [Resource Management]
+      summary: Allocate resources
+      description: Allocate additional resources for workflow execution
+      operationId: allocateResources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocateResourcesRequest'
+      responses:
+        '200':
+          description: Resources allocated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationResponse'
+
+  /resources/capacity:
+    get:
+      tags: [Resource Management]
+      summary: Get capacity planning
+      description: Retrieve capacity planning information and recommendations
+      operationId: getCapacityPlanning
+      parameters:
+        - name: time_horizon
+          in: query
+          description: Planning time horizon (e.g., '1w', '1m', '3m')
+          schema:
+            type: string
+            default: '1m'
+      responses:
+        '200':
+          description: Capacity planning retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacityPlanningResponse'
+
+  # Health & Monitoring
+  /health:
+    get:
+      tags: [Health & Monitoring]
+      summary: Health check
+      description: Check service health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /health/detailed:
+    get:
+      tags: [Health & Monitoring]
+      summary: Detailed health check
+      description: Get detailed health information including dependencies
+      operationId: detailedHealthCheck
+      responses:
+        '200':
+          description: Detailed health information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+
+components:
+  parameters:
+    DefinitionIdParam:
+      name: definitionId
+      in: path
+      required: true
+      description: Unique identifier for the workflow definition
+      schema:
+        type: string
+        format: uuid
+
+    InstanceIdParam:
+      name: instanceId
+      in: path
+      required: true
+      description: Unique identifier for the workflow instance
+      schema:
+        type: string
+        format: uuid
+
+    TaskIdParam:
+      name: taskId
+      in: path
+      required: true
+      description: Unique identifier for the task
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Core Data Models
+    WorkflowDefinition:
+      type: object
+      required:
+        - id
+        - name
+        - version
+        - bpmn_content
+        - status
+        - created_at
+        - created_by
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Human-readable workflow name
+        description:
+          type: string
+        version:
+          type: string
+          description: Workflow version
+        bpmn_content:
+          type: string
+          description: BPMN XML or JSON content
+        bpmn_format:
+          type: string
+          enum: [xml, json]
+          default: xml
+        status:
+          $ref: '#/components/schemas/WorkflowDefinitionStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+        metadata:
+          type: object
+          properties:
+            category:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            complexity_score:
+              type: number
+              minimum: 0
+              maximum: 100
+            estimated_duration:
+              type: integer
+              description: Estimated duration in seconds
+            dependencies:
+              type: array
+              items:
+                type: string
+          additionalProperties: true
+
+    WorkflowDefinitionStatus:
+      type: string
+      enum:
+        - draft
+        - validated
+        - published
+        - deprecated
+        - archived
+
+    WorkflowInstance:
+      type: object
+      required:
+        - id
+        - workflow_definition_id
+        - name
+        - status
+        - priority
+        - initiated_by
+        - initiated_at
+        - input_data
+        - execution_context
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_definition_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/WorkflowInstanceStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        initiated_by:
+          type: string
+        initiated_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        cancelled_at:
+          type: string
+          format: date-time
+        input_data:
+          type: object
+          additionalProperties: true
+        output_data:
+          type: object
+          additionalProperties: true
+        execution_context:
+          $ref: '#/components/schemas/ExecutionContext'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowEvent'
+        metadata:
+          type: object
+          properties:
+            project_id:
+              type: string
+              format: uuid
+            parent_workflow_id:
+              type: string
+              format: uuid
+            correlation_id:
+              type: string
+            business_key:
+              type: string
+            environment:
+              type: string
+          additionalProperties: true
+
+    WorkflowInstanceStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - suspended
+        - completed
+        - failed
+        - cancelled
+        - terminated
+
+    Task:
+      type: object
+      required:
+        - id
+        - workflow_instance_id
+        - task_definition_key
+        - name
+        - type
+        - status
+        - priority
+        - created_at
+        - input_data
+        - assignment
+        - execution_config
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_instance_id:
+          type: string
+          format: uuid
+        task_definition_key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/TaskType'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        cancelled_at:
+          type: string
+          format: date-time
+        due_date:
+          type: string
+          format: date-time
+        input_data:
+          type: object
+          additionalProperties: true
+        output_data:
+          type: object
+          additionalProperties: true
+        assignment:
+          $ref: '#/components/schemas/TaskAssignment'
+        execution_config:
+          $ref: '#/components/schemas/TaskExecutionConfig'
+        retry_config:
+          $ref: '#/components/schemas/RetryConfig'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResult'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskEvent'
+        dependencies:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          properties:
+            bpmn_element_id:
+              type: string
+            sequence_number:
+              type: integer
+            parallel_group:
+              type: string
+            estimated_duration:
+              type: integer
+            actual_duration:
+              type: integer
+          additionalProperties: true
+
+    TaskType:
+      type: string
+      enum:
+        - human_task
+        - service_task
+        - script_task
+        - user_task
+        - send_task
+        - receive_task
+        - manual_task
+        - business_rule_task
+        - call_activity
+        - sub_process
+
+    TaskStatus:
+      type: string
+      enum:
+        - created
+        - assigned
+        - started
+        - in_progress
+        - suspended
+        - completed
+        - failed
+        - cancelled
+        - skipped
+
+    TaskPriority:
+      type: string
+      enum:
+        - low
+        - normal
+        - high
+        - critical
+        - urgent
+
+    TaskAssignment:
+      type: object
+      required:
+        - id
+        - task_id
+        - assignment_type
+        - assignee
+        - assigned_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        assignment_type:
+          $ref: '#/components/schemas/AssignmentType'
+        assignee:
+          $ref: '#/components/schemas/TaskAssignee'
+        assigned_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        delegation_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/DelegationRecord'
+        capabilities_required:
+          type: array
+          items:
+            type: string
+        constraints:
+          $ref: '#/components/schemas/AssignmentConstraints'
+
+    AssignmentType:
+      type: string
+      enum:
+        - human
+        - ai_agent
+        - service
+        - tool
+        - external_api
+        - hybrid
+
+    TaskAssignee:
+      type: object
+      required:
+        - type
+        - identifier
+        - name
+        - capabilities
+      properties:
+        type:
+          $ref: '#/components/schemas/AssignmentType'
+        identifier:
+          type: string
+        name:
+          type: string
+        endpoint:
+          type: string
+          format: uri
+        credentials:
+          $ref: '#/components/schemas/CredentialReference'
+        capabilities:
+          type: array
+          items:
+            type: string
+        load_balancing:
+          $ref: '#/components/schemas/LoadBalancingConfig'
+        fallback_assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskAssignee'
+
+    TaskExecutionConfig:
+      type: object
+      required:
+        - timeout_seconds
+        - max_retries
+        - execution_mode
+        - monitoring_config
+      properties:
+        timeout_seconds:
+          type: integer
+          minimum: 1
+        max_retries:
+          type: integer
+          minimum: 0
+        retry_delay_seconds:
+          type: integer
+          minimum: 0
+        exponential_backoff:
+          type: boolean
+          default: true
+        circuit_breaker:
+          $ref: '#/components/schemas/CircuitBreakerConfig'
+        execution_mode:
+          $ref: '#/components/schemas/ExecutionMode'
+        parallelism_config:
+          $ref: '#/components/schemas/ParallelismConfig'
+        resource_limits:
+          $ref: '#/components/schemas/ResourceLimits'
+        monitoring_config:
+          $ref: '#/components/schemas/MonitoringConfig'
+
+    ExecutionMode:
+      type: string
+      enum:
+        - synchronous
+        - asynchronous
+        - batch
+        - streaming
+
+    RetryConfig:
+      type: object
+      required:
+        - max_attempts
+        - initial_delay_ms
+        - backoff_strategy
+      properties:
+        max_attempts:
+          type: integer
+          minimum: 1
+          maximum: 10
+        initial_delay_ms:
+          type: integer
+          minimum: 100
+        max_delay_ms:
+          type: integer
+          minimum: 1000
+        multiplier:
+          type: number
+          minimum: 1.0
+          default: 2.0
+        jitter:
+          type: boolean
+          default: true
+        retry_conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetryCondition'
+        backoff_strategy:
+          $ref: '#/components/schemas/BackoffStrategy'
+
+    BackoffStrategy:
+      type: string
+      enum:
+        - fixed
+        - linear
+        - exponential
+        - fibonacci
+
+    ExecutionContext:
+      type: object
+      required:
+        - workflow_instance_id
+        - current_state
+        - variables
+      properties:
+        workflow_instance_id:
+          type: string
+          format: uuid
+        current_state:
+          $ref: '#/components/schemas/WorkflowState'
+        variables:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ContextVariable'
+        active_tasks:
+          type: array
+          items:
+            type: string
+        completed_tasks:
+          type: array
+          items:
+            type: string
+        failed_tasks:
+          type: array
+          items:
+            type: string
+        execution_path:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionPathEntry'
+        resource_usage:
+          $ref: '#/components/schemas/ResourceUsage'
+        performance_metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+        error_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorRecord'
+
+    WorkflowState:
+      type: object
+      required:
+        - current_step
+        - process_variables
+      properties:
+        current_step:
+          type: string
+        active_tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/Token'
+        waiting_events:
+          type: array
+          items:
+            type: string
+        process_variables:
+          type: object
+          additionalProperties: true
+        boundary_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoundaryEvent'
+        escalations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Escalation'
+
+    ContextVariable:
+      type: object
+      required:
+        - name
+        - value
+        - type
+        - scope
+        - created_at
+      properties:
+        name:
+          type: string
+        value:
+          description: Variable value (any type)
+        type:
+          type: string
+        scope:
+          $ref: '#/components/schemas/VariableScope'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        access_control:
+          $ref: '#/components/schemas/AccessControl'
+
+    VariableScope:
+      type: string
+      enum:
+        - global
+        - workflow
+        - task
+        - local
+
+    TaskResult:
+      type: object
+      required:
+        - id
+        - task_id
+        - execution_id
+        - status
+        - start_time
+        - output_data
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskResultStatus'
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+          minimum: 0
+        output_data:
+          type: object
+          additionalProperties: true
+        metrics:
+          $ref: '#/components/schemas/ExecutionMetrics'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionError'
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogEntry'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultArtifact'
+
+    TaskResultStatus:
+      type: string
+      enum:
+        - success
+        - partial_success
+        - failure
+        - timeout
+        - cancelled
+
+    # Event Models
+    WorkflowEvent:
+      type: object
+      required:
+        - id
+        - workflow_instance_id
+        - event_type
+        - timestamp
+        - source
+        - data
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_instance_id:
+          type: string
+          format: uuid
+        event_type:
+          $ref: '#/components/schemas/WorkflowEventType'
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        correlation_id:
+          type: string
+        causation_id:
+          type: string
+        metadata:
+          type: object
+          properties:
+            user_id:
+              type: string
+            session_id:
+              type: string
+            trace_id:
+              type: string
+            span_id:
+              type: string
+          additionalProperties: true
+
+    WorkflowEventType:
+      type: string
+      enum:
+        - workflow_started
+        - workflow_completed
+        - workflow_failed
+        - workflow_cancelled
+        - task_created
+        - task_assigned
+        - task_started
+        - task_completed
+        - task_failed
+        - task_cancelled
+        - gateway_reached
+        - timer_triggered
+        - message_received
+        - signal_received
+        - error_occurred
+        - escalation_triggered
+
+    TaskEvent:
+      type: object
+      required:
+        - id
+        - task_id
+        - event_type
+        - timestamp
+        - source
+        - data
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        event_type:
+          $ref: '#/components/schemas/TaskEventType'
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TaskEventType:
+      type: string
+      enum:
+        - task_created
+        - task_assigned
+        - task_started
+        - task_progress_updated
+        - task_suspended
+        - task_resumed
+        - task_completed
+        - task_failed
+        - task_cancelled
+        - task_delegated
+        - task_escalated
+
+    # Request/Response Models
+    CreateWorkflowDefinitionRequest:
+      type: object
+      required:
+        - name
+        - bpmn_content
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        bpmn_content:
+          type: string
+          minLength: 1
+        bpmn_format:
+          type: string
+          enum: [xml, json]
+          default: xml
+        metadata:
+          type: object
+          properties:
+            category:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            complexity_score:
+              type: number
+              minimum: 0
+              maximum: 100
+            estimated_duration:
+              type: integer
+              minimum: 1
+            dependencies:
+              type: array
+              items:
+                type: string
+          additionalProperties: true
+
+    CreateWorkflowDefinitionFileRequest:
+      type: object
+      required:
+        - name
+        - bpmn_file
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        bpmn_file:
+          type: string
+          format: binary
+        metadata:
+          type: string
+          description: JSON string containing metadata
+
+    CreateWorkflowDefinitionResponse:
+      type: object
+      required:
+        - workflow_definition_id
+        - message
+      properties:
+        workflow_definition_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+
+    UpdateWorkflowDefinitionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        bpmn_content:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    StartWorkflowInstanceRequest:
+      type: object
+      required:
+        - workflow_definition_id
+        - input_data
+      properties:
+        workflow_definition_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        input_data:
+          type: object
+          additionalProperties: true
+        execution_options:
+          $ref: '#/components/schemas/ExecutionOptions'
+        metadata:
+          type: object
+          properties:
+            project_id:
+              type: string
+              format: uuid
+            business_key:
+              type: string
+            correlation_id:
+              type: string
+            environment:
+              type: string
+          additionalProperties: true
+
+    StartWorkflowInstanceResponse:
+      type: object
+      required:
+        - workflow_instance_id
+        - status
+        - message
+      properties:
+        workflow_instance_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/WorkflowInstanceStatus'
+        message:
+          type: string
+
+    TaskAssignmentRequest:
+      type: object
+      required:
+        - assignee
+      properties:
+        assignee:
+          $ref: '#/components/schemas/TaskAssignee'
+        assignment_reason:
+          type: string
+        constraints:
+          $ref: '#/components/schemas/AssignmentConstraints'
+        force_reassign:
+          type: boolean
+          default: false
+
+    TaskCompletionRequest:
+      type: object
+      required:
+        - output_data
+      properties:
+        output_data:
+          type: object
+          additionalProperties: true
+        execution_summary:
+          type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultArtifact'
+        next_assignee:
+          type: string
+
+    TaskFailureRequest:
+      type: object
+      required:
+        - error_code
+        - error_message
+        - retry_recommended
+        - escalation_required
+      properties:
+        error_code:
+          type: string
+        error_message:
+          type: string
+        error_details:
+          type: object
+          additionalProperties: true
+        retry_recommended:
+          type: boolean
+        escalation_required:
+          type: boolean
+
+    ExecutionStatus:
+      type: object
+      required:
+        - workflow_instance_id
+        - current_status
+        - progress_percentage
+        - active_tasks
+        - completed_tasks_count
+        - failed_tasks_count
+      properties:
+        workflow_instance_id:
+          type: string
+          format: uuid
+        current_status:
+          $ref: '#/components/schemas/WorkflowInstanceStatus'
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        active_tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        completed_tasks_count:
+          type: integer
+          minimum: 0
+        failed_tasks_count:
+          type: integer
+          minimum: 0
+        estimated_completion:
+          type: string
+          format: date-time
+        bottlenecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/BottleneckAnalysis'
+
+    # Supporting Models
+    ValidationResult:
+      type: object
+      required:
+        - is_valid
+        - timestamp
+      properties:
+        is_valid:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationSuggestion'
+
+    ValidationError:
+      type: object
+      required:
+        - code
+        - message
+        - severity
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning, info]
+        element_id:
+          type: string
+        location:
+          type: string
+
+    ValidationWarning:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        element_id:
+          type: string
+        suggestion:
+          type: string
+
+    ValidationSuggestion:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          type: string
+          enum: [optimization, best_practice, performance, security]
+        message:
+          type: string
+        impact:
+          type: string
+          enum: [low, medium, high]
+
+    TaskSummary:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+        - priority
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/TaskType'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        created_at:
+          type: string
+          format: date-time
+        assignee:
+          type: string
+        estimated_duration:
+          type: integer
+        actual_duration:
+          type: integer
+
+    ExecutionMetrics:
+      type: object
+      properties:
+        cpu_usage_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        memory_usage_mb:
+          type: number
+          minimum: 0
+        network_io_kb:
+          type: number
+          minimum: 0
+        disk_io_kb:
+          type: number
+          minimum: 0
+        api_calls_count:
+          type: integer
+          minimum: 0
+        error_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        throughput:
+          type: number
+          minimum: 0
+        latency_ms:
+          type: number
+          minimum: 0
+
+    ExecutionError:
+      type: object
+      required:
+        - code
+        - message
+        - timestamp
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        stack_trace:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+
+    LogEntry:
+      type: object
+      required:
+        - level
+        - message
+        - timestamp
+      properties:
+        level:
+          type: string
+          enum: [debug, info, warn, error, fatal]
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ResultArtifact:
+      type: object
+      required:
+        - name
+        - type
+        - location
+        - size_bytes
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [file, url, data, report, visualization]
+        location:
+          type: string
+          format: uri
+        size_bytes:
+          type: integer
+          minimum: 0
+        checksum:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # List Response Models
+    WorkflowDefinitionListResponse:
+      type: object
+      required:
+        - definitions
+        - total
+      properties:
+        definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowDefinitionSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WorkflowDefinitionSummary:
+      type: object
+      required:
+        - id
+        - name
+        - version
+        - status
+        - created_at
+        - created_by
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: string
+        status:
+          $ref: '#/components/schemas/WorkflowDefinitionStatus'
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        active_instances:
+          type: integer
+          minimum: 0
+
+    WorkflowInstanceListResponse:
+      type: object
+      required:
+        - instances
+        - total
+      properties:
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowInstanceSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WorkflowInstanceSummary:
+      type: object
+      required:
+        - id
+        - workflow_definition_id
+        - name
+        - status
+        - priority
+        - initiated_at
+        - initiated_by
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_definition_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/WorkflowInstanceStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        initiated_at:
+          type: string
+          format: date-time
+        initiated_by:
+          type: string
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        active_tasks_count:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+        - total
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # Metrics Response Models
+    WorkflowMetricsResponse:
+      type: object
+      required:
+        - metrics
+        - time_range
+        - aggregation
+      properties:
+        metrics:
+          $ref: '#/components/schemas/WorkflowMetrics'
+        time_range:
+          type: string
+        aggregation:
+          type: string
+
+    WorkflowMetrics:
+      type: object
+      properties:
+        total_instances:
+          type: integer
+          minimum: 0
+        completed_instances:
+          type: integer
+          minimum: 0
+        failed_instances:
+          type: integer
+          minimum: 0
+        active_instances:
+          type: integer
+          minimum: 0
+        average_duration_ms:
+          type: number
+          minimum: 0
+        success_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        throughput_per_hour:
+          type: number
+          minimum: 0
+        bottleneck_tasks:
+          type: array
+          items:
+            type: string
+
+    TaskMetricsResponse:
+      type: object
+      required:
+        - metrics
+        - time_range
+      properties:
+        metrics:
+          $ref: '#/components/schemas/TaskMetrics'
+        time_range:
+          type: string
+
+    TaskMetrics:
+      type: object
+      properties:
+        total_tasks:
+          type: integer
+          minimum: 0
+        completed_tasks:
+          type: integer
+          minimum: 0
+        failed_tasks:
+          type: integer
+          minimum: 0
+        average_execution_time_ms:
+          type: number
+          minimum: 0
+        task_type_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+        assignee_performance:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssigneePerformance'
+
+    AssigneePerformance:
+      type: object
+      required:
+        - assignee_id
+        - assignee_name
+        - tasks_completed
+        - average_duration_ms
+        - success_rate
+      properties:
+        assignee_id:
+          type: string
+        assignee_name:
+          type: string
+        tasks_completed:
+          type: integer
+          minimum: 0
+        average_duration_ms:
+          type: number
+          minimum: 0
+        success_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    SystemMetricsResponse:
+      type: object
+      required:
+        - system_metrics
+        - timestamp
+      properties:
+        system_metrics:
+          $ref: '#/components/schemas/SystemMetrics'
+        timestamp:
+          type: string
+          format: date-time
+
+    SystemMetrics:
+      type: object
+      properties:
+        active_workflows:
+          type: integer
+          minimum: 0
+        active_tasks:
+          type: integer
+          minimum: 0
+        queue_depth:
+          type: integer
+          minimum: 0
+        throughput_per_minute:
+          type: number
+          minimum: 0
+        average_response_time_ms:
+          type: number
+          minimum: 0
+        error_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        resource_utilization:
+          type: object
+          properties:
+            cpu_percent:
+              type: number
+              minimum: 0
+              maximum: 100
+            memory_percent:
+              type: number
+              minimum: 0
+              maximum: 100
+            disk_percent:
+              type: number
+              minimum: 0
+              maximum: 100
+
+    # Event Response Models
+    WorkflowEventListResponse:
+      type: object
+      required:
+        - events
+        - total
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowEvent'
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    TaskEventListResponse:
+      type: object
+      required:
+        - events
+        - total
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskEvent'
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    EventSubscriptionRequest:
+      type: object
+      required:
+        - event_types
+        - delivery_method
+      properties:
+        event_types:
+          type: array
+          items:
+            type: string
+        delivery_method:
+          $ref: '#/components/schemas/DeliveryMethod'
+        filter_criteria:
+          type: object
+          additionalProperties: true
+        webhook_url:
+          type: string
+          format: uri
+        authentication:
+          $ref: '#/components/schemas/WebhookAuthentication'
+
+    DeliveryMethod:
+      type: string
+      enum:
+        - webhook
+        - websocket
+        - server_sent_events
+        - message_queue
+
+    EventSubscriptionResponse:
+      type: object
+      required:
+        - subscription_id
+        - status
+        - message
+      properties:
+        subscription_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, pending, failed]
+        message:
+          type: string
+
+    # Analytical Response Models
+    BottleneckAnalysisResponse:
+      type: object
+      required:
+        - bottlenecks
+        - analysis_timestamp
+      properties:
+        bottlenecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/BottleneckAnalysis'
+        analysis_timestamp:
+          type: string
+          format: date-time
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptimizationRecommendation'
+
+    BottleneckAnalysis:
+      type: object
+      required:
+        - bottleneck_type
+        - severity
+        - affected_workflows
+        - description
+      properties:
+        bottleneck_type:
+          type: string
+          enum: [resource, dependency, coordination, performance]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        affected_workflows:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        metrics:
+          type: object
+          additionalProperties: true
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    OptimizationRecommendation:
+      type: object
+      required:
+        - recommendation_type
+        - priority
+        - description
+        - expected_impact
+      properties:
+        recommendation_type:
+          type: string
+          enum: [scaling, optimization, restructuring, caching]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        expected_impact:
+          type: string
+        implementation_effort:
+          type: string
+          enum: [low, medium, high]
+
+    PredictiveAnalyticsResponse:
+      type: object
+      required:
+        - predictions
+        - confidence_level
+        - model_version
+      properties:
+        predictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prediction'
+        confidence_level:
+          type: number
+          minimum: 0
+          maximum: 1
+        model_version:
+          type: string
+        analysis_timestamp:
+          type: string
+          format: date-time
+
+    Prediction:
+      type: object
+      required:
+        - prediction_type
+        - predicted_value
+        - confidence
+      properties:
+        prediction_type:
+          type: string
+          enum: [completion_time, resource_usage, failure_probability]
+        predicted_value:
+          description: Predicted value (type varies by prediction_type)
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        variance:
+          type: number
+          minimum: 0
+        factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PredictionFactor'
+
+    PredictionFactor:
+      type: object
+      required:
+        - factor_name
+        - influence_weight
+      properties:
+        factor_name:
+          type: string
+        influence_weight:
+          type: number
+          minimum: -1
+          maximum: 1
+        description:
+          type: string
+
+    # Health Check Models
+    HealthCheckResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime_seconds:
+          type: integer
+          minimum: 0
+
+    DetailedHealthResponse:
+      type: object
+      required:
+        - overall_status
+        - timestamp
+        - components
+      properties:
+        overall_status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime_seconds:
+          type: integer
+          minimum: 0
+        components:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ComponentHealth'
+            event_manager:
+              $ref: '#/components/schemas/ComponentHealth'
+            context_manager:
+              $ref: '#/components/schemas/ComponentHealth'
+            tool_manager:
+              $ref: '#/components/schemas/ComponentHealth'
+            cache:
+              $ref: '#/components/schemas/ComponentHealth'
+            message_queue:
+              $ref: '#/components/schemas/ComponentHealth'
+        metrics:
+          $ref: '#/components/schemas/HealthMetrics'
+
+    ComponentHealth:
+      type: object
+      required:
+        - status
+        - response_time_ms
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        response_time_ms:
+          type: number
+          minimum: 0
+        last_check:
+          type: string
+          format: date-time
+        error_message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    HealthMetrics:
+      type: object
+      properties:
+        active_workflows:
+          type: integer
+          minimum: 0
+        queue_depth:
+          type: integer
+          minimum: 0
+        memory_usage_mb:
+          type: number
+          minimum: 0
+        cpu_usage_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    # Supporting Complex Models (partial definitions for brevity)
+    DelegationRecord:
+      type: object
+      properties:
+        delegated_from:
+          type: string
+        delegated_to:
+          type: string
+        delegated_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    AssignmentConstraints:
+      type: object
+      properties:
+        max_concurrent_tasks:
+          type: integer
+          minimum: 0
+        required_permissions:
+          type: array
+          items:
+            type: string
+        geographical_restrictions:
+          type: array
+          items:
+            type: string
+        time_restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRestriction'
+        resource_requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceRequirement'
+
+    TimeRestriction:
+      type: object
+      properties:
+        days_of_week:
+          type: array
+          items:
+            type: string
+            enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        start_time:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+        end_time:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+        timezone:
+          type: string
+
+    ResourceRequirement:
+      type: object
+      properties:
+        resource_type:
+          type: string
+          enum: [cpu, memory, gpu, storage, network]
+        minimum_amount:
+          type: number
+          minimum: 0
+        maximum_amount:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+
+    CredentialReference:
+      type: object
+      properties:
+        credential_type:
+          type: string
+          enum: [api_key, oauth2, certificate, basic_auth]
+        credential_id:
+          type: string
+        vault_path:
+          type: string
+
+    LoadBalancingConfig:
+      type: object
+      properties:
+        strategy:
+          type: string
+          enum: [round_robin, least_connections, weighted, random]
+        weights:
+          type: object
+          additionalProperties:
+            type: number
+
+    CircuitBreakerConfig:
+      type: object
+      properties:
+        failure_threshold:
+          type: integer
+          minimum: 1
+        timeout_duration_ms:
+          type: integer
+          minimum: 1000
+        retry_timeout_ms:
+          type: integer
+          minimum: 1000
+
+    ParallelismConfig:
+      type: object
+      properties:
+        max_parallel_tasks:
+          type: integer
+          minimum: 1
+        task_distribution_strategy:
+          type: string
+          enum: [even, priority_based, capability_based]
+
+    ResourceLimits:
+      type: object
+      properties:
+        max_cpu_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        max_memory_mb:
+          type: integer
+          minimum: 0
+        max_execution_time_ms:
+          type: integer
+          minimum: 1000
+
+    MonitoringConfig:
+      type: object
+      properties:
+        metrics_collection_enabled:
+          type: boolean
+          default: true
+        log_level:
+          type: string
+          enum: [debug, info, warn, error]
+          default: info
+        trace_sampling_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.1
+
+    RetryCondition:
+      type: object
+      properties:
+        condition_type:
+          type: string
+          enum: [error_code, status_code, exception_type, timeout]
+        pattern:
+          type: string
+        invert:
+          type: boolean
+          default: false
+
+    Token:
+      type: object
+      properties:
+        token_id:
+          type: string
+        element_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    BoundaryEvent:
+      type: object
+      properties:
+        event_id:
+          type: string
+        event_type:
+          type: string
+        attached_to:
+          type: string
+
+    Escalation:
+      type: object
+      properties:
+        escalation_id:
+          type: string
+        escalation_type:
+          type: string
+        trigger_condition:
+          type: string
+
+    ExecutionPathEntry:
+      type: object
+      properties:
+        step_id:
+          type: string
+        step_name:
+          type: string
+        entered_at:
+          type: string
+          format: date-time
+        exited_at:
+          type: string
+          format: date-time
+
+    ResourceUsage:
+      type: object
+      properties:
+        cpu_time_ms:
+          type: integer
+          minimum: 0
+        memory_peak_mb:
+          type: number
+          minimum: 0
+        disk_io_bytes:
+          type: integer
+          minimum: 0
+        network_io_bytes:
+          type: integer
+          minimum: 0
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        total_execution_time_ms:
+          type: integer
+          minimum: 0
+        task_execution_time_ms:
+          type: integer
+          minimum: 0
+        wait_time_ms:
+          type: integer
+          minimum: 0
+        queue_time_ms:
+          type: integer
+          minimum: 0
+
+    ErrorRecord:
+      type: object
+      properties:
+        error_id:
+          type: string
+        error_code:
+          type: string
+        error_message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        context:
+          type: object
+          additionalProperties: true
+
+    AccessControl:
+      type: object
+      properties:
+        read_permissions:
+          type: array
+          items:
+            type: string
+        write_permissions:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: [public, private, restricted]
+
+    ExecutionOptions:
+      type: object
+      properties:
+        synchronous:
+          type: boolean
+          default: false
+        timeout_seconds:
+          type: integer
+          minimum: 1
+        priority_boost:
+          type: boolean
+          default: false
+        resource_allocation:
+          $ref: '#/components/schemas/ResourceAllocation'
+
+    ResourceAllocation:
+      type: object
+      properties:
+        cpu_cores:
+          type: number
+          minimum: 0.1
+        memory_mb:
+          type: integer
+          minimum: 128
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+
+    # Additional Request Models
+    CancelWorkflowInstanceRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        force:
+          type: boolean
+          default: false
+
+    SuspendWorkflowInstanceRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        suspend_tasks:
+          type: boolean
+          default: true
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        due_date:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    StartTaskRequest:
+      type: object
+      properties:
+        execution_context:
+          type: object
+          additionalProperties: true
+        override_config:
+          $ref: '#/components/schemas/TaskExecutionConfig'
+
+    CancelTaskRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        force:
+          type: boolean
+          default: false
+
+    RetryTaskRequest:
+      type: object
+      properties:
+        retry_config:
+          $ref: '#/components/schemas/RetryConfig'
+        reset_state:
+          type: boolean
+          default: false
+
+    EscalateTaskRequest:
+      type: object
+      required:
+        - escalation_type
+        - reason
+      properties:
+        escalation_type:
+          type: string
+          enum: [priority_increase, reassignment, supervisor_notification, emergency]
+        reason:
+          type: string
+        new_assignee:
+          $ref: '#/components/schemas/TaskAssignee'
+        new_priority:
+          $ref: '#/components/schemas/TaskPriority'
+        notify_stakeholders:
+          type: boolean
+          default: true
+
+    PauseExecutionRequest:
+      type: object
+      required:
+        - entity_type
+        - entity_ids
+      properties:
+        entity_type:
+          type: string
+          enum: [workflow, task]
+        entity_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        reason:
+          type: string
+
+    ResumeExecutionRequest:
+      type: object
+      required:
+        - entity_type
+        - entity_ids
+      properties:
+        entity_type:
+          type: string
+          enum: [workflow, task]
+        entity_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ExecutionControlResponse:
+      type: object
+      required:
+        - successful_operations
+        - failed_operations
+      properties:
+        successful_operations:
+          type: array
+          items:
+            type: string
+        failed_operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationResult'
+
+    OperationResult:
+      type: object
+      required:
+        - entity_id
+        - error_message
+      properties:
+        entity_id:
+          type: string
+        error_message:
+          type: string
+        error_code:
+          type: string
+
+    BatchOperationRequest:
+      type: object
+      required:
+        - operation_type
+        - target_entities
+      properties:
+        operation_type:
+          type: string
+          enum: [cancel, suspend, resume, retry, priority_change]
+        target_entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchTarget'
+        operation_parameters:
+          type: object
+          additionalProperties: true
+
+    BatchTarget:
+      type: object
+      required:
+        - entity_type
+        - entity_id
+      properties:
+        entity_type:
+          type: string
+          enum: [workflow, task]
+        entity_id:
+          type: string
+          format: uuid
+
+    BatchOperationResponse:
+      type: object
+      required:
+        - total_operations
+        - successful_count
+        - failed_count
+        - results
+      properties:
+        total_operations:
+          type: integer
+          minimum: 0
+        successful_count:
+          type: integer
+          minimum: 0
+        failed_count:
+          type: integer
+          minimum: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BatchOperationResult'
+
+    BatchOperationResult:
+      type: object
+      required:
+        - entity_id
+        - success
+      properties:
+        entity_id:
+          type: string
+        success:
+          type: boolean
+        error_message:
+          type: string
+        operation_details:
+          type: object
+          additionalProperties: true
+
+    # Resource Management Models
+    ResourceAllocationResponse:
+      type: object
+      required:
+        - current_allocation
+        - utilization
+        - available_capacity
+      properties:
+        current_allocation:
+          $ref: '#/components/schemas/CurrentAllocation'
+        utilization:
+          $ref: '#/components/schemas/ResourceUtilization'
+        available_capacity:
+          $ref: '#/components/schemas/AvailableCapacity'
+
+    CurrentAllocation:
+      type: object
+      properties:
+        cpu_cores_allocated:
+          type: number
+          minimum: 0
+        memory_mb_allocated:
+          type: integer
+          minimum: 0
+        active_workflows:
+          type: integer
+          minimum: 0
+        active_tasks:
+          type: integer
+          minimum: 0
+
+    ResourceUtilization:
+      type: object
+      properties:
+        cpu_utilization_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        memory_utilization_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        queue_utilization_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    AvailableCapacity:
+      type: object
+      properties:
+        cpu_cores_available:
+          type: number
+          minimum: 0
+        memory_mb_available:
+          type: integer
+          minimum: 0
+        estimated_additional_workflows:
+          type: integer
+          minimum: 0
+
+    AllocateResourcesRequest:
+      type: object
+      required:
+        - resource_requirements
+      properties:
+        resource_requirements:
+          $ref: '#/components/schemas/ResourceRequirements'
+        allocation_strategy:
+          type: string
+          enum: [immediate, scheduled, adaptive]
+          default: immediate
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+
+    ResourceRequirements:
+      type: object
+      properties:
+        cpu_cores:
+          type: number
+          minimum: 0.1
+        memory_mb:
+          type: integer
+          minimum: 128
+        duration_estimate_seconds:
+          type: integer
+          minimum: 1
+
+    AllocationResponse:
+      type: object
+      required:
+        - allocation_id
+        - status
+        - allocated_resources
+      properties:
+        allocation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [allocated, pending, failed]
+        allocated_resources:
+          $ref: '#/components/schemas/AllocatedResources'
+        estimated_availability:
+          type: string
+          format: date-time
+
+    AllocatedResources:
+      type: object
+      properties:
+        cpu_cores:
+          type: number
+          minimum: 0
+        memory_mb:
+          type: integer
+          minimum: 0
+        allocation_duration_seconds:
+          type: integer
+          minimum: 1
+
+    CapacityPlanningResponse:
+      type: object
+      required:
+        - current_capacity
+        - projected_demand
+        - recommendations
+      properties:
+        current_capacity:
+          $ref: '#/components/schemas/CapacityMetrics'
+        projected_demand:
+          $ref: '#/components/schemas/DemandProjection'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CapacityRecommendation'
+        planning_horizon:
+          type: string
+
+    CapacityMetrics:
+      type: object
+      properties:
+        total_cpu_cores:
+          type: number
+          minimum: 0
+        total_memory_mb:
+          type: integer
+          minimum: 0
+        utilization_trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/UtilizationTrend'
+
+    DemandProjection:
+      type: object
+      properties:
+        projected_workflows_per_hour:
+          type: number
+          minimum: 0
+        projected_tasks_per_hour:
+          type: number
+          minimum: 0
+        peak_demand_periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeakPeriod'
+
+    CapacityRecommendation:
+      type: object
+      required:
+        - recommendation_type
+        - priority
+        - description
+      properties:
+        recommendation_type:
+          type: string
+          enum: [scale_up, scale_down, optimize, redistribute]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        estimated_impact:
+          type: string
+        estimated_cost:
+          type: string
+
+    UtilizationTrend:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        cpu_utilization:
+          type: number
+          minimum: 0
+          maximum: 100
+        memory_utilization:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    PeakPeriod:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        projected_utilization:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    WebhookAuthentication:
+      type: object
+      properties:
+        auth_type:
+          type: string
+          enum: [none, basic, bearer_token, api_key, hmac]
+        credentials:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: [] 

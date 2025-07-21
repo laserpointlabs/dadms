@@ -34,6 +34,7 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 - **[Requirements Extractor & Conceptualizer API](development/backend/requirements_extractor_service_api_endpoints.md)**: Comprehensive intelligent requirements extraction and conceptual modeling API
 - **[Memory Manager API](development/backend/memory_manager_service_api_endpoints.md)**: Comprehensive memory management with categorization, lifecycle intelligence, and semantic retrieval API
 - **[Ontology Workspace API](development/backend/ontology_workspace_service_api_endpoints.md)**: Comprehensive visual, collaborative environment for ontology authoring, editing, and validation API
+- **[Task Orchestrator API](development/backend/task_orchestrator_service_api_endpoints.md)**: Comprehensive workflow orchestration and task management API for the EDS ecosystem
 - Service endpoint documentation (OpenAPI specifications)
 - Request/response schemas and examples
 - Authentication and authorization guides
