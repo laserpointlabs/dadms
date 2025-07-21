@@ -12,35 +12,138 @@ DADMS 2.0 follows a clean microservices architecture with the following principl
 
 ## Service Architecture
 
-### Core Services (MVP)
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   User/Project  │    │   Knowledge     │    │   LLM Service   │
-│   Service       │    │   Service       │    │                 │
-│   Port 3001     │    │   Port 3003     │    │   Port 3002     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │   Event Bus     │
-                    │   Port 3002     │
-                    └─────────────────┘
+### Service Architecture & Port Allocation
+
+```mermaid
+%%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
+flowchart TD
+    subgraph UI["User Interface"]
+        WebUI["React UI<br/>(Port 3000)"]
+        Playground["LLM Playground<br/>(Port 3006)"]
+    end
+    
+    subgraph CoreServices["Core Services"]
+        ProjectService["Project Service<br/>(Port 3001)"]
+        LLMService["LLM Service<br/>(Port 3002)"]
+        KnowledgeService["Knowledge Service<br/>(Port 3003)"]
+        AAS["Agent Assistance<br/>(Port 3005)"]
+    end
+    
+    subgraph EventSystem["Event-Driven System"]
+        EventManager["EventManager<br/>(Port 3004)"]
+    end
+    
+    subgraph ProcessServices["Process & Data Services"]
+        ProcessManager["Process Manager<br/>(Port 3007)"]
+        ThreadManager["Thread Manager<br/>(Port 3008)"]
+        DataManager["Data Manager<br/>(Port 3009)"]
+        ModelManager["Model Manager<br/>(Port 3010)"]
+    end
+    
+    %% UI connections
+    WebUI --> ProjectService
+    WebUI --> KnowledgeService
+    WebUI --> LLMService
+    WebUI --> ModelManager
+    Playground --> LLMService
+    
+    %% Service to EventManager connections
+    ProjectService --> EventManager
+    LLMService --> EventManager
+    KnowledgeService --> EventManager
+    AAS --> EventManager
+    ProcessManager --> EventManager
+    DataManager --> EventManager
+    ModelManager --> EventManager
+    
+    %% EventManager back to services
+    EventManager --> AAS
+    EventManager --> ProcessManager
+    EventManager --> ModelManager
+    
+    %% Service interconnections
+    ProcessManager --> LLMService
+    ModelManager --> KnowledgeService
+    DataManager --> KnowledgeService
+    
+    classDef ui fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
+    classDef core fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
+    classDef event fill:#ffebee,stroke:#d32f2f,stroke-width:3px;
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    
+    class WebUI,Playground ui;
+    class ProjectService,LLMService,KnowledgeService,AAS core;
+    class EventManager event;
+    class ProcessManager,ThreadManager,DataManager,ModelManager process;
 ```
 
+**Port Allocation:**
+- **UI Layer**: 3000 (React UI), 3006 (LLM Playground)
+- **Core Services**: 3001 (Project), 3002 (LLM), 3003 (Knowledge), 3005 (AAS)
+- **Event System**: 3004 (EventManager)
+- **Process Services**: 3007 (Process), 3008 (Thread), 3009 (Data), 3010 (Model)
+- **Future Services**: 3011+
+
 ### Data Architecture
+
+```mermaid
+%%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
+flowchart TD
+    subgraph Storage["Storage Layer"]
+        PostgreSQL["PostgreSQL<br/>• User/Project Data<br/>• Model Metadata<br/>• Event History<br/>• Audit Logs"]
+        Qdrant["Qdrant Vector Store<br/>• Knowledge Embeddings<br/>• Model Embeddings<br/>• Similarity Search<br/>• Semantic Retrieval"]
+        Redis["Redis Cache<br/>• Session Storage<br/>• Event Queues<br/>• Temporary Data<br/>• Rate Limiting"]
+        MinIO["MinIO Object Store<br/>• Model Artifacts<br/>• Document Files<br/>• Large Binary Data<br/>• Backup Storage"]
+        Neo4j["Neo4j Graph DB<br/>• Model Lineage<br/>• Knowledge Graphs<br/>• Dependency Tracking<br/>• Relationship Analysis"]
+    end
+    
+    subgraph Services["Service Data Patterns"]
+        ProjectService --> PostgreSQL
+        KnowledgeService --> PostgreSQL
+        KnowledgeService --> Qdrant
+        KnowledgeService --> MinIO
+        ModelManager --> PostgreSQL
+        ModelManager --> MinIO
+        ModelManager --> Neo4j
+        ModelManager --> Qdrant
+        EventManager --> PostgreSQL
+        EventManager --> Redis
+        AAS --> Qdrant
+        AAS --> Neo4j
+    end
+    
+    classDef primary fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
+    classDef vector fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
+    classDef cache fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef object fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef graphdb fill:#ffebee,stroke:#d32f2f,stroke-width:2px;
+    classDef service fill:#f5f5f5,stroke:#616161,stroke-width:1px;
+    
+    class PostgreSQL primary;
+    class Qdrant vector;
+    class Redis cache;
+    class MinIO object;
+    class Neo4j graphdb;
+    class ProjectService,KnowledgeService,ModelManager,EventManager,AAS service;
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PostgreSQL    │    │     Qdrant      │    │     Redis       │
-│                 │    │   Vector Store  │    │    Cache        │
-│ User/Project    │    │   Knowledge     │    │   Sessions      │
-│ Task Data       │    │   Embeddings    │    │   Temp Data     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+
+## Service Specifications
+
+### Core Services (Implemented)
+- **[EventManager Service](./event_manager_specification.md)** - Central event processing and distribution hub
+- **[Data Manager Service](./data_manager_specification.md)** - External data ingestion and processing gateway
+- **[Model Manager Service](./model_manager_specification.md)** - Computational model registry and lifecycle management
+
+### Future Services (Planned)
+- **SimulationManager Service** - Model execution and simulation orchestration
+- **OntologyManager Service** - Domain knowledge and semantic modeling
+- **ProcessManager Service** - Business process workflow management
 
 ## Documentation Contents
 
 ### System Diagrams
+- [x] **[Architecture Overview](./DADMS_ARCHITECTURE_OVERVIEW.md)** - High-level system architecture
+- [x] **[EventManager Diagrams](./event_manager_diagrams.md)** - Event-driven system patterns
 - [ ] **Service Dependency Map**: How services interact
 - [ ] **Data Flow Diagrams**: Information flow through system
 - [ ] **Deployment Architecture**: Infrastructure and containers

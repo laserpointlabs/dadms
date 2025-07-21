@@ -27,10 +27,11 @@ Welcome to the DADMS 2.0 documentation. This directory contains all project docu
 
 ### 🌐 API Documentation
 - **[API Overview](api/README.md)**: Service APIs, authentication, and integration guides
-- Service endpoint documentation
-- Request/response schemas
-- Authentication and authorization
-- Integration examples
+- **[Model Manager API](api/model_manager_api_endpoints.md)**: Comprehensive model registry API documentation
+- Service endpoint documentation (OpenAPI specifications)
+- Request/response schemas and examples
+- Authentication and authorization guides
+- Integration examples and SDK usage
 - Postman collections
 
 ### 🚀 Deployment

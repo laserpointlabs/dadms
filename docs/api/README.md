@@ -8,8 +8,13 @@ This directory contains API documentation for all DADMS services.
 - **[Project Service API](project_service_openapi.yaml)** (Port 3001) - **ENHANCED: Lifecycle & Analytics**
 - **[LLM Service API](llm_service_openapi.yaml)** (Port 3002) - **ENHANCED: Multi-provider & Cost Tracking**
 - **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003) - **ENHANCED: RAG & Vector Search**
-- **[Event Bus Service API](event_bus_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
+- **[EventManager Service API](event_manager_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
 - **[Agent Assistance Service API](agent_assistance_service_openapi.yaml)** (Port 3005) - **NEW: Intelligent assistant**
+
+### Data & Model Services
+- **[Data Manager Service API](data_manager_service_openapi.yaml)** (Port 3009) - **NEW: External data integration**
+- **[Model Manager Service API](model_manager_service_openapi.yaml)** (Port 3010) - **NEW: Model registry & lifecycle**
+  - **[Detailed API Endpoints](model_manager_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -69,11 +74,43 @@ The intelligent assistant that provides proactive, context-aware help:
 - **Learning**: Improves based on user feedback and patterns
 
 ### **Integration Flow**
-```
-User Action → Service → Event Bus → AAS → Proactive Assistance
-     ↓           ↓         ↓        ↓
-  Context    Event     Stream    Suggestions
-  Update   Published   Events    & Actions
+
+```mermaid
+%%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
+flowchart LR
+    subgraph User["User Interface"]
+        UserAction["User Action"]
+        Context["Context Update"]
+    end
+    
+    subgraph Backend["Backend Services"]
+        Service["Service Processing"]
+        EventBus["Event Bus<br/>(Port 3004)"]
+        AAS["Agent Assistance<br/>(Port 3005)"]
+    end
+    
+    subgraph Output["Intelligent Response"]
+        ProactiveHelp["Proactive Assistance"]
+        Suggestions["Suggestions & Actions"]
+    end
+    
+    UserAction --> Service
+    Service --> EventBus
+    EventBus --> AAS
+    AAS --> ProactiveHelp
+    
+    UserAction --> Context
+    Service -.-> Context
+    EventBus -.-> Suggestions
+    AAS --> Suggestions
+    
+    classDef user fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
+    classDef backend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
+    classDef output fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    
+    class UserAction,Context user;
+    class Service,EventBus,AAS backend;
+    class ProactiveHelp,Suggestions output;
 ```
 
 ## Documentation Status
@@ -82,8 +119,12 @@ User Action → Service → Event Bus → AAS → Proactive Assistance
 - [x] **Project Service API** - ✅ ENHANCED
 - [x] **LLM Service API** - ✅ ENHANCED
 - [x] **Knowledge Service API** - ✅ ENHANCED
-- [x] **Event Bus Service API** - ✅ COMPLETE
+- [x] **EventManager Service API** - ✅ COMPLETE
 - [x] **Agent Assistance Service API** - ✅ COMPLETE
+
+### Data & Model Services
+- [x] **Data Manager Service API** - ✅ COMPLETE
+- [x] **Model Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE

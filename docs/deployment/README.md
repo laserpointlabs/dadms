@@ -39,10 +39,66 @@ Databases:
 ```
 
 ### Network Architecture
-```
-Internet → Load Balancer → API Gateway → Services
-                    ↓
-                 Database Layer
+
+```mermaid
+%%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
+flowchart TD
+    subgraph External["External"]
+        Internet["Internet<br/>Users & APIs"]
+    end
+    
+    subgraph Infrastructure["Infrastructure Layer"]
+        LoadBalancer["Load Balancer<br/>Traefik/Nginx"]
+        APIGateway["API Gateway<br/>Service Mesh"]
+    end
+    
+    subgraph Services["Service Layer"]
+        UI["React UI<br/>(Port 3000)"]
+        ProjectService["Project Service<br/>(Port 3001)"]
+        LLMService["LLM Service<br/>(Port 3002)"]
+        KnowledgeService["Knowledge Service<br/>(Port 3003)"]
+        EventManager["EventManager<br/>(Port 3004)"]
+        ModelManager["Model Manager<br/>(Port 3010)"]
+    end
+    
+    subgraph Storage["Database Layer"]
+        PostgreSQL["PostgreSQL<br/>Primary Database"]
+        Qdrant["Qdrant<br/>Vector Store"]
+        Redis["Redis<br/>Cache & Queues"]
+        MinIO["MinIO<br/>Object Storage"]
+        Neo4j["Neo4j<br/>Graph Database"]
+    end
+    
+    Internet --> LoadBalancer
+    LoadBalancer --> APIGateway
+    
+    APIGateway --> UI
+    APIGateway --> ProjectService
+    APIGateway --> LLMService
+    APIGateway --> KnowledgeService
+    APIGateway --> EventManager
+    APIGateway --> ModelManager
+    
+    ProjectService --> PostgreSQL
+    LLMService --> PostgreSQL
+    KnowledgeService --> PostgreSQL
+    KnowledgeService --> Qdrant
+    KnowledgeService --> MinIO
+    EventManager --> PostgreSQL
+    EventManager --> Redis
+    ModelManager --> PostgreSQL
+    ModelManager --> MinIO
+    ModelManager --> Neo4j
+    
+    classDef external fill:#ffebee,stroke:#d32f2f,stroke-width:2px;
+    classDef infra fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
+    classDef service fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    
+    class Internet external;
+    class LoadBalancer,APIGateway infra;
+    class UI,ProjectService,LLMService,KnowledgeService,EventManager,ModelManager service;
+    class PostgreSQL,Qdrant,Redis,MinIO,Neo4j storage;
 ```
 
 ### Storage Requirements
