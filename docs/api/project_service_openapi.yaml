@@ -1,1129 +1,677 @@
 openapi: 3.0.3
 info:
-  title: DADMS Project Service API
-  version: 1.0.0
+  title: DADMS 2.0 - Project Service API
   description: |
-    OpenAPI specification for the DADMS 2.0 Project Service. Defines endpoints for project management, 
-    user assignment, lifecycle management, and integration with other DADMS services. Supports 
-    decision intelligence workflows with rich project context and analytics.
+    Project Service API for DADMS 2.0 - Decision Analysis and Decision Management System.
+    
+    This service provides project lifecycle management for decision intelligence workflows,
+    including project creation, metadata management, status tracking, and user ownership.
+    
+    ## Current Implementation Status
+    ✅ **IMPLEMENTED** - Core functionality operational with React UI integration
+    
+    ## Key Features
+    - **Project CRUD Operations**: Complete lifecycle management
+    - **PostgreSQL Integration**: Robust data persistence with proper schema
+    - **React UI Integration**: Full frontend integration with real-time updates
+    - **Input Validation**: Joi schema validation for all requests
+    - **API Documentation**: Swagger/OpenAPI integration
+    - **Error Handling**: Comprehensive error middleware
+
+    ## Authentication
+    Currently using simple user-id header authentication. JWT authentication planned for Phase 2.
+
+  version: 2.0.0-alpha.2
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: http://localhost:3001
     description: Local development server
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
   schemas:
     # Core Project Models
     Project:
       type: object
+      required: [id, name, description, owner_id, status, knowledge_domain, settings, created_at, updated_at]
       properties:
         id:
           type: string
+          format: uuid
           description: Unique project identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
         name:
           type: string
+          maxLength: 255
           description: Project name/title
+          example: "UAV Decision Analysis"
         description:
           type: string
+          maxLength: 1000
           description: Project description
-        decision_context:
-          type: string
-          description: Rich decision context and metadata
-        status:
-          type: string
-          enum: [draft, active, completed, archived, suspended]
-          description: Current project status
-        priority:
-          type: string
-          enum: [low, medium, high, critical]
-          default: medium
-          description: Project priority level
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-        completed_at:
-          type: string
-          format: date-time
-          nullable: true
+          example: "Analysis of UAV procurement options for defense applications"
         owner_id:
           type: string
+          format: uuid
           description: Project owner user ID
-        users:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectUser'
-        metadata:
-          type: object
-          description: Additional project metadata
-        tags:
-          type: array
-          items:
-            type: string
-          description: Project tags for categorization
-        template_id:
-          type: string
-          nullable: true
-          description: Template used to create this project
-        parent_project_id:
-          type: string
-          nullable: true
-          description: Parent project if this is a sub-project
-
-    ProjectCreate:
-      type: object
-      required: [name, owner_id]
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        decision_context:
-          type: string
-        owner_id:
-          type: string
-        priority:
-          type: string
-          enum: [low, medium, high, critical]
-          default: medium
-        tags:
-          type: array
-          items:
-            type: string
-        template_id:
-          type: string
-        parent_project_id:
-          type: string
-        metadata:
-          type: object
-
-    ProjectUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        decision_context:
-          type: string
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
         status:
           type: string
-          enum: [draft, active, completed, archived, suspended]
-        priority:
+          enum: [active, completed]
+          description: Current project status
+          example: "active"
+        knowledge_domain:
           type: string
-          enum: [low, medium, high, critical]
-        tags:
-          type: array
-          items:
-            type: string
-        metadata:
-          type: object
-
-    # User Management Models
-    User:
-      type: object
-      properties:
-        id:
+          maxLength: 100
+          description: Knowledge domain for the project
+          example: "defense_analysis"
+        settings:
+          $ref: '#/components/schemas/ProjectSettings'
+        decision_context:
           type: string
-        name:
-          type: string
-        email:
-          type: string
-        avatar_url:
-          type: string
+          maxLength: 2000
           nullable: true
-
-    ProjectUser:
-      type: object
-      properties:
-        user:
-          $ref: '#/components/schemas/User'
-        role:
-          type: string
-          enum: [owner, admin, member, viewer]
-          default: member
-        permissions:
-          type: array
-          items:
-            type: string
-            enum: [read, write, delete, manage_users, manage_settings]
-        joined_at:
-          type: string
-          format: date-time
-        last_active:
-          type: string
-          format: date-time
-          nullable: true
-
-    UserAssignment:
-      type: object
-      required: [user_ids]
-      properties:
-        user_ids:
-          type: array
-          items:
-            type: string
-        role:
-          type: string
-          enum: [admin, member, viewer]
-          default: member
-        permissions:
-          type: array
-          items:
-            type: string
-            enum: [read, write, delete, manage_users, manage_settings]
-
-    # Project Templates
-    ProjectTemplate:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        category:
-          type: string
-          enum: [decision_analysis, acquisition, planning, research, other]
-        template_data:
-          type: object
-          description: Template configuration and defaults
+          description: Rich decision context and background information
+          example: "Analysis required for Q2 procurement decision with $50M budget"
         created_at:
           type: string
           format: date-time
+          description: Project creation timestamp
+          example: "2025-01-15T10:30:00Z"
         updated_at:
           type: string
           format: date-time
-        usage_count:
-          type: integer
-        is_public:
-          type: boolean
-          default: false
+          description: Last update timestamp
+          example: "2025-01-15T14:22:15Z"
 
-    ProjectTemplateCreate:
+    ProjectSettings:
       type: object
-      required: [name, category]
+      required: [default_llm, personas, tools_enabled]
+      properties:
+        default_llm:
+          type: string
+          description: Default LLM provider for the project
+          example: "openai/gpt-4"
+        personas:
+          type: array
+          items:
+            type: string
+          description: Available agent personas for the project
+          example: ["analyst", "subject_matter_expert"]
+        tools_enabled:
+          type: array
+          items:
+            type: string
+          description: Enabled tools for the project
+          example: ["rag_search", "web_search"]
+
+    CreateProjectRequest:
+      type: object
+      required: [name, description, knowledge_domain]
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 255
+          description: Project name
+          example: "UAV Decision Analysis"
         description:
           type: string
-        category:
+          maxLength: 1000
+          description: Project description
+          example: "Analysis of UAV procurement options for defense applications"
+        knowledge_domain:
           type: string
-          enum: [decision_analysis, acquisition, planning, research, other]
-        template_data:
-          type: object
-        is_public:
-          type: boolean
-          default: false
+          minLength: 1
+          maxLength: 100
+          description: Knowledge domain
+          example: "defense_analysis"
+        settings:
+          $ref: '#/components/schemas/ProjectSettingsInput'
+        decision_context:
+          type: string
+          maxLength: 2000
+          description: Decision context and background
+          example: "Analysis required for Q2 procurement decision with $50M budget"
 
-    # Analytics Models
-    ProjectAnalytics:
+    ProjectSettingsInput:
       type: object
       properties:
-        project_id:
+        default_llm:
           type: string
-        summary:
-          type: object
-          properties:
-            total_users:
-              type: integer
-            active_users:
-              type: integer
-            total_processes:
-              type: integer
-            completed_processes:
-              type: integer
-            total_documents:
-              type: integer
-            average_completion_time:
-              type: number
-              format: float
-        user_activity:
+          description: Default LLM provider
+          example: "openai/gpt-4"
+        personas:
           type: array
           items:
-            $ref: '#/components/schemas/UserActivity'
-        process_metrics:
+            type: string
+          description: Agent personas
+          example: ["analyst"]
+        tools_enabled:
           type: array
           items:
-            $ref: '#/components/schemas/ProcessMetric'
-        timeline:
-          type: array
-          items:
-            $ref: '#/components/schemas/TimelineEvent'
+            type: string
+          description: Enabled tools
+          example: ["rag_search"]
 
-    UserActivity:
+    UpdateProjectRequest:
       type: object
       properties:
-        user_id:
+        name:
           type: string
-        user_name:
+          minLength: 1
+          maxLength: 255
+          description: Project name
+          example: "Updated UAV Analysis"
+        description:
           type: string
-        activity_type:
+          maxLength: 1000
+          description: Project description
+          example: "Updated analysis scope"
+        knowledge_domain:
           type: string
-          enum: [login, document_upload, process_start, process_complete, comment]
-        timestamp:
-          type: string
-          format: date-time
-        details:
-          type: object
-
-    ProcessMetric:
-      type: object
-      properties:
-        process_id:
-          type: string
-        process_name:
-          type: string
+          minLength: 1
+          maxLength: 100
+          description: Knowledge domain
+          example: "defense_analysis"
         status:
           type: string
-        start_time:
+          enum: [active, completed]
+          description: Project status
+          example: "completed"
+        settings:
+          $ref: '#/components/schemas/ProjectSettingsInput'
+        decision_context:
           type: string
-          format: date-time
-        completion_time:
-          type: string
-          format: date-time
-          nullable: true
-        duration:
+          maxLength: 2000
+          description: Decision context
+          example: "Updated context information"
+
+    ProjectListResponse:
+      type: object
+      required: [projects, total, page, limit]
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+          description: Array of projects
+        total:
           type: integer
-          nullable: true
-
-    TimelineEvent:
-      type: object
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-        event_type:
-          type: string
-          enum: [created, started, user_joined, process_started, process_completed, document_added]
-        description:
-          type: string
-        user_id:
-          type: string
-          nullable: true
-        metadata:
-          type: object
-
-    # Search and Filter Models
-    ProjectSearch:
-      type: object
-      properties:
-        query:
-          type: string
-          description: Search query for project name/description
-        status:
-          type: array
-          items:
-            type: string
-            enum: [draft, active, completed, archived, suspended]
-        priority:
-          type: array
-          items:
-            type: string
-            enum: [low, medium, high, critical]
-        owner_id:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        created_after:
-          type: string
-          format: date-time
-        created_before:
-          type: string
-          format: date-time
+          minimum: 0
+          description: Total number of projects
+          example: 25
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
         limit:
           type: integer
-          default: 20
-        offset:
-          type: integer
-          default: 0
-        sort_by:
-          type: string
-          enum: [created_at, updated_at, name, priority, status]
-          default: updated_at
-        sort_order:
-          type: string
-          enum: [asc, desc]
-          default: desc
-
-    # Integration Models
-    ProjectIntegration:
-      type: object
-      properties:
-        knowledge_documents:
-          type: integer
-          description: Number of documents in Knowledge Service
-        active_processes:
-          type: integer
-          description: Number of active processes in Thread Manager
-        llm_interactions:
-          type: integer
-          description: Number of LLM interactions
-        last_event:
-          type: string
-          format: date-time
-          nullable: true
+          minimum: 1
+          maximum: 50
+          description: Number of projects per page
+          example: 10
 
     # Standard Response Models
-    ErrorResponse:
+    ApiResponse:
       type: object
-      required: [error]
+      required: [success, timestamp]
       properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: true
+        data:
+          description: Response data (varies by endpoint)
         error:
-          type: object
-          required: [code, message]
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            details:
-              type: string
-
-    HealthStatus:
-      type: object
-      properties:
-        status:
           type: string
-          enum: [healthy, unhealthy, degraded]
+          description: Error message if success is false
+          example: "Validation failed"
+        message:
+          type: string
+          description: Additional message
+          example: "Project created successfully"
         timestamp:
           type: string
           format: date-time
+          description: Response timestamp
+          example: "2025-01-15T10:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required: [success, error, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "Project not found"
+        message:
+          type: string
+          description: Additional error context
+          example: "The requested project does not exist or you don't have access"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+
+    HealthResponse:
+      type: object
+      required: [status, service, timestamp, port]
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+          example: "healthy"
+        service:
+          type: string
+          example: "user-project-service"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+        port:
+          type: integer
+          example: 3001
+
+    ServiceInfo:
+      type: object
+      required: [service, version, endpoints, timestamp]
+      properties:
+        service:
+          type: string
+          example: "DADMS User & Project Service"
         version:
           type: string
-        dependencies:
+          example: "1.0.0"
+        endpoints:
           type: object
-          additionalProperties:
-            type: string
-
-security:
-  - bearerAuth: []
+          properties:
+            projects:
+              type: string
+              example: "/api/projects"
+            health:
+              type: string
+              example: "/health"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
 
 paths:
   # Health Check
   /health:
     get:
-      summary: Service health/readiness check
-      description: Returns service health status, uptime, version, and integration status.
+      summary: Service health check
+      description: Returns the health status of the Project Service
       tags: [Health]
       responses:
         '200':
-          description: Health status
+          description: Service is healthy
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  uptime:
-                    type: integer
-                  version:
-                    type: string
-                  integrations:
-                    type: object
-                    properties:
-                      knowledge_service:
-                        type: string
-                      thread_manager:
-                        type: string
-                      event_bus:
-                        type: string
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                service: "user-project-service"
+                timestamp: "2025-01-15T10:30:00Z"
+                port: 3001
+
+  # Service Information
+  /api:
+    get:
+      summary: Service information
+      description: Returns basic service information and available endpoints
+      tags: [Service Info]
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceInfo'
 
   # Project Management
-  /projects:
+  /api/projects:
     get:
-      summary: Search and list projects
-      description: Search projects with advanced filtering, sorting, and pagination.
+      summary: List user's projects
+      description: |
+        Get a list of projects owned by the authenticated user with pagination support.
+        
+        **Default pagination**: page=1, limit=10  
+        **Maximum limit**: 50 projects per page
       tags: [Projects]
       parameters:
-        - in: query
-          name: query
+        - in: header
+          name: user-id
+          required: true
           schema:
             type: string
-          description: Search query for project name/description
+            format: uuid
+          description: User ID for authentication
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
         - in: query
-          name: status
+          name: page
           schema:
-            type: array
-            items:
-              type: string
-              enum: [draft, active, completed, archived, suspended]
-          style: form
-          explode: false
-          description: Filter by project status
-        - in: query
-          name: priority
-          schema:
-            type: array
-            items:
-              type: string
-              enum: [low, medium, high, critical]
-          style: form
-          explode: false
-          description: Filter by priority
-        - in: query
-          name: owner_id
-          schema:
-            type: string
-          description: Filter by project owner
-        - in: query
-          name: tags
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by tags
-        - in: query
-          name: created_after
-          schema:
-            type: string
-            format: date-time
-          description: Filter projects created after date
-        - in: query
-          name: created_before
-          schema:
-            type: string
-            format: date-time
-          description: Filter projects created before date
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
         - in: query
           name: limit
           schema:
             type: integer
-            default: 20
-          description: Number of results to return
-        - in: query
-          name: offset
-          schema:
-            type: integer
-            default: 0
-          description: Number of results to skip
-        - in: query
-          name: sort_by
-          schema:
-            type: string
-            enum: [created_at, updated_at, name, priority, status]
-            default: updated_at
-          description: Sort field
-        - in: query
-          name: sort_order
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-          description: Sort order
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Number of projects per page
+          example: 10
       responses:
         '200':
-          description: Search results
+          description: Projects retrieved successfully
           content:
             application/json:
               schema:
                 type: object
+                required: [success, data, timestamp]
                 properties:
-                  projects:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Project'
-                  total:
-                    type: integer
-                  limit:
-                    type: integer
-                  offset:
-                    type: integer
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProjectListResponse'
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-15T10:30:00Z"
         '400':
-          description: Bad request
+          description: Bad request - invalid pagination parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     post:
       summary: Create a new project
-      description: Create a new project with optional template and metadata.
+      description: |
+        Create a new project with the provided information. The project will be owned by the authenticated user.
+        
+        **Required fields**: name, description, knowledge_domain  
+        **Optional fields**: settings, decision_context
       tags: [Projects]
+      parameters:
+        - in: header
+          name: user-id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID for authentication
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectCreate'
+              $ref: '#/components/schemas/CreateProjectRequest'
+            example:
+              name: "UAV Decision Analysis"
+              description: "Analysis of UAV procurement options for defense applications"
+              knowledge_domain: "defense_analysis"
+              settings:
+                default_llm: "openai/gpt-4"
+                personas: ["analyst", "subject_matter_expert"]
+                tools_enabled: ["rag_search", "web_search"]
+              decision_context: "Analysis required for Q2 procurement decision with $50M budget"
       responses:
         '201':
-          description: Project created
+          description: Project created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Project'
+                type: object
+                required: [success, data, message, timestamp]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+                  message:
+                    type: string
+                    example: "Project created successfully"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-15T10:30:00Z"
         '400':
-          description: Bad request
+          description: Bad request - validation failed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Validation failed: name is required"
+                timestamp: "2025-01-15T10:30:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /projects/{id}:
+  /api/projects/{id}:
     get:
       summary: Get project by ID
-      description: Get detailed project information including users and integration status.
+      description: |
+        Retrieve a specific project by ID. The project must be owned by the authenticated user.
       tags: [Projects]
       parameters:
+        - in: header
+          name: user-id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID for authentication
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
         - in: path
           name: id
           required: true
           schema:
             type: string
+            format: uuid
+          description: Project ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
-          description: Project details
+          description: Project retrieved successfully
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Project'
-                  - type: object
-                    properties:
-                      integration:
-                        $ref: '#/components/schemas/ProjectIntegration'
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-15T10:30:00Z"
         '404':
           description: Project not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Project not found"
+                message: "The requested project does not exist or you don't have access"
+                timestamp: "2025-01-15T10:30:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     put:
       summary: Update project by ID
+      description: |
+        Update an existing project. Only the project owner can update the project.
+        All fields are optional - only provided fields will be updated.
       tags: [Projects]
       parameters:
+        - in: header
+          name: user-id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID for authentication
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
         - in: path
           name: id
           required: true
           schema:
             type: string
+            format: uuid
+          description: Project ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectUpdate'
+              $ref: '#/components/schemas/UpdateProjectRequest'
+            example:
+              name: "Updated UAV Analysis"
+              description: "Updated analysis with expanded scope"
+              status: "completed"
       responses:
         '200':
-          description: Project updated
+          description: Project updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Project'
+                type: object
+                required: [success, data, message, timestamp]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+                  message:
+                    type: string
+                    example: "Project updated successfully"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-15T10:30:00Z"
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Project not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     delete:
       summary: Delete project by ID
+      description: |
+        Delete a project permanently. Only the project owner can delete the project.
+        **Warning**: This action cannot be undone.
       tags: [Projects]
       parameters:
+        - in: header
+          name: user-id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID for authentication
+          example: "0d6838ad-ae0e-4637-96cd-3c3271854da4"
         - in: path
           name: id
           required: true
           schema:
             type: string
+            format: uuid
+          description: Project ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
-        '204':
-          description: Project deleted
+        '200':
+          description: Project deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, timestamp]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Project deleted successfully"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-15T10:30:00Z"
         '404':
           description: Project not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-
-  /projects/{id}/clone:
-    post:
-      summary: Clone project
-      description: Create a copy of an existing project with new name and owner.
-      tags: [Projects]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name, owner_id]
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                owner_id:
-                  type: string
-                include_users:
-                  type: boolean
-                  default: false
-                include_documents:
-                  type: boolean
-                  default: false
-      responses:
-        '201':
-          description: Project cloned
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Project'
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /projects/{id}/status:
-    put:
-      summary: Update project status
-      description: Update project status with optional transition notes.
-      tags: [Projects]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [draft, active, completed, archived, suspended]
-                notes:
-                  type: string
-      responses:
-        '200':
-          description: Project status updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Project'
+tags:
+  - name: Health
+    description: Service health and status endpoints
+  - name: Service Info
+    description: Service information and metadata
+  - name: Projects
+    description: Project lifecycle management operations
 
-  # User Management
-  /projects/{id}/users:
-    get:
-      summary: List users assigned to a project
-      description: Get all users assigned to the project with their roles and permissions.
-      tags: [Project Users]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of project users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProjectUser'
-
-    post:
-      summary: Assign user(s) to a project
-      description: Assign one or more users to a project with specific roles and permissions.
-      tags: [Project Users]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserAssignment'
-      responses:
-        '200':
-          description: Users assigned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  assigned_users:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ProjectUser'
-                  errors:
-                    type: array
-                    items:
-                      type: object
-
-  /projects/{id}/users/{userId}:
-    get:
-      summary: Get user details in project
-      description: Get detailed information about a specific user in the project.
-      tags: [Project Users]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: User details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUser'
-
-    put:
-      summary: Update user role and permissions
-      description: Update a user's role and permissions within the project.
-      tags: [Project Users]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                role:
-                  type: string
-                  enum: [owner, admin, member, viewer]
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                    enum: [read, write, delete, manage_users, manage_settings]
-      responses:
-        '200':
-          description: User updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUser'
-
-    delete:
-      summary: Remove user from project
-      tags: [Project Users]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: User removed
-
-  # Project Templates
-  /templates:
-    get:
-      summary: List project templates
-      description: Get available project templates for creating new projects.
-      tags: [Templates]
-      parameters:
-        - in: query
-          name: category
-          schema:
-            type: string
-            enum: [decision_analysis, acquisition, planning, research, other]
-          description: Filter by template category
-        - in: query
-          name: is_public
-          schema:
-            type: boolean
-          description: Filter by public/private templates
-      responses:
-        '200':
-          description: List of templates
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProjectTemplate'
-
-    post:
-      summary: Create a new template
-      tags: [Templates]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProjectTemplateCreate'
-      responses:
-        '201':
-          description: Template created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectTemplate'
-
-  /templates/{id}:
-    get:
-      summary: Get template by ID
-      tags: [Templates]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Template details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectTemplate'
-
-    put:
-      summary: Update template by ID
-      tags: [Templates]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProjectTemplateCreate'
-      responses:
-        '200':
-          description: Template updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectTemplate'
-
-    delete:
-      summary: Delete template by ID
-      tags: [Templates]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Template deleted
-
-  # Analytics
-  /projects/{id}/analytics:
-    get:
-      summary: Get project analytics
-      description: Get comprehensive analytics and metrics for a project.
-      tags: [Analytics]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: query
-          name: start_date
-          schema:
-            type: string
-            format: date-time
-          description: Start date for analytics
-        - in: query
-          name: end_date
-          schema:
-            type: string
-            format: date-time
-          description: End date for analytics
-      responses:
-        '200':
-          description: Project analytics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectAnalytics'
-
-  /analytics/projects:
-    get:
-      summary: Get projects analytics
-      description: Get analytics across all projects.
-      tags: [Analytics]
-      parameters:
-        - in: query
-          name: start_date
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: end_date
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: owner_id
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Projects analytics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  summary:
-                    type: object
-                    properties:
-                      total_projects:
-                        type: integer
-                      active_projects:
-                        type: integer
-                      completed_projects:
-                        type: integer
-                      average_completion_time:
-                        type: number
-                        format: float
-                  by_status:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        status:
-                          type: string
-                        count:
-                          type: integer
-                  by_priority:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        priority:
-                          type: string
-                        count:
-                          type: integer
-
-  # Bulk Operations
-  /bulk/projects:
-    post:
-      summary: Bulk update projects
-      description: Update multiple projects in a single request.
-      tags: [Bulk Operations]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [project_ids, updates]
-              properties:
-                project_ids:
-                  type: array
-                  items:
-                    type: string
-                updates:
-                  $ref: '#/components/schemas/ProjectUpdate'
-      responses:
-        '200':
-          description: Projects updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  updated_count:
-                    type: integer
-                  errors:
-                    type: array
-                    items:
-                      type: object
-
-  /bulk/users:
-    post:
-      summary: Bulk assign users
-      description: Assign users to multiple projects in a single request.
-      tags: [Bulk Operations]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [project_ids, user_ids]
-              properties:
-                project_ids:
-                  type: array
-                  items:
-                    type: string
-                user_ids:
-                  type: array
-                  items:
-                    type: string
-                role:
-                  type: string
-                  enum: [admin, member, viewer]
-                  default: member
-      responses:
-        '200':
-          description: Users assigned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  assigned_count:
-                    type: integer
-                  errors:
-                    type: array
-                    items:
-                      type: object 
+# Current authentication uses simple user-id header
+# Future versions will implement JWT authentication
+security: [] 

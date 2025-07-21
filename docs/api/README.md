@@ -5,7 +5,8 @@ This directory contains API documentation for all DADMS services.
 ## Service APIs
 
 ### Core Services (Week 1)
-- **[Project Service API](project_service_openapi.yaml)** (Port 3001) - **ENHANCED: Lifecycle & Analytics**
+- **[Project Service API](project_service_openapi.yaml)** (Port 3001) - **✅ OPERATIONAL: Core project lifecycle management**
+  - **[Detailed API Endpoints](../development/backend/project_service_api_endpoints.md)** - Comprehensive documentation with real examples
 - **[LLM Service API](llm_service_openapi.yaml)** (Port 3002) - **ENHANCED: Multi-provider & Cost Tracking**
 - **[Knowledge Service API](knowledge_service_openapi.yaml)** (Port 3003) - **ENHANCED: RAG & Vector Search**
 - **[EventManager Service API](event_manager_service_openapi.yaml)** (Port 3004) - **NEW: Central nervous system**
@@ -31,6 +32,8 @@ This directory contains API documentation for all DADMS services.
   - **[Detailed API Endpoints](../development/backend/task_orchestrator_service_api_endpoints.md)** - Human-readable documentation
 - **[Decision Analytics Service API](decision_analytics_service_openapi.yaml)** (Port 3018) - **NEW: Comprehensive decision intelligence engine for decision space analysis, impact assessment & performance scoring**
   - **[Detailed API Endpoints](../development/backend/decision_analytics_service_api_endpoints.md)** - Human-readable documentation
+- **[Error Manager Service API](error_manager_service_openapi.yaml)** (Port 3019) - **NEW: Intelligent error detection, analysis & autonomous correction engine with deep AAS integration**
+  - **[Detailed API Endpoints](../development/backend/error_manager_service_api_endpoints.md)** - Human-readable documentation
 
 ### Extended Services (Week 2+)
 - **[LLM Playground Service API](llm_playground_service_openapi.yaml)** (Port 3006) - **NEW: Interactive LLM testing**
@@ -132,7 +135,7 @@ flowchart LR
 ## Documentation Status
 
 ### Core Services (Week 1)
-- [x] **Project Service API** - ✅ ENHANCED
+- [x] **Project Service API** - ✅ COMPLETE (Specification + OpenAPI + Endpoints Doc)
 - [x] **LLM Service API** - ✅ ENHANCED
 - [x] **Knowledge Service API** - ✅ ENHANCED
 - [x] **EventManager Service API** - ✅ COMPLETE
@@ -149,6 +152,7 @@ flowchart LR
 - [x] **Ontology Workspace Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Task Orchestrator Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 - [x] **Decision Analytics Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
+- [x] **Error Manager Service API** - ✅ COMPLETE (OpenAPI + Endpoints Doc)
 
 ### Extended Services (Week 2+)
 - [x] **LLM Playground Service API** - ✅ COMPLETE
