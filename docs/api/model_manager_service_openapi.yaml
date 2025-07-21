@@ -1,0 +1,1854 @@
+openapi: 3.0.3
+info:
+  title: DADMS Model Manager Service API
+  description: |
+    Central registry and lifecycle management hub for computational models in DADMS's Event-Driven System (EDS).
+    Provides comprehensive model versioning, metadata management, artifact storage, lineage tracking, 
+    and integration capabilities for ML, simulation, physics, and mission models.
+  version: 2.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+
+servers:
+  - url: http://localhost:3010
+    description: Development server
+  - url: https://api.dadms.com/model-manager
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Models
+    description: Model registration, management, and retrieval
+  - name: Artifacts
+    description: Model artifact upload, download, and management
+  - name: Versions
+    description: Model version management and promotion
+  - name: Validation
+    description: Model validation and testing
+  - name: Analytics
+    description: Model metrics, lineage, and analytics
+  - name: Search
+    description: Model discovery and search
+  - name: Integration
+    description: Model deployment and execution
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  # Model Registration & Management
+  /api/v1/models:
+    post:
+      summary: Register new model
+      description: Register a new computational model with metadata and artifacts
+      tags:
+        - Models
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                metadata:
+                  $ref: '#/components/schemas/ModelMetadata'
+                artifacts:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Model artifact files
+              required:
+                - metadata
+      responses:
+        '201':
+          description: Model registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelRegistrationResult'
+        '400':
+          description: Invalid model data
+        '401':
+          description: Unauthorized
+        '413':
+          description: Artifact too large
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List models
+      description: List models with filtering and pagination
+      tags:
+        - Models
+      parameters:
+        - name: model_type
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModelType'
+          description: Filter by model types
+        - name: stage
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModelStage'
+          description: Filter by model stages
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModelStatus'
+          description: Filter by model status
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter models created after date
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter models created before date
+        - name: created_by
+          in: query
+          schema:
+            type: string
+          description: Filter by creator
+        - name: search_term
+          in: query
+          schema:
+            type: string
+          description: Search term for name/description
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, created_at, updated_at, version]
+            default: created_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: Models retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}:
+    get:
+      summary: Get model details
+      description: Retrieve detailed information about a specific model
+      tags:
+        - Models
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID or name
+        - name: version
+          in: query
+          schema:
+            type: string
+          description: Specific version (defaults to latest)
+      responses:
+        '200':
+          description: Model details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelMetadata'
+        '404':
+          description: Model not found
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+    put:
+      summary: Update model metadata
+      description: Update model metadata (does not change artifacts)
+      tags:
+        - Models
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelMetadataUpdate'
+      responses:
+        '200':
+          description: Model updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelMetadata'
+        '400':
+          description: Invalid update data
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Delete model
+      description: Delete a model and all its artifacts
+      tags:
+        - Models
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: force
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Force deletion even if model is in use
+      responses:
+        '204':
+          description: Model deleted successfully
+        '400':
+          description: Cannot delete model (in use)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  # Model Artifacts
+  /api/v1/models/{id}/artifacts:
+    post:
+      summary: Upload model artifacts
+      description: Upload new artifacts for an existing model
+      tags:
+        - Artifacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                artifacts:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Artifact files to upload
+              required:
+                - artifacts
+      responses:
+        '201':
+          description: Artifacts uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelArtifact'
+        '400':
+          description: Invalid artifact data
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '413':
+          description: Artifact too large
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List model artifacts
+      description: List all artifacts for a model
+      tags:
+        - Artifacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      responses:
+        '200':
+          description: Artifacts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelArtifact'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/artifacts/{name}:
+    get:
+      summary: Download model artifact
+      description: Download a specific model artifact
+      tags:
+        - Artifacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Artifact name
+      responses:
+        '200':
+          description: Artifact download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '404':
+          description: Artifact not found
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Delete model artifact
+      description: Delete a specific model artifact
+      tags:
+        - Artifacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Artifact name
+      responses:
+        '204':
+          description: Artifact deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: Artifact not found
+        '500':
+          description: Internal server error
+
+  # Version Management
+  /api/v1/models/{id}/promote:
+    post:
+      summary: Promote model to next stage
+      description: Promote model to a higher deployment stage
+      tags:
+        - Versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_stage:
+                  $ref: '#/components/schemas/ModelStage'
+                reason:
+                  type: string
+                  description: Reason for promotion
+              required:
+                - target_stage
+      responses:
+        '200':
+          description: Model promoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromotionResult'
+        '400':
+          description: Invalid promotion request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/versions:
+    get:
+      summary: Get model version history
+      description: Get version history for a model
+      tags:
+        - Versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      responses:
+        '200':
+          description: Version history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelVersion'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/compare/{otherId}:
+    post:
+      summary: Compare models
+      description: Compare two models for metrics and performance
+      tags:
+        - Versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: First model ID
+        - name: otherId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Second model ID
+      responses:
+        '200':
+          description: Model comparison completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelComparison'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  # Validation & Testing
+  /api/v1/models/{id}/validate:
+    post:
+      summary: Run model validation
+      description: Execute validation tests on a model
+      tags:
+        - Validation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                validation_type:
+                  $ref: '#/components/schemas/ValidationType'
+                test_suite:
+                  type: string
+                  description: Specific test suite to run
+              required:
+                - validation_type
+      responses:
+        '200':
+          description: Validation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Invalid validation request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/validations:
+    get:
+      summary: Get validation history
+      description: Get validation history for a model
+      tags:
+        - Validation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: validation_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ValidationType'
+          description: Filter by validation type
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ValidationStatus'
+          description: Filter by validation status
+      responses:
+        '200':
+          description: Validation history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ValidationResult'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/test:
+    post:
+      summary: Execute test suite
+      description: Run comprehensive test suite on a model
+      tags:
+        - Validation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                test_suite:
+                  type: string
+                  description: Test suite identifier
+                timeout:
+                  type: integer
+                  description: Test timeout in seconds
+      responses:
+        '200':
+          description: Tests executed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ValidationResult'
+        '400':
+          description: Invalid test request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  # Analytics & Monitoring
+  /api/v1/models/{id}/lineage:
+    get:
+      summary: Get model lineage
+      description: Get complete lineage and provenance information for a model
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      responses:
+        '200':
+          description: Lineage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelLineage'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/metrics:
+    get:
+      summary: Get model metrics
+      description: Get performance metrics for a model over time
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Start time for metrics
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: End time for metrics
+        - name: metric_type
+          in: query
+          schema:
+            type: string
+            enum: [performance, usage, accuracy, resource]
+          description: Type of metrics to retrieve
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelMetrics'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/usage:
+    get:
+      summary: Get model usage statistics
+      description: Get usage statistics and analytics for a model
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      responses:
+        '200':
+          description: Usage statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelUsageStats'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  # Search & Discovery
+  /api/v1/models/search:
+    get:
+      summary: Search models
+      description: Search models using text query and filters
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: model_type
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModelType'
+          description: Filter by model types
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filter by tags
+        - name: stage
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ModelStage'
+          description: Filter by stages
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelSearchResult'
+        '400':
+          description: Invalid search query
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/models/tags:
+    get:
+      summary: Get available tags
+      description: Get list of all available model tags
+      tags:
+        - Search
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/models/types:
+    get:
+      summary: Get supported model types
+      description: Get list of supported model types and their descriptions
+      tags:
+        - Search
+      responses:
+        '200':
+          description: Model types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      $ref: '#/components/schemas/ModelType'
+                    description:
+                      type: string
+                    supported_formats:
+                      type: array
+                      items:
+                        type: string
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  # Integration
+  /api/v1/models/{id}/deploy:
+    post:
+      summary: Deploy model
+      description: Deploy model to execution environment
+      tags:
+        - Integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentConfig'
+      responses:
+        '200':
+          description: Model deployed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResult'
+        '400':
+          description: Invalid deployment configuration
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/execute:
+    post:
+      summary: Execute model
+      description: Execute model with provided inputs
+      tags:
+        - Integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelInputs'
+      responses:
+        '200':
+          description: Model executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelOutputs'
+        '400':
+          description: Invalid inputs
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  /api/v1/models/{id}/deployments:
+    get:
+      summary: Get deployment status
+      description: Get current deployment status and history
+      tags:
+        - Integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model ID
+      responses:
+        '200':
+          description: Deployment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeploymentStatus'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Model not found
+        '500':
+          description: Internal server error
+
+  # Health & Monitoring
+  /health:
+    get:
+      summary: Health check
+      description: Service health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+
+  /metrics:
+    get:
+      summary: Service metrics
+      description: Prometheus-formatted service metrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Core Model Schemas
+    ModelMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUID for unique identification
+        name:
+          type: string
+          description: Human-readable model name
+        version:
+          type: string
+          description: Semantic version (major.minor.patch)
+        model_type:
+          $ref: '#/components/schemas/ModelType'
+        description:
+          type: string
+          description: Detailed model description
+        tags:
+          type: array
+          items:
+            type: string
+          description: Searchable tags and labels
+        stage:
+          $ref: '#/components/schemas/ModelStage'
+        status:
+          $ref: '#/components/schemas/ModelStatus'
+        input_schema:
+          type: object
+          description: JSON schema for input parameters
+        output_schema:
+          type: object
+          description: JSON schema for output format
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelDependency'
+        runtime_requirements:
+          $ref: '#/components/schemas/RuntimeRequirements'
+        lineage:
+          $ref: '#/components/schemas/ModelLineage'
+        training_info:
+          $ref: '#/components/schemas/TrainingInfo'
+        validation_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationResult'
+        metadata:
+          type: object
+          description: Additional metadata
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelArtifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          description: User who registered the model
+        promoted_by:
+          type: string
+          description: User who promoted the model
+        promoted_at:
+          type: string
+          format: date-time
+          description: When model was promoted
+      required:
+        - name
+        - version
+        - model_type
+        - description
+        - input_schema
+        - output_schema
+
+    ModelType:
+      type: string
+      enum:
+        - ml
+        - simulation
+        - physics
+        - mission
+        - statistical
+        - rule_based
+        - hybrid
+        - fmi
+        - python_script
+        - executable
+      description: Type of computational model
+
+    ModelStage:
+      type: string
+      enum:
+        - development
+        - testing
+        - staging
+        - production
+        - archived
+        - experimental
+      description: Current deployment stage
+
+    ModelStatus:
+      type: string
+      enum:
+        - registered
+        - validating
+        - validated
+        - failed_validation
+        - promoting
+        - active
+        - deprecated
+        - disabled
+      description: Current model status
+
+    ModelArtifact:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: Artifact name
+        type:
+          $ref: '#/components/schemas/ArtifactType'
+        path:
+          type: string
+          description: Storage path/URL
+        size:
+          type: integer
+          description: File size in bytes
+        hash:
+          type: string
+          description: SHA-256 hash for integrity
+        mime_type:
+          type: string
+          description: MIME type
+        description:
+          type: string
+          description: Artifact description
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - name
+        - type
+        - path
+        - size
+        - hash
+
+    ArtifactType:
+      type: string
+      enum:
+        - model_binary
+        - weights
+        - configuration
+        - documentation
+        - schema
+        - executable
+        - docker_image
+        - notebook
+        - script
+        - data_sample
+      description: Type of model artifact
+
+    ModelDependency:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Dependency name
+        type:
+          $ref: '#/components/schemas/DependencyType'
+        version:
+          type: string
+          description: Required version or version range
+        optional:
+          type: boolean
+          description: Whether dependency is optional
+        description:
+          type: string
+          description: Dependency description
+      required:
+        - name
+        - type
+        - version
+
+    DependencyType:
+      type: string
+      enum:
+        - python_package
+        - system_package
+        - docker_image
+        - external_service
+        - hardware
+        - dataset
+        - other_model
+      description: Type of dependency
+
+    RuntimeRequirements:
+      type: object
+      properties:
+        cpu_cores:
+          type: integer
+          description: Required CPU cores
+        memory_gb:
+          type: number
+          description: Required memory in GB
+        gpu_required:
+          type: boolean
+          description: GPU requirement
+        gpu_memory_gb:
+          type: number
+          description: GPU memory requirement
+        disk_space_gb:
+          type: number
+          description: Required disk space
+        network_access:
+          type: boolean
+          description: Network access required
+        execution_timeout:
+          type: integer
+          description: Max execution time in seconds
+        environment_variables:
+          type: object
+          additionalProperties:
+            type: string
+          description: Required environment variables
+
+    ModelLineage:
+      type: object
+      properties:
+        training_datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetReference'
+        parent_models:
+          type: array
+          items:
+            type: string
+          description: Parent/base model IDs
+        derived_models:
+          type: array
+          items:
+            type: string
+          description: Models derived from this model
+        training_pipeline:
+          $ref: '#/components/schemas/PipelineReference'
+        experiments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExperimentReference'
+        publications:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationReference'
+
+    TrainingInfo:
+      type: object
+      properties:
+        framework:
+          type: string
+          description: Training framework
+        framework_version:
+          type: string
+          description: Framework version
+        hyperparameters:
+          type: object
+          description: Training hyperparameters
+        metrics:
+          $ref: '#/components/schemas/TrainingMetrics'
+        training_duration:
+          type: integer
+          description: Training time in seconds
+        compute_resources:
+          $ref: '#/components/schemas/ComputeResources'
+        checkpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckpointInfo'
+
+    ValidationResult:
+      type: object
+      properties:
+        id:
+          type: string
+        validation_type:
+          $ref: '#/components/schemas/ValidationType'
+        status:
+          $ref: '#/components/schemas/ValidationStatus'
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+          description: Validation metrics
+        test_suite:
+          type: string
+          description: Test suite identifier
+        executed_at:
+          type: string
+          format: date-time
+        executed_by:
+          type: string
+        details:
+          type: string
+          description: Detailed results or error messages
+      required:
+        - validation_type
+        - status
+        - executed_at
+        - executed_by
+
+    ValidationType:
+      type: string
+      enum:
+        - unit_test
+        - integration_test
+        - performance_test
+        - accuracy_test
+        - stress_test
+        - regression_test
+      description: Type of validation
+
+    ValidationStatus:
+      type: string
+      enum:
+        - passed
+        - failed
+        - pending
+        - skipped
+      description: Validation status
+
+    # API Response Schemas
+    ModelRegistrationResult:
+      type: object
+      properties:
+        model_id:
+          type: string
+        message:
+          type: string
+        artifacts_uploaded:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelArtifact'
+      required:
+        - model_id
+        - message
+
+    ModelListResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelSummary'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - models
+        - total
+
+    ModelSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        model_type:
+          $ref: '#/components/schemas/ModelType'
+        stage:
+          $ref: '#/components/schemas/ModelStage'
+        status:
+          $ref: '#/components/schemas/ModelStatus'
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+      required:
+        - id
+        - name
+        - version
+        - model_type
+        - stage
+        - status
+
+    ModelMetadataUpdate:
+      type: object
+      properties:
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+
+    PromotionResult:
+      type: object
+      properties:
+        model_id:
+          type: string
+        from_stage:
+          $ref: '#/components/schemas/ModelStage'
+        to_stage:
+          $ref: '#/components/schemas/ModelStage'
+        promoted_at:
+          type: string
+          format: date-time
+        promoted_by:
+          type: string
+        message:
+          type: string
+      required:
+        - model_id
+        - from_stage
+        - to_stage
+        - promoted_at
+        - promoted_by
+
+    ModelVersion:
+      type: object
+      properties:
+        version:
+          type: string
+        stage:
+          $ref: '#/components/schemas/ModelStage'
+        status:
+          $ref: '#/components/schemas/ModelStatus'
+        created_at:
+          type: string
+          format: date-time
+        promoted_at:
+          type: string
+          format: date-time
+        promoted_by:
+          type: string
+        changes:
+          type: string
+          description: Version changes description
+
+    ModelComparison:
+      type: object
+      properties:
+        model1_id:
+          type: string
+        model2_id:
+          type: string
+        comparison_date:
+          type: string
+          format: date-time
+        metrics_comparison:
+          type: object
+          description: Comparative metrics
+        differences:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              model1_value:
+                type: string
+              model2_value:
+                type: string
+        recommendation:
+          type: string
+          description: Which model is recommended
+
+    ModelSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/ModelSummary'
+        - type: object
+          properties:
+            relevance_score:
+              type: number
+              description: Search relevance score
+            matched_fields:
+              type: array
+              items:
+                type: string
+              description: Fields that matched the search
+
+    ModelMetrics:
+      type: object
+      properties:
+        model_id:
+          type: string
+        time_range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        performance_metrics:
+          type: object
+          additionalProperties:
+            type: number
+        usage_metrics:
+          type: object
+          properties:
+            execution_count:
+              type: integer
+            total_runtime:
+              type: number
+            average_response_time:
+              type: number
+            error_rate:
+              type: number
+        resource_metrics:
+          type: object
+          properties:
+            cpu_usage:
+              type: number
+            memory_usage:
+              type: number
+            gpu_usage:
+              type: number
+
+    ModelUsageStats:
+      type: object
+      properties:
+        model_id:
+          type: string
+        total_executions:
+          type: integer
+        unique_users:
+          type: integer
+        average_execution_time:
+          type: number
+        success_rate:
+          type: number
+        last_executed:
+          type: string
+          format: date-time
+        popular_use_cases:
+          type: array
+          items:
+            type: object
+            properties:
+              use_case:
+                type: string
+              count:
+                type: integer
+
+    # Integration Schemas
+    DeploymentConfig:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [development, staging, production]
+        resources:
+          $ref: '#/components/schemas/RuntimeRequirements'
+        scaling:
+          type: object
+          properties:
+            min_instances:
+              type: integer
+            max_instances:
+              type: integer
+            target_cpu:
+              type: number
+        environment_variables:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - environment
+
+    DeploymentResult:
+      type: object
+      properties:
+        deployment_id:
+          type: string
+        model_id:
+          type: string
+        environment:
+          type: string
+        status:
+          type: string
+          enum: [deploying, deployed, failed, stopped]
+        endpoint_url:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    DeploymentStatus:
+      type: object
+      properties:
+        deployment_id:
+          type: string
+        model_id:
+          type: string
+        environment:
+          type: string
+        status:
+          type: string
+          enum: [deploying, deployed, failed, stopped]
+        health:
+          type: string
+          enum: [healthy, unhealthy, unknown]
+        endpoint_url:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+        last_health_check:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          properties:
+            requests_per_minute:
+              type: number
+            average_response_time:
+              type: number
+            error_rate:
+              type: number
+
+    ModelInputs:
+      type: object
+      properties:
+        inputs:
+          type: object
+          description: Model input data according to input schema
+        execution_config:
+          type: object
+          properties:
+            timeout:
+              type: integer
+              description: Execution timeout in seconds
+            async:
+              type: boolean
+              description: Execute asynchronously
+        metadata:
+          type: object
+          properties:
+            execution_id:
+              type: string
+            user_id:
+              type: string
+            session_id:
+              type: string
+      required:
+        - inputs
+
+    ModelOutputs:
+      type: object
+      properties:
+        outputs:
+          type: object
+          description: Model output data according to output schema
+        execution_metadata:
+          type: object
+          properties:
+            execution_id:
+              type: string
+            execution_time:
+              type: number
+              description: Execution time in seconds
+            resource_usage:
+              $ref: '#/components/schemas/ResourceUsage'
+            timestamp:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [success, error, timeout]
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            details:
+              type: object
+
+    # Reference Schemas
+    DatasetReference:
+      type: object
+      properties:
+        dataset_id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        source:
+          type: string
+
+    PipelineReference:
+      type: object
+      properties:
+        pipeline_id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        framework:
+          type: string
+
+    ExperimentReference:
+      type: object
+      properties:
+        experiment_id:
+          type: string
+        name:
+          type: string
+        platform:
+          type: string
+        url:
+          type: string
+
+    PublicationReference:
+      type: object
+      properties:
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        journal:
+          type: string
+        year:
+          type: integer
+        doi:
+          type: string
+        url:
+          type: string
+
+    TrainingMetrics:
+      type: object
+      properties:
+        accuracy:
+          type: number
+        loss:
+          type: number
+        precision:
+          type: number
+        recall:
+          type: number
+        f1_score:
+          type: number
+        training_loss:
+          type: array
+          items:
+            type: number
+        validation_loss:
+          type: array
+          items:
+            type: number
+
+    ComputeResources:
+      type: object
+      properties:
+        cpu_type:
+          type: string
+        cpu_cores:
+          type: integer
+        memory_gb:
+          type: number
+        gpu_type:
+          type: string
+        gpu_count:
+          type: integer
+        gpu_memory_gb:
+          type: number
+        training_time_hours:
+          type: number
+
+    CheckpointInfo:
+      type: object
+      properties:
+        checkpoint_id:
+          type: string
+        epoch:
+          type: integer
+        metrics:
+          type: object
+        file_path:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ResourceUsage:
+      type: object
+      properties:
+        cpu_usage_percent:
+          type: number
+        memory_usage_mb:
+          type: number
+        gpu_usage_percent:
+          type: number
+        gpu_memory_usage_mb:
+          type: number
+        execution_time_ms:
+          type: number
+
+    # Health Schema
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        dependencies:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            object_storage:
+              type: string
+              enum: [healthy, unhealthy]
+            vector_store:
+              type: string
+              enum: [healthy, unhealthy]
+            graph_database:
+              type: string
+              enum: [healthy, unhealthy]
+            event_manager:
+              type: string
+              enum: [healthy, unhealthy]
+      required:
+        - status
+        - timestamp 
