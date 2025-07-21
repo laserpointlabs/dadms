@@ -227,7 +227,8 @@ flowchart TD
 
 ### Core Services (Implemented)
 - **[Project Service](./project_service_specification.md)** - ✅ **OPERATIONAL** - Project lifecycle management for decision intelligence workflows with React UI integration
-- **[Agent Assistance Service (AAS)](./agent_assistance_service_specification.md)** - 📋 **SPECIFICATION** - Proactive, context-aware intelligent assistant (Port 3006)
+- **[Agent Assistance Service (AAS)](./agent_assistance_service_specification.md)** - 📋 **SPECIFICATION** - Proactive, context-aware intelligent assistant (Port 3005)
+- **[LLM Playground Service](./llm_playground_service_specification.md)** - 📋 **SPECIFICATION** - Interactive LLM testing and experimentation platform (Port 3006)
 - **[EventManager Service](./event_manager_specification.md)** - Central event processing and distribution hub
 - **[Data Manager Service](./data_manager_specification.md)** - External data ingestion and processing gateway
 - **[Model Manager Service](./model_manager_specification.md)** - Computational model registry and lifecycle management
