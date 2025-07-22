@@ -5,6 +5,7 @@ import { useState } from "react";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
+import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
 
@@ -67,15 +68,15 @@ const dadmsActivityItems = [
         type: 'navigation'
     },
     {
-        id: 'process',
-        icon: 'pulse',
-        label: 'Process Manager',
-        href: '/process',
+        id: 'analysis',
+        icon: 'graph-line',
+        label: 'Analysis Manager',
+        href: '/analysis',
         type: 'navigation'
     },
     {
         id: 'thread',
-        icon: 'list-tree',
+        icon: 'comment-discussion',
         label: 'Thread Manager',
         href: '/thread',
         type: 'navigation'
@@ -258,6 +259,23 @@ function StatusBar() {
     );
 }
 
+// New component to handle the main content with agent assistant spacing
+function MainContent({ children }: { children: React.ReactNode }) {
+    const { isDocked, dockedHeight } = useAgentAssistant();
+
+    return (
+        <div
+            className="vscode-editor"
+            style={{
+                paddingBottom: isDocked ? `${dockedHeight}px` : '0px',
+                transition: 'padding-bottom 0.3s ease'
+            }}
+        >
+            {children}
+        </div>
+    );
+}
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -273,38 +291,40 @@ export default function RootLayout({
             </head>
             <body>
                 <ThemeProvider defaultTheme="dark">
-                    <div className="vscode-workbench">
-                        {/* Title Bar */}
-                        <div className="vscode-titlebar">
-                            <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
-                        </div>
+                    <AgentAssistantProvider>
+                        <div className="vscode-workbench">
+                            {/* Title Bar */}
+                            <div className="vscode-titlebar">
+                                <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
+                            </div>
 
-                        {/* Main Layout */}
-                        <div className="vscode-main">
-                            {/* Activity Bar */}
-                            <ActivityBar activeView={activeView} onViewChange={setActiveView} />
+                            {/* Main Layout */}
+                            <div className="vscode-main">
+                                {/* Activity Bar */}
+                                <ActivityBar activeView={activeView} onViewChange={setActiveView} />
 
-                            {/* Sidebar */}
-                            <SidebarView activeView={activeView} />
+                                {/* Sidebar */}
+                                <SidebarView activeView={activeView} />
 
-                            {/* Editor Area */}
-                            <div className="vscode-editor-area">
-                                {/* Tab Bar */}
-                                <TabBar />
+                                {/* Editor Area */}
+                                <div className="vscode-editor-area">
+                                    {/* Tab Bar */}
+                                    <TabBar />
 
-                                {/* Main Content */}
-                                <div className="vscode-editor">
-                                    {children}
+                                    {/* Main Content with Agent Assistant spacing */}
+                                    <MainContent>
+                                        {children}
+                                    </MainContent>
                                 </div>
                             </div>
+
+                            {/* Status Bar */}
+                            <StatusBar />
                         </div>
 
-                        {/* Status Bar */}
-                        <StatusBar />
-                    </div>
-
-                    {/* Agent Assistance Component */}
-                    <AASCar />
+                        {/* Agent Assistance Component */}
+                        <AASCar />
+                    </AgentAssistantProvider>
                 </ThemeProvider>
             </body>
         </html>
