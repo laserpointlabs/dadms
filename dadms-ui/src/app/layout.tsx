@@ -1,124 +1,127 @@
 'use client';
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import AASCar from "../components/AASCar";
+import ProjectTreeView from "../components/ProjectTreeView";
 import "./globals.css";
 
-// Activity Bar Items (main navigation)
-const activityBarItems = [
-    { id: 'explorer', icon: 'files', label: 'Explorer', view: 'explorer' },
-    { id: 'search', icon: 'search', label: 'Search', view: 'search' },
-    { id: 'scm', icon: 'source-control', label: 'Source Control', view: 'scm' },
-    { id: 'debug', icon: 'debug-alt', label: 'Run and Debug', view: 'debug' },
-    { id: 'extensions', icon: 'extensions', label: 'Extensions', view: 'extensions' },
-];
-
-// DADMS Navigation Items for Explorer view
-const dadmsPages = [
+// DADMS Activity Bar Items (replaces generic VS Code icons with DADMS functionality)
+const dadmsActivityItems = [
     {
-        name: 'Projects',
-        href: '/projects',
+        id: 'projects',
         icon: 'project',
-        description: 'Manage decision projects',
-        type: 'folder'
+        label: 'Projects',
+        href: '/projects',
+        type: 'navigation'
     },
     {
-        name: 'Knowledge Base',
-        href: '/knowledge',
+        id: 'knowledge',
         icon: 'library',
-        description: 'Document & search knowledge',
-        type: 'folder'
+        label: 'Knowledge Base',
+        href: '/knowledge',
+        type: 'navigation'
     },
     {
-        name: 'Ontology Builder',
-        href: '/ontology',
+        id: 'explorer',
+        icon: 'files',
+        label: 'Project Explorer',
+        view: 'explorer',
+        type: 'view'
+    },
+    {
+        id: 'ontology',
         icon: 'type-hierarchy',
-        description: 'Extract & manage domain ontologies',
-        type: 'folder'
+        label: 'Ontology Builder',
+        href: '/ontology',
+        type: 'navigation'
     },
     {
-        name: 'LLM Playground',
-        href: '/llm',
+        id: 'llm',
         icon: 'robot',
-        description: 'AI model testing & experimentation',
-        type: 'file'
+        label: 'LLM Playground',
+        href: '/llm',
+        type: 'navigation'
     },
     {
-        name: 'Context Manager',
-        href: '/context',
+        id: 'context',
         icon: 'settings-gear',
-        description: 'Manage prompts, personas & tools',
-        type: 'file'
+        label: 'Context Manager',
+        href: '/context',
+        type: 'navigation'
     },
     {
-        name: 'BPMN Workspace',
-        href: '/bpmn',
+        id: 'bpmn',
         icon: 'graph',
-        description: 'Design decision workflows',
-        type: 'file'
+        label: 'BPMN Workspace',
+        href: '/bpmn',
+        type: 'navigation'
     },
     {
-        name: 'Process Manager',
-        href: '/process',
+        id: 'process',
         icon: 'pulse',
-        description: 'Monitor workflow execution',
-        type: 'file'
+        label: 'Process Manager',
+        href: '/process',
+        type: 'navigation'
     },
     {
-        name: 'Thread Manager',
-        href: '/thread',
+        id: 'thread',
         icon: 'list-tree',
-        description: 'Trace decision threads',
-        type: 'file'
+        label: 'Thread Manager',
+        href: '/thread',
+        type: 'navigation'
     },
     {
-        name: 'Decision Assistant',
-        href: '/aads',
+        id: 'aads',
         icon: 'star-full',
-        description: 'Finalize decisions',
-        type: 'file'
+        label: 'Decision Assistant',
+        href: '/aads',
+        type: 'navigation'
     },
 ];
 
 function ActivityBar({ activeView, onViewChange }: { activeView: string; onViewChange: (view: string) => void }) {
+    const pathname = usePathname();
+
+    const handleItemClick = (item: typeof dadmsActivityItems[0]) => {
+        if (item.type === 'view') {
+            onViewChange(item.view!);
+        } else if (item.type === 'navigation' && item.href) {
+            // For navigation items, we'll use Next.js navigation
+            window.location.href = item.href;
+        }
+    };
+
     return (
         <div className="vscode-activitybar">
-            {activityBarItems.map((item) => (
-                <div
-                    key={item.id}
-                    className={`vscode-activitybar-item ${activeView === item.view ? 'active' : ''}`}
-                    onClick={() => onViewChange(item.view)}
-                    title={item.label}
-                >
-                    <i className={`codicon codicon-${item.icon}`}></i>
-                </div>
-            ))}
+            {dadmsActivityItems.map((item) => {
+                const isActive = item.type === 'view'
+                    ? activeView === item.view
+                    : pathname === item.href;
+
+                return (
+                    <div
+                        key={item.id}
+                        className={`vscode-activitybar-item ${isActive ? 'active' : ''}`}
+                        onClick={() => handleItemClick(item)}
+                        title={item.label}
+                    >
+                        <i className={`codicon codicon-${item.icon}`}></i>
+                    </div>
+                );
+            })}
         </div>
     );
 }
 
 function ExplorerView() {
-    const pathname = usePathname();
-
     return (
         <div className="vscode-sidebar">
             <div className="vscode-sidebar-header">
-                DADMS EXPLORER
+                PROJECT EXPLORER
             </div>
             <div className="vscode-sidebar-content">
-                {dadmsPages.map((page) => (
-                    <Link
-                        key={page.href}
-                        href={page.href}
-                        className={`vscode-sidebar-item ${pathname === page.href ? 'active' : ''}`}
-                        title={page.description}
-                    >
-                        <i className={`codicon codicon-${page.icon}`}></i>
-                        <span>{page.name}</span>
-                    </Link>
-                ))}
+                <ProjectTreeView />
             </div>
         </div>
     );
@@ -185,14 +188,14 @@ function TabBar() {
 
     const getPageTitle = (path: string | null): string => {
         if (!path) return 'DADMS 2.0';
-        const page = dadmsPages.find(p => p.href === path);
-        return page ? page.name : 'DADMS 2.0';
+        const item = dadmsActivityItems.find(i => i.href === path);
+        return item ? item.label : 'DADMS 2.0';
     };
 
     const getPageIcon = (path: string | null): string => {
         if (!path) return 'home';
-        const page = dadmsPages.find(p => p.href === path);
-        return page ? page.icon : 'home';
+        const item = dadmsActivityItems.find(i => i.href === path);
+        return item ? item.icon : 'home';
     };
 
     return (
