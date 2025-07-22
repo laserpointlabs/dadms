@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.0.0-alpha.3] - 2025-07-22
+
+### Added
+- **🎨 Revamped Activity Bar Navigation**
+  - Grouped navigation with hover popouts for better organization
+  - Enhanced activity bar with grouped sections for improved UX
+  - New navigation structure with logical grouping of features
+
+- **💫 Enhanced UI Layout & Settings**
+  - Completely revamped settings page with new navigation options
+  - Improved UI layout structure for better user experience
+  - Enhanced configuration options and settings management
+
+- **🌗 Dark & Light Theme Support**
+  - Implemented comprehensive dark and light theme support
+  - BPMN modeler now supports theme switching
+  - Consistent theming across all UI components
+  - Seamless theme transitions and persistence
+
+- **🚗 Enhanced AASCar Component**
+  - Improved user interaction capabilities
+  - Enhanced window management features
+  - Better theming integration
+  - Improved component responsiveness
+
+- **📱 Improved Component Architecture**
+  - Enhanced MainContent components for better user interaction
+  - Improved window management across all components
+  - Better component composition and reusability
+
+### Changed
+- **UI Architecture**: Complete overhaul of activity bar navigation
+- **Theme System**: Implementation of comprehensive theming system
+- **Component Design**: Enhanced component architecture for better maintainability
+
+### Technical Improvements
+- Better component composition patterns
+- Improved state management for UI components
+- Enhanced responsive design capabilities
+- Better accessibility features
+
 ## [2.0.0-alpha.7] - 2025-01-02
 
 ### Added
