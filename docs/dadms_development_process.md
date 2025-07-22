@@ -9,7 +9,7 @@ This document captures the ongoing development process, key decisions, rationale
 - **Scaffold First:** Rapidly prototype UI/UX with local state and placeholder data.
 - **Iterate on UX:** Validate workflows and get feedback before backend integration.
 - **API Integration:** Replace local state with real API/database calls once UI is validated.
-- **Continuous Documentation:** Update this document as decisions are made and milestones are reached.
+- **Continuous Documentation:** Update this document as decisions and milestones are reached.
 
 ---
 
@@ -22,11 +22,32 @@ This document captures the ongoing development process, key decisions, rationale
   cd ~/dadms/dadms-ui
   pm2 start npm --name dadms-ui-dev -- run dev
   ```
-  Use `pm2 list`, `pm2 logs`, `pm2 stop <name>`, and `pm2 delete <name>` for process management.
+  Use `pm2 list`, `pm2 logs`, `pm2 stop <n>`, and `pm2 delete <n>` for process management.
 
 ---
 
 ## Key Decisions & Rationale
+
+### **Enhanced UI Scaffolding: Activity Bar and Project Tree View**
+**Date**: January 15, 2025
+**Decision**: Implement DADMS-specific activity bar navigation and project-centric tree view
+**Rationale**: 
+- **User Experience**: Moving from sidebar navigation to activity bar provides direct access to all DADMS tools, reducing clicks and improving workflow efficiency
+- **Project-Centric Design**: The tree view organizes all project-related objects (ontologies, knowledge, models, simulations, etc.) in a logical hierarchy, making it easier to navigate and manage project assets
+- **Industry Standards**: Follows familiar patterns from popular development tools like VS Code, reducing learning curve for technical users
+- **Scalability**: The tree structure can accommodate growing numbers of project objects and types without cluttering the interface
+
+**Implementation**:
+- **Activity Bar**: Replaced generic VS Code icons with DADMS-specific navigation (Projects, Knowledge, Explorer, Ontology, LLM, Context, BPMN, Process, Thread, AADS)
+- **Project Tree View**: Hierarchical explorer with project selector, organized folders by object type, status indicators, and interactive controls
+- **Enhanced Styling**: 200+ lines of CSS for tree view styling, improved accessibility, and VS Code theme integration
+- **Type Safety**: Comprehensive TypeScript interfaces for ProjectObject, TreeNode, and navigation components
+
+**Benefits**:
+- **Efficiency**: Single-click access to all major DADMS tools
+- **Organization**: Clear visual hierarchy of project objects and relationships
+- **Context Awareness**: Visual indicators showing current location and object states
+- **Extensibility**: Easy to add new object types and functionality as the system grows
 
 ### **MVP Architecture Decision: Include Event Bus + AAS**
 **Date**: January 15, 2025
@@ -76,6 +97,46 @@ This document captures the ongoing development process, key decisions, rationale
 
 ---
 
+## UI Architecture Enhancements
+
+### Project Object Type System
+The enhanced UI implements a comprehensive project object type system that organizes all project-related assets:
+
+```typescript
+interface ProjectObject {
+    id: string;
+    name: string;
+    type: 'ontology' | 'knowledge' | 'data_model' | 'model' | 'simulation' | 'process' | 'thread';
+    status?: 'active' | 'draft' | 'completed' | 'inactive';
+    lastModified?: string;
+    metadata?: Record<string, any>;
+}
+```
+
+**Object Type Organization:**
+- **Ontologies**: Domain ontologies and taxonomies for knowledge representation
+- **Knowledge**: Documents, requirements, and knowledge assets for decision context
+- **Data Models**: Data structures and schemas for decision parameters
+- **Models**: Analysis and computational models for decision support
+- **Simulations**: Scenario simulations and results for what-if analysis
+- **Processes**: BPMN processes and workflows for decision execution
+- **Threads**: Decision threads and execution traces for auditability
+
+### Tree View Functionality
+- **Hierarchical Navigation**: Projects at top level with organized object folders
+- **Status Indicators**: Visual badges showing object states (active, draft, completed)
+- **Interactive Controls**: Expand/collapse, refresh, create, and collapse all actions
+- **Project Switching**: Dropdown selector to switch between different projects
+- **Search Ready**: Architecture prepared for future search and filtering capabilities
+
+### Navigation Best Practices
+- **Single-Click Access**: All major tools accessible from activity bar
+- **Context Awareness**: Visual feedback showing current location and active tools
+- **Keyboard Navigation**: Full keyboard support for accessibility
+- **Responsive Design**: Adapts to different screen sizes and orientations
+
+---
+
 ## Known Issues & Lessons Learned
 
 - **Camunda Variable Truncation:** Camunda's default schema uses `VARCHAR(4000)` for string process variables, which can cause truncation of large context data (e.g., long JSON or prompt context). In previous installations, attempts to alter the table type to `TEXT` were difficult and risky. The recommended approach is to use Camunda's `bytearray` variable type for large payloads instead of changing the table schema. No change is made now, but this is a known limitation to address if large context must be passed through BPMN workflows.
@@ -93,13 +154,18 @@ This document captures the ongoing development process, key decisions, rationale
 ---
 
 ## Milestones & Progress
+
+### Recent Milestones
+- **January 15, 2025:** **Enhanced UI Scaffolding Complete** - Implemented DADMS-specific activity bar and project tree view with comprehensive object organization, status indicators, and interactive navigation controls.
+- **January 15, 2025:** **MVP Architecture Updated** - Decided to include Event Bus and AAS in MVP for intelligent, proactive assistance. Complete API documentation created for both services.
+- **January 15, 2025:** **AADS Implementation Complete** - Comprehensive decision finalization tool implemented with frontend UI and backend service structure. Features include decision review, AI chat, white paper editor, and approval submission.
+
+### Historical Milestones
 - **Day 1:** Project CRUD UI and backend complete.
 - **Day 2:** Knowledge page scaffolded; Domain and Tag management UIs scaffolded with local state.
 - **Next:** Document upload and RAG search UI scaffolding; backend API integration for knowledge entities.
 - **Day X:** BPMN Workspace scaffolded with iframe integration of comprehensive_bpmn_modeler.html and localStorage-based model state management.
 - **Day X:** Camunda BPM Platform added to docker-compose; verified integration with Postgres 15 using Camunda 7.18.0 and Podman Compose. Documented and resolved authentication compatibility issues.
-- **January 15, 2025:** **MVP Architecture Updated** - Decided to include Event Bus and AAS in MVP for intelligent, proactive assistance. Complete API documentation created for both services.
-- **January 15, 2025:** **AADS Implementation Complete** - Comprehensive decision finalization tool implemented with frontend UI and backend service structure. Features include decision review, AI chat, white paper editor, and approval submission.
 
 ---
 

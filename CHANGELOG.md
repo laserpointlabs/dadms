@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.0.0-alpha.3] - 2025-01-15
+
+### Added
+- **Enhanced UI Scaffolding**: Major improvements to frontend navigation and project management
+  - **DADMS-Specific Activity Bar**: Replaced generic VS Code icons with direct navigation to DADMS tools
+  - **Project Tree View**: Hierarchical explorer showing projects and associated objects (ontologies, knowledge, models, simulations, etc.)
+  - **Project-Centric Navigation**: All DADMS tools now directly accessible from the activity bar
+  - **Object Organization**: Logical folder structure for different project object types
+  - **Status Indicators**: Visual status badges for project objects (active, draft, completed)
+  - **Interactive Tree Controls**: Expand/collapse, refresh, and action buttons
+- **Enhanced TypeScript Types**: Comprehensive type definitions for project objects and tree nodes
+- **Improved Accessibility**: Proper ARIA labels, keyboard navigation, and screen reader support
+- **VS Code-Inspired Styling**: Enhanced CSS with project tree view and improved activity bar styling
+
+### Changed
+- **Navigation Architecture**: Moved from sidebar-based navigation to activity bar-based navigation
+- **Explorer Panel**: Now dedicated to project tree view instead of general navigation
+- **Activity Bar Items**: Replaced generic VS Code icons (files, search, debug, etc.) with DADMS-specific tools
+- **Layout Structure**: Enhanced component organization and improved state management
+
+### Technical Details
+- **New Components**: `ProjectTreeView.tsx` with comprehensive tree navigation
+- **Enhanced Layout**: Updated `layout.tsx` with DADMS-specific activity bar implementation
+- **CSS Improvements**: Added 200+ lines of tree view styling and enhanced VS Code theme integration
+- **Type Safety**: Added interfaces for `ProjectObject`, `TreeNode`, and enhanced navigation types
+
 ## [2.0.0-alpha.2] - 2025-07-17
 
 ### Added

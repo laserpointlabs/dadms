@@ -4,9 +4,24 @@
 
 The DADMS 2.0 User Interface is a modern, professional React-based application built with Next.js that provides a comprehensive interface for decision intelligence workflows. Designed with a VS Code-inspired layout and professional color scheme, the UI delivers an intuitive, powerful experience for decision analysis, knowledge management, process execution, and collaborative decision-making.
 
-**Current Status**: 📋 **SPECIFICATION** - Ready for implementation with established architecture and components  
+**Current Status**: ✅ **ACTIVE DEVELOPMENT** - Enhanced with DADMS-specific navigation and project-centric tree view  
 **Technology**: Next.js 15.4.1, React 19.1.0, TypeScript 5+, Material-UI 7.2.0  
 **Port**: 3000 (primary), 3002 (fallback)
+
+## Recent Enhancements (2025-01-15)
+
+### ✅ DADMS-Specific Activity Bar
+- **Replaced generic VS Code icons** with DADMS-specific navigation
+- **Direct access** to all major DADMS tools and pages from the activity bar
+- **Context-aware highlighting** showing current active page
+- **Streamlined navigation** reducing clicks and improving workflow efficiency
+
+### ✅ Project-Centric Tree View
+- **Hierarchical project explorer** showing projects and associated objects
+- **Object type organization** with folders for ontologies, knowledge, models, simulations, etc.
+- **Status indicators** showing object states (active, draft, completed)
+- **Interactive navigation** with expand/collapse functionality
+- **Project selector** for switching between different projects
 
 ## Architecture Overview
 
@@ -34,45 +49,54 @@ interface TechnologyStack {
 }
 ```
 
-### UI Architecture Pattern
+### Enhanced UI Architecture Pattern
 
 ```mermaid
 %%{init: { 'flowchart': { 'curve': 'orthogonal' }}}%%
 flowchart TD
-    subgraph Layout["Application Layout"]
+    subgraph Layout["Enhanced Application Layout"]
         TitleBar["Title Bar<br/>Application Branding"]
-        ActivityBar["Activity Bar<br/>Main Navigation"]
-        Sidebar["Sidebar<br/>Contextual Navigation"]
+        ActivityBar["DADMS Activity Bar<br/>Direct Tool Navigation"]
+        ProjectExplorer["Project Explorer<br/>Hierarchical Tree View"]
         TabBar["Tab Bar<br/>Open Views"]
         EditorArea["Editor Area<br/>Main Content"]
         StatusBar["Status Bar<br/>Status Information"]
     end
     
-    subgraph Components["Component Architecture"]
-        PageComponents["Page Components<br/>/app/[route]/page.tsx"]
-        SharedComponents["Shared Components<br/>/components/"]
-        ServiceClients["Service Clients<br/>/services/"]
-        TypeDefinitions["Type Definitions<br/>/types/"]
+    subgraph Navigation["DADMS Navigation"]
+        Projects["Projects"]
+        Knowledge["Knowledge Base"]
+        Explorer["Project Explorer"]
+        Ontology["Ontology Builder"]
+        LLM["LLM Playground"]
+        Context["Context Manager"]
+        BPMN["BPMN Workspace"]
+        Process["Process Manager"]
+        Thread["Thread Manager"]
+        AADS["Decision Assistant"]
     end
     
-    subgraph Services["Backend Integration"]
-        ProjectAPI["Project API<br/>Port 3001"]
-        AADSAPI["AADS API<br/>Port 3005"]
-        KnowledgeAPI["Knowledge API<br/>Port 3003"]
-        ProcessAPI["Process API<br/>Port 3007"]
-        ThreadAPI["Thread API<br/>Port 3008"]
+    subgraph TreeView["Project Tree Structure"]
+        ProjectNode["Project Root"]
+        OntologyFolder["📁 Ontologies"]
+        KnowledgeFolder["📁 Knowledge"]
+        DataModelFolder["📁 Data Models"]
+        ModelFolder["📁 Models"]
+        SimulationFolder["📁 Simulations"]
+        ProcessFolder["📁 Processes"]
+        ThreadFolder["📁 Threads"]
     end
     
-    Layout --> Components
-    Components --> Services
+    Layout --> Navigation
+    Navigation --> TreeView
     
     classDef layout fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
-    classDef components fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
-    classDef services fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef navigation fill:#e8f5e8,stroke:#388e3c,stroke-width:2px;
+    classDef treeview fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
     
-    class TitleBar,ActivityBar,Sidebar,TabBar,EditorArea,StatusBar layout;
-    class PageComponents,SharedComponents,ServiceClients,TypeDefinitions components;
-    class ProjectAPI,AADSAPI,KnowledgeAPI,ProcessAPI,ThreadAPI services;
+    class TitleBar,ActivityBar,ProjectExplorer,TabBar,EditorArea,StatusBar layout;
+    class Projects,Knowledge,Explorer,Ontology,LLM,Context,BPMN,Process,Thread,AADS navigation;
+    class ProjectNode,OntologyFolder,KnowledgeFolder,DataModelFolder,ModelFolder,SimulationFolder,ProcessFolder,ThreadFolder treeview;
 ```
 
 ## Design System
@@ -273,146 +297,265 @@ dadms-ui/
 │   └── pages/               # Legacy pages (if needed)
 ```
 
-### Navigation Architecture
+### Enhanced Navigation Architecture
 
-#### Primary Navigation (Activity Bar)
+#### DADMS Activity Bar (Primary Navigation)
 ```typescript
-interface ActivityBarItem {
+interface DADMSActivityItem {
     id: string;
     icon: string;        // VS Code codicon identifier
     label: string;       // Accessibility label
-    view: string;        // Associated sidebar view
-    shortcut?: string;   // Keyboard shortcut
+    href?: string;       // Direct navigation URL
+    view?: string;       // Sidebar view identifier
+    type: 'navigation' | 'view';  // Item behavior type
 }
 
-const activityBarItems: ActivityBarItem[] = [
+const dadmsActivityItems: DADMSActivityItem[] = [
+    { 
+        id: 'projects', 
+        icon: 'project', 
+        label: 'Projects', 
+        href: '/projects',
+        type: 'navigation'
+    },
+    { 
+        id: 'knowledge', 
+        icon: 'library', 
+        label: 'Knowledge Base', 
+        href: '/knowledge',
+        type: 'navigation'
+    },
     { 
         id: 'explorer', 
         icon: 'files', 
-        label: 'Explorer', 
+        label: 'Project Explorer', 
         view: 'explorer',
-        shortcut: 'Ctrl+Shift+E'
+        type: 'view'
     },
     { 
-        id: 'search', 
-        icon: 'search', 
-        label: 'Search', 
-        view: 'search',
-        shortcut: 'Ctrl+Shift+F'
+        id: 'ontology', 
+        icon: 'type-hierarchy', 
+        label: 'Ontology Builder', 
+        href: '/ontology',
+        type: 'navigation'
     },
     { 
-        id: 'scm', 
-        icon: 'source-control', 
-        label: 'Source Control', 
-        view: 'scm',
-        shortcut: 'Ctrl+Shift+G'
+        id: 'llm', 
+        icon: 'robot', 
+        label: 'LLM Playground', 
+        href: '/llm',
+        type: 'navigation'
     },
     { 
-        id: 'debug', 
-        icon: 'debug-alt', 
-        label: 'Run and Debug', 
-        view: 'debug',
-        shortcut: 'Ctrl+Shift+D'
+        id: 'context', 
+        icon: 'settings-gear', 
+        label: 'Context Manager', 
+        href: '/context',
+        type: 'navigation'
     },
     { 
-        id: 'extensions', 
-        icon: 'extensions', 
-        label: 'Extensions', 
-        view: 'extensions',
-        shortcut: 'Ctrl+Shift+X'
+        id: 'bpmn', 
+        icon: 'graph', 
+        label: 'BPMN Workspace', 
+        href: '/bpmn',
+        type: 'navigation'
+    },
+    { 
+        id: 'process', 
+        icon: 'pulse', 
+        label: 'Process Manager', 
+        href: '/process',
+        type: 'navigation'
+    },
+    { 
+        id: 'thread', 
+        icon: 'list-tree', 
+        label: 'Thread Manager', 
+        href: '/thread',
+        type: 'navigation'
+    },
+    { 
+        id: 'aads', 
+        icon: 'star-full', 
+        label: 'Decision Assistant', 
+        href: '/aads',
+        type: 'navigation'
     }
 ];
 ```
 
-#### Secondary Navigation (Explorer View)
+#### Project Tree View (Explorer Panel)
 ```typescript
-interface DADMSPage {
+interface ProjectObject {
+    id: string;
     name: string;
-    href: string;
-    icon: string;
-    description: string;
-    type: 'folder' | 'file';
-    category: 'core' | 'process' | 'analysis' | 'management';
-    requirements?: string[];
+    type: 'ontology' | 'knowledge' | 'data_model' | 'model' | 'simulation' | 'process' | 'thread';
+    status?: 'active' | 'draft' | 'completed' | 'inactive';
+    lastModified?: string;
+    metadata?: Record<string, any>;
 }
 
-const dadmsPages: DADMSPage[] = [
-    {
-        name: 'Projects',
-        href: '/projects',
-        icon: 'project',
-        description: 'Manage decision projects',
-        type: 'folder',
-        category: 'core'
-    },
-    {
-        name: 'Knowledge Base',
-        href: '/knowledge',
-        icon: 'library',
-        description: 'Document & search knowledge',
-        type: 'folder',
-        category: 'core'
-    },
-    {
-        name: 'Ontology Builder',
-        href: '/ontology',
+interface TreeNode {
+    id: string;
+    name: string;
+    type: 'project' | 'folder' | 'object';
+    icon: string;
+    expanded?: boolean;
+    children?: TreeNode[];
+    href?: string;
+    project?: Project;
+    object?: ProjectObject;
+    status?: string;
+}
+
+const objectTypeMapping = {
+    ontology: {
+        folderName: 'Ontologies',
         icon: 'type-hierarchy',
-        description: 'Extract & manage domain ontologies',
-        type: 'folder',
-        category: 'analysis'
+        description: 'Domain ontologies and taxonomies'
     },
-    {
-        name: 'LLM Playground',
-        href: '/llm',
-        icon: 'robot',
-        description: 'AI model testing & experimentation',
-        type: 'file',
-        category: 'analysis'
+    knowledge: {
+        folderName: 'Knowledge',
+        icon: 'library',
+        description: 'Documents, requirements, and knowledge assets'
     },
-    {
-        name: 'Context Manager',
-        href: '/context',
-        icon: 'settings-gear',
-        description: 'Manage prompts, personas & tools',
-        type: 'file',
-        category: 'management'
+    data_model: {
+        folderName: 'Data Models',
+        icon: 'database',
+        description: 'Data structures and schemas'
     },
-    {
-        name: 'BPMN Workspace',
-        href: '/bpmn',
-        icon: 'graph',
-        description: 'Design decision workflows',
-        type: 'file',
-        category: 'process'
+    model: {
+        folderName: 'Models',
+        icon: 'beaker',
+        description: 'Analysis and computational models'
     },
-    {
-        name: 'Process Manager',
-        href: '/process',
+    simulation: {
+        folderName: 'Simulations',
+        icon: 'play-circle',
+        description: 'Simulation scenarios and results'
+    },
+    process: {
+        folderName: 'Processes',
         icon: 'pulse',
-        description: 'Monitor workflow execution',
-        type: 'file',
-        category: 'process'
+        description: 'BPMN processes and workflows'
     },
-    {
-        name: 'Thread Manager',
-        href: '/thread',
+    thread: {
+        folderName: 'Threads',
         icon: 'list-tree',
-        description: 'Trace decision threads',
-        type: 'file',
-        category: 'process'
-    },
-    {
-        name: 'Decision Assistant',
-        href: '/aads',
-        icon: 'star-full',
-        description: 'Finalize decisions',
-        type: 'file',
-        category: 'core'
+        description: 'Decision threads and execution traces'
     }
-];
+};
 ```
 
 ## Component Architecture
+
+### Enhanced Layout Components
+
+#### ProjectTreeView Component
+```typescript
+interface ProjectTreeViewProps {
+    onObjectSelect?: (object: ProjectObject) => void;
+    onProjectChange?: (project: Project) => void;
+    selectedProjectId?: string;
+}
+
+const ProjectTreeView: React.FC<ProjectTreeViewProps> = ({
+    onObjectSelect,
+    onProjectChange,
+    selectedProjectId
+}) => {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+    const [treeData, setTreeData] = useState<TreeNode[]>([]);
+    
+    // Tree building logic
+    const buildTreeStructure = useCallback((project: Project, objects: ProjectObject[]) => {
+        const groupedObjects = groupBy(objects, 'type');
+        
+        const projectNode: TreeNode = {
+            id: project.id,
+            name: project.name,
+            type: 'project',
+            icon: 'project',
+            expanded: expandedNodes.has(project.id),
+            project,
+            children: []
+        };
+        
+        Object.entries(groupedObjects).forEach(([type, typeObjects]) => {
+            const folderNode: TreeNode = {
+                id: `${project.id}-${type}`,
+                name: objectTypeMapping[type].folderName,
+                type: 'folder',
+                icon: 'folder',
+                expanded: expandedNodes.has(`${project.id}-${type}`),
+                children: typeObjects.map(obj => ({
+                    id: `${project.id}-${obj.id}`,
+                    name: obj.name,
+                    type: 'object',
+                    icon: objectTypeMapping[obj.type].icon,
+                    object: obj,
+                    status: obj.status
+                }))
+            };
+            projectNode.children!.push(folderNode);
+        });
+        
+        return projectNode;
+    }, [expandedNodes]);
+    
+    // Component implementation...
+};
+```
+
+#### Enhanced Activity Bar Component
+```typescript
+interface ActivityBarProps {
+    activeView: string;
+    onViewChange: (view: string) => void;
+    currentPath: string;
+}
+
+const ActivityBar: React.FC<ActivityBarProps> = ({
+    activeView,
+    onViewChange,
+    currentPath
+}) => {
+    const handleItemClick = useCallback((item: DADMSActivityItem) => {
+        if (item.type === 'view') {
+            onViewChange(item.view!);
+        } else if (item.type === 'navigation' && item.href) {
+            // Navigate using Next.js router
+            router.push(item.href);
+        }
+    }, [onViewChange]);
+    
+    return (
+        <div className="vscode-activitybar">
+            {dadmsActivityItems.map((item) => {
+                const isActive = item.type === 'view' 
+                    ? activeView === item.view 
+                    : currentPath === item.href;
+
+                return (
+                    <div
+                        key={item.id}
+                        className={`vscode-activitybar-item ${isActive ? 'active' : ''}`}
+                        onClick={() => handleItemClick(item)}
+                        title={item.label}
+                        aria-label={item.label}
+                        role="button"
+                        tabIndex={0}
+                    >
+                        <i className={`codicon codicon-${item.icon}`} />
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+```
 
 ### Component Hierarchy
 
