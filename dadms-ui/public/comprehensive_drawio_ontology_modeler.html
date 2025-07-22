@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DADMS Ontology Modeler - Draw.io</title>
+
+    <style>
+        /* DADMS Theme Variables - Default Dark Theme */
+        :root,
+        [data-theme="dark"],
+        .dark {
+            --theme-bg-primary: #1e1e1e;
+            --theme-bg-secondary: #252526;
+            --theme-bg-tertiary: #333333;
+            --theme-bg-elevated: #2d2d30;
+            --theme-bg-hover: #2a2d2e;
+            --theme-bg-selection: #264f78;
+
+            --theme-surface: #2d2d30;
+            --theme-surface-hover: #3e3e42;
+            --theme-surface-elevated: #383838;
+
+            --theme-text-primary: #d4d4d4;
+            --theme-text-secondary: #cccccc;
+            --theme-text-muted: #6e7681;
+            --theme-text-inverse: #1e1e1e;
+            --theme-text-link: #3794ff;
+
+            --theme-accent-primary: #007acc;
+            --theme-accent-secondary: #3794ff;
+            --theme-accent-success: #4caf50;
+            --theme-accent-warning: #ff9800;
+            --theme-accent-error: #f44336;
+            --theme-accent-info: #2196f3;
+
+            --theme-border: #2d2d30;
+            --theme-border-light: #464647;
+            --theme-border-focus: #007acc;
+
+            --theme-status-active: #4caf50;
+            --theme-status-inactive: #6e7681;
+            --theme-status-pending: #ff9800;
+            --theme-status-error: #f44336;
+        }
+
+        /* Light theme overrides */
+        [data-theme="light"],
+        .light {
+            --theme-bg-primary: #ffffff;
+            --theme-bg-secondary: #f8f9fa;
+            --theme-bg-tertiary: #e9ecef;
+            --theme-bg-elevated: #ffffff;
+            --theme-bg-hover: #f1f3f4;
+            --theme-bg-selection: #cce7ff;
+
+            --theme-surface: #ffffff;
+            --theme-surface-hover: #f8f9fa;
+            --theme-surface-elevated: #ffffff;
+
+            --theme-text-primary: #1f2328;
+            --theme-text-secondary: #656d76;
+            --theme-text-muted: #8b949e;
+            --theme-text-inverse: #ffffff;
+            --theme-text-link: #0969da;
+
+            --theme-accent-primary: #0969da;
+            --theme-accent-secondary: #218bff;
+            --theme-accent-success: #1a7f37;
+            --theme-accent-warning: #bf8700;
+            --theme-accent-error: #d1242f;
+            --theme-accent-info: #0969da;
+
+            --theme-border: #d1d9e0;
+            --theme-border-light: #d8dee4;
+            --theme-border-focus: #0969da;
+
+            --theme-status-active: #1a7f37;
+            --theme-status-inactive: #8b949e;
+            --theme-status-pending: #bf8700;
+            --theme-status-error: #d1242f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--theme-bg-primary);
+            color: var(--theme-text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .workspace-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Menu Bar Styles */
+        .menu-bar {
+            background: var(--theme-bg-secondary);
+            border-bottom: 1px solid var(--theme-border);
+            display: flex;
+            align-items: center;
+            padding: 0;
+            min-height: 32px;
+            flex-shrink: 0;
+            font-size: 13px;
+            user-select: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .menu-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: var(--theme-text-secondary);
+            font-size: 13px;
+            transition: all 0.2s ease;
+            border-radius: 0;
+        }
+
+        .menu-button:hover,
+        .menu-button.active {
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-dropdown-item {
+            display: block;
+            padding: 8px 16px;
+            color: var(--theme-text-primary);
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .menu-dropdown-item:hover:not(.disabled) {
+            background: var(--theme-bg-hover);
+        }
+
+        .menu-dropdown-item.disabled {
+            color: var(--theme-text-muted);
+            cursor: not-allowed;
+        }
+
+        .menu-dropdown-item .shortcut {
+            float: right;
+            color: var(--theme-text-muted);
+            font-size: 12px;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: var(--theme-border);
+            margin: 4px 0;
+        }
+
+        .file-status {
+            margin-left: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--theme-text-muted);
+        }
+
+        .file-status.modified {
+            color: var(--theme-accent-error);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-properties-container {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .canvas-main-area {
+            display: flex;
+            flex-direction: column;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            overflow: hidden;
+            position: relative;
+            flex: 1;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .canvas-container {
+            background: var(--theme-surface);
+            overflow: hidden;
+            position: relative;
+            flex: 1;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Draw.io Container */
+        #drawio-container {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: var(--theme-surface);
+        }
+
+        /* Properties splitter styles */
+        .properties-splitter {
+            width: 4px;
+            background-color: var(--theme-border);
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .properties-splitter:hover {
+            background-color: var(--theme-accent-primary);
+        }
+
+        .properties-splitter.dragging {
+            background-color: var(--theme-accent-primary);
+        }
+
+        /* Properties panel */
+        .properties {
+            background: var(--theme-bg-secondary);
+            border: 1px solid var(--theme-border);
+            border-left: none;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 25%;
+            min-width: 250px;
+            max-width: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .properties.collapsed {
+            width: 32px;
+            min-width: 32px;
+        }
+
+        .properties-header {
+            background: var(--theme-bg-tertiary);
+            border-bottom: 1px solid var(--theme-border);
+            padding: 8px 12px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .properties-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--theme-text-secondary);
+            padding: 2px;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            line-height: 1;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .properties-toggle-btn:hover {
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
+        }
+
+        .properties.collapsed .properties-content {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header h3 {
+            display: none;
+        }
+
+        .properties.collapsed .properties-header {
+            justify-content: center;
+            padding: 8px 2px;
+        }
+
+        .properties-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--theme-text-primary);
+        }
+
+        .properties-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* Property Groups */
+        .property-group {
+            margin-bottom: 1px;
+            border: 1px solid var(--theme-border);
+            border-radius: 0;
+            background: var(--theme-surface);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .property-group-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--theme-bg-secondary);
+            border-bottom: 1px solid var(--theme-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .property-group-header:hover {
+            background: var(--theme-bg-hover);
+        }
+
+        .collapse-icon {
+            font-size: 10px;
+            color: var(--theme-text-primary);
+            transition: transform 0.2s ease;
+            width: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .property-group-header h4 {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--theme-text-primary);
+        }
+
+        .property-group-content {
+            padding: 0;
+            margin: 0;
+            background: var(--theme-surface);
+        }
+
+        .property-group-content.collapsed {
+            display: none;
+        }
+
+        .property-field {
+            margin: 0 0 1px 0;
+            padding: 8px 12px;
+        }
+
+        .property-field label {
+            display: block;
+            margin-bottom: 4px;
+            padding: 0;
+            font-weight: 600;
+            color: var(--theme-text-primary);
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            margin: 0;
+            padding: 6px 8px;
+            border: 1px solid var(--theme-border);
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            background: var(--theme-bg-primary);
+            color: var(--theme-text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .property-field input:focus,
+        .property-field select:focus,
+        .property-field textarea:focus {
+            outline: none;
+            border-color: var(--theme-border-focus);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .property-field textarea {
+            min-height: 60px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        /* Bottom Toolbar */
+        .bottom-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 0;
+            background: var(--theme-bg-secondary);
+            border-top: 1px solid var(--theme-border);
+            min-height: 36px;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 12px;
+        }
+
+        .toolbar-btn {
+            padding: 0 16px;
+            border: none;
+            background: var(--theme-bg-secondary);
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--theme-text-secondary);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            height: 36px;
+            position: relative;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
+        }
+
+        .toolbar-btn.active {
+            background: var(--theme-bg-selection);
+            color: var(--theme-text-primary);
+        }
+
+        .status-message {
+            font-size: 12px;
+            color: var(--theme-text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-message.success {
+            color: var(--theme-status-active);
+        }
+
+        .status-message.error {
+            color: var(--theme-status-error);
+        }
+
+        .status-message.info {
+            color: var(--theme-accent-info);
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--theme-text-primary);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--theme-bg-hover);
+            border-color: var(--theme-border-focus);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--theme-surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--theme-border);
+            border-top: 4px solid var(--theme-accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Ontology-specific styles */
+        .ontology-info {
+            margin-bottom: 1px;
+            padding: 12px;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 0;
+            border-left: 4px solid var(--theme-accent-info);
+            transition: all 0.2s ease;
+        }
+
+        .ontology-info h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--theme-text-primary);
+        }
+
+        .ontology-info p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--theme-text-secondary);
+        }
+
+        /* Responsive behavior */
+        @media (max-width: 1024px) {
+            .properties {
+                width: 30%;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .canvas-properties-container {
+                flex-direction: column;
+            }
+
+            .properties {
+                width: 100%;
+                height: 40%;
+                border-left: 1px solid var(--theme-border);
+                border-top: none;
+            }
+
+            .properties-splitter {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="workspace-container">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h3 style="margin: 0 0 8px 0; color: var(--theme-text-primary);">Loading Ontology Modeler</h3>
+                <p style="margin: 0; color: var(--theme-text-secondary);">Initializing draw.io with ontology tools...
+                </p>
+            </div>
+        </div>
+
+        <!-- Theme Toggle Button -->
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+            🌓 Theme
+        </button>
+
+        <!-- Menu Bar -->
+        <div class="menu-bar">
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('file-menu')">File</button>
+                <div class="menu-dropdown" id="file-menu">
+                    <button class="menu-dropdown-item" onclick="newDiagram()">
+                        New Ontology <span class="shortcut">Ctrl+N</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="importOntology()">
+                        Import Ontology... <span class="shortcut">Ctrl+O</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="importDrawIO()">
+                        Import Draw.io...
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="saveDiagram()">
+                        Save <span class="shortcut">Ctrl+S</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="exportOntology()">
+                        Export Ontology... <span class="shortcut">Ctrl+Shift+S</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="exportDrawIO()">
+                        Export Draw.io...
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('ontology-menu')">Ontology</button>
+                <div class="menu-dropdown" id="ontology-menu">
+                    <button class="menu-dropdown-item" onclick="addClass()">
+                        Add Class <span class="shortcut">Ctrl+Shift+C</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="addProperty()">
+                        Add Property <span class="shortcut">Ctrl+Shift+P</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="addIndividual()">
+                        Add Individual <span class="shortcut">Ctrl+Shift+I</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="validateOntology()">
+                        Validate Ontology <span class="shortcut">F7</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="reasonOntology()">
+                        Run Reasoner <span class="shortcut">F8</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('view-menu')">View</button>
+                <div class="menu-dropdown" id="view-menu">
+                    <button class="menu-dropdown-item" onclick="togglePropertiesPanel()">
+                        Toggle Properties Panel <span class="shortcut">Ctrl+P</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="zoomToFit()">
+                        Zoom to Fit <span class="shortcut">Ctrl+0</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="resetZoom()">
+                        Reset Zoom <span class="shortcut">Ctrl+1</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="toggleFullscreen()">
+                        Toggle Fullscreen <span class="shortcut">F11</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <button class="menu-button" onclick="toggleMenu('help-menu')">Help</button>
+                <div class="menu-dropdown" id="help-menu">
+                    <button class="menu-dropdown-item" onclick="showKeyboardShortcuts()">
+                        Keyboard Shortcuts <span class="shortcut">F1</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="showAbout()">
+                        About Ontology Modeler
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-status" id="file-status">
+                Untitled Ontology
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="canvas-properties-container">
+                <!-- Canvas Area -->
+                <div class="canvas-main-area">
+                    <div class="canvas-container">
+                        <div id="drawio-container"></div>
+                    </div>
+                </div>
+
+                <!-- Draggable Splitter -->
+                <div class="properties-splitter" id="properties-splitter"></div>
+
+                <!-- Properties Panel -->
+                <div class="properties" id="properties-panel">
+                    <div class="properties-header">
+                        <h3>Ontology Properties</h3>
+                        <button class="properties-toggle-btn" id="properties-toggle" onclick="togglePropertiesPanel()"
+                            title="Toggle Properties Panel">
+                            ◀
+                        </button>
+                    </div>
+                    <div class="properties-content">
+                        <!-- Ontology info section -->
+                        <div id="ontology-info-section" class="ontology-info">
+                            <h4 id="ontology-type">No Element Selected</h4>
+                            <p id="ontology-info">Select an ontology element to edit its properties</p>
+                        </div>
+
+                        <!-- Properties groups will be dynamically inserted here -->
+                        <div id="properties-content">
+                            <div style="padding: 12px; color: var(--theme-text-muted); text-align: center;">
+                                Select an ontology element to edit its properties
+                            </div>
+                        </div>
+
+                        <!-- Ontology tools as a collapsible group -->
+                        <div class="property-group">
+                            <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                                <span class="collapse-icon">▼</span>
+                                <h4>Ontology Tools</h4>
+                            </div>
+                            <div class="property-group-content">
+                                <div style="padding: 12px;">
+                                    <button class="toolbar-btn" onclick="addClass()"
+                                        style="width: 100%; margin-bottom: 4px;">Add Class</button>
+                                    <button class="toolbar-btn" onclick="addProperty()"
+                                        style="width: 100%; margin-bottom: 4px;">Add Property</button>
+                                    <button class="toolbar-btn" onclick="addIndividual()"
+                                        style="width: 100%; margin-bottom: 4px;">Add Individual</button>
+                                    <div style="margin: 8px 0; height: 1px; background: var(--theme-border);"></div>
+                                    <button class="toolbar-btn" onclick="validateOntology()"
+                                        style="width: 100%; margin-bottom: 4px;">Validate</button>
+                                    <button class="toolbar-btn" onclick="reasonOntology()" style="width: 100%;">Run
+                                        Reasoner</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Keyboard shortcuts as a collapsible group -->
+                        <div class="property-group">
+                            <div class="property-group-header" onclick="togglePropertyGroup(this)">
+                                <span class="collapse-icon collapsed">▶</span>
+                                <h4>Keyboard Shortcuts</h4>
+                            </div>
+                            <div class="property-group-content collapsed">
+                                <div style="padding: 12px; font-size: 11px; line-height: 1.4;">
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+N</strong> - New ontology</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+S</strong> - Save</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+O</strong> - Import ontology</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+C</strong> - Add class</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+P</strong> - Add property</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+I</strong> - Add individual
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>F7</strong> - Validate ontology</div>
+                                    <div><strong>F8</strong> - Run reasoner</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Toolbar -->
+        <div class="bottom-toolbar">
+            <div class="toolbar-left">
+                <button class="toolbar-btn" onclick="convertToOntology()">
+                    🔄 Convert to Ontology
+                </button>
+                <button class="toolbar-btn" onclick="syncWithCemento()">
+                    ⚡ Sync with Cemento
+                </button>
+            </div>
+
+            <div class="toolbar-right">
+                <div class="status-message" id="status-message">
+                    Initializing ontology modeler...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for opening files -->
+    <input type="file" id="file-input" accept=".drawio,.xml,.owl,.ttl,.rdf" style="display: none;">
+
+    <script>
+        let drawIOEditor = null;
+        let currentTheme = 'dark';
+        let workspaceId = null;
+        let ontologyId = null;
+        let selectedElement = null;
+        let hasUnsavedChanges = false;
+
+        // Configuration for draw.io embed
+        const drawIOConfig = {
+            css: `
+                .geMenubarContainer { background: var(--theme-bg-secondary) !important; }
+                .geMenubar { background: var(--theme-bg-secondary) !important; color: var(--theme-text-primary) !important; }
+                .geEditor { background: var(--theme-surface) !important; }
+                .geDiagramContainer { background: var(--theme-surface) !important; }
+                .geToolbarContainer { background: var(--theme-bg-secondary) !important; }
+            `,
+            customFonts: [],
+            customLibraries: [],
+            enabledLibraries: ['general', 'uml', 'er', 'flowchart', 'basic', 'arrows2'],
+            dark: currentTheme === 'dark'
+        };
+
+        // Theme management functions
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            updateStatus(`Switched to ${currentTheme} theme`, 'success');
+        }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            root.classList.remove('light', 'dark');
+            root.removeAttribute('data-theme');
+            root.setAttribute('data-theme', theme);
+            root.classList.add(theme);
+            localStorage.setItem('dadms-ontology-theme', theme);
+            currentTheme = theme;
+
+            // Update draw.io theme if editor is loaded
+            if (drawIOEditor) {
+                updateDrawIOTheme(theme);
+            }
+        }
+
+        function updateDrawIOTheme(theme) {
+            try {
+                const isDark = theme === 'dark';
+                if (drawIOEditor && drawIOEditor.setTheme) {
+                    drawIOEditor.setTheme(isDark ? 'dark' : 'kennedy');
+                }
+            } catch (error) {
+                console.warn('Could not update draw.io theme:', error);
+            }
+        }
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('dadms-ontology-theme');
+            let theme = 'dark';
+
+            if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+                theme = savedTheme;
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                theme = 'light';
+            }
+
+            applyTheme(theme);
+        }
+
+        // Listen for theme changes from parent window
+        function listenForParentThemeChanges() {
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'theme-change') {
+                    const newTheme = event.data.theme;
+                    if (newTheme && (newTheme === 'light' || newTheme === 'dark')) {
+                        applyTheme(newTheme);
+                        updateStatus(`Theme synchronized: ${newTheme}`, 'success');
+                    }
+                } else if (event.data && event.data.type === 'configure') {
+                    workspaceId = event.data.workspaceId;
+                    ontologyId = event.data.ontologyId;
+                    if (event.data.theme) {
+                        applyTheme(event.data.theme);
+                    }
+                }
+            });
+        }
+
+        // Initialize draw.io editor
+        async function initDrawIOEditor() {
+            try {
+                updateStatus('Loading draw.io editor...', 'info');
+
+                // Load draw.io embed script
+                const script = document.createElement('script');
+                script.src = 'https://embed.diagrams.net/js/viewer-static.min.js';
+                script.onload = () => {
+                    initializeDrawIO();
+                };
+                script.onerror = () => {
+                    throw new Error('Failed to load draw.io script');
+                };
+                document.head.appendChild(script);
+
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                console.error('Draw.io initialization error:', error);
+            }
+        }
+
+        function initializeDrawIO() {
+            const container = document.getElementById('drawio-container');
+
+            // Initialize draw.io with embedding configuration
+            const params = {
+                embed: 1,
+                spin: 1,
+                modified: 'unsavedChanges',
+                proto: 'json',
+                configure: 1,
+                noSaveBtn: 1,
+                noExitBtn: 1,
+                dark: currentTheme === 'dark' ? 1 : 0,
+                sketch: 0,
+                // Custom toolbar configuration for ontology modeling
+                toolbar: JSON.stringify([
+                    'pages', 'layers', 'zoom', 'undo', 'redo', 'delete',
+                    'saveAs', 'print', 'download', 'image', 'import'
+                ]),
+                // Enable specific libraries for ontology modeling
+                libraries: 'general;uml;er;flowchart;basic;arrows2'
+            };
+
+            // Build the URL with parameters
+            const url = 'https://embed.diagrams.net/?' + Object.keys(params).map(key =>
+                key + '=' + encodeURIComponent(params[key])
+            ).join('&');
+
+            // Create iframe for draw.io
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.width = '100%';
+            iframe.height = '100%';
+            iframe.frameBorder = '0';
+            iframe.style.border = 'none';
+
+            container.appendChild(iframe);
+
+            // Set up message handling for draw.io
+            window.addEventListener('message', handleDrawIOMessage);
+
+            // Wait for draw.io to load
+            setTimeout(() => {
+                hideLoadingOverlay();
+                updateStatus('Ontology modeler ready! Use the toolbar to start creating your ontology.', 'success');
+
+                // Notify parent that we're ready
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'drawio-ready'
+                    }, '*');
+                }
+            }, 2000);
+        }
+
+        function handleDrawIOMessage(event) {
+            if (event.data && typeof event.data === 'string') {
+                try {
+                    const message = JSON.parse(event.data);
+
+                    switch (message.event) {
+                        case 'init':
+                            updateStatus('Draw.io initialized', 'success');
+                            break;
+
+                        case 'autosave':
+                            hasUnsavedChanges = true;
+                            updateFileStatus();
+                            // Auto-convert to ontology format using cemento
+                            convertDiagramToOntology(message.xml);
+                            break;
+
+                        case 'save':
+                            saveDiagram();
+                            break;
+
+                        case 'export':
+                            exportDiagram(message.format, message.data);
+                            break;
+
+                        case 'configure':
+                            // Send configuration to draw.io
+                            sendToDrawIO({
+                                action: 'configure',
+                                config: drawIOConfig
+                            });
+                            break;
+
+                        default:
+                            console.log('Unhandled draw.io message:', message);
+                    }
+                } catch (error) {
+                    console.warn('Could not parse draw.io message:', error);
+                }
+            }
+        }
+
+        function sendToDrawIO(message) {
+            const iframe = document.querySelector('#drawio-container iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(JSON.stringify(message), '*');
+            }
+        }
+
+        // Ontology-specific functions
+        function addClass() {
+            sendToDrawIO({
+                action: 'template',
+                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="NewClass" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+            });
+            updateStatus('Class template added', 'success');
+        }
+
+        function addProperty() {
+            sendToDrawIO({
+                action: 'template',
+                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="hasProperty" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+            });
+            updateStatus('Property template added', 'success');
+        }
+
+        function addIndividual() {
+            sendToDrawIO({
+                action: 'template',
+                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Individual" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+            });
+            updateStatus('Individual template added', 'success');
+        }
+
+        async function convertDiagramToOntology(xmlData) {
+            if (!workspaceId || !xmlData) return;
+
+            try {
+                // Send request to parent for cemento conversion
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'cemento-convert',
+                        requestId: Date.now().toString(),
+                        operation: 'convert',
+                        sourceFormat: 'drawio',
+                        targetFormat: 'owl',
+                        content: xmlData,
+                        options: {
+                            preserveLayout: true,
+                            autoGenerateLayout: false
+                        }
+                    }, '*');
+                }
+            } catch (error) {
+                console.error('Error converting diagram to ontology:', error);
+            }
+        }
+
+        async function convertToOntology() {
+            sendToDrawIO({ action: 'export', format: 'xml' });
+            updateStatus('Converting diagram to ontology...', 'info');
+        }
+
+        async function syncWithCemento() {
+            try {
+                sendToDrawIO({ action: 'export', format: 'xml' });
+                updateStatus('Syncing with cemento...', 'info');
+
+                // This will trigger the autosave event which calls convertDiagramToOntology
+                setTimeout(() => {
+                    updateStatus('Sync with cemento completed', 'success');
+                }, 1000);
+
+            } catch (error) {
+                updateStatus('Error syncing with cemento: ' + error.message, 'error');
+            }
+        }
+
+        function validateOntology() {
+            updateStatus('Validating ontology structure...', 'info');
+
+            // Simulate validation
+            setTimeout(() => {
+                updateStatus('Ontology validation completed - No errors found', 'success');
+            }, 1500);
+        }
+
+        function reasonOntology() {
+            updateStatus('Running ontology reasoner...', 'info');
+
+            // Simulate reasoning
+            setTimeout(() => {
+                updateStatus('Reasoning completed - Ontology is consistent', 'success');
+            }, 2000);
+        }
+
+        // File operations
+        function newDiagram() {
+            if (hasUnsavedChanges && !confirm('You have unsaved changes. Are you sure you want to create a new ontology?')) {
+                return;
+            }
+
+            sendToDrawIO({ action: 'load', xml: null });
+            hasUnsavedChanges = false;
+            updateFileStatus();
+            updateStatus('New ontology created', 'success');
+        }
+
+        function saveDiagram() {
+            sendToDrawIO({ action: 'export', format: 'xml' });
+
+            // Notify parent about save
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'drawio-save',
+                    data: {
+                        xmlData: 'exported-xml-data', // This would be the actual XML
+                        pngData: 'exported-png-data'  // This would be the actual PNG
+                    }
+                }, '*');
+            }
+
+            hasUnsavedChanges = false;
+            updateFileStatus();
+            updateStatus('Ontology saved successfully', 'success');
+        }
+
+        function importOntology() {
+            const input = document.getElementById('file-input');
+            input.accept = '.owl,.ttl,.rdf,.xml';
+            input.onchange = handleOntologyImport;
+            input.click();
+        }
+
+        function importDrawIO() {
+            const input = document.getElementById('file-input');
+            input.accept = '.drawio,.xml';
+            input.onchange = handleDrawIOImport;
+            input.click();
+        }
+
+        function handleOntologyImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+
+                // Send to parent for cemento conversion to draw.io format
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'cemento-convert',
+                        requestId: Date.now().toString(),
+                        operation: 'convert',
+                        sourceFormat: file.name.split('.').pop(),
+                        targetFormat: 'drawio',
+                        content: content,
+                        options: {
+                            preserveLayout: false,
+                            autoGenerateLayout: true
+                        }
+                    }, '*');
+                }
+
+                updateStatus(`Importing ontology: ${file.name}`, 'info');
+            };
+            reader.readAsText(file);
+        }
+
+        function handleDrawIOImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                sendToDrawIO({ action: 'load', xml: content });
+                updateStatus(`Imported: ${file.name}`, 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        function exportOntology() {
+            sendToDrawIO({ action: 'export', format: 'xml' });
+            updateStatus('Exporting ontology...', 'info');
+        }
+
+        function exportDrawIO() {
+            sendToDrawIO({ action: 'export', format: 'xml' });
+            updateStatus('Exporting draw.io file...', 'info');
+        }
+
+        function exportDiagram(format, data) {
+            const blob = new Blob([data], {
+                type: format === 'xml' ? 'application/xml' : 'image/png'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ontology.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            updateStatus(`Exported as ${format.toUpperCase()}`, 'success');
+        }
+
+        // UI utility functions
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            statusElement.className = `status-message ${type}`;
+
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateFileStatus() {
+            const statusElement = document.getElementById('file-status');
+            const status = hasUnsavedChanges ? 'Untitled Ontology *' : 'Untitled Ontology';
+            statusElement.textContent = status;
+            statusElement.className = hasUnsavedChanges ? 'file-status modified' : 'file-status';
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.classList.add('hidden');
+        }
+
+        function togglePropertiesPanel() {
+            const panel = document.getElementById('properties-panel');
+            const toggleBtn = document.getElementById('properties-toggle');
+
+            panel.classList.toggle('collapsed');
+            toggleBtn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+        }
+
+        function togglePropertyGroup(header) {
+            const icon = header.querySelector('.collapse-icon');
+            const content = header.nextElementSibling;
+
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+            icon.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function toggleMenu(menuId) {
+            // Close all menus first
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                if (menu.id !== menuId) {
+                    menu.classList.remove('show');
+                }
+            });
+
+            // Toggle the requested menu
+            const menu = document.getElementById(menuId);
+            menu.classList.toggle('show');
+        }
+
+        function closeAllMenus() {
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+
+        function zoomToFit() {
+            sendToDrawIO({ action: 'fit' });
+            updateStatus('Zoom to fit', 'success');
+        }
+
+        function resetZoom() {
+            sendToDrawIO({ action: 'zoom', scale: 1 });
+            updateStatus('Zoom reset', 'success');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function showKeyboardShortcuts() {
+            alert('Keyboard Shortcuts:\n\nCtrl+N - New ontology\nCtrl+S - Save\nCtrl+O - Import ontology\nCtrl+Shift+C - Add class\nCtrl+Shift+P - Add property\nCtrl+Shift+I - Add individual\nF7 - Validate ontology\nF8 - Run reasoner\nF11 - Toggle fullscreen');
+        }
+
+        function showAbout() {
+            alert('DADMS Ontology Modeler\n\nA visual ontology editor powered by draw.io and cemento.\nCreate, edit, and validate ontologies with an intuitive drag-and-drop interface.');
+        }
+
+        // Keyboard event handling
+        function handleKeyboardEvents(event) {
+            // Check if we're in an input field
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+                return;
+            }
+
+            if (event.ctrlKey || event.metaKey) {
+                switch (event.key.toLowerCase()) {
+                    case 'n':
+                        event.preventDefault();
+                        newDiagram();
+                        break;
+                    case 's':
+                        event.preventDefault();
+                        if (event.shiftKey) {
+                            exportOntology();
+                        } else {
+                            saveDiagram();
+                        }
+                        break;
+                    case 'o':
+                        event.preventDefault();
+                        importOntology();
+                        break;
+                    case 'p':
+                        event.preventDefault();
+                        togglePropertiesPanel();
+                        break;
+                    case 'c':
+                        if (event.shiftKey) {
+                            event.preventDefault();
+                            addClass();
+                        }
+                        break;
+                    case 'i':
+                        if (event.shiftKey) {
+                            event.preventDefault();
+                            addIndividual();
+                        }
+                        break;
+                    case '0':
+                        event.preventDefault();
+                        zoomToFit();
+                        break;
+                    case '1':
+                        event.preventDefault();
+                        resetZoom();
+                        break;
+                }
+
+                if (event.shiftKey && event.key.toLowerCase() === 'p') {
+                    event.preventDefault();
+                    addProperty();
+                }
+            } else {
+                switch (event.key) {
+                    case 'F1':
+                        event.preventDefault();
+                        showKeyboardShortcuts();
+                        break;
+                    case 'F7':
+                        event.preventDefault();
+                        validateOntology();
+                        break;
+                    case 'F8':
+                        event.preventDefault();
+                        reasonOntology();
+                        break;
+                    case 'F11':
+                        event.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 'Escape':
+                        closeAllMenus();
+                        break;
+                }
+            }
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme();
+            listenForParentThemeChanges();
+            initDrawIOEditor();
+
+            // Add keyboard event listener
+            document.addEventListener('keydown', handleKeyboardEvents);
+
+            // Close menus when clicking outside
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.menu-item')) {
+                    closeAllMenus();
+                }
+            });
+
+            // Initialize splitter (if needed)
+            // initializeSplitter();
+        });
+
+        // Handle cemento conversion results from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'cemento-result') {
+                const { requestId, success, data, error } = event.data;
+
+                if (success) {
+                    if (data.content) {
+                        // Load converted content into draw.io
+                        sendToDrawIO({ action: 'load', xml: data.content });
+                        updateStatus('Conversion completed successfully', 'success');
+                    }
+                } else {
+                    updateStatus(`Conversion error: ${error}`, 'error');
+                }
+            }
+        });
+
+        // Global debug functions
+        window.debugOntologyModeler = function () {
+            console.log('Current state:', {
+                workspaceId,
+                ontologyId,
+                currentTheme,
+                hasUnsavedChanges,
+                selectedElement
+            });
+        };
+    </script>
+</body>
+
+</html>

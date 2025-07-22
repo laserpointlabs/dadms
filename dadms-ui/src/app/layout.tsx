@@ -67,7 +67,7 @@ const dadmsActivityGroups: NavigationGroup[] = [
                 id: 'ontology',
                 icon: 'type-hierarchy',
                 label: 'Ontology Workspace',
-                href: '/ontology',
+                href: '/ontology-workspace',
                 type: 'navigation'
             },
             {
