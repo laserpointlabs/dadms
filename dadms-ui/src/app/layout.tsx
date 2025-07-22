@@ -9,213 +9,318 @@ import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssi
 import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
 
-// DADMS Activity Bar Items (replaces generic VS Code icons with DADMS functionality)
-const dadmsActivityItems = [
-    // Core System Navigation
-    {
-        id: 'projects',
-        icon: 'project',
-        label: 'Projects',
-        href: '/projects',
-        type: 'navigation'
-    },
-    {
-        id: 'knowledge',
-        icon: 'library',
-        label: 'Knowledge Base',
-        href: '/knowledge',
-        type: 'navigation'
-    },
-    {
-        id: 'explorer',
-        icon: 'files',
-        label: 'Project Explorer',
-        view: 'explorer',
-        type: 'view'
-    },
+// Types for the grouped navigation structure
+interface NavigationItem {
+    id: string;
+    icon: string;
+    label: string;
+    href?: string;
+    view?: string;
+    type: 'navigation' | 'view';
+}
 
-    // Workspace Services
-    {
-        id: 'bpmn',
-        icon: 'graph',
-        label: 'BPMN Workspace',
-        href: '/bpmn',
-        type: 'navigation'
-    },
-    {
-        id: 'ontology',
-        icon: 'type-hierarchy',
-        label: 'Ontology Workspace',
-        href: '/ontology',
-        type: 'navigation'
-    },
+interface NavigationGroup {
+    id: string;
+    icon: string;
+    label: string;
+    items?: NavigationItem[];
+    href?: string;
+    type?: 'navigation';
+}
 
-    // AI & LLM Services
+// DADMS Activity Bar Items - Grouped structure with hover popouts
+const dadmsActivityGroups: NavigationGroup[] = [
     {
-        id: 'llm',
+        id: 'core',
+        icon: 'home',
+        label: 'Core',
+        items: [
+            {
+                id: 'explorer',
+                icon: 'files',
+                label: 'Project Explorer',
+                view: 'explorer',
+                type: 'view'
+            },
+            {
+                id: 'projects',
+                icon: 'project',
+                label: 'Projects',
+                href: '/projects',
+                type: 'navigation'
+            },
+            {
+                id: 'knowledge',
+                icon: 'library',
+                label: 'Knowledge Base',
+                href: '/knowledge',
+                type: 'navigation'
+            }
+        ]
+    },
+    {
+        id: 'workspaces',
+        icon: 'layout',
+        label: 'Workspaces',
+        items: [
+            {
+                id: 'ontology',
+                icon: 'type-hierarchy',
+                label: 'Ontology Workspace',
+                href: '/ontology',
+                type: 'navigation'
+            },
+            {
+                id: 'bpmn',
+                icon: 'git-branch',
+                label: 'BPMN Workspace',
+                href: '/bpmn',
+                type: 'navigation'
+            }
+        ]
+    },
+    {
+        id: 'ai-services',
         icon: 'robot',
-        label: 'LLM Playground',
-        href: '/llm',
-        type: 'navigation'
+        label: 'AI Services',
+        items: [
+            {
+                id: 'llm',
+                icon: 'beaker',
+                label: 'LLM Playground',
+                href: '/llm',
+                type: 'navigation'
+            },
+            {
+                id: 'context',
+                icon: 'extensions',
+                label: 'Context Manager',
+                href: '/context',
+                type: 'navigation'
+            }
+        ]
     },
     {
-        id: 'context',
-        icon: 'extensions',
-        label: 'Context Manager',
-        href: '/context',
-        type: 'navigation'
-    },
-
-    // Process & Workflow Management
-    {
-        id: 'process',
+        id: 'process-managers',
         icon: 'gear',
-        label: 'Process Manager',
-        href: '/process',
-        type: 'navigation'
+        label: 'Process Managers',
+        items: [
+            {
+                id: 'process',
+                icon: 'workflow',
+                label: 'Process Manager',
+                href: '/process',
+                type: 'navigation'
+            },
+            {
+                id: 'thread',
+                icon: 'comment-discussion',
+                label: 'Thread Manager',
+                href: '/thread',
+                type: 'navigation'
+            },
+            {
+                id: 'task',
+                icon: 'checklist',
+                label: 'Task Orchestrator',
+                href: '/task',
+                type: 'navigation'
+            }
+        ]
     },
     {
-        id: 'thread',
-        icon: 'comment-discussion',
-        label: 'Thread Manager',
-        href: '/thread',
-        type: 'navigation'
-    },
-    {
-        id: 'task',
-        icon: 'checklist',
-        label: 'Task Orchestrator',
-        href: '/task',
-        type: 'navigation'
-    },
-
-    // Data & Analysis Services
-    {
-        id: 'data',
+        id: 'data-managers',
         icon: 'database',
-        label: 'Data Manager',
-        href: '/data',
-        type: 'navigation'
+        label: 'Data Managers',
+        items: [
+            {
+                id: 'data',
+                icon: 'server',
+                label: 'Data Manager',
+                href: '/data',
+                type: 'navigation'
+            },
+            {
+                id: 'analysis',
+                icon: 'graph-line',
+                label: 'Analysis Manager',
+                href: '/analysis',
+                type: 'navigation'
+            },
+            {
+                id: 'decision',
+                icon: 'pie-chart',
+                label: 'Decision Analytics',
+                href: '/decision',
+                type: 'navigation'
+            }
+        ]
     },
     {
-        id: 'analysis',
-        icon: 'graph-line',
-        label: 'Analysis Manager',
-        href: '/analysis',
-        type: 'navigation'
-    },
-    {
-        id: 'decision',
-        icon: 'pie-chart',
-        label: 'Decision Analytics',
-        href: '/decision',
-        type: 'navigation'
-    },
-
-    // Model & Simulation Services
-    {
-        id: 'model',
+        id: 'model-managers',
         icon: 'package',
-        label: 'Model Manager',
-        href: '/model',
-        type: 'navigation'
+        label: 'Model Managers',
+        items: [
+            {
+                id: 'model',
+                icon: 'layers',
+                label: 'Model Manager',
+                href: '/model',
+                type: 'navigation'
+            },
+            {
+                id: 'simulation',
+                icon: 'pulse',
+                label: 'Simulation Manager',
+                href: '/simulation',
+                type: 'navigation'
+            },
+            {
+                id: 'parameter',
+                icon: 'settings',
+                label: 'Parameter Manager',
+                href: '/parameter',
+                type: 'navigation'
+            }
+        ]
     },
     {
-        id: 'simulation',
-        icon: 'pulse',
-        label: 'Simulation Manager',
-        href: '/simulation',
-        type: 'navigation'
+        id: 'system-services',
+        icon: 'tools',
+        label: 'System Services',
+        items: [
+            {
+                id: 'memory',
+                icon: 'archive',
+                label: 'Memory Manager',
+                href: '/memory',
+                type: 'navigation'
+            },
+            {
+                id: 'requirements',
+                icon: 'list-tree',
+                label: 'Requirements Extractor',
+                href: '/requirements',
+                type: 'navigation'
+            },
+            {
+                id: 'event',
+                icon: 'broadcast',
+                label: 'Event Manager',
+                href: '/event',
+                type: 'navigation'
+            },
+            {
+                id: 'error',
+                icon: 'warning',
+                label: 'Error Manager',
+                href: '/error',
+                type: 'navigation'
+            }
+        ]
     },
     {
-        id: 'parameter',
-        icon: 'settings',
-        label: 'Parameter Manager',
-        href: '/parameter',
-        type: 'navigation'
-    },
-
-    // Memory & Knowledge Services  
-    {
-        id: 'memory',
-        icon: 'archive',
-        label: 'Memory Manager',
-        href: '/memory',
-        type: 'navigation'
-    },
-    {
-        id: 'requirements',
-        icon: 'list-tree',
-        label: 'Requirements Extractor',
-        href: '/requirements',
-        type: 'navigation'
-    },
-
-    // System Services
-    {
-        id: 'event',
-        icon: 'broadcast',
-        label: 'Event Manager',
-        href: '/event',
-        type: 'navigation'
-    },
-    {
-        id: 'error',
-        icon: 'warning',
-        label: 'Error Manager',
-        href: '/error',
-        type: 'navigation'
-    },
-
-    // Decision Support
-    {
-        id: 'aads',
+        id: 'assistant',
         icon: 'star-full',
         label: 'Agent Assistant (AADS)',
         href: '/aads',
         type: 'navigation'
-    },
-
-    // System Settings
-    {
-        id: 'settings',
-        icon: 'settings-gear',
-        label: 'Settings',
-        href: '/settings',
-        type: 'navigation'
-    },
+    }
 ];
 
 function ActivityBar({ activeView, onViewChange }: { activeView: string; onViewChange: (view: string) => void }) {
     const pathname = usePathname();
+    const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+    const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
-    const handleItemClick = (item: typeof dadmsActivityItems[0]) => {
+    const handleItemClick = (item: NavigationItem) => {
         if (item.type === 'view') {
             onViewChange(item.view!);
         } else if (item.type === 'navigation' && item.href) {
-            // For navigation items, we'll use Next.js navigation
             window.location.href = item.href;
         }
     };
 
+    const handleGroupClick = (group: NavigationGroup) => {
+        if (group.items) {
+            // For groups, just show the popout on hover
+            return;
+        } else {
+            // For single items like AADS, navigate directly
+            if (group.href) {
+                window.location.href = group.href;
+            }
+        }
+    };
+
+    const isGroupActive = (group: NavigationGroup) => {
+        if (group.items) {
+            return group.items.some((item: NavigationItem) =>
+                item.type === 'view' ? activeView === item.view : pathname === item.href
+            );
+        } else {
+            return pathname === group.href;
+        }
+    };
+
+    const isItemActive = (item: NavigationItem) => {
+        return item.type === 'view' ? activeView === item.view : pathname === item.href;
+    };
+
+    const handleMouseEnter = (groupId: string) => {
+        if (hoverTimeout) {
+            clearTimeout(hoverTimeout);
+            setHoverTimeout(null);
+        }
+        setHoveredGroup(groupId);
+    };
+
+    const handleMouseLeave = () => {
+        const timeout = setTimeout(() => {
+            setHoveredGroup(null);
+        }, 300); // 300ms delay before hiding
+        setHoverTimeout(timeout);
+    };
+
     return (
         <div className="vscode-activitybar">
-            {dadmsActivityItems.map((item) => {
-                const isActive = item.type === 'view'
-                    ? activeView === item.view
-                    : pathname === item.href;
-
-                return (
+            {dadmsActivityGroups.map((group) => (
+                <div
+                    key={group.id}
+                    className="activity-group"
+                    onMouseEnter={() => handleMouseEnter(group.id)}
+                    onMouseLeave={handleMouseLeave}
+                >
                     <div
-                        key={item.id}
-                        className={`vscode-activitybar-item ${isActive ? 'active' : ''}`}
-                        onClick={() => handleItemClick(item)}
-                        title={item.label}
+                        className={`vscode-activitybar-item ${isGroupActive(group) ? 'active' : ''}`}
+                        onClick={() => handleGroupClick(group)}
+                        title={group.label}
                     >
-                        <i className={`codicon codicon-${item.icon}`}></i>
+                        <i className={`codicon codicon-${group.icon}`}></i>
                     </div>
-                );
-            })}
+
+                    {/* Popout Menu */}
+                    {group.items && hoveredGroup === group.id && (
+                        <div className="activity-popout">
+                            <div className="activity-popout-header">
+                                {group.label}
+                            </div>
+                            <div className="activity-popout-items">
+                                {group.items.map((item: any) => (
+                                    <div
+                                        key={item.id}
+                                        className={`activity-popout-item ${isItemActive(item) ? 'active' : ''}`}
+                                        onClick={() => handleItemClick(item)}
+                                    >
+                                        <i className={`codicon codicon-${item.icon}`}></i>
+                                        <span>{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ))}
         </div>
     );
 }
@@ -294,13 +399,13 @@ function TabBar() {
 
     const getPageTitle = (path: string | null): string => {
         if (!path) return 'DADMS 2.0';
-        const item = dadmsActivityItems.find(i => i.href === path);
+        const item = dadmsActivityGroups.flatMap(group => group.items || []).find(i => i?.href === path);
         return item ? item.label : 'DADMS 2.0';
     };
 
     const getPageIcon = (path: string | null): string => {
         if (!path) return 'home';
-        const item = dadmsActivityItems.find(i => i.href === path);
+        const item = dadmsActivityGroups.flatMap(group => group.items || []).find(i => i?.href === path);
         return item ? item.icon : 'home';
     };
 
