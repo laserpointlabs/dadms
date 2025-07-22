@@ -40,6 +40,13 @@ const dadmsActivityItems = [
         type: 'navigation'
     },
     {
+        id: 'bpmn',
+        icon: 'graph',
+        label: 'BPMN Workspace',
+        href: '/bpmn',
+        type: 'navigation'
+    },
+    {
         id: 'llm',
         icon: 'robot',
         label: 'LLM Playground',
