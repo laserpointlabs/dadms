@@ -11,6 +11,7 @@ import "./globals.css";
 
 // DADMS Activity Bar Items (replaces generic VS Code icons with DADMS functionality)
 const dadmsActivityItems = [
+    // Core System Navigation
     {
         id: 'projects',
         icon: 'project',
@@ -32,13 +33,8 @@ const dadmsActivityItems = [
         view: 'explorer',
         type: 'view'
     },
-    {
-        id: 'ontology',
-        icon: 'type-hierarchy',
-        label: 'Ontology Builder',
-        href: '/ontology',
-        type: 'navigation'
-    },
+
+    // Workspace Services
     {
         id: 'bpmn',
         icon: 'graph',
@@ -46,6 +42,15 @@ const dadmsActivityItems = [
         href: '/bpmn',
         type: 'navigation'
     },
+    {
+        id: 'ontology',
+        icon: 'type-hierarchy',
+        label: 'Ontology Workspace',
+        href: '/ontology',
+        type: 'navigation'
+    },
+
+    // AI & LLM Services
     {
         id: 'llm',
         icon: 'robot',
@@ -60,25 +65,13 @@ const dadmsActivityItems = [
         href: '/context',
         type: 'navigation'
     },
+
+    // Process & Workflow Management
     {
-        id: 'settings',
-        icon: 'settings-gear',
-        label: 'Settings',
-        href: '/settings',
-        type: 'navigation'
-    },
-    {
-        id: 'bpmn',
-        icon: 'graph',
-        label: 'BPMN Workspace',
-        href: '/bpmn',
-        type: 'navigation'
-    },
-    {
-        id: 'analysis',
-        icon: 'graph-line',
-        label: 'Analysis Manager',
-        href: '/analysis',
+        id: 'process',
+        icon: 'gear',
+        label: 'Process Manager',
+        href: '/process',
         type: 'navigation'
     },
     {
@@ -89,10 +82,106 @@ const dadmsActivityItems = [
         type: 'navigation'
     },
     {
+        id: 'task',
+        icon: 'checklist',
+        label: 'Task Orchestrator',
+        href: '/task',
+        type: 'navigation'
+    },
+
+    // Data & Analysis Services
+    {
+        id: 'data',
+        icon: 'database',
+        label: 'Data Manager',
+        href: '/data',
+        type: 'navigation'
+    },
+    {
+        id: 'analysis',
+        icon: 'graph-line',
+        label: 'Analysis Manager',
+        href: '/analysis',
+        type: 'navigation'
+    },
+    {
+        id: 'decision',
+        icon: 'pie-chart',
+        label: 'Decision Analytics',
+        href: '/decision',
+        type: 'navigation'
+    },
+
+    // Model & Simulation Services
+    {
+        id: 'model',
+        icon: 'package',
+        label: 'Model Manager',
+        href: '/model',
+        type: 'navigation'
+    },
+    {
+        id: 'simulation',
+        icon: 'pulse',
+        label: 'Simulation Manager',
+        href: '/simulation',
+        type: 'navigation'
+    },
+    {
+        id: 'parameter',
+        icon: 'settings',
+        label: 'Parameter Manager',
+        href: '/parameter',
+        type: 'navigation'
+    },
+
+    // Memory & Knowledge Services  
+    {
+        id: 'memory',
+        icon: 'archive',
+        label: 'Memory Manager',
+        href: '/memory',
+        type: 'navigation'
+    },
+    {
+        id: 'requirements',
+        icon: 'list-tree',
+        label: 'Requirements Extractor',
+        href: '/requirements',
+        type: 'navigation'
+    },
+
+    // System Services
+    {
+        id: 'event',
+        icon: 'broadcast',
+        label: 'Event Manager',
+        href: '/event',
+        type: 'navigation'
+    },
+    {
+        id: 'error',
+        icon: 'warning',
+        label: 'Error Manager',
+        href: '/error',
+        type: 'navigation'
+    },
+
+    // Decision Support
+    {
         id: 'aads',
         icon: 'star-full',
-        label: 'Decision Assistant',
+        label: 'Agent Assistant (AADS)',
         href: '/aads',
+        type: 'navigation'
+    },
+
+    // System Settings
+    {
+        id: 'settings',
+        icon: 'settings-gear',
+        label: 'Settings',
+        href: '/settings',
         type: 'navigation'
     },
 ];
@@ -304,6 +393,15 @@ export default function RootLayout({
                             {/* Title Bar */}
                             <div className="vscode-titlebar">
                                 <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
+                                <div className="titlebar-actions">
+                                    <div
+                                        className="titlebar-action"
+                                        onClick={() => window.location.href = '/settings'}
+                                        title="Configuration & Settings"
+                                    >
+                                        <i className="codicon codicon-settings-gear"></i>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Main Layout */}
@@ -338,3 +436,4 @@ export default function RootLayout({
         </html>
     );
 }
+
