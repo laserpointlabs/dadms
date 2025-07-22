@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 import { CementoService } from '../integrations/cementoService';
-import { ApiResponse, CementoSyncRequest, ImportFromDrawIORequest } from '../models/workspace';
 import { WorkspaceService } from '../services/workspaceService';
+import { ApiResponse, ImportFromDrawIORequest, CementoSyncRequest } from '../models/workspace';
 
 const cementoService = new CementoService();
 const workspaceService = new WorkspaceService();
+
+// Extend Express Request to include file from multer
+interface MulterRequest extends Request {
+    file?: Express.Multer.File;
+}
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -14,67 +19,72 @@ const upload = multer({
     limits: {
         fileSize: 10 * 1024 * 1024, // 10MB limit
     },
-    fileFilter: (req, file, cb) => {
+    fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
         // Accept draw.io files and common ontology formats
         const allowedMimes = [
             'application/xml',
             'text/xml',
-            'application/vnd.jgraph.mxfile',
-            'text/turtle',
+            'application/octet-stream', // Sometimes draw.io files are detected as this
+            'text/plain',
             'application/rdf+xml',
-            'application/owl+xml'
+            'text/turtle',
+            'application/ld+json'
         ];
 
-        const allowedExtensions = ['.drawio', '.xml', '.ttl', '.rdf', '.owl'];
-        const hasValidExtension = allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext));
+        const allowedExts = ['.drawio', '.xml', '.owl', '.ttl', '.rdf', '.jsonld', '.n3'];
+        const fileExt = file.originalname.toLowerCase();
+        const hasValidExt = allowedExts.some(ext => fileExt.endsWith(ext));
 
-        if (allowedMimes.includes(file.mimetype) || hasValidExtension) {
+        if (allowedMimes.includes(file.mimetype) || hasValidExt) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only draw.io, XML, TTL, RDF, and OWL files are allowed.'));
+            cb(new Error('Unsupported file type. Please upload .drawio, .xml, .owl, .ttl, .rdf, or .jsonld files.'));
         }
     }
 });
 
 export class IntegrationController {
-    // Multer middleware for file uploads
-    uploadMiddleware = upload.single('file');
-
     /**
-     * Import from draw.io
+     * Import from draw.io file and convert to ontology
      */
-    async importFromDrawIO(req: Request, res: Response): Promise<void> {
+    async importFromDrawIO(req: MulterRequest, res: Response): Promise<void> {
         try {
             const { workspaceId } = req.params;
 
-            if (!req.file) {
-                res.status(400).json(this.createErrorResponse('Bad request', 'No file uploaded'));
+            if (!workspaceId) {
+                res.status(400).json({
+                    success: false,
+                    error: 'Workspace ID is required'
+                });
                 return;
             }
 
-            // Parse options
-            const options: ImportFromDrawIORequest = {
-                interpretation_mode: (req.body.options?.interpretation_mode) || 'flexible_mapping',
-                generate_iris: req.body.options?.generate_iris !== false // Default to true
-            };
+            if (!req.file) {
+                res.status(400).json({
+                    success: false,
+                    error: 'No file uploaded'
+                });
+                return;
+            }
 
-            console.log(`Importing draw.io file for workspace ${workspaceId}:`, {
+            const fileInfo = {
                 filename: req.file.originalname,
                 size: req.file.size,
-                options
-            });
+                mimetype: req.file.mimetype
+            };
 
-            // Convert draw.io to turtle using cemento
+            // Convert draw.io to ontology format using cemento
             const conversionResult = await cementoService.convertDrawioToTurtle(req.file.buffer, {
-                autoGenerateLayout: true,
+                preserveLayout: true,
                 validateOnImport: true
             });
 
             if (!conversionResult.success) {
-                res.status(400).json(this.createErrorResponse(
-                    'Conversion failed',
-                    conversionResult.errors?.join('; ') || 'Unknown conversion error'
-                ));
+                res.status(422).json({
+                    success: false,
+                    error: 'Failed to convert draw.io file',
+                    details: conversionResult.errors
+                });
                 return;
             }
 
@@ -83,23 +93,34 @@ export class IntegrationController {
             const ontology = await workspaceService.addOntology(workspaceId, {
                 name: ontologyName,
                 description: `Imported from draw.io file: ${req.file.originalname}`,
-                action: 'import_existing',
                 format: 'turtle',
-                content: conversionResult.content,
-                iri: `http://example.com/ontology/${ontologyName.toLowerCase().replace(/\s+/g, '-')}`
+                content: conversionResult.content ? JSON.stringify(conversionResult.content) : '{}',
+                visual_layout: {
+                    type: 'drawio',
+                    data: req.file.buffer.toString('utf8'),
+                    auto_layout: false
+                }
             });
 
-            res.json(this.createSuccessResponse({
+            res.json({
                 success: true,
-                message: 'Draw.io file imported successfully',
-                ontology_id: ontology.id,
-                metadata: conversionResult.metadata,
-                warnings: conversionResult.warnings
-            }));
+                data: {
+                    ontology,
+                    fileInfo,
+                    conversionResult: {
+                        success: conversionResult.success,
+                        metadata: conversionResult.metadata
+                    }
+                }
+            });
 
         } catch (error) {
-            console.error('Draw.io import error:', error);
-            res.status(500).json(this.createErrorResponse('Internal server error', 'Failed to import draw.io file'));
+            console.error('Import from draw.io error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to import from draw.io',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     }
 
@@ -110,184 +131,231 @@ export class IntegrationController {
         try {
             const { workspaceId, ontologyId } = req.params;
 
-            // Get the ontology
-            const ontology = await workspaceService.getOntology(workspaceId, ontologyId);
-            if (!ontology) {
-                res.status(404).json(this.createErrorResponse('Not found', 'Ontology not found'));
+            if (!workspaceId || !ontologyId) {
+                res.status(400).json({
+                    success: false,
+                    error: 'Workspace ID and Ontology ID are required'
+                });
                 return;
             }
 
-            // Convert content to turtle format if needed
-            let turtleContent: string;
-            if (ontology.format === 'turtle') {
-                turtleContent = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
-            } else {
-                // For now, assume content is already in a usable format
-                // In a real implementation, you'd convert from other formats to turtle
-                turtleContent = JSON.stringify(ontology.content);
+            const ontology = await workspaceService.getOntology(workspaceId, ontologyId);
+            if (!ontology) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Ontology not found'
+                });
+                return;
             }
 
-            // Convert turtle to draw.io using cemento
-            const conversionResult = await cementoService.convertTurtleToDrawio(turtleContent, {
+            // Check if we have existing visual layout
+            if (ontology.visual_layout && ontology.visual_layout.type === 'drawio') {
+                // Return existing draw.io layout
+                res.setHeader('Content-Type', 'application/xml');
+                res.setHeader('Content-Disposition', `attachment; filename="${ontology.name}.drawio"`);
+                res.send(ontology.visual_layout.data);
+                return;
+            }
+
+            // Convert ontology to draw.io format using cemento
+            const contentStr = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
+            const conversionResult = await cementoService.convertTurtleToDrawio(contentStr, {
                 autoGenerateLayout: true,
-                preserveLayout: true
+                preserveLayout: false
             });
 
             if (!conversionResult.success) {
-                res.status(500).json(this.createErrorResponse(
-                    'Conversion failed',
-                    conversionResult.errors?.join('; ') || 'Unknown conversion error'
-                ));
+                res.status(422).json({
+                    success: false,
+                    error: 'Failed to convert ontology to draw.io format',
+                    details: conversionResult.errors
+                });
                 return;
             }
 
-            // Send the draw.io file as download
-            const filename = `${ontology.name.replace(/\s+/g, '_')}.drawio`;
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
             res.setHeader('Content-Type', 'application/xml');
+            res.setHeader('Content-Disposition', `attachment; filename="${ontology.name}.drawio"`);
             res.send(conversionResult.content);
 
         } catch (error) {
-            console.error('Draw.io export error:', error);
-            res.status(500).json(this.createErrorResponse('Internal server error', 'Failed to export to draw.io'));
+            console.error('Export to draw.io error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to export to draw.io',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     }
 
     /**
-     * Sync with Cemento
+     * Import ontology from standard formats (OWL, Turtle, RDF)
+     */
+    async importOntology(req: MulterRequest, res: Response): Promise<void> {
+        try {
+            const { workspaceId } = req.params;
+
+            if (!workspaceId) {
+                res.status(400).json({
+                    success: false,
+                    error: 'Workspace ID is required'
+                });
+                return;
+            }
+
+            if (!req.file) {
+                res.status(400).json({
+                    success: false,
+                    error: 'No file uploaded'
+                });
+                return;
+            }
+
+            const fileContent = req.file.buffer.toString('utf8');
+            const fileExtension = req.file.originalname.split('.').pop()?.toLowerCase();
+
+            // Determine format from file extension
+            let format: 'owl' | 'turtle' | 'rdf' | 'jsonld' = 'turtle';
+            switch (fileExtension) {
+                case 'owl':
+                case 'xml':
+                    format = 'owl';
+                    break;
+                case 'ttl':
+                    format = 'turtle';
+                    break;
+                case 'rdf':
+                    format = 'rdf';
+                    break;
+                case 'jsonld':
+                    format = 'jsonld';
+                    break;
+            }
+
+            // For now, we'll store the raw content and create basic draw.io representation
+            const ontologyName = req.file.originalname.replace(/\.(owl|ttl|rdf|jsonld|xml)$/i, '');
+            const ontology = await workspaceService.addOntology(workspaceId, {
+                name: ontologyName,
+                description: `Imported from ${format.toUpperCase()} file: ${req.file.originalname}`,
+                format: format,
+                content: fileContent,
+                visual_layout: {
+                    type: 'drawio',
+                    data: '<?xml version="1.0" encoding="UTF-8"?><mxfile><diagram></diagram></mxfile>',
+                    auto_layout: true
+                }
+            });
+
+            res.json({
+                success: true,
+                data: {
+                    ontology,
+                    conversionResult: {
+                        success: true,
+                        metadata: { format, size: fileContent.length },
+                        errors: []
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Import ontology error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to import ontology',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    /**
+     * Sync ontology with cemento (bi-directional conversion)
      */
     async syncWithCemento(req: Request, res: Response): Promise<void> {
         try {
-            const { workspaceId } = req.params;
-            const syncRequest: CementoSyncRequest = req.body;
+            const { workspaceId, ontologyId } = req.params;
+            const { operation, sourceFormat, targetFormat, options } = req.body as CementoSyncRequest;
 
-            if (!syncRequest.cemento_project_id) {
-                res.status(400).json(this.createErrorResponse('Bad request', 'cemento_project_id is required'));
+            if (!workspaceId || !ontologyId) {
+                res.status(400).json({
+                    success: false,
+                    error: 'Workspace ID and Ontology ID are required'
+                });
                 return;
             }
 
-            // For now, we'll implement a basic version that focuses on file conversion
-            // A full implementation would integrate with Cemento's project management
-
-            console.log(`Syncing workspace ${workspaceId} with Cemento project ${syncRequest.cemento_project_id}:`, {
-                direction: syncRequest.direction,
-                options: syncRequest.options
-            });
-
-            // Test cemento installation
-            const cementoTest = await cementoService.testCementoInstallation();
-            if (!cementoTest.available) {
-                res.status(503).json(this.createErrorResponse(
-                    'Service unavailable',
-                    `Cemento is not available: ${cementoTest.error}`
-                ));
+            const ontology = await workspaceService.getOntology(workspaceId, ontologyId);
+            if (!ontology) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Ontology not found'
+                });
                 return;
             }
 
-            // Placeholder response - in a real implementation this would:
-            // 1. Connect to Cemento project
-            // 2. Compare local vs remote ontologies
-            // 3. Handle conflicts based on merge_conflicts setting
-            // 4. Perform bidirectional sync if requested
+            let conversionResult;
+            let newStatus = ontology.status;
 
-            res.json(this.createSuccessResponse({
+            switch (operation) {
+                case 'validate':
+                    const contentStr = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
+                    conversionResult = await cementoService.validateOntology(contentStr, ontology.format);
+                    newStatus = conversionResult.success ? 'validated' : 'invalid';
+                    break;
+
+                case 'convert':
+                    if (sourceFormat === 'drawio' && targetFormat === 'turtle') {
+                        const drawioData = ontology.visual_layout?.data || '';
+                        conversionResult = await cementoService.convertDrawioToTurtle(Buffer.from(drawioData), options);
+                    } else {
+                        // For now, return a basic success response
+                        conversionResult = { success: true, content: ontology.content };
+                    }
+                    break;
+
+                default:
+                    res.status(400).json({
+                        success: false,
+                        error: 'Invalid operation. Supported operations: validate, convert'
+                    });
+                    return;
+            }
+
+            // Update ontology status
+            await workspaceService.updateOntology(workspaceId, ontologyId, { status: newStatus });
+
+            res.json({
                 success: true,
-                message: 'Cemento sync initiated',
-                cemento_version: cementoTest.version,
-                sync_status: 'completed',
-                conflicts_resolved: 0,
-                files_synced: 0
-            }));
+                data: {
+                    operation,
+                    result: conversionResult,
+                    ontology: {
+                        ...ontology,
+                        status: newStatus
+                    }
+                }
+            });
 
         } catch (error) {
             console.error('Cemento sync error:', error);
-            res.status(500).json(this.createErrorResponse('Internal server error', 'Failed to sync with Cemento'));
+            res.status(500).json({
+                success: false,
+                error: 'Failed to sync with cemento',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     }
 
     /**
-     * Validate ontology using Cemento
+     * Get upload middleware for draw.io files
      */
-    async validateOntology(req: Request, res: Response): Promise<void> {
-        try {
-            const { workspaceId, ontologyId } = req.params;
-
-            // Get the ontology
-            const ontology = await workspaceService.getOntology(workspaceId, ontologyId);
-            if (!ontology) {
-                res.status(404).json(this.createErrorResponse('Not found', 'Ontology not found'));
-                return;
-            }
-
-            // Prepare content for validation
-            const content = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
-
-            // Validate using cemento
-            const validationResult = await cementoService.validateOntology(content, ontology.format as any);
-
-            // Update ontology status based on validation
-            const newStatus = validationResult.success ? 'valid' : 'invalid';
-            await workspaceService.updateOntology(workspaceId, ontologyId, { status: newStatus });
-
-            res.json(this.createSuccessResponse({
-                is_valid: validationResult.success,
-                reasoner_used: 'cemento',
-                timestamp: new Date().toISOString(),
-                metadata: validationResult.metadata,
-                errors: validationResult.errors || [],
-                warnings: validationResult.warnings || []
-            }));
-
-        } catch (error) {
-            console.error('Ontology validation error:', error);
-            res.status(500).json(this.createErrorResponse('Internal server error', 'Failed to validate ontology'));
-        }
+    getDrawIOUploadMiddleware() {
+        return upload.single('file');
     }
 
     /**
-     * Get Cemento service status
+     * Get upload middleware for ontology files
      */
-    async getCementoStatus(req: Request, res: Response): Promise<void> {
-        try {
-            const status = await cementoService.testCementoInstallation();
-
-            res.json(this.createSuccessResponse({
-                available: status.available,
-                version: status.version,
-                error: status.error,
-                features: {
-                    drawio_to_turtle: status.available,
-                    turtle_to_drawio: status.available,
-                    validation: status.available,
-                    auto_layout: status.available
-                }
-            }));
-
-        } catch (error) {
-            console.error('Cemento status error:', error);
-            res.status(500).json(this.createErrorResponse('Internal server error', 'Failed to get Cemento status'));
-        }
-    }
-
-    /**
-     * Create success response
-     */
-    private createSuccessResponse<T>(data: T, message?: string): ApiResponse<T> {
-        return {
-            success: true,
-            data,
-            message
-        };
-    }
-
-    /**
-     * Create error response
-     */
-    private createErrorResponse(error: string, message?: string): ApiResponse {
-        return {
-            success: false,
-            error,
-            message
-        };
+    getOntologyUploadMiddleware() {
+        return upload.single('file');
     }
 } 

@@ -678,16 +678,23 @@
             </div>
 
             <div class="menu-item">
-                <button class="menu-button" onclick="toggleMenu('ontology-menu')">Ontology</button>
+                <button class="menu-button" onclick="toggleMenu('ontology-menu')">VOWL Ontology</button>
                 <div class="menu-dropdown" id="ontology-menu">
                     <button class="menu-dropdown-item" onclick="addClass()">
-                        Add Class <span class="shortcut">Ctrl+Shift+C</span>
+                        Add Class (Circle) <span class="shortcut">Ctrl+Shift+C</span>
                     </button>
                     <button class="menu-dropdown-item" onclick="addProperty()">
-                        Add Property <span class="shortcut">Ctrl+Shift+P</span>
+                        Add Object Property (Diamond) <span class="shortcut">Ctrl+Shift+P</span>
+                    </button>
+                    <button class="menu-dropdown-item" onclick="addDataProperty()">
+                        Add Data Property (Red Diamond) <span class="shortcut">Ctrl+Shift+D</span>
                     </button>
                     <button class="menu-dropdown-item" onclick="addIndividual()">
-                        Add Individual <span class="shortcut">Ctrl+Shift+I</span>
+                        Add Individual (Rounded Rect) <span class="shortcut">Ctrl+Shift+I</span>
+                    </button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-dropdown-item" onclick="addSubClassEdge()">
+                        SubClass Relationship <span class="shortcut">Ctrl+Shift+S</span>
                     </button>
                     <div class="menu-separator"></div>
                     <button class="menu-dropdown-item" onclick="validateOntology()">
@@ -772,25 +779,43 @@
                             </div>
                         </div>
 
-                        <!-- Ontology tools as a collapsible group -->
+                        <!-- VOWL Ontology tools as a collapsible group -->
                         <div class="property-group">
                             <div class="property-group-header" onclick="togglePropertyGroup(this)">
                                 <span class="collapse-icon">▼</span>
-                                <h4>Ontology Tools</h4>
+                                <h4>VOWL Ontology Tools</h4>
                             </div>
                             <div class="property-group-content">
                                 <div style="padding: 12px;">
                                     <button class="toolbar-btn" onclick="addClass()"
-                                        style="width: 100%; margin-bottom: 4px;">Add Class</button>
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        🔵 Add Class (Circle)
+                                    </button>
                                     <button class="toolbar-btn" onclick="addProperty()"
-                                        style="width: 100%; margin-bottom: 4px;">Add Property</button>
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        🔶 Add Object Property (Diamond)
+                                    </button>
+                                    <button class="toolbar-btn" onclick="addDataProperty()"
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        🔸 Add Data Property (Red Diamond)
+                                    </button>
                                     <button class="toolbar-btn" onclick="addIndividual()"
-                                        style="width: 100%; margin-bottom: 4px;">Add Individual</button>
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        📦 Add Individual (Rounded Rect)
+                                    </button>
+                                    <div style="margin: 8px 0; height: 1px; background: var(--theme-border);"></div>
+                                    <button class="toolbar-btn" onclick="addSubClassEdge()"
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        ↗️ SubClass Relationship
+                                    </button>
                                     <div style="margin: 8px 0; height: 1px; background: var(--theme-border);"></div>
                                     <button class="toolbar-btn" onclick="validateOntology()"
-                                        style="width: 100%; margin-bottom: 4px;">Validate</button>
-                                    <button class="toolbar-btn" onclick="reasonOntology()" style="width: 100%;">Run
-                                        Reasoner</button>
+                                        style="width: 100%; margin-bottom: 4px;">
+                                        ✅ Validate Ontology
+                                    </button>
+                                    <button class="toolbar-btn" onclick="reasonOntology()" style="width: 100%;">
+                                        🧠 Run Reasoner
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -804,12 +829,18 @@
                             <div class="property-group-content collapsed">
                                 <div style="padding: 12px; font-size: 11px; line-height: 1.4;">
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+N</strong> - New ontology</div>
-                                    <div style="margin-bottom: 6px;"><strong>Ctrl+S</strong> - Save</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+S</strong> - Save diagram</div>
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+O</strong> - Import ontology</div>
-                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+C</strong> - Add class</div>
-                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+P</strong> - Add property</div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+C</strong> - Add class (circle)
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+P</strong> - Add object property
+                                    </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+D</strong> - Add data property
+                                    </div>
                                     <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+I</strong> - Add individual
                                     </div>
+                                    <div style="margin-bottom: 6px;"><strong>Ctrl+Shift+S</strong> - Add subclass
+                                        relation</div>
                                     <div style="margin-bottom: 6px;"><strong>F7</strong> - Validate ontology</div>
                                     <div><strong>F8</strong> - Run reasoner</div>
                                 </div>
@@ -850,7 +881,7 @@
         let selectedElement = null;
         let hasUnsavedChanges = false;
 
-        // Configuration for draw.io embed
+        // Configuration for draw.io embed with VOWL library
         const drawIOConfig = {
             css: `
                 .geMenubarContainer { background: var(--theme-bg-secondary) !important; }
@@ -860,10 +891,16 @@
                 .geToolbarContainer { background: var(--theme-bg-secondary) !important; }
             `,
             customFonts: [],
-            customLibraries: [],
-            enabledLibraries: ['general', 'uml', 'er', 'flowchart', 'basic', 'arrows2'],
+            customLibraries: [
+                'https://raw.githubusercontent.com/KMax/draw.io-vowl/master/VOWL'
+            ],
+            enabledLibraries: ['vowl'], // Only enable VOWL library
+            libraries: 0, // Hide default libraries
             dark: currentTheme === 'dark'
         };
+
+        // VOWL library URL for loading
+        const VOWL_LIBRARY_URL = 'https://raw.githubusercontent.com/KMax/draw.io-vowl/master/VOWL';
 
         // Theme management functions
         function toggleTheme() {
@@ -930,16 +967,16 @@
             });
         }
 
-        // Initialize draw.io editor
+        // Initialize draw.io editor with VOWL library
         async function initDrawIOEditor() {
             try {
-                updateStatus('Loading draw.io editor...', 'info');
+                updateStatus('Loading VOWL ontology editor...', 'info');
 
                 // Load draw.io embed script
                 const script = document.createElement('script');
                 script.src = 'https://embed.diagrams.net/js/viewer-static.min.js';
                 script.onload = () => {
-                    initializeDrawIO();
+                    initializeDrawIOWithVOWL();
                 };
                 script.onerror = () => {
                     throw new Error('Failed to load draw.io script');
@@ -952,10 +989,10 @@
             }
         }
 
-        function initializeDrawIO() {
+        function initializeDrawIOWithVOWL() {
             const container = document.getElementById('drawio-container');
 
-            // Initialize draw.io with embedding configuration
+            // Initialize draw.io with VOWL-specific configuration
             const params = {
                 embed: 1,
                 spin: 1,
@@ -966,13 +1003,25 @@
                 noExitBtn: 1,
                 dark: currentTheme === 'dark' ? 1 : 0,
                 sketch: 0,
-                // Custom toolbar configuration for ontology modeling
-                toolbar: JSON.stringify([
-                    'pages', 'layers', 'zoom', 'undo', 'redo', 'delete',
-                    'saveAs', 'print', 'download', 'image', 'import'
-                ]),
-                // Enable specific libraries for ontology modeling
-                libraries: 'general;uml;er;flowchart;basic;arrows2'
+                // Hide ALL default libraries and load only VOWL
+                libs: 0, // Disable default libraries
+                clibs: 'U', // Custom libraries only
+                // Hide template dialog
+                splash: 0,
+                // Custom configuration
+                ui: 'kennedy', // Use kennedy UI theme
+                // Load with empty diagram
+                xml: encodeURIComponent(`<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="embed.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="DADMS VOWL Editor" version="22.1.16" etag="custom" type="embed">
+  <diagram name="Ontology" id="vowl-ontology">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`)
             };
 
             // Build the URL with parameters
@@ -993,18 +1042,61 @@
             // Set up message handling for draw.io
             window.addEventListener('message', handleDrawIOMessage);
 
-            // Wait for draw.io to load
+            // Wait for draw.io to load, then configure with VOWL
             setTimeout(() => {
-                hideLoadingOverlay();
-                updateStatus('Ontology modeler ready! Use the toolbar to start creating your ontology.', 'success');
+                configureVOWLLibrary(iframe);
+            }, 3000); // Increased timeout for better loading
+        }
 
-                // Notify parent that we're ready
+        function configureVOWLLibrary(iframe) {
+            try {
+                updateStatus('Configuring VOWL library...', 'info');
+
+                // First, configure draw.io to hide default libraries
+                const configMessage = {
+                    action: 'configure',
+                    config: {
+                        defaultLibraries: false, // Hide default libraries
+                        compressXml: false,
+                        css: drawIOConfig.css
+                    }
+                };
+                iframe.contentWindow.postMessage(JSON.stringify(configMessage), '*');
+
+                // Load VOWL library from URL
+                setTimeout(() => {
+                    const loadLibraryMessage = {
+                        action: 'template',
+                        xml: null,
+                        libs: ['https://raw.githubusercontent.com/KMax/draw.io-vowl/master/VOWL']
+                    };
+                    iframe.contentWindow.postMessage(JSON.stringify(loadLibraryMessage), '*');
+
+                    setTimeout(() => {
+                        hideLoadingOverlay();
+                        updateStatus('VOWL Ontology Modeler ready! Click the toolbar buttons to add VOWL shapes directly.', 'success');
+
+                        // Notify parent that we're ready
+                        if (window.parent !== window) {
+                            window.parent.postMessage({
+                                type: 'drawio-ready'
+                            }, '*');
+                        }
+                    }, 2000);
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error configuring VOWL library:', error);
+                updateStatus('VOWL library loaded with basic shapes. Use the toolbar buttons to add ontology elements.', 'warning');
+
+                hideLoadingOverlay();
+                // Still notify parent that we're ready
                 if (window.parent !== window) {
                     window.parent.postMessage({
                         type: 'drawio-ready'
                     }, '*');
                 }
-            }, 2000);
+            }
         }
 
         function handleDrawIOMessage(event) {
@@ -1014,7 +1106,7 @@
 
                     switch (message.event) {
                         case 'init':
-                            updateStatus('Draw.io initialized', 'success');
+                            updateStatus('VOWL Ontology Modeler initialized', 'success');
                             break;
 
                         case 'autosave':
@@ -1033,10 +1125,11 @@
                             break;
 
                         case 'configure':
-                            // Send configuration to draw.io
+                            // Send VOWL-specific configuration to draw.io
                             sendToDrawIO({
                                 action: 'configure',
-                                config: drawIOConfig
+                                config: drawIOConfig,
+                                libs: [VOWL_LIBRARY_URL]
                             });
                             break;
 
@@ -1056,29 +1149,139 @@
             }
         }
 
-        // Ontology-specific functions
+        // VOWL-specific ontology functions - Direct insertion
         function addClass() {
+            // Try direct insertion using load action
             sendToDrawIO({
-                action: 'template',
-                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="NewClass" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+                action: 'load',
+                xml: createVOWLClass(),
+                merge: true
             });
-            updateStatus('Class template added', 'success');
+            updateStatus('VOWL Class added - Blue circles represent OWL classes', 'success');
         }
 
         function addProperty() {
             sendToDrawIO({
-                action: 'template',
-                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="hasProperty" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+                action: 'load',
+                xml: createVOWLObjectProperty(),
+                merge: true
             });
-            updateStatus('Property template added', 'success');
+            updateStatus('VOWL Object Property added - Yellow diamonds for object properties', 'success');
+        }
+
+        function addDataProperty() {
+            sendToDrawIO({
+                action: 'load',
+                xml: createVOWLDataProperty(),
+                merge: true
+            });
+            updateStatus('VOWL Data Property added - Red diamonds for data properties', 'success');
         }
 
         function addIndividual() {
             sendToDrawIO({
-                action: 'template',
-                xml: '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Individual" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="120" height="60" as="geometry"/></mxCell></root></mxGraphModel>'
+                action: 'load',
+                xml: createVOWLIndividual(),
+                merge: true
             });
-            updateStatus('Individual template added', 'success');
+            updateStatus('VOWL Individual added - Purple rounded rectangles for individuals', 'success');
+        }
+
+        function addSubClassEdge() {
+            updateStatus('To create SubClass relationship: Select a class, then draw an arrow to another class. Use Ctrl+drag to connect.', 'info');
+        }
+
+        // Create VOWL shape XML templates
+        function createVOWLClass() {
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="embed.diagrams.net" modified="${new Date().toISOString()}" agent="DADMS VOWL Editor" etag="vowl-class">
+  <diagram name="VOWL Class" id="vowl-class-${Date.now()}">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="class-${Date.now()}" value="NewClass" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="${getRandomX()}" y="${getRandomY()}" width="120" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`;
+        }
+
+        function createVOWLObjectProperty() {
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="embed.diagrams.net" modified="${new Date().toISOString()}" agent="DADMS VOWL Editor" etag="vowl-property">
+  <diagram name="VOWL Property" id="vowl-property-${Date.now()}">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="property-${Date.now()}" value="hasProperty" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="${getRandomX()}" y="${getRandomY()}" width="120" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`;
+        }
+
+        function createVOWLDataProperty() {
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="embed.diagrams.net" modified="${new Date().toISOString()}" agent="DADMS VOWL Editor" etag="vowl-data-property">
+  <diagram name="VOWL Data Property" id="vowl-data-property-${Date.now()}">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="dataprop-${Date.now()}" value="hasDataProperty" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="${getRandomX()}" y="${getRandomY()}" width="120" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`;
+        }
+
+        function createVOWLIndividual() {
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="embed.diagrams.net" modified="${new Date().toISOString()}" agent="DADMS VOWL Editor" etag="vowl-individual">
+  <diagram name="VOWL Individual" id="vowl-individual-${Date.now()}">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="individual-${Date.now()}" value="Individual" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="${getRandomX()}" y="${getRandomY()}" width="120" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`;
+        }
+
+        // Utility functions
+        function getRandomX() {
+            return Math.floor(Math.random() * 500) + 150;
+        }
+
+        function getRandomY() {
+            return Math.floor(Math.random() * 400) + 100;
+        }
+
+        // Helper function to insert VOWL shapes with proper positioning
+        function insertVOWLShape(shapeXML, shapeName) {
+            // Find a good position on the canvas (avoid overlapping)
+            const x = Math.floor(Math.random() * 400) + 100;
+            const y = Math.floor(Math.random() * 300) + 100;
+
+            // Update the position in the XML
+            const updatedXML = shapeXML.replace(/x="\d+"/, `x="${x}"`).replace(/y="\d+"/, `y="${y}"`);
+
+            sendToDrawIO({
+                action: 'template',
+                xml: updatedXML
+            });
         }
 
         async function convertDiagramToOntology(xmlData) {
@@ -1331,11 +1534,11 @@
         }
 
         function showKeyboardShortcuts() {
-            alert('Keyboard Shortcuts:\n\nCtrl+N - New ontology\nCtrl+S - Save\nCtrl+O - Import ontology\nCtrl+Shift+C - Add class\nCtrl+Shift+P - Add property\nCtrl+Shift+I - Add individual\nF7 - Validate ontology\nF8 - Run reasoner\nF11 - Toggle fullscreen');
+            alert('Keyboard Shortcuts:\n\nCtrl+N - New ontology\nCtrl+S - Save diagram\nCtrl+O - Import ontology\nCtrl+Shift+C - Add class (circle)\nCtrl+Shift+P - Add object property\nCtrl+Shift+D - Add data property\nCtrl+Shift+I - Add individual\nCtrl+Shift+S - Add subclass relation\nF7 - Validate ontology\nF8 - Run reasoner\nF11 - Toggle fullscreen');
         }
 
         function showAbout() {
-            alert('DADMS Ontology Modeler\n\nA visual ontology editor powered by draw.io and cemento.\nCreate, edit, and validate ontologies with an intuitive drag-and-drop interface.');
+            alert('DADMS VOWL Ontology Modeler\n\nA visual ontology editor powered by draw.io, VOWL notation, and cemento integration.\n\nVOWL (Visual Notation for OWL Ontologies) provides standardized shapes for ontology modeling:\n• Circles for Classes\n• Diamonds for Object Properties\n• Red Diamonds for Data Properties\n• Rounded Rectangles for Individuals\n\nCreate, edit, and validate OWL ontologies with an intuitive drag-and-drop interface following VOWL standards.');
         }
 
         // Keyboard event handling
@@ -1365,8 +1568,13 @@
                         importOntology();
                         break;
                     case 'p':
-                        event.preventDefault();
-                        togglePropertiesPanel();
+                        if (event.shiftKey) {
+                            event.preventDefault();
+                            addProperty();
+                        } else {
+                            event.preventDefault();
+                            togglePropertiesPanel();
+                        }
                         break;
                     case 'c':
                         if (event.shiftKey) {
@@ -1374,10 +1582,22 @@
                             addClass();
                         }
                         break;
+                    case 'd':
+                        if (event.shiftKey) {
+                            event.preventDefault();
+                            addDataProperty();
+                        }
+                        break;
                     case 'i':
                         if (event.shiftKey) {
                             event.preventDefault();
                             addIndividual();
+                        }
+                        break;
+                    case 's':
+                        if (event.shiftKey && !event.altKey) {
+                            event.preventDefault();
+                            addSubClassEdge();
                         }
                         break;
                     case '0':
@@ -1388,11 +1608,6 @@
                         event.preventDefault();
                         resetZoom();
                         break;
-                }
-
-                if (event.shiftKey && event.key.toLowerCase() === 'p') {
-                    event.preventDefault();
-                    addProperty();
                 }
             } else {
                 switch (event.key) {
