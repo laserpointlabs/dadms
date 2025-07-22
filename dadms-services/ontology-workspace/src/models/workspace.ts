@@ -38,9 +38,12 @@ export interface OntologyDocument {
 
 export type OntologyFormat =
     | 'owl_xml'
+    | 'owl'        // Add plain owl format
     | 'turtle'
     | 'rdf_xml'
+    | 'rdf'        // Add plain rdf format
     | 'json_ld'
+    | 'jsonld'     // Add alternative jsonld format
     | 'n_triples'
     | 'n_quads'
     | 'robot';
@@ -58,6 +61,10 @@ export interface VisualLayout {
     layout_algorithm: 'manual' | 'hierarchical' | 'force_directed' | 'circular' | 'grid';
     viewport?: Viewport;
     groups?: ElementGroup[];
+    // Add support for draw.io layouts
+    type?: 'drawio' | 'mxgraph' | 'onto4all';
+    data?: string; // Raw draw.io XML or other format data
+    auto_layout?: boolean;
 }
 
 export interface VisualElement {
@@ -144,6 +151,8 @@ export interface AddOntologyRequest {
     format?: OntologyFormat;
     content?: string;
     collection_id?: string;
+    // Add support for visual layout in requests
+    visual_layout?: Partial<VisualLayout>;
 }
 
 export interface ImportFromDrawIORequest {
@@ -158,6 +167,10 @@ export interface CementoSyncRequest {
         preserve_layout: boolean;
         merge_conflicts: 'overwrite_local' | 'overwrite_remote' | 'manual_resolution';
     };
+    // Add missing properties used in controller
+    operation?: 'validate' | 'convert';
+    sourceFormat?: string;
+    targetFormat?: string;
 }
 
 export interface ApiResponse<T = any> {

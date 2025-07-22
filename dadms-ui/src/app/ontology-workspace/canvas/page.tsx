@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useState } from 'react';
-import { DrawIOModeler } from '../../components/OntologyWorkspace/DrawIOModeler';
-import { Modal } from '../../components/ProjectDashboard/Modal';
-import { Button } from '../../components/shared/Button';
-import { Card } from '../../components/shared/Card';
-import { FormField, Input, Select, TextArea } from '../../components/shared/FormField';
-import { PageLayout } from '../../components/shared/PageLayout';
+import { ReactFlowOntologyEditor } from '../../../components/OntologyWorkspace/ReactFlowOntologyEditor';
+import { Modal } from '../../../components/ProjectDashboard/Modal';
+import { Button } from '../../../components/shared/Button';
+import { Card } from '../../../components/shared/Card';
+import { FormField, Input, Select, TextArea } from '../../../components/shared/FormField';
+import { PageLayout } from '../../../components/shared/PageLayout';
 
 interface OntologyWorkspace {
     id: string;
@@ -27,28 +27,29 @@ interface OntologyDocument {
     created_at: string;
 }
 
-export default function OntologyWorkspacePage() {
+export default function CanvasOntologyEditorPage() {
     const [selectedWorkspace, setSelectedWorkspace] = useState<OntologyWorkspace | null>(null);
     const [selectedOntology, setSelectedOntology] = useState<OntologyDocument | null>(null);
     const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
     const [showOntologyModal, setShowOntologyModal] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [validationResult, setValidationResult] = useState<any>(null);
 
-    // Mock data - in real implementation, this would come from API
+    // Mock data for canvas-based editor
     const [workspaces] = useState<OntologyWorkspace[]>([
         {
             id: '1',
-            name: 'Decision Analysis Ontology',
-            description: 'Core ontology for decision analysis concepts',
+            name: 'Decision Analysis Ontology (Canvas)',
+            description: 'Clean React canvas-based ontology editing with drag and drop',
             project_id: 'proj1',
             created_at: '2024-01-15T10:00:00Z',
             updated_at: '2024-01-20T15:30:00Z'
         },
         {
             id: '2',
-            name: 'UAV Mission Ontology',
-            description: 'Ontology for UAV mission planning and execution',
+            name: 'UAV Mission Ontology (Canvas)',
+            description: 'Simple block-based ontology modeling with React Flow',
             project_id: 'proj1',
             created_at: '2024-01-18T14:20:00Z',
             updated_at: '2024-01-22T09:15:00Z'
@@ -60,8 +61,8 @@ export default function OntologyWorkspacePage() {
             id: '1',
             workspace_id: '1',
             name: 'Core Decision Model',
-            description: 'Base decision-making concepts and relationships',
-            format: 'OWL/XML',
+            description: 'Base decision-making concepts with canvas interface',
+            format: 'React Flow JSON',
             status: 'active',
             created_at: '2024-01-15T10:30:00Z'
         },
@@ -69,8 +70,8 @@ export default function OntologyWorkspacePage() {
             id: '2',
             workspace_id: '1',
             name: 'Stakeholder Model',
-            description: 'Stakeholder roles and responsibilities',
-            format: 'Turtle',
+            description: 'Stakeholder roles with drag-and-drop canvas',
+            format: 'React Flow JSON',
             status: 'draft',
             created_at: '2024-01-16T11:45:00Z'
         }
@@ -79,45 +80,57 @@ export default function OntologyWorkspacePage() {
     const handleWorkspaceSelect = useCallback((workspace: OntologyWorkspace) => {
         setSelectedWorkspace(workspace);
         setSelectedOntology(null);
+        setValidationResult(null);
     }, []);
 
     const handleOntologySelect = useCallback((ontology: OntologyDocument) => {
         setSelectedOntology(ontology);
+        setValidationResult(null);
     }, []);
 
-    const handleModelerLoad = useCallback(() => {
+    const handleEditorLoad = useCallback(() => {
         setIsLoading(false);
         setError(null);
     }, []);
 
-    const handleModelerError = useCallback((error: Error) => {
+    const handleEditorError = useCallback((error: Error) => {
         setError(error.message);
         setIsLoading(false);
     }, []);
 
-    const handleModelerSave = useCallback(async (xmlData: string, pngData: string) => {
+    const handleEditorSave = useCallback(async (ontologyData: any) => {
         try {
             setIsLoading(true);
 
-            // Save to backend via API
-            const response = await fetch('/api/ontology-workspace/save', {
-                method: 'POST',
+            // Save via Ontology Workspace Service API (using React Flow data)
+            const response = await fetch(`http://localhost:3016/workspaces/${selectedWorkspace?.id}/ontologies/${selectedOntology?.id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    workspaceId: selectedWorkspace?.id,
-                    ontologyId: selectedOntology?.id,
-                    xmlData,
-                    pngData
+                    name: selectedOntology?.name,
+                    description: selectedOntology?.description,
+                    format: 'react_flow_ontology',
+                    content: ontologyData,
+                    visual_layout: {
+                        type: 'react_flow',
+                        data: JSON.stringify(ontologyData),
+                        auto_layout: false
+                    }
                 }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to save ontology');
+                throw new Error('Failed to save ontology via Canvas editor');
             }
 
+            const result = await response.json();
             setError(null);
+
+            // Show success message
+            alert('Ontology saved successfully using React Flow Canvas editor!');
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Save failed');
         } finally {
@@ -125,35 +138,35 @@ export default function OntologyWorkspacePage() {
         }
     }, [selectedWorkspace, selectedOntology]);
 
-    const handleOntologyImport = useCallback(async (ontologyData: any) => {
-        try {
-            setIsLoading(true);
+    const handleEditorValidate = useCallback(async (validationResult: any) => {
+        setValidationResult(validationResult);
 
-            // Import ontology data via cemento
-            const response = await fetch('/api/ontology-workspace/import', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    workspaceId: selectedWorkspace?.id,
-                    ontologyData
-                }),
-            });
+        if (selectedWorkspace && selectedOntology) {
+            try {
+                // Send validation request to backend
+                const response = await fetch(`http://localhost:3016/workspaces/${selectedWorkspace.id}/ontologies/${selectedOntology.id}/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        validationEngine: 'react_flow_canvas',
+                        includeWarnings: true
+                    }),
+                });
 
-            if (!response.ok) {
-                throw new Error('Failed to import ontology');
+                if (response.ok) {
+                    const backendResult = await response.json();
+                    setValidationResult({
+                        ...validationResult,
+                        backendValidation: backendResult.data
+                    });
+                }
+            } catch (error) {
+                console.warn('Backend validation failed:', error);
             }
-
-            const result = await response.json();
-            setError(null);
-
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Import failed');
-        } finally {
-            setIsLoading(false);
         }
-    }, [selectedWorkspace]);
+    }, [selectedWorkspace, selectedOntology]);
 
     const createNewWorkspace = () => {
         setShowWorkspaceModal(true);
@@ -167,12 +180,12 @@ export default function OntologyWorkspacePage() {
         setShowOntologyModal(true);
     };
 
-    const navigateToOnto4All = () => {
-        window.location.href = '/ontology-workspace/onto4all';
+    const navigateToDrawIO = () => {
+        window.location.href = '/ontology-workspace';
     };
 
-    const navigateToCanvas = () => {
-        window.location.href = '/ontology-workspace/canvas';
+    const navigateToOnto4All = () => {
+        window.location.href = '/ontology-workspace/onto4all';
     };
 
     const pageActions = (
@@ -181,17 +194,17 @@ export default function OntologyWorkspacePage() {
                 variant="secondary"
                 size="sm"
                 leftIcon="graph"
-                onClick={navigateToOnto4All}
+                onClick={navigateToDrawIO}
             >
-                Try Onto4ALL
+                Draw.io Editor
             </Button>
             <Button
                 variant="secondary"
                 size="sm"
                 leftIcon="graph"
-                onClick={navigateToCanvas}
+                onClick={navigateToOnto4All}
             >
-                Try Canvas Editor
+                Onto4ALL Editor
             </Button>
             <Button
                 variant="secondary"
@@ -216,12 +229,30 @@ export default function OntologyWorkspacePage() {
     if (!selectedWorkspace) {
         return (
             <PageLayout
-                title="Ontology Workspace"
-                subtitle="Visual ontology modeling with draw.io and cemento integration"
+                title="React Flow Canvas Ontology Editor"
+                subtitle="Simple drag-and-drop ontology modeling with React Canvas and Flow"
                 icon="graph"
                 actions={pageActions}
                 status={{ text: 'Select Workspace', type: 'inactive' }}
             >
+                <div className="mb-6">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-green-900 mb-2">🎨 React Flow Canvas Editor</h3>
+                        <p className="text-green-800 mb-3">
+                            This implementation uses React Flow for a native React canvas experience with:
+                        </p>
+                        <ul className="text-green-800 text-sm space-y-1 ml-4">
+                            <li>• Drag-and-drop blocks for Classes 🏛️, Object Properties 🔗, and Data Properties 📊</li>
+                            <li>• Native React components with full theme integration</li>
+                            <li>• Visual connection drawing between ontology elements</li>
+                            <li>• Real-time property editing panel with type-specific fields</li>
+                            <li>• Built-in validation with visual feedback</li>
+                            <li>• Zoom, pan, and minimap for large ontologies</li>
+                            <li>• Clean, modern UI with semantic colors</li>
+                        </ul>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {workspaces.map((workspace) => (
                         <Card
@@ -255,14 +286,14 @@ export default function OntologyWorkspacePage() {
                 <Modal
                     isOpen={showWorkspaceModal}
                     onClose={() => setShowWorkspaceModal(false)}
-                    title="Create New Workspace"
+                    title="Create New Canvas Workspace"
                 >
                     <form className="space-y-4">
                         <FormField label="Workspace Name" required>
-                            <Input placeholder="e.g., Decision Analysis Ontology" />
+                            <Input placeholder="e.g., Decision Analysis Ontology (Canvas)" />
                         </FormField>
                         <FormField label="Description">
-                            <TextArea placeholder="Describe the purpose of this ontology workspace..." />
+                            <TextArea placeholder="Describe the purpose of this ontology workspace for canvas editing..." />
                         </FormField>
                         <FormField label="Project">
                             <Select>
@@ -288,7 +319,7 @@ export default function OntologyWorkspacePage() {
     return (
         <PageLayout
             title={selectedWorkspace.name}
-            subtitle="Visual ontology modeling with draw.io and cemento integration"
+            subtitle="React Flow canvas ontology modeling with drag-and-drop blocks"
             icon="graph"
             actions={pageActions}
             status={{
@@ -310,6 +341,22 @@ export default function OntologyWorkspacePage() {
                                 >
                                     Back to Workspaces
                                 </Button>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    leftIcon="graph"
+                                    onClick={navigateToDrawIO}
+                                >
+                                    Draw.io
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    leftIcon="graph"
+                                    onClick={navigateToOnto4All}
+                                >
+                                    Onto4ALL
+                                </Button>
                             </div>
                             <h2 className="text-xl font-semibold text-theme-text-primary">
                                 {selectedWorkspace.name}
@@ -317,6 +364,16 @@ export default function OntologyWorkspacePage() {
                             <p className="text-theme-text-secondary">
                                 {selectedWorkspace.description}
                             </p>
+                            {validationResult && (
+                                <div className="mt-2">
+                                    <span className={`text-sm px-2 py-1 rounded ${validationResult.valid
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {validationResult.valid ? '✅ Valid Ontology' : `⚠️ ${validationResult.warnings?.length || 0} Warnings`}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             {ontologies
@@ -353,15 +410,15 @@ export default function OntologyWorkspacePage() {
                     </div>
                 )}
 
-                {/* Draw.io Modeler */}
+                {/* React Flow Canvas Editor */}
                 <div className="flex-1 bg-theme-surface border border-theme-border rounded-lg overflow-hidden">
-                    <DrawIOModeler
+                    <ReactFlowOntologyEditor
                         workspaceId={selectedWorkspace.id}
                         ontologyId={selectedOntology?.id}
-                        onLoad={handleModelerLoad}
-                        onError={handleModelerError}
-                        onSave={handleModelerSave}
-                        onOntologyImport={handleOntologyImport}
+                        onLoad={handleEditorLoad}
+                        onError={handleEditorError}
+                        onSave={handleEditorSave}
+                        onValidate={handleEditorValidate}
                         height="100%"
                     />
                 </div>
@@ -370,17 +427,18 @@ export default function OntologyWorkspacePage() {
                 <Modal
                     isOpen={showOntologyModal}
                     onClose={() => setShowOntologyModal(false)}
-                    title="Create New Ontology"
+                    title="Create New Ontology (Canvas)"
                 >
                     <form className="space-y-4">
                         <FormField label="Ontology Name" required>
                             <Input placeholder="e.g., Core Decision Model" />
                         </FormField>
                         <FormField label="Description">
-                            <TextArea placeholder="Describe this ontology component..." />
+                            <TextArea placeholder="Describe this ontology component for canvas editing..." />
                         </FormField>
                         <FormField label="Format">
                             <Select>
+                                <option value="react_flow">React Flow Canvas</option>
                                 <option value="owl">OWL/XML</option>
                                 <option value="turtle">Turtle</option>
                                 <option value="rdf">RDF/XML</option>
@@ -389,10 +447,11 @@ export default function OntologyWorkspacePage() {
                         </FormField>
                         <FormField label="Initial Template">
                             <Select>
-                                <option value="">Empty Ontology</option>
+                                <option value="">Empty Canvas</option>
                                 <option value="decision">Decision Analysis Template</option>
                                 <option value="process">Process Ontology Template</option>
                                 <option value="stakeholder">Stakeholder Model Template</option>
+                                <option value="canvas_basic">Canvas Basic Template</option>
                             </Select>
                         </FormField>
                         <div className="flex justify-end gap-3 pt-4">

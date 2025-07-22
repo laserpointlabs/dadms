@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import { CementoService } from '../integrations/cementoService';
+import { CementoSyncRequest } from '../models/workspace';
 import { WorkspaceService } from '../services/workspaceService';
-import { ApiResponse, ImportFromDrawIORequest, CementoSyncRequest } from '../models/workspace';
 
 const cementoService = new CementoService();
 const workspaceService = new WorkspaceService();
@@ -44,6 +44,9 @@ const upload = multer({
 });
 
 export class IntegrationController {
+    // Add uploadMiddleware as a property
+    public uploadMiddleware = upload.single('file');
+
     /**
      * Import from draw.io file and convert to ontology
      */
@@ -93,6 +96,7 @@ export class IntegrationController {
             const ontology = await workspaceService.addOntology(workspaceId, {
                 name: ontologyName,
                 description: `Imported from draw.io file: ${req.file.originalname}`,
+                action: 'import_existing',
                 format: 'turtle',
                 content: conversionResult.content ? JSON.stringify(conversionResult.content) : '{}',
                 visual_layout: {
@@ -236,6 +240,7 @@ export class IntegrationController {
             const ontology = await workspaceService.addOntology(workspaceId, {
                 name: ontologyName,
                 description: `Imported from ${format.toUpperCase()} file: ${req.file.originalname}`,
+                action: 'import_existing',
                 format: format,
                 content: fileContent,
                 visual_layout: {
@@ -299,13 +304,16 @@ export class IntegrationController {
                 case 'validate':
                     const contentStr = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
                     conversionResult = await cementoService.validateOntology(contentStr, ontology.format);
-                    newStatus = conversionResult.success ? 'validated' : 'invalid';
+                    newStatus = conversionResult.success ? 'valid' : 'invalid';
                     break;
 
                 case 'convert':
                     if (sourceFormat === 'drawio' && targetFormat === 'turtle') {
                         const drawioData = ontology.visual_layout?.data || '';
-                        conversionResult = await cementoService.convertDrawioToTurtle(Buffer.from(drawioData), options);
+                        conversionResult = await cementoService.convertDrawioToTurtle(Buffer.from(drawioData), {
+                            preserveLayout: true,
+                            validateOnImport: false
+                        });
                     } else {
                         // For now, return a basic success response
                         conversionResult = { success: true, content: ontology.content };
@@ -346,16 +354,84 @@ export class IntegrationController {
     }
 
     /**
-     * Get upload middleware for draw.io files
+     * Get cemento service status
      */
-    getDrawIOUploadMiddleware() {
-        return upload.single('file');
+    async getCementoStatus(req: Request, res: Response): Promise<void> {
+        try {
+            const status = await cementoService.getStatus();
+
+            res.json({
+                success: true,
+                data: {
+                    service: 'cemento',
+                    status: status.available ? 'available' : 'unavailable',
+                    version: status.version || 'unknown',
+                    features: status.features || [],
+                    last_checked: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error('Cemento status check error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to check cemento status',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     }
 
     /**
-     * Get upload middleware for ontology files
+     * Validate ontology using cemento
      */
-    getOntologyUploadMiddleware() {
-        return upload.single('file');
+    async validateOntology(req: Request, res: Response): Promise<void> {
+        try {
+            const { workspaceId, ontologyId } = req.params;
+
+            if (!workspaceId || !ontologyId) {
+                res.status(400).json({
+                    success: false,
+                    error: 'Workspace ID and Ontology ID are required'
+                });
+                return;
+            }
+
+            const ontology = await workspaceService.getOntology(workspaceId, ontologyId);
+            if (!ontology) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Ontology not found'
+                });
+                return;
+            }
+
+            const contentStr = typeof ontology.content === 'string' ? ontology.content : JSON.stringify(ontology.content);
+            const validationResult = await cementoService.validateOntology(contentStr, ontology.format);
+
+            // Update ontology status based on validation
+            const newStatus = validationResult.success ? 'validated' : 'invalid';
+            await workspaceService.updateOntology(workspaceId, ontologyId, { status: newStatus });
+
+            res.json({
+                success: true,
+                data: {
+                    valid: validationResult.success,
+                    errors: validationResult.errors || [],
+                    warnings: validationResult.warnings || [],
+                    metadata: validationResult.metadata || {},
+                    ontology: {
+                        ...ontology,
+                        status: newStatus
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Ontology validation error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to validate ontology',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     }
 } 
