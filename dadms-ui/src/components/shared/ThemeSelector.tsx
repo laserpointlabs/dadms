@@ -36,9 +36,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
             >
                 <Icon
-                    name={theme === 'dark' ? 'lightbulb' : 'circle-filled'}
+                    name="lightbulb"
                     size="sm"
-                    className="transition-transform duration-200"
+                    className={`transition-transform duration-200 ${theme === 'light' ? 'text-gray-800' : 'text-white'}`}
                 />
             </button>
         );

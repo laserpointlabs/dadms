@@ -262,6 +262,7 @@ function StatusBar() {
 // New component to handle the main content with agent assistant spacing
 function MainContent({ children }: { children: React.ReactNode }) {
     const { isDocked, dockedHeight } = useAgentAssistant();
+    const statusBarHeight = 24; // VSCode status bar height from CSS
 
     return (
         <div

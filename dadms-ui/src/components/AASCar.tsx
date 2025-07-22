@@ -25,7 +25,9 @@ export default function AASCar() {
     const [position, setPosition] = useState({ x: 400, y: 100 });
     const [activeTab, setActiveTab] = useState(TAB_AAS);
     const [aasInput, setAasInput] = useState("");
+    const [conversationHistory, setConversationHistory] = useState("Assistant: I'm monitoring your DADMS workspace. I noticed you have 3 active projects. Would you like me to help prioritize your next steps or provide insights on any specific project?\n\nAsk me anything about your DADMS workspace...");
     const [isMinimized, setIsMinimized] = useState(false);
+    const conversationRef = useRef<HTMLTextAreaElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isDetached, setIsDetached] = useState(false);
     const [isDocked, setIsDocked] = useState(contextIsDocked);
@@ -41,9 +43,10 @@ export default function AASCar() {
     // Initialize position after mount to avoid hydration issues
     useEffect(() => {
         if (!isInitialized && typeof window !== 'undefined') {
+            const statusBarHeight = 24;
             setPosition({
                 x: Math.max(20, window.innerWidth - 420),
-                y: Math.max(20, window.innerHeight - 300)
+                y: Math.max(20, window.innerHeight - 300 - statusBarHeight)
             });
             setIsInitialized(true);
         }
@@ -719,8 +722,21 @@ export default function AASCar() {
 
     const handleAasSend = () => {
         if (aasInput.trim()) {
-            console.log("AAS User Input:", aasInput);
+            // Add user message to conversation
+            const userMessage = `You: ${aasInput}`;
+            const assistantResponse = `Assistant: I received your message: "${aasInput}". In a full implementation, I would provide intelligent responses and can execute actions in the main DADMS interface.`;
+
+            setConversationHistory(prev =>
+                prev + `\n\n${userMessage}\n\n${assistantResponse}`
+            );
             setAasInput("");
+
+            // Auto-scroll to bottom after a short delay
+            setTimeout(() => {
+                if (conversationRef.current) {
+                    conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+                }
+            }, 100);
         }
     };
 
@@ -733,9 +749,10 @@ export default function AASCar() {
 
     const resetPosition = () => {
         if (typeof window !== 'undefined') {
+            const statusBarHeight = 24;
             setPosition({
                 x: Math.max(20, window.innerWidth - 420),
-                y: Math.max(20, window.innerHeight - 300)
+                y: Math.max(20, window.innerHeight - 300 - statusBarHeight)
             });
         }
     };
@@ -797,77 +814,61 @@ export default function AASCar() {
         );
     }
 
-    // Docked mode - appears at bottom of screen
+    // Docked mode - appears above the status bar
     if (isDocked) {
         const displayHeight = isMinimized ? 48 : height;
+        const statusBarHeight = 24; // VSCode status bar height from CSS
 
         return (
             <div
-                className="fixed bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden border-t border-theme-border bg-theme-surface"
+                className="fixed left-0 right-0 z-40 flex flex-col overflow-hidden border-t border-theme-border bg-theme-surface"
                 style={{
+                    bottom: statusBarHeight + 'px',
                     height: displayHeight + 'px',
                     transition: isMinimized ? 'height 0.3s ease' : 'none'
                 }}
             >
-                {/* Resize Handle */}
+                {/* Resize Handle with Controls */}
                 {!isMinimized && (
-                    <div
-                        onMouseDown={handleResizeDragStart}
-                        className="h-1 bg-theme-border hover:bg-theme-accent-primary cursor-ns-resize transition-colors relative group"
-                        title="Drag to resize"
-                    >
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-8 h-0.5 bg-theme-text-muted rounded"></div>
+                    <div className="h-6 bg-theme-bg-secondary border-b border-theme-border flex items-center justify-between px-2 select-none">
+                        {/* Left side - Resize handle */}
+                        <div
+                            onMouseDown={handleResizeDragStart}
+                            className="flex-1 h-full flex items-center justify-center cursor-ns-resize hover:bg-theme-surface-hover transition-colors group"
+                            title="Drag to resize"
+                        >
+                            <div className="w-8 h-0.5 bg-theme-text-muted rounded group-hover:bg-theme-accent-primary transition-colors"></div>
+                        </div>
+
+                        {/* Right side - Control buttons */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={openDetachedWindow}
+                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                title="Open in separate window"
+                            >
+                                <Icon name="ellipsis" size="xs" />
+                            </button>
+                            <button
+                                onClick={handleDocking}
+                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                title="Undock"
+                            >
+                                <Icon name="arrow-up" size="xs" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setVisible(false);
+                                    setIsDocked(false);
+                                }}
+                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                title="Close"
+                            >
+                                <Icon name="close" size="xs" />
+                            </button>
                         </div>
                     </div>
                 )}
-
-                {/* Header */}
-                <div
-                    className="px-3 py-2 flex items-center justify-between bg-theme-bg-secondary border-b border-theme-border select-none"
-                    title="Docked Agent Assistant"
-                >
-                    <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 flex items-center justify-center bg-theme-accent-primary rounded-sm">
-                            <Icon name="robot" size="sm" className="text-white" />
-                        </div>
-                        <h3 className="text-sm font-medium text-theme-text-primary">Agent Assistant (Docked)</h3>
-                        <div className="w-2 h-2 bg-theme-accent-success rounded-full" title="Active" />
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={openDetachedWindow}
-                            className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                            title="Open in separate window"
-                        >
-                            <Icon name="ellipsis" size="sm" />
-                        </button>
-                        <button
-                            onClick={() => setIsMinimized(!isMinimized)}
-                            className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                            title={isMinimized ? "Expand" : "Minimize"}
-                        >
-                            <Icon name={isMinimized ? "arrow-up" : "chevron-down"} size="sm" />
-                        </button>
-                        <button
-                            onClick={handleDocking}
-                            className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                            title="Undock"
-                        >
-                            <Icon name="arrow-up" size="sm" />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setVisible(false);
-                                setIsDocked(false);
-                            }}
-                            className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                            title="Close"
-                        >
-                            <Icon name="close" size="sm" />
-                        </button>
-                    </div>
-                </div>
 
                 {!isMinimized && (
                     <>
@@ -935,50 +936,39 @@ export default function AASCar() {
                             )}
 
                             {activeTab === TAB_AAS && (
-                                <div className="flex flex-col h-full">
-                                    <div className="flex-1 p-4 space-y-3 min-h-0 overflow-auto">
-                                        <div className="text-xs text-theme-text-muted mb-2">Assistant ready to help with DADMS tasks</div>
+                                <div className="flex flex-col h-full p-2 gap-2">
+                                    {/* Conversation Area - fills available space */}
+                                    <textarea
+                                        ref={conversationRef}
+                                        readOnly
+                                        value={conversationHistory}
+                                        className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none min-h-0"
+                                        style={{
+                                            fontFamily: 'inherit'
+                                        }}
+                                    />
 
-                                        {/* Sample assistant message */}
-                                        <div className="bg-theme-accent-primary bg-opacity-10 border border-theme-accent-primary border-opacity-30 rounded-lg p-3">
-                                            <div className="flex items-start gap-2">
-                                                <div className="w-5 h-5 bg-theme-accent-primary rounded flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                    <Icon name="robot" size="sm" className="text-white" />
-                                                </div>
-                                                <div className="text-xs text-theme-text-primary leading-relaxed">
-                                                    I&apos;m monitoring your DADMS workspace. I noticed you have 3 active projects.
-                                                    Would you like me to help prioritize your next steps or provide insights on any specific project?
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Input Area */}
-                                    <div className="border-t border-theme-border p-3 bg-theme-bg-secondary">
-                                        <div className="flex gap-2">
-                                            <textarea
-                                                value={aasInput}
-                                                onChange={(e) => setAasInput(e.target.value)}
-                                                onKeyPress={handleKeyPress}
-                                                placeholder="Ask the assistant anything..."
-                                                className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary placeholder-theme-text-muted rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none"
-                                                rows={1}
-                                                style={{
-                                                    minHeight: "32px",
-                                                    maxHeight: "80px"
-                                                }}
-                                            />
-                                            <button
-                                                onClick={handleAasSend}
-                                                disabled={!aasInput.trim()}
-                                                className="bg-theme-accent-primary text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0"
-                                            >
-                                                Send
-                                            </button>
-                                        </div>
-                                        <div className="text-xs text-theme-text-muted mt-1">
-                                            Press Enter to send, Shift+Enter for new line
-                                        </div>
+                                    {/* Input Area - fixed height at bottom */}
+                                    <div className="flex gap-2">
+                                        <textarea
+                                            value={aasInput}
+                                            onChange={(e) => setAasInput(e.target.value)}
+                                            onKeyPress={handleKeyPress}
+                                            placeholder="Ask the assistant anything..."
+                                            className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary placeholder-theme-text-muted rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none"
+                                            rows={2}
+                                            style={{
+                                                minHeight: "44px",
+                                                maxHeight: "80px"
+                                            }}
+                                        />
+                                        <button
+                                            onClick={handleAasSend}
+                                            disabled={!aasInput.trim()}
+                                            className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
+                                        >
+                                            Send
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -1187,4 +1177,4 @@ export default function AASCar() {
             )}
         </div>
     );
-}
+} 
