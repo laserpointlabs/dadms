@@ -236,13 +236,18 @@ html {
 /* Activity Bar */
 .vscode-activitybar {
     width: 48px;
-    background-color: var(--theme-bg-tertiary);
-    border-right: 1px solid var(--theme-border);
+    background-color: var(--theme-bg-secondary);
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 8px 0;
+    border-right: 1px solid var(--theme-border);
     flex-shrink: 0;
+}
+
+.activity-group {
+    position: relative;
+    margin-bottom: 4px;
 }
 
 .vscode-activitybar-item {
@@ -251,11 +256,10 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 8px;
-    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.1s ease;
     color: var(--theme-text-secondary);
+    border-radius: 4px;
+    transition: background-color 0.1s ease, color 0.1s ease;
 }
 
 .vscode-activitybar-item:hover {
@@ -269,7 +273,79 @@ html {
 }
 
 .vscode-activitybar-item i {
-    font-size: 24px;
+    font-size: 16px;
+}
+
+/* Activity Bar Popout Menus */
+.activity-popout {
+    position: absolute;
+    left: 48px;
+    top: 0;
+    background-color: var(--theme-surface-elevated);
+    border: 1px solid var(--theme-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    min-width: 200px;
+    animation: popout-slide-in 0.15s ease-out;
+}
+
+.activity-popout-header {
+    padding: 8px 12px;
+    background-color: var(--theme-bg-tertiary);
+    border-bottom: 1px solid var(--theme-border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--theme-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.activity-popout-items {
+    padding: 4px 0;
+}
+
+.activity-popout-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--theme-text-primary);
+    font-size: 13px;
+    transition: background-color 0.1s ease;
+}
+
+.activity-popout-item:hover {
+    background-color: var(--theme-surface-hover);
+}
+
+.activity-popout-item.active {
+    background-color: var(--theme-accent-primary);
+    color: white;
+}
+
+.activity-popout-item i {
+    font-size: 16px;
+    width: 16px;
+    text-align: center;
+    color: var(--theme-text-secondary);
+}
+
+.activity-popout-item.active i {
+    color: white;
+}
+
+@keyframes popout-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* Sidebar */
