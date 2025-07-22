@@ -192,11 +192,39 @@ html {
     background-color: var(--theme-bg-tertiary);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 16px;
     color: var(--theme-text-primary);
     font-size: 12px;
     border-bottom: 1px solid var(--theme-border);
     flex-shrink: 0;
+}
+
+.titlebar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.titlebar-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--theme-text-secondary);
+    transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.titlebar-action:hover {
+    background-color: var(--theme-surface-hover);
+    color: var(--theme-text-primary);
+}
+
+.titlebar-action i {
+    font-size: 14px;
 }
 
 .vscode-main {
