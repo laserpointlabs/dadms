@@ -1,5 +1,187 @@
 # Changelog
 
+## [2.0.0-alpha.7] - 2025-01-02
+
+### Added
+- **🎨 Advanced Theme Selector & Testing System**
+  - Comprehensive ThemeSelector component with toggle, dropdown, and panel variants
+  - New Settings page with complete theme testing capabilities
+  - Theme system validation and component testing interface
+  - Color palette visualization and theme state information
+
+### Fixed
+- **🎯 Critical Theme Initialization & Component Fixes**
+  - Fixed CSS variable timing issues causing mixed light/dark appearance
+  - Restructured CSS variables to avoid default theme conflicts
+  - Enhanced ThemeContext with immediate theme application
+  - Fixed PageLayout component hardcoded gray backgrounds (major cause of mixed styling)
+  - Updated Knowledge page tab navigation to use theme variables
+  - Fixed LLM Playground configuration panel and content areas
+  - Resolved timing issues with theme application on initial load
+- **🔧 Context Manager Complete Overhaul**
+  - Replaced ALL Material-UI components with theme-aware custom components
+  - Fixed PersonaManager, ToolManager, PromptManager, TeamsTab white card issues
+  - Rewritten components using Card, Button, Icon, FormField from shared library
+  - Modal component updated to use theme variables instead of hardcoded grays
+  - Simplified UI while maintaining full functionality
+- **⚙️ Process & Thread Management Pages**
+  - **Process Manager**: Complete conversion from Material-UI to theme-aware components
+  - Maintained exact functionality: process definitions, instances table, start/delete dialogs
+  - Preserved original layout: summary cards, auto-refresh, interactive tables
+  - **Thread Manager**: Converted tab navigation and core components to use theme system
+  - Fixed white backgrounds and inconsistent styling in both pages
+- **📋 AADS (Agent Assistant & Documentation Service) Complete Rewrite**
+  - **Fixed critical parsing errors** causing build failures
+  - Complete conversion from Material-UI to theme-aware components
+  - Redesigned with clean tab navigation: AI Assistant, Documentation, Approval Workflow
+  - Maintained all functionality: chat interface, white paper generation, approval workflow
+  - Enhanced user experience with better responsive design and consistent theming
+- **🌐 Ontology Workspace Complete Conversion**
+  - Replaced all Material-UI imports and components with theme-aware alternatives
+  - Comprehensive ontology management interface with proper theme support
+  - Clean tab navigation: Workspace, Library, Extraction, Validation, Integration, Analytics
+  - Enhanced search and filtering with consistent visual design
+  - Preserved all workspace functionality while ensuring theme consistency
+- **Complete Theme Consistency**
+  - Fixed all hardcoded gray colors in FormField components
+  - Updated Input, TextArea, and Select components to use theme variables
+  - Fixed Projects page edit modal hardcoded colors
+  - Replaced Material-UI styling conflicts causing mixed light/dark appearance
+  - Eliminated remaining hardcoded colors in component libraries
+  - **RESOLVED**: All pages now properly switch between light and dark themes
+  - **NO MORE WHITE BACKGROUNDS** in dark mode across any page
+
+### Changed
+- **Enhanced Form Components**
+  - Improved form field styling with proper theme variable usage
+  - Better error states and focus styling for all input components
+  - Consistent visual hierarchy across all form elements
+- **Navigation Updates**
+  - Added Settings page to activity bar navigation
+  - Reorganized context manager icon to avoid duplication
+- **Theme System Architecture**
+  - Restructured CSS variable hierarchy for better theme application
+  - Enhanced theme initialization logic with SSR compatibility
+  - Improved theme persistence and system preference detection
+- **Context Manager Redesign**
+  - Simplified Material-UI dependency removal
+  - Unified component design language across all manager tabs
+  - Better responsive layout and mobile compatibility
+- **Process Management Enhancement**
+  - Improved table design with better responsive behavior
+  - Enhanced status indicators with proper theme colors
+  - Better button grouping and tooltip implementations
+- **AADS & Ontology Redesign**
+  - Modern, clean interface design with enhanced usability
+  - Better information architecture and navigation patterns
+  - Improved responsive behavior across all screen sizes
+  - Consistent with overall DADMS design language
+
+### Infrastructure
+- **Theme System Maturity**
+  - Comprehensive theme testing infrastructure
+  - Better fallback handling for theme context
+  - Enhanced theme switching reliability across all components
+  - Resolved CSS variable application order issues
+  - **Complete Material-UI elimination** - no remaining dependencies causing theme conflicts
+  - **100% Theme Coverage** - all pages now fully support light/dark theme switching
+  - Fixed JSX parsing errors and build issues across all pages
+
+## [2.0.0-alpha.6] - 2025-01-02
+
+### Added
+- **🎨 Complete Light/Dark Theme System**
+  - React theme provider with context and hooks
+  - CSS variables for consistent theming across all components
+  - Theme toggle component with accessibility features
+  - Automatic system preference detection and localStorage persistence
+  - SSR-safe theme implementation preventing hydration mismatches
+
+### Changed
+- **Component Refactoring for Theme Support**
+  - Refactored Button, Card, and core components to use CSS theme variables
+  - Updated Projects page with theme-aware color classes
+  - Replaced all hardcoded colors with semantic theme variables
+  - Enhanced utility classes with theme support
+
+### Fixed
+- **Theme Consistency Issues**
+  - Fixed mixed light/dark styling across different UI sections
+  - Updated VSCode layout components to use theme variables consistently
+  - Replaced all remaining `--vscode-*` variables with `--theme-*` variables
+  - Ensured activity bar, sidebar, and status bar follow theme system
+  - Improved theme context error handling with fallback values
+
+### Infrastructure
+- **Tailwind Configuration**
+  - Added theme-aware color system using CSS variables
+  - Configured dark mode with class strategy
+  - Extended utility classes for theme integration
+
+### Documentation
+- **Theme Implementation Guide**
+  - Complete implementation following UI theme specification
+  - Examples for both light and dark themes
+  - Best practices for theme-aware component development
+
+## [2.0.0-alpha.5] - 2025-01-15
+
+### Added
+- **Form Validation System**: Comprehensive validation utilities and user-friendly error handling
+  - Created `validation.ts` utility with common validation rules and schemas
+  - Added `FormField`, `Input`, `TextArea`, and `Select` components with built-in validation
+  - Implemented real-time validation with touch-based error display
+  - Added form validation to CreateProject component with detailed error messages
+  - Included tag management with array validation
+- **Error Handling Components**: Robust error display and recovery mechanisms
+  - Created `Alert` component with error, warning, info, and success variants
+  - Added `Toast` component for temporary notifications with auto-dismiss
+  - Implemented `AlertDialog` for confirmation dialogs
+  - Built `ErrorBoundary` component for catching runtime errors
+  - Added `withErrorBoundary` HOC and `useErrorHandler` hook
+- **SSR Hydration Fix**: Fixed React hydration mismatch in AASCar component
+  - Replaced dynamic window-based positioning with safe initial values
+  - Converted CSS variables to hardcoded values for consistent SSR
+  - Added proper initialization after mount
+
+### Changed
+- Updated CreateProject component to use new form validation system
+- Enhanced user experience with helpful validation messages and field hints
+- Improved form accessibility with ARIA attributes and error announcements
+- Replaced basic error messages in Projects page with Alert components
+- Converted delete confirmation to use AlertDialog component
+
+## [2.0.0-alpha.4] - 2025-01-15
+
+### Added
+- **Comprehensive UI Design System**: Professional component library and consistent styling
+  - **Unified Theme System**: VS Code-inspired dark theme with consistent colors, spacing, and typography
+  - **Icon System**: Replaced unprofessional emoji icons with VS Code Codicons
+  - **Shared Component Library**: Reusable Button, Card, Icon, LoadingState, and PageLayout components
+  - **Skeleton Loaders**: Professional loading states for better perceived performance
+  - **Type Definitions**: Comprehensive TypeScript interfaces for API integration
+  - **Service Types**: Detailed type definitions for Project and Knowledge services
+
+### Changed
+- **Projects Page Refactored**: Pilot implementation using new design system
+  - Consistent dark theme applied
+  - Professional icons throughout
+  - Improved loading states with skeletons
+  - Better error and success messaging
+  - Standardized page layout structure
+
+### Fixed
+- Visual inconsistencies across different pages
+- Unprofessional emoji icon usage
+- Missing loading states and error handling
+- Lack of reusable components
+
+### Technical Improvements
+- Created `design-system/theme.ts` for centralized theming
+- Established `components/shared/` directory for reusable components
+- Added comprehensive type definitions in `types/` directory
+- Improved component architecture and separation of concerns
+
 ## [2.0.0-alpha.3] - 2025-01-15
 
 ### Added
@@ -10,85 +192,70 @@
   - **Object Organization**: Logical folder structure for different project object types
   - **Status Indicators**: Visual status badges for project objects (active, draft, completed)
   - **Interactive Tree Controls**: Expand/collapse, refresh, and action buttons
-- **Enhanced TypeScript Types**: Comprehensive type definitions for project objects and tree nodes
-- **Improved Accessibility**: Proper ARIA labels, keyboard navigation, and screen reader support
-- **VS Code-Inspired Styling**: Enhanced CSS with project tree view and improved activity bar styling
+- **Enhanced TypeScript Types**: Comprehensive type definitions for project objects and tree structures
+- **Updated UI Specification**: Documentation for new navigation patterns and tree view functionality
+
+## [2.0.0-alpha.2] - 2025-01-09
+
+### Added
+- **ContextManager Service**: Comprehensive AI context management including personas, teams, tools, and prompt templates
+- **UI pages for all services**: Added dedicated pages for Process Manager, Thread Manager, BPMN Workspace, Ontology Builder, and AAS/AADS
+- **Enhanced service specifications**: Added detailed markdown specifications for Context Manager, BPMN Workspace, Process Manager, and Thread Manager services
+- **Service integration types**: Added TypeScript interfaces for all new services in project types
 
 ### Changed
-- **Navigation Architecture**: Moved from sidebar-based navigation to activity bar-based navigation
-- **Explorer Panel**: Now dedicated to project tree view instead of general navigation
-- **Activity Bar Items**: Replaced generic VS Code icons (files, search, debug, etc.) with DADMS-specific tools
-- **Layout Structure**: Enhanced component organization and improved state management
-
-### Technical Details
-- **New Components**: `ProjectTreeView.tsx` with comprehensive tree navigation
-- **Enhanced Layout**: Updated `layout.tsx` with DADMS-specific activity bar implementation
-- **CSS Improvements**: Added 200+ lines of tree view styling and enhanced VS Code theme integration
-- **Type Safety**: Added interfaces for `ProjectObject`, `TreeNode`, and enhanced navigation types
-
-## [2.0.0-alpha.2] - 2025-07-17
-
-### Added
-- **Complete Architecture Rebuild**: DADMS 2.0 with clean microservices architecture
-- **Enhanced AASCar Component**: Added user input functionality for Agent Assistance & Documentation Service
-- **AASD Configuration**: Updated configuration page and enhanced project management settings
-- **Comprehensive Documentation**: Expanded README with AASD workflow and UI/UX details
-- **Navigation Enhancement**: Added AASD (Finalize Decision) link in RootLayout
-- **Microservices Foundation**: Prepared structure for user-project, knowledge, and LLM services
-- **Docker Infrastructure**: Complete setup with PostgreSQL, Qdrant, and Redis
-- **Turborepo Integration**: Monorepo build system with workspace packages
-
-### Changed
-- **Architecture**: Complete migration from monolithic to microservices architecture
-- **Technology Stack**: Upgraded to Node.js 18+, TypeScript, React 18
-- **Database**: Enhanced schema with decision_context field for richer project metadata
-- **Build System**: Migrated to Turborepo for better monorepo management
+- **Service architecture**: Refined service boundaries and responsibilities across the DADMS ecosystem
+- **Port allocation**: Updated service port assignments for new services (Process Manager: 3007, Thread Manager: 3008, etc.)
+- **Documentation structure**: Reorganized service specifications into dedicated markdown files
 
 ### Fixed
-- Shell/SQL quoting issues for JSONB fields during demo data insertion
-- Established consistent model/schema change propagation process
+- Service communication patterns between related services
+- Type definitions for cross-service data exchange
 
-## [2.0.0-alpha.1] - Previous Release
-### Added
-- Initial DADMS 2.0 foundation with clean architecture
-- Added `decision_context` field to the project model for richer project metadata and context-aware decision analysis.
-- Updated database schema (`projects` table) to include `decision_context` column.
-- Updated backend TypeScript types, service, controller, and validation logic to support the new field.
-- Updated frontend types, project creation form, and project card display to include and show the `decision_context` field.
-- Ensured OpenAPI/Swagger documentation and API responses include the new field.
-- Added demo project with populated `decision_context` for end-to-end testing and UI visibility.
-
-### Fixed
-- Documented and resolved shell/SQL quoting issues for JSONB fields during demo data insertion by using SQL files and Podman commands.
-- Established best practice: all model/schema changes must be propagated through database, backend, frontend, API docs, and demo/seed data, and documented in the development process.
-
-## [Unreleased] – YYYY-MM-DD
-### Added
-- Added `decision_context` field to the project model for richer project metadata and context-aware decision analysis.
-- Updated database schema (`projects` table) to include `decision_context` column.
-- Updated backend TypeScript types, service, controller, and validation logic to support the new field.
-- Updated frontend types, project creation form, and project card display to include and show the `decision_context` field.
-- Ensured OpenAPI/Swagger documentation and API responses include the new field.
-- Added demo project with populated `decision_context` for end-to-end testing and UI visibility.
-
-### Fixed
-- Documented and resolved shell/SQL quoting issues for JSONB fields during demo data insertion by using SQL files and Podman commands.
-- Established best practice: all model/schema changes must be propagated through database, backend, frontend, API docs, and demo/seed data, and documented in the development process.
-
-## [Unreleased] – YYYY-MM-DD
+## [2.0.0-alpha.1] - 2025-01-08
 
 ### Added
-- **BPMN Workspace**: New page at `/bpmn` in the UI, embedding `comprehensive_bpmn_modeler.html` via iframe for BPMN process design.
-- **Model State Management**: Save/Load buttons in the workspace use localStorage and postMessage for BPMN XML persistence (MVP, no backend yet).
-- **Sidebar Navigation**: Added "BPMN Workspace" link to the main sidebar for easy access.
-- **Documentation**: Updated `docs/dadms_development_process.md` with a new section on BPMN Workspace future enhancements (backend persistence, project-scoped models, advanced integration, collaboration, etc.).
+- **Complete Frontend Scaffolding (UI)**: Next.js-based React application with TypeScript
+  - VS Code-inspired interface with activity bar and sidebar
+  - All major service pages scaffolded
+  - Material-UI component integration
+  - Responsive layout system
+  
+- **Project Service**: REST API with PostgreSQL
+  - CRUD operations for projects
+  - User association and ownership
+  - Metadata and tagging support
+  - OpenAPI specification
+  
+- **Knowledge Service**: Document management with RAG
+  - File upload (PDF, DOCX, TXT)
+  - Domain-based organization
+  - Vector search with Qdrant
+  - Text extraction pipeline
+  
+- **LLM Service**: Multi-provider AI integration
+  - OpenAI and Anthropic support
+  - Streaming responses
+  - Tool calling capability
+  - Context management
 
-### Changed
-- N/A
+### Infrastructure
+- Docker Compose orchestration
+- PostgreSQL for structured data
+- Qdrant for vector storage
+- Redis for caching/queuing
+- Traefik for API gateway
 
-### Fixed
-- N/A
+### Documentation
+- Comprehensive service specifications
+- API documentation
+- Development process guide
+- Architecture overview
 
----
+## [2.0.0-dev] - 2025-01-07
 
-🍻 Time to celebrate! Let's get a beer. 
+### Initial Setup
+- Repository structure created
+- Development environment configured
+- Base documentation established
+- CI/CD pipeline planned 

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { CreateProject } from '../../components/ProjectDashboard/CreateProject';
 import { Modal } from '../../components/ProjectDashboard/Modal';
 import { ProjectList } from '../../components/ProjectDashboard/ProjectList';
+import { Alert, AlertDialog, Button, Card, Icon, SkeletonList } from '../../components/shared';
+import { PageContent, PageLayout } from '../../components/shared/PageLayout';
 import { createProject, deleteProject, fetchProjects, updateProject } from '../../services/projectApi';
-import { CreateProjectRequest, Project, UpdateProjectRequest } from '../../types/project';
+import { CreateProjectRequest, Project, ProjectStatus, UpdateProjectRequest } from '../../types/services/project';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -19,17 +21,25 @@ export default function ProjectsPage() {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
 
-    const STATUS_OPTIONS: Array<'active' | 'completed'> = [
-        'active',
-        'completed',
+    const STATUS_OPTIONS: ProjectStatus[] = [
+        ProjectStatus.Active,
+        ProjectStatus.Completed,
     ];
+
+    // Calculate project statistics
+    const stats = {
+        total: projects.length,
+        active: projects.filter(p => p.status === ProjectStatus.Active).length,
+        completed: projects.filter(p => p.status === ProjectStatus.Completed).length,
+        onHold: projects.filter(p => p.status === ProjectStatus.OnHold).length
+    };
 
     const loadProjects = async () => {
         setLoading(true);
         setError(null);
         try {
             const data = await fetchProjects();
-            setProjects(data.projects);
+            setProjects(data.items); // Changed from data.projects to data.items
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Failed to load projects');
         } finally {
@@ -58,8 +68,8 @@ export default function ProjectsPage() {
         setEditForm({
             name: project.name,
             description: project.description,
-            decision_context: project.decision_context,
-            knowledge_domain: project.knowledge_domain,
+            decisionContext: project.decisionContext,
+            knowledgeDomain: project.knowledgeDomain,
             status: project.status,
         });
     };
@@ -100,284 +110,207 @@ export default function ProjectsPage() {
         }
     };
 
-    // Calculate project statistics
-    const stats = {
-        total: projects.length,
-        active: projects.filter(p => p.status === 'active').length,
-        completed: projects.filter(p => p.status === 'completed').length,
-    };
+    const pageActions = (
+        <>
+            <Button
+                variant="tertiary"
+                leftIcon="refresh"
+                onClick={handleRefresh}
+                disabled={loading}
+                loading={loading}
+            >
+                Refresh
+            </Button>
+            <Button
+                variant="primary"
+                leftIcon="add"
+                onClick={() => setShowCreateForm(true)}
+            >
+                New Project
+            </Button>
+        </>
+    );
 
     return (
-        <div className="h-full flex flex-col">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Project Dashboard</h1>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Manage decision analysis projects and track progress
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleRefresh}
-                            className="btn-secondary"
-                            disabled={loading}
-                            title="Refresh projects"
-                        >
-                            {loading ? (
-                                <div className="loading-spinner" />
-                            ) : (
-                                '🔄'
-                            )}
-                            Refresh
-                        </button>
-                        <button
-                            onClick={() => setShowCreateForm(true)}
-                            className="btn-primary"
-                        >
-                            ➕ New Project
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <PageLayout
+            title="Project Dashboard"
+            subtitle="Manage decision analysis projects and track progress"
+            icon="project"
+            actions={pageActions}
+            status={{
+                text: `${stats.active} Active Projects`,
+                type: 'active'
+            }}
+        >
+            <PageContent spacing="lg">
+                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="card p-4">
+                    <Card padding="sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                                <p className="text-sm font-medium text-theme-text-secondary">Total Projects</p>
+                                <p className="text-2xl font-bold text-theme-text-primary">{stats.total}</p>
                             </div>
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                📁
+                            <div className="w-12 h-12 bg-theme-accent-primary bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <Icon name="folder" size="lg" className="text-theme-accent-primary" />
                             </div>
                         </div>
-                    </div>
-                    <div className="card p-4">
+                    </Card>
+                    <Card padding="sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Active Projects</p>
-                                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                                <p className="text-sm font-medium text-theme-text-secondary">Active Projects</p>
+                                <p className="text-2xl font-bold text-theme-text-primary">{stats.active}</p>
                             </div>
-                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                ⚡
+                            <div className="w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <Icon name="check-circle" size="lg" className="text-theme-accent-success" />
                             </div>
                         </div>
-                    </div>
-                    <div className="card p-4">
+                    </Card>
+                    <Card padding="sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Completed</p>
-                                <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
+                                <p className="text-sm font-medium text-theme-text-secondary">Completed</p>
+                                <p className="text-2xl font-bold text-theme-text-primary">{stats.completed}</p>
                             </div>
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                ✅
+                            <div className="w-12 h-12 bg-theme-accent-info bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <Icon name="circle-filled" size="lg" className="text-theme-accent-info" />
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 </div>
-            </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
                 {/* Status Messages */}
-                {error && (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                            <span className="text-red-600">❌</span>
-                            <span className="text-sm font-medium text-red-800">{error}</span>
-                        </div>
+                {(error || success) && (
+                    <div className="space-y-3">
+                        {error && (
+                            <Alert
+                                variant="error"
+                                title="Error"
+                                onClose={() => setError(null)}
+                            >
+                                {error}
+                            </Alert>
+                        )}
+                        {success && (
+                            <Alert
+                                variant="success"
+                                title="Success"
+                                onClose={() => setSuccess(null)}
+                            >
+                                {success}
+                            </Alert>
+                        )}
                     </div>
                 )}
 
-                {success && (
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                            <span className="text-green-600">✅</span>
-                            <span className="text-sm font-medium text-green-800">{success}</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Projects List */}
+                {/* Main Content */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="loading-spinner mr-3" />
-                        <span className="text-gray-600">Loading projects...</span>
-                    </div>
+                    <SkeletonList items={6} />
                 ) : projects.length > 0 ? (
-                    <ProjectList
-                        projects={projects}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                    />
+                    <ProjectList projects={projects} onEdit={handleEdit} onDelete={handleDelete} />
                 ) : (
-                    <div className="text-center py-12">
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                            📁
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-                        <p className="text-gray-600 mb-4">
-                            Create your first decision analysis project to get started.
+                    <Card variant="default" padding="lg" className="text-center">
+                        <Icon name="folder" size="xl" className="text-theme-text-muted mb-4" />
+                        <h3 className="text-lg font-medium text-theme-text-primary mb-2">No projects yet</h3>
+                        <p className="text-theme-text-secondary mb-4">
+                            Get started by creating your first decision analysis project
                         </p>
-                        <button
-                            onClick={() => setShowCreateForm(true)}
-                            className="btn-primary"
-                        >
-                            ➕ Create Project
-                        </button>
-                    </div>
+                        <Button variant="primary" leftIcon="add" onClick={() => setShowCreateForm(true)}>
+                            Create Your First Project
+                        </Button>
+                    </Card>
                 )}
-            </div>
+            </PageContent>
 
             {/* Create Project Modal */}
-            {showCreateForm && (
-                <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
-                    <div className="p-6">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Project</h2>
-                        <CreateProject
-                            onCreate={handleCreate}
-                        />
-                    </div>
-                </Modal>
-            )}
+            <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Create New Project">
+                <CreateProject
+                    onSubmit={async (data) => {
+                        await handleCreate(data);
+                        setShowCreateForm(false);
+                    }}
+                    onCancel={() => setShowCreateForm(false)}
+                />
+            </Modal>
 
             {/* Edit Project Modal */}
-            {editProject && (
-                <Modal isOpen={!!editProject} onClose={() => setEditProject(null)}>
-                    <div className="p-6">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Project</h2>
-                        <form onSubmit={(e) => { e.preventDefault(); handleUpdate(); }} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Project Name
-                                </label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    value={editForm.name || ''}
-                                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Description
-                                </label>
-                                <textarea
-                                    className="input min-h-[100px] resize-y"
-                                    value={editForm.description || ''}
-                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                    rows={3}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Decision Context
-                                </label>
-                                <textarea
-                                    className="input min-h-[80px] resize-y"
-                                    value={editForm.decision_context || ''}
-                                    onChange={(e) => setEditForm({ ...editForm, decision_context: e.target.value })}
-                                    placeholder="What decision needs to be made?"
-                                    rows={2}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Knowledge Domain
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={editForm.knowledge_domain || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, knowledge_domain: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Status
-                                    </label>
-                                    <select
-                                        className="input"
-                                        value={editForm.status || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'completed' })}
-                                    >
-                                        {STATUS_OPTIONS.map(status => (
-                                            <option key={status} value={status}>
-                                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditProject(null)}
-                                    className="btn-secondary"
-                                    disabled={editLoading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="btn-primary"
-                                    disabled={editLoading}
-                                >
-                                    {editLoading ? (
-                                        <>
-                                            <div className="loading-spinner" />
-                                            Updating...
-                                        </>
-                                    ) : (
-                                        'Update Project'
-                                    )}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </Modal>
-            )}
-
-            {/* Delete Confirmation Modal */}
-            {deleteProjectTarget && (
-                <Modal isOpen={!!deleteProjectTarget} onClose={() => setDeleteProjectTarget(null)}>
-                    <div className="p-6">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Project</h2>
-                        <p className="text-gray-600 mb-6">
-                            Are you sure you want to delete &ldquo;{deleteProjectTarget.name}&rdquo;? This action cannot be undone.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setDeleteProjectTarget(null)}
-                                className="btn-secondary"
-                                disabled={deleteLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
-                                disabled={deleteLoading}
-                            >
-                                {deleteLoading ? (
-                                    <>
-                                        <div className="loading-spinner" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    'Delete Project'
-                                )}
-                            </button>
+            <Modal isOpen={!!editProject} onClose={() => setEditProject(null)} title="Edit Project">
+                {editProject && (
+                    <form onSubmit={(e) => { e.preventDefault(); handleUpdate(); }} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-theme-text-secondary mb-1">Name</label>
+                            <input
+                                type="text"
+                                value={editForm.name || ''}
+                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                className="w-full px-3 py-2 bg-theme-input-bg border border-theme-input-border rounded-md text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
+                                required
+                            />
                         </div>
-                    </div>
-                </Modal>
-            )}
-        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-theme-text-secondary mb-1">Status</label>
+                            <select
+                                value={editForm.status || ProjectStatus.Active}
+                                onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ProjectStatus })}
+                                className="w-full px-3 py-2 bg-theme-input-bg border border-theme-input-border rounded-md text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
+                            >
+                                {STATUS_OPTIONS.map((status) => (
+                                    <option key={status} value={status} className="bg-theme-input-bg text-theme-text-primary">
+                                        {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-theme-text-secondary mb-1">Knowledge Domain</label>
+                            <input
+                                type="text"
+                                value={editForm.knowledgeDomain || ''}
+                                onChange={(e) => setEditForm({ ...editForm, knowledgeDomain: e.target.value })}
+                                className="w-full px-3 py-2 bg-theme-input-bg border border-theme-input-border rounded-md text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-theme-text-secondary mb-1">Description</label>
+                            <textarea
+                                value={editForm.description || ''}
+                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                className="w-full px-3 py-2 bg-theme-input-bg border border-theme-input-border rounded-md text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
+                                rows={3}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-theme-text-secondary mb-1">Decision Context</label>
+                            <textarea
+                                value={editForm.decisionContext || ''}
+                                onChange={(e) => setEditForm({ ...editForm, decisionContext: e.target.value })}
+                                className="w-full px-3 py-2 bg-theme-input-bg border border-theme-input-border rounded-md text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button variant="secondary" onClick={() => setEditProject(null)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" type="submit" loading={editLoading}>
+                                Save Changes
+                            </Button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
+            {/* Delete Confirmation */}
+            <AlertDialog
+                open={!!deleteProjectTarget}
+                onClose={() => setDeleteProjectTarget(null)}
+                onConfirm={() => deleteProjectTarget && handleDelete(deleteProjectTarget)}
+                title="Delete Project"
+                description={`Are you sure you want to delete "${deleteProjectTarget?.name}"? This action cannot be undone.`}
+                confirmText="Delete"
+                variant="error"
+            />
+        </PageLayout>
     );
 } 

@@ -1,8 +1,9 @@
 "use client";
 
-import { AutoFixHigh, CheckCircle, Edit, Info, PictureAsPdf, Save, Send, Warning } from "@mui/icons-material";
-import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Divider, Paper, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { Alert, Button, Card, Icon } from "../../components/shared";
+import { TextArea } from "../../components/shared/FormField";
+import { PageLayout } from "../../components/shared/PageLayout";
 import {
     ChatMessage,
     DecisionSummary,
@@ -11,29 +12,21 @@ import {
     getMockDecisionSummary
 } from "../../services/aadsApi";
 
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
+interface Tab {
+    id: string;
+    name: string;
+    icon: 'comment-discussion' | 'file-text' | 'checklist';
+    description: string;
 }
 
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`aads-tabpanel-${index}`}
-            aria-labelledby={`aads-tab-${index}`}
-            {...other}
-        >
-            {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-        </div>
-    );
-}
+const TABS: Tab[] = [
+    { id: 'ai-assistant', name: 'AI Assistant', icon: 'comment-discussion', description: 'Decision support and analysis' },
+    { id: 'documentation', name: 'Documentation', icon: 'file-text', description: 'Generate decision documents' },
+    { id: 'approval', name: 'Approval Workflow', icon: 'checklist', description: 'Stakeholder review and approval' }
+];
 
-export default function AASDPage() {
-    const [tabValue, setTabValue] = useState(0);
+export default function AADSPage() {
+    const [activeTab, setActiveTab] = useState<string>(TABS[0].id);
     const [chatMessage, setChatMessage] = useState("");
     const [approvalStatus, setApprovalStatus] = useState<"draft" | "submitted" | "under_review" | "approved" | "rejected">("draft");
 
@@ -48,40 +41,18 @@ export default function AASDPage() {
     // Mock project ID - in real implementation, this would come from URL params or context
     const projectId = "proj-001";
 
-    // Load initial data
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                setError(null);
-
-                // For now, use mock data. In production, these would be real API calls
-                const summary = getMockDecisionSummary();
-                const messages = getMockChatMessages();
-
-                setDecisionSummary(summary);
-                setChatMessages(messages);
-                setApprovalStatus(summary.status);
-
-                // Initialize white paper with default sections
-                const defaultWhitePaper: WhitePaper = {
-                    projectId,
-                    sections: [
-                        { id: "executive", title: "Executive Summary", content: "", required: true, projectId },
-                        { id: "context", title: "Decision Context", content: "", required: true, projectId },
-                        { id: "alternatives", title: "Alternatives Considered", content: "", required: true, projectId },
-                        { id: "analysis", title: "Analysis and Rationale", content: "", required: true, projectId },
-                        { id: "risks", title: "Risk Assessment", content: "", required: true, projectId },
-                        { id: "recommendation", title: "Final Recommendation", content: "", required: true, projectId },
-                        { id: "implementation", title: "Implementation Plan", content: "", required: false, projectId }
-                    ],
-                    lastModified: new Date().toISOString(),
-                    version: 1
-                };
-                setWhitePaper(defaultWhitePaper);
-
-            } catch (err: any) {
-                setError(err.message || 'Failed to load data');
+                const [summaryData, messagesData] = await Promise.all([
+                    getMockDecisionSummary(projectId),
+                    getMockChatMessages(projectId)
+                ]);
+                setDecisionSummary(summaryData);
+                setChatMessages(messagesData);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load data');
             } finally {
                 setLoading(false);
             }
@@ -90,477 +61,388 @@ export default function AASDPage() {
         loadData();
     }, [projectId]);
 
-    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-        setTabValue(newValue);
-    };
-
     const handleSendMessage = async () => {
-        if (!chatMessage.trim() || !decisionSummary) return;
+        if (!chatMessage.trim()) return;
 
-        try {
-            const newMessage: Omit<ChatMessage, 'id' | 'timestamp'> = {
-                sender: 'user',
-                senderName: 'Current User',
-                content: chatMessage,
-                projectId
+        const newMessage: ChatMessage = {
+            id: Date.now().toString(),
+            content: chatMessage,
+            role: 'user',
+            timestamp: new Date().toISOString(),
+            user_id: 'current-user'
+        };
+
+        setChatMessages(prev => [...prev, newMessage]);
+        setChatMessage("");
+
+        // Mock AI response
+        setTimeout(() => {
+            const aiResponse: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                content: `I understand your question about "${chatMessage}". Based on the current decision context, I recommend considering the following factors...`,
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                user_id: 'ai-assistant'
             };
+            setChatMessages(prev => [...prev, aiResponse]);
+        }, 1000);
+    };
 
-            // In real implementation, this would be a real API call
-            // const response = await sendChatMessage(projectId, newMessage);
-
-            // For now, add to local state
-            const mockResponse: ChatMessage = {
-                ...newMessage,
+    const handleGenerateWhitePaper = async () => {
+        setSaving(true);
+        try {
+            // Mock white paper generation
+            const mockWhitePaper: WhitePaper = {
                 id: Date.now().toString(),
-                timestamp: new Date().toLocaleString()
+                title: `Decision Analysis: ${decisionSummary?.title || 'Untitled Decision'}`,
+                content: `# Executive Summary\n\nThis document presents a comprehensive analysis of the decision-making process for ${decisionSummary?.title}.\n\n## Key Findings\n\n- Decision criteria have been systematically evaluated\n- Stakeholder input has been collected and analyzed\n- Risk factors have been identified and mitigated\n\n## Recommendations\n\nBased on the analysis, we recommend proceeding with the proposed decision while monitoring key risk indicators.`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                status: 'draft' as const,
+                project_id: projectId,
+                generated_by: 'current-user'
             };
-
-            setChatMessages(prev => [...prev, mockResponse]);
-            setChatMessage("");
-
-            // Simulate AI response
-            setTimeout(() => {
-                const aiResponse: ChatMessage = {
-                    id: (Date.now() + 1).toString(),
-                    sender: 'assistant',
-                    senderName: 'AI Assistant',
-                    content: `I understand your message: "${chatMessage}". How can I help you with the decision finalization process?`,
-                    timestamp: new Date().toLocaleString(),
-                    projectId
-                };
-                setChatMessages(prev => [...prev, aiResponse]);
-            }, 1000);
-
-        } catch (err: any) {
-            setError(err.message || 'Failed to send message');
-        }
-    };
-
-    const handleUpdateWhitePaperSection = async (sectionId: string, content: string) => {
-        if (!whitePaper) return;
-
-        try {
-            // In real implementation, this would be a real API call
-            // await updateWhitePaperSection(projectId, sectionId, content);
-
-            // Update local state
-            setWhitePaper(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    sections: prev.sections.map(section =>
-                        section.id === sectionId ? { ...section, content } : section
-                    ),
-                    lastModified: new Date().toISOString(),
-                    version: prev.version + 1
-                };
-            });
-        } catch (err: any) {
-            setError(err.message || 'Failed to update section');
-        }
-    };
-
-    const handleGenerateWithAI = async () => {
-        if (!decisionSummary) return;
-
-        try {
-            setSaving(true);
-            // In real implementation, this would be a real API call
-            // const generated = await generateWhitePaperWithAI(projectId);
-
-            // For now, generate mock content based on decision summary
-            const generatedSections = whitePaper?.sections.map(section => {
-                let content = "";
-                switch (section.id) {
-                    case "executive":
-                        content = `This document summarizes the decision to ${decisionSummary.decision.toLowerCase()}. The analysis was conducted using ${decisionSummary.processName} and involved ${decisionSummary.participants.length} key stakeholders.`;
-                        break;
-                    case "context":
-                        content = `The decision context involves ${decisionSummary.projectName}. The process ran from ${decisionSummary.startDate} to ${decisionSummary.endDate}.`;
-                        break;
-                    case "recommendation":
-                        content = decisionSummary.recommendations.join(". ") + ".";
-                        break;
-                    case "risks":
-                        content = `Key risks identified: ${decisionSummary.risks.join(". ")}.`;
-                        break;
-                    default:
-                        content = `Content for ${section.title} will be generated based on the decision analysis.`;
-                }
-                return { ...section, content };
-            }) || [];
-
-            setWhitePaper(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    sections: generatedSections,
-                    lastModified: new Date().toISOString(),
-                    version: prev.version + 1
-                };
-            });
-        } catch (err: any) {
-            setError(err.message || 'Failed to generate with AI');
+            setWhitePaper(mockWhitePaper);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to generate white paper');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleSaveDraft = async () => {
-        if (!whitePaper) return;
-
-        try {
-            setSaving(true);
-            // In real implementation, this would be a real API call
-            // await saveWhitePaperDraft(projectId, whitePaper);
-
-            // For now, just update the last modified time
-            setWhitePaper(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    lastModified: new Date().toISOString(),
-                    version: prev.version + 1
-                };
-            });
-        } catch (err: any) {
-            setError(err.message || 'Failed to save draft');
-        } finally {
-            setSaving(false);
-        }
+    const handleSubmitForApproval = () => {
+        setApprovalStatus("submitted");
     };
 
-    const handleExportPDF = async () => {
-        try {
-            setSaving(true);
-            // In real implementation, this would be a real API call
-            // const blob = await exportWhitePaperPDF(projectId);
-            // const url = window.URL.createObjectURL(blob);
-            // const a = document.createElement('a');
-            // a.href = url;
-            // a.download = `decision-white-paper-${projectId}.pdf`;
-            // a.click();
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'ai-assistant':
+                return (
+                    <div className="space-y-6">
+                        {/* Decision Summary */}
+                        {decisionSummary && (
+                            <Card variant="outlined" padding="md">
+                                <div className="mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Icon name="info" size="md" className="text-theme-accent-primary" />
+                                        <h3 className="text-lg font-semibold text-theme-text-primary">Decision Context</h3>
+                                    </div>
+                                    <h4 className="text-xl font-bold text-theme-text-primary mb-2">{decisionSummary.decision}</h4>
+                                    <p className="text-theme-text-secondary">{decisionSummary.processName}</p>
+                                </div>
 
-            // For now, just show a message
-            alert('PDF export would be generated here in production');
-        } catch (err: any) {
-            setError(err.message || 'Failed to export PDF');
-        } finally {
-            setSaving(false);
-        }
-    };
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-theme-text-secondary">Status:</span>
+                                        <span className="ml-2 text-theme-text-primary font-medium">{decisionSummary.status}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-theme-text-secondary">Project:</span>
+                                        <span className="ml-2 text-theme-text-primary font-medium">{decisionSummary.projectName}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-theme-text-secondary">Start Date:</span>
+                                        <span className="ml-2 text-theme-text-primary font-medium">
+                                            {new Date(decisionSummary.startDate).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-theme-text-secondary">Participants:</span>
+                                        <span className="ml-2 text-theme-text-primary font-medium">
+                                            {decisionSummary.participants?.join(', ') || 'None assigned'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
 
-    const handleSubmitForApproval = async () => {
-        if (!decisionSummary || !whitePaper) return;
+                        {/* Chat Interface */}
+                        <Card variant="default" padding="none">
+                            <div className="p-4 border-b border-theme-border">
+                                <div className="flex items-center gap-2">
+                                    <Icon name="comment-discussion" size="md" className="text-theme-accent-primary" />
+                                    <h3 className="text-lg font-semibold text-theme-text-primary">AI Decision Assistant</h3>
+                                </div>
+                                <p className="text-sm text-theme-text-secondary mt-1">
+                                    Ask questions about your decision or request analysis
+                                </p>
+                            </div>
 
-        try {
-            setSaving(true);
-            // In real implementation, this would be a real API call
-            // const response = await submitForApproval({
-            //     projectId,
-            //     whitePaperId: whitePaper.projectId,
-            //     submittedBy: "Current User",
-            //     submittedAt: new Date().toISOString()
-            // });
+                            {/* Chat Messages */}
+                            <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+                                {chatMessages.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div
+                                            className={`max-w-[80%] p-3 rounded-lg ${message.role === 'user'
+                                                ? 'bg-theme-accent-primary text-white'
+                                                : 'bg-theme-surface-elevated text-theme-text-primary border border-theme-border'
+                                                }`}
+                                        >
+                                            <p className="text-sm">{message.content}</p>
+                                            <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white opacity-70' : 'text-theme-text-muted'
+                                                }`}>
+                                                {new Date(message.timestamp).toLocaleTimeString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
 
-            setApprovalStatus("submitted");
-            setDecisionSummary(prev => prev ? { ...prev, status: 'submitted' } : null);
-        } catch (err: any) {
-            setError(err.message || 'Failed to submit for approval');
-        } finally {
-            setSaving(false);
-        }
-    };
+                            {/* Message Input */}
+                            <div className="p-4 border-t border-theme-border">
+                                <div className="flex gap-2">
+                                    <TextArea
+                                        rows={2}
+                                        value={chatMessage}
+                                        onChange={(e) => setChatMessage(e.target.value)}
+                                        placeholder="Ask about the decision, request analysis, or seek recommendations..."
+                                        className="flex-1"
+                                    />
+                                    <Button
+                                        variant="primary"
+                                        leftIcon="arrow-right"
+                                        onClick={handleSendMessage}
+                                        disabled={!chatMessage.trim()}
+                                    >
+                                        Send
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                );
 
-    const getStatusIcon = () => {
-        switch (approvalStatus) {
-            case "draft": return <Edit />;
-            case "submitted": return <Info />;
-            case "under_review": return <Warning />;
-            case "approved": return <CheckCircle />;
-            case "rejected": return <Warning />;
-            default: return <Edit />;
+            case 'documentation':
+                return (
+                    <div className="space-y-6">
+                        <Card variant="default" padding="md">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Icon name="file-text" size="md" className="text-theme-accent-primary" />
+                                        <h3 className="text-lg font-semibold text-theme-text-primary">Decision Documentation</h3>
+                                    </div>
+                                    <p className="text-theme-text-secondary">
+                                        Generate comprehensive decision documents and white papers
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="primary"
+                                    leftIcon="file-plus"
+                                    onClick={handleGenerateWhitePaper}
+                                    loading={saving}
+                                    disabled={saving}
+                                >
+                                    Generate White Paper
+                                </Button>
+                            </div>
+
+                            {whitePaper ? (
+                                <div className="space-y-4">
+                                    <div className="border border-theme-border rounded-lg p-4 bg-theme-surface-elevated">
+                                        <h4 className="text-lg font-semibold text-theme-text-primary mb-2">
+                                            {whitePaper.title}
+                                        </h4>
+                                        <div className="text-sm text-theme-text-secondary mb-4">
+                                            Generated on {new Date(whitePaper.created_at).toLocaleString()}
+                                        </div>
+                                        <div className="prose prose-sm max-w-none text-theme-text-primary">
+                                            <pre className="whitespace-pre-wrap font-sans">{whitePaper.content}</pre>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Button variant="secondary" leftIcon="download">
+                                            Download PDF
+                                        </Button>
+                                        <Button variant="secondary" leftIcon="share">
+                                            Share Document
+                                        </Button>
+                                        <Button variant="tertiary" leftIcon="edit">
+                                            Edit Document
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-theme-text-secondary">
+                                    <Icon name="file-text" size="xl" className="mx-auto mb-4 text-theme-text-muted" />
+                                    <p>No documents generated yet</p>
+                                    <p className="text-sm">Click "Generate White Paper" to create your first document</p>
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+                );
+
+            case 'approval':
+                return (
+                    <div className="space-y-6">
+                        <Card variant="default" padding="md">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Icon name="checklist" size="md" className="text-theme-accent-primary" />
+                                <h3 className="text-lg font-semibold text-theme-text-primary">Approval Workflow</h3>
+                            </div>
+
+                            {/* Approval Status */}
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className={`w-3 h-3 rounded-full ${approvalStatus === 'approved' ? 'bg-theme-accent-success' :
+                                        approvalStatus === 'rejected' ? 'bg-theme-accent-error' :
+                                            approvalStatus === 'under_review' ? 'bg-theme-accent-warning' :
+                                                'bg-theme-text-muted'
+                                        }`} />
+                                    <span className="text-theme-text-primary font-medium">
+                                        Status: {approvalStatus.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                </div>
+                                <p className="text-theme-text-secondary text-sm">
+                                    {approvalStatus === 'draft' && 'Decision is ready for stakeholder review'}
+                                    {approvalStatus === 'submitted' && 'Decision has been submitted for approval'}
+                                    {approvalStatus === 'under_review' && 'Decision is currently under review'}
+                                    {approvalStatus === 'approved' && 'Decision has been approved by stakeholders'}
+                                    {approvalStatus === 'rejected' && 'Decision requires revision based on feedback'}
+                                </p>
+                            </div>
+
+                            {/* Stakeholder List */}
+                            <div className="mb-6">
+                                <h4 className="text-md font-semibold text-theme-text-primary mb-3">Stakeholders</h4>
+                                <div className="space-y-2">
+                                    {decisionSummary?.stakeholders.map((stakeholder, index) => (
+                                        <div key={index} className="flex items-center justify-between p-3 bg-theme-surface-elevated rounded-lg border border-theme-border">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-theme-accent-primary bg-opacity-20 rounded-full flex items-center justify-center">
+                                                    <Icon name="person" size="sm" className="text-theme-accent-primary" />
+                                                </div>
+                                                <span className="text-theme-text-primary">{stakeholder}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-theme-text-secondary">
+                                                <div className="w-2 h-2 rounded-full bg-theme-text-muted" />
+                                                Pending Review
+                                            </div>
+                                        </div>
+                                    )) || []}
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                                {approvalStatus === 'draft' && (
+                                    <Button
+                                        variant="primary"
+                                        leftIcon="checklist"
+                                        onClick={handleSubmitForApproval}
+                                    >
+                                        Submit for Approval
+                                    </Button>
+                                )}
+
+                                <Button variant="secondary" leftIcon="comment">
+                                    Add Comments
+                                </Button>
+
+                                <Button variant="tertiary" leftIcon="history">
+                                    View History
+                                </Button>
+                            </div>
+
+                            {/* Status Messages */}
+                            {approvalStatus === "submitted" && (
+                                <Alert variant="info" title="Submission Confirmed" className="mt-4">
+                                    Your decision has been submitted to the approval workflow. You will be notified when the review is complete.
+                                </Alert>
+                            )}
+                        </Card>
+                    </div>
+                );
+
+            default:
+                return null;
         }
     };
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                <CircularProgress />
-            </Box>
+            <PageLayout
+                title="Agent Assistant & Documentation Service"
+                subtitle="AI-powered decision finalization and stakeholder collaboration"
+                icon="robot"
+                status={{ text: 'Loading...', type: 'pending' }}
+            >
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                        <Icon name="loading" size="xl" className="text-theme-accent-primary animate-spin mx-auto mb-4" />
+                        <p className="text-theme-text-secondary">Loading AADS interface...</p>
+                    </div>
+                </div>
+            </PageLayout>
         );
     }
 
     if (error) {
         return (
-            <Box sx={{ maxWidth: 1400, mx: "auto", py: 4, px: 2 }}>
-                <Alert severity="error">{error}</Alert>
-            </Box>
-        );
-    }
-
-    if (!decisionSummary || !whitePaper) {
-        return (
-            <Box sx={{ maxWidth: 1400, mx: "auto", py: 4, px: 2 }}>
-                <Alert severity="warning">No decision data available</Alert>
-            </Box>
+            <PageLayout
+                title="Agent Assistant & Documentation Service"
+                subtitle="AI-powered decision finalization and stakeholder collaboration"
+                icon="robot"
+                status={{ text: 'Error', type: 'error' }}
+            >
+                <Alert variant="error" title="Error Loading AADS" className="m-6">
+                    {error}
+                </Alert>
+            </PageLayout>
         );
     }
 
     return (
-        <Box sx={{ maxWidth: 1400, mx: "auto", py: 4, px: 2 }}>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ color: "primary.main", fontWeight: "bold" }}>
-                Agent Assistant & Documentation Service (AADS)
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                Finalize Decision: {decisionSummary.projectName}
-            </Typography>
-
-            {/* Status Banner */}
-            <Alert
-                severity={approvalStatus === "approved" ? "success" : approvalStatus === "rejected" ? "error" : "info"}
-                icon={getStatusIcon()}
-                sx={{ mb: 3 }}
-            >
-                Status: {approvalStatus.replace("_", " ").toUpperCase()}
-                {approvalStatus === "draft" && " - Ready to submit for approval"}
-                {approvalStatus === "submitted" && " - Decision submitted for review"}
-                {approvalStatus === "under_review" && " - Under review by stakeholders"}
-                {approvalStatus === "approved" && " - Decision approved and ready for implementation"}
-                {approvalStatus === "rejected" && " - Decision requires revision"}
-            </Alert>
-
-            <Paper elevation={2} sx={{ mb: 3 }}>
-                <Tabs value={tabValue} onChange={handleTabChange} aria-label="AADS tabs">
-                    <Tab label="Decision Review" />
-                    <Tab label="AI Assistant & Team" />
-                    <Tab label="White Paper Editor" />
-                    <Tab label="Approval Submission" />
-                </Tabs>
-            </Paper>
-
-            {/* Decision Review Tab */}
-            <TabPanel value={tabValue} index={0}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>Project Overview</Typography>
-                            <Typography><strong>Project:</strong> {decisionSummary.projectName}</Typography>
-                            <Typography><strong>Decision:</strong> {decisionSummary.decision}</Typography>
-                            <Typography><strong>Process:</strong> {decisionSummary.processName}</Typography>
-                            <Typography><strong>Duration:</strong> {decisionSummary.startDate} to {decisionSummary.endDate}</Typography>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>Participants</Typography>
-                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                {decisionSummary.participants.map((participant, index) => (
-                                    <Chip key={index} label={participant} size="small" />
-                                ))}
-                            </Box>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>Key Findings</Typography>
-                            <ul>
-                                {decisionSummary.keyFindings.map((finding, index) => (
-                                    <li key={index}><Typography variant="body2">{finding}</Typography></li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>Risks Identified</Typography>
-                            <ul>
-                                {decisionSummary.risks.map((risk, index) => (
-                                    <li key={index}><Typography variant="body2" color="warning.main">{risk}</Typography></li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-
-                    <Card sx={{ gridColumn: "1 / -1" }}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>Recommendations</Typography>
-                            <ul>
-                                {decisionSummary.recommendations.map((rec, index) => (
-                                    <li key={index}><Typography variant="body2">{rec}</Typography></li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                </Box>
-            </TabPanel>
-
-            {/* AI Assistant & Team Tab */}
-            <TabPanel value={tabValue} index={1}>
-                <Box sx={{ display: "flex", flexDirection: "column", height: 600 }}>
-                    {/* Chat Messages */}
-                    <Box sx={{ flex: 1, overflowY: "auto", mb: 2, p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
-                        {chatMessages.map((message) => (
-                            <Box key={message.id} sx={{ mb: 2 }}>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                                    <Chip
-                                        label={message.senderName}
-                                        size="small"
-                                        color={message.sender === "assistant" ? "primary" : message.sender === "team" ? "secondary" : "default"}
+        <PageLayout
+            title="Agent Assistant & Documentation Service"
+            subtitle="AI-powered decision finalization and stakeholder collaboration"
+            icon="robot"
+            status={{ text: 'AADS Active', type: 'active' }}
+        >
+            <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
+                {/* Tab Navigation */}
+                <Card variant="default" padding="none">
+                    <div className="border-b border-theme-border">
+                        <nav className="flex">
+                            {TABS.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`
+                                        flex items-center gap-3 px-6 py-4 text-sm font-medium transition-all duration-200 border-b-2
+                                        ${activeTab === tab.id
+                                            ? 'text-theme-accent-primary bg-theme-surface-elevated border-theme-accent-primary'
+                                            : 'text-theme-text-secondary hover:text-theme-accent-primary hover:bg-theme-surface-hover border-transparent'
+                                        }
+                                    `}
+                                >
+                                    <Icon
+                                        name={tab.icon}
+                                        size="md"
+                                        className={activeTab === tab.id ? 'text-theme-accent-primary' : 'text-theme-text-muted'}
                                     />
-                                    <Typography variant="caption" sx={{ ml: 1, color: "text.secondary" }}>
-                                        {message.timestamp}
-                                    </Typography>
-                                </Box>
-                                <Paper sx={{ p: 2, backgroundColor: message.sender === "assistant" ? "#f3f6ff" : "#fafafa" }}>
-                                    <Typography variant="body2">{message.content}</Typography>
-                                </Paper>
-                            </Box>
-                        ))}
-                    </Box>
+                                    <div className="text-left">
+                                        <div>{tab.name}</div>
+                                        <div className="text-xs text-theme-text-muted">
+                                            {tab.description}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
 
-                    {/* Message Input */}
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={2}
-                            placeholder="Ask the AI assistant or add a team comment..."
-                            value={chatMessage}
-                            onChange={(e) => setChatMessage(e.target.value)}
-                            onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                        />
-                        <Button
-                            variant="contained"
-                            onClick={handleSendMessage}
-                            disabled={!chatMessage.trim()}
-                            sx={{ minWidth: 100 }}
-                        >
-                            <Send />
-                        </Button>
-                    </Box>
-                </Box>
-            </TabPanel>
-
-            {/* White Paper Editor Tab */}
-            <TabPanel value={tabValue} index={2}>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Box>
-                            <Typography variant="h6">Decision White Paper</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Draft the formal decision document. Use the AI assistant for help with content and structure.
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                            <Button
-                                variant="outlined"
-                                startIcon={<AutoFixHigh />}
-                                onClick={handleGenerateWithAI}
-                                disabled={saving}
-                            >
-                                Generate with AI
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<Save />}
-                                onClick={handleSaveDraft}
-                                disabled={saving}
-                            >
-                                Save Draft
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<PictureAsPdf />}
-                                onClick={handleExportPDF}
-                                disabled={saving}
-                            >
-                                Export PDF
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    {saving && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            <CircularProgress size={16} sx={{ mr: 1 }} />
-                            Processing...
-                        </Alert>
-                    )}
-
-                    {whitePaper.sections.map((section) => (
-                        <Card key={section.id}>
-                            <CardContent>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                    <Typography variant="h6">{section.title}</Typography>
-                                    {section.required && (
-                                        <Chip label="Required" size="small" color="error" sx={{ ml: 1 }} />
-                                    )}
-                                </Box>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={4}
-                                    placeholder={`Enter content for ${section.title.toLowerCase()}...`}
-                                    value={section.content}
-                                    onChange={(e) => handleUpdateWhitePaperSection(section.id, e.target.value)}
-                                />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </Box>
-            </TabPanel>
-
-            {/* Approval Submission Tab */}
-            <TabPanel value={tabValue} index={3}>
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" gutterBottom>Submit for Approval</Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                            Review the decision summary and submit for formal approval through the BPMN workflow.
-                        </Typography>
-
-                        <Box sx={{ mb: 3 }}>
-                            <Typography variant="subtitle2" gutterBottom>Approval Checklist:</Typography>
-                            <ul>
-                                <li>Decision analysis is complete and documented</li>
-                                <li>All risks have been identified and mitigation strategies defined</li>
-                                <li>Stakeholder feedback has been incorporated</li>
-                                <li>White paper is complete and accurate</li>
-                                <li>Implementation plan is ready</li>
-                            </ul>
-                        </Box>
-
-                        <Divider sx={{ my: 2 }} />
-
-                        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                onClick={handleSubmitForApproval}
-                                disabled={approvalStatus !== "draft" || saving}
-                                startIcon={<CheckCircle />}
-                            >
-                                {saving ? "Submitting..." : "Submit for Approval"}
-                            </Button>
-                            {approvalStatus !== "draft" && (
-                                <Typography variant="body2" color="text.secondary">
-                                    Decision has been submitted for review
-                                </Typography>
-                            )}
-                        </Box>
-
-                        {approvalStatus === "submitted" && (
-                            <Alert severity="info" sx={{ mt: 2 }}>
-                                Your decision has been submitted to the approval workflow. You will be notified when the review is complete.
-                            </Alert>
-                        )}
-                    </CardContent>
+                    {/* Tab Content */}
+                    <div className="p-6">
+                        {renderTabContent()}
+                    </div>
                 </Card>
-            </TabPanel>
-        </Box>
+            </div>
+        </PageLayout>
     );
 } 

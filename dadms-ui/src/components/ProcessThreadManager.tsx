@@ -1,20 +1,6 @@
-import { DataObject, Psychology, Search } from '@mui/icons-material';
-import {
-    Alert,
-    Box,
-    Card, CardContent, CardHeader,
-    Chip,
-    CircularProgress,
-    Collapse,
-    Divider,
-    IconButton,
-    InputAdornment, List, ListItemButton, ListItemText,
-    Paper,
-    TextField,
-    Tooltip,
-    Typography
-} from '@mui/material';
 import React, { useState } from 'react';
+import { Button, Card, Icon } from './shared';
+import { FormField, Input } from './shared/FormField';
 
 // Mock data types
 interface TaskFeedback {
@@ -33,7 +19,6 @@ interface ServiceTaskContext {
     feedback?: TaskFeedback[];
 }
 
-// Extend ProcessThread to include thread-level feedback
 interface ProcessThread {
     thread_id: string;
     process_name: string;
@@ -45,472 +30,332 @@ interface ProcessThread {
     feedback?: TaskFeedback[];
 }
 
-// Add mock similar tasks for the Similarity Explorer
 interface SimilarTask {
     thread_id: string;
+    similarity_score: number;
     process_name: string;
-    process_version: number;
-    task_id: string;
-    task_name: string;
-    similarity: number;
-    context_snippet: string;
+    created_at: string;
+    context_overlap: string[];
 }
 
-const MOCK_PROCESS_THREADS: ProcessThread[] = [
+interface AnalysisThread {
+    id: string;
+    openai_thread: string;
+    openai_assistant: string;
+    name: string;
+    status: 'active' | 'completed' | 'error' | 'pending';
+    created_at: string;
+    last_activity: string;
+    analysis_count: number;
+    analysis_ids: string[];
+    process_definition?: {
+        name: string;
+        version: number;
+        key: string;
+    };
+}
+
+interface ProcessThreadManagerProps {
+    threads?: AnalysisThread[];
+}
+
+// Mock data
+const MOCK_THREADS: ProcessThread[] = [
     {
-        thread_id: 'thread-1',
-        process_name: 'Invoice Approval',
+        thread_id: 'thread-001',
+        process_name: 'Strategic Planning Process',
         process_version: 2,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        metadata: { project: 'Demo', process: 'Invoice Process' },
-        feedback: [
-            { user: 'Carol', timestamp: new Date().toISOString(), comment: 'Overall, this process run was smooth.' }
-        ],
-        tasks: [
-            {
-                task_id: 'task-1',
-                name: 'Extract Invoice Data',
-                input_context: { invoiceId: 123 },
-                injected_context: { tool: 'OCR', confidence: 0.98 },
-                output_context: { extracted: true, fields: ['amount', 'date'] },
-                created_at: new Date().toISOString(),
-                feedback: [
-                    { user: 'Alice', timestamp: new Date().toISOString(), comment: 'Extraction looks good.' },
-                    { user: 'Bob', timestamp: new Date(Date.now() - 60000).toISOString(), comment: 'Consider double-checking the date field.' }
-                ]
-            },
-            {
-                task_id: 'task-2',
-                name: 'Approve Invoice',
-                input_context: { amount: 1000 },
-                injected_context: { persona: 'Manager', rules: ['limit < 5000'] },
-                output_context: { approved: true, approver: 'Alice' },
-                created_at: new Date().toISOString(),
-                feedback: []
-            },
-        ],
-    },
-    {
-        thread_id: 'thread-2',
-        process_name: 'Purchase Request',
-        process_version: 1,
         status: 'completed',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        metadata: { project: 'Demo', process: 'Purchase Process' },
-        feedback: [],
+        created_at: '2024-01-15T10:30:00Z',
+        metadata: { initiator: 'john.doe', priority: 'high' },
         tasks: [
             {
-                task_id: 'task-3',
-                name: 'Review Request',
-                input_context: { requestId: 456 },
-                injected_context: { persona: 'Reviewer' },
-                output_context: { reviewed: true, comments: 'Looks good' },
-                created_at: new Date(Date.now() - 86300000).toISOString(),
-            },
+                task_id: 'task-001',
+                name: 'Requirements Analysis',
+                input_context: { requirements: ['scalability', 'security'] },
+                injected_context: { best_practices: true },
+                output_context: { analysis_complete: true },
+                created_at: '2024-01-15T10:30:00Z',
+                feedback: [
+                    {
+                        user: 'jane.smith',
+                        timestamp: '2024-01-15T12:00:00Z',
+                        comment: 'Analysis was thorough and well-documented.'
+                    }
+                ]
+            }
         ],
-    },
+        feedback: [
+            {
+                user: 'manager.jones',
+                timestamp: '2024-01-15T16:00:00Z',
+                comment: 'Process completed successfully with good stakeholder engagement.'
+            }
+        ]
+    }
 ];
 
 const MOCK_SIMILAR_TASKS: SimilarTask[] = [
     {
-        thread_id: 'thread-2',
-        process_name: 'Purchase Request',
-        process_version: 1,
-        task_id: 'task-3',
-        task_name: 'Review Request',
-        similarity: 0.87,
-        context_snippet: 'Reviewed purchase request for item 456. Comments: Looks good.'
-    },
-    {
-        thread_id: 'thread-3',
-        process_name: 'Expense Approval',
-        process_version: 1,
-        task_id: 'task-7',
-        task_name: 'Approve Expense',
-        similarity: 0.81,
-        context_snippet: 'Expense of $1000 approved by manager.'
+        thread_id: 'thread-002',
+        similarity_score: 0.85,
+        process_name: 'Risk Assessment Process',
+        created_at: '2024-01-10T09:00:00Z',
+        context_overlap: ['security', 'compliance']
     }
 ];
 
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'completed': return 'success';
-        case 'active': return 'primary';
-        case 'error': return 'error';
-        case 'pending': return 'warning';
-        default: return 'default';
-    }
-};
+const ProcessThreadManager: React.FC<ProcessThreadManagerProps> = ({ threads = [] }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedThread, setSelectedThread] = useState<ProcessThread | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackComment, setFeedbackComment] = useState('');
 
-const ProcessThreadManager: React.FC = () => {
-    const [threads, setThreads] = useState<ProcessThread[]>(MOCK_PROCESS_THREADS);
-    const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [expandedThreads, setExpandedThreads] = useState<{ [threadId: string]: boolean }>({});
-    // Add state for new feedback input
-    const [newFeedback, setNewFeedback] = useState<string>('');
-    const [feedbackError, setFeedbackError] = useState<string | null>(null);
-    // Add state for new thread feedback input
-    const [newThreadFeedback, setNewThreadFeedback] = useState<string>('');
-    const [threadFeedbackError, setThreadFeedbackError] = useState<string | null>(null);
-
-    const filteredThreads = threads.filter(thread =>
-        thread.process_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        thread.thread_id.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredThreads = MOCK_THREADS.filter(thread =>
+        thread.process_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        thread.thread_id.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleThreadSelect = (threadId: string) => {
-        setSelectedThreadId(threadId);
-        setSelectedTaskId(null);
-    };
-    const handleTaskSelect = (threadId: string, taskId: string) => {
-        setSelectedThreadId(threadId);
-        setSelectedTaskId(taskId);
-    };
-    const handleExpandToggle = (threadId: string) => {
-        setExpandedThreads(prev => ({ ...prev, [threadId]: !prev[threadId] }));
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'active': return 'text-theme-accent-success bg-theme-accent-success bg-opacity-20';
+            case 'completed': return 'text-theme-accent-info bg-theme-accent-info bg-opacity-20';
+            case 'error': return 'text-theme-accent-error bg-theme-accent-error bg-opacity-20';
+            case 'pending': return 'text-theme-accent-warning bg-theme-accent-warning bg-opacity-20';
+            default: return 'text-theme-text-secondary bg-theme-surface-hover';
+        }
     };
 
-    // Add handler for submitting feedback
+    const formatDateTime = (dateTime: string) => {
+        return new Date(dateTime).toLocaleString();
+    };
+
     const handleAddFeedback = () => {
-        if (!selectedThread || !selectedTask) return;
-        if (!newFeedback.trim()) {
-            setFeedbackError('Comment cannot be empty.');
-            return;
+        if (feedbackComment.trim() && selectedThread) {
+            // In a real implementation, this would call an API
+            console.log('Adding feedback:', feedbackComment);
+            setFeedbackComment('');
+            setShowFeedback(false);
         }
-        // Add feedback to the selected task in local state
-        setThreads(prevThreads => prevThreads.map(thread => {
-            if (thread.thread_id !== selectedThread.thread_id) return thread;
-            return {
-                ...thread,
-                tasks: thread.tasks.map(task => {
-                    if (task.task_id !== selectedTask.task_id) return task;
-                    return {
-                        ...task,
-                        feedback: [
-                            ...(task.feedback || []),
-                            {
-                                user: 'CurrentUser', // Replace with real user in future
-                                timestamp: new Date().toISOString(),
-                                comment: newFeedback.trim(),
-                            }
-                        ]
-                    };
-                })
-            };
-        }));
-        setNewFeedback('');
-        setFeedbackError(null);
     };
-
-    // Add handler for submitting thread feedback
-    const handleAddThreadFeedback = () => {
-        if (!selectedThread) return;
-        if (!newThreadFeedback.trim()) {
-            setThreadFeedbackError('Comment cannot be empty.');
-            return;
-        }
-        setThreads(prevThreads => prevThreads.map(thread => {
-            if (thread.thread_id !== selectedThread.thread_id) return thread;
-            return {
-                ...thread,
-                feedback: [
-                    ...(thread.feedback || []),
-                    {
-                        user: 'CurrentUser', // Replace with real user in future
-                        timestamp: new Date().toISOString(),
-                        comment: newThreadFeedback.trim(),
-                    }
-                ]
-            };
-        }));
-        setNewThreadFeedback('');
-        setThreadFeedbackError(null);
-    };
-
-    const selectedThread = threads.find(t => t.thread_id === selectedThreadId) || null;
-    const selectedTask = selectedThread && selectedTaskId
-        ? selectedThread.tasks.find(t => t.task_id === selectedTaskId) || null
-        : null;
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, height: '70vh', maxWidth: '100%', overflow: 'hidden' }}>
-            {/* Thread List */}
-            <Box sx={{ width: '400px', minWidth: '400px', maxWidth: '400px', flexShrink: 0 }}>
-                <Paper sx={{ p: 2, height: '100%', overflow: 'auto', width: '100%' }}>
-                    <Box sx={{ mb: 2 }}>
-                        <TextField
-                            fullWidth
-                            size="small"
-                            placeholder="Search process threads..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <Search />
-                                    </InputAdornment>
-                                )
-                            }}
-                        />
-                    </Box>
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : (
-                        <List>
-                            {filteredThreads.map((thread) => (
-                                <React.Fragment key={thread.thread_id}>
-                                    <ListItemButton
-                                        onClick={() => handleThreadSelect(thread.thread_id)}
-                                        selected={selectedThreadId === thread.thread_id && !selectedTaskId}
-                                        sx={{ maxWidth: '100%', overflow: 'hidden' }}
+        <div className="space-y-6">
+            {/* Header */}
+            <div>
+                <h2 className="text-2xl font-semibold text-theme-text-primary mb-2">Process Thread Manager</h2>
+                <p className="text-theme-text-secondary">
+                    Track and manage process execution threads with comprehensive feedback collection.
+                </p>
+            </div>
+
+            <div className="flex gap-6 h-[70vh] max-w-full overflow-hidden">
+                {/* Thread List */}
+                <div className="w-96 min-w-96 max-w-96 flex-shrink-0">
+                    <Card variant="outlined" padding="md" className="h-full">
+                        <div className="mb-4">
+                            <FormField label="Search Threads">
+                                <div className="relative">
+                                    <Input
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Search by name or ID..."
+                                        className="pl-10"
+                                    />
+                                    <Icon name="search" size="md" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-theme-text-muted" />
+                                </div>
+                            </FormField>
+                        </div>
+
+                        <div className="space-y-2 overflow-y-auto max-h-[calc(100%-80px)]">
+                            {filteredThreads.length === 0 ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="text-center text-theme-text-secondary">
+                                        <Icon name="search" size="lg" className="mx-auto mb-2 text-theme-text-muted" />
+                                        <p>No threads found</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                filteredThreads.map((thread) => (
+                                    <button
+                                        key={thread.thread_id}
+                                        onClick={() => setSelectedThread(thread)}
+                                        className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${selectedThread?.thread_id === thread.thread_id
+                                                ? 'bg-theme-accent-primary bg-opacity-20 border-theme-accent-primary'
+                                                : 'bg-theme-surface-elevated border-theme-border hover:bg-theme-surface-hover'
+                                            }`}
                                     >
-                                        <ListItemText
-                                            primary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: '100%', overflow: 'hidden' }}>
-                                                    <Typography variant="subtitle2" sx={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                                                        {thread.process_name} (v{thread.process_version})
-                                                    </Typography>
-                                                    <Chip label={thread.status} size="small" color={getStatusColor(thread.status) as any} />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-                                                    <Typography variant="caption" display="block" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        Thread: {thread.thread_id}
-                                                    </Typography>
-                                                    <Typography variant="caption" display="block" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        Created: {new Date(thread.created_at).toLocaleString()}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                        <Tooltip title={expandedThreads[thread.thread_id] ? 'Collapse tasks' : 'Expand tasks'}>
-                                            <IconButton size="small" onClick={e => { e.stopPropagation(); handleExpandToggle(thread.thread_id); }}>
-                                                {expandedThreads[thread.thread_id] ? '-' : '+'}
-                                            </IconButton>
-                                        </Tooltip>
-                                    </ListItemButton>
-                                    <Collapse in={expandedThreads[thread.thread_id]} timeout="auto" unmountOnExit>
-                                        <List component="div" disablePadding>
-                                            {thread.tasks.map(task => (
-                                                <ListItemButton
-                                                    key={task.task_id}
-                                                    sx={{ pl: 4 }}
-                                                    selected={selectedThreadId === thread.thread_id && selectedTaskId === task.task_id}
-                                                    onClick={() => handleTaskSelect(thread.thread_id, task.task_id)}
-                                                >
-                                                    <ListItemText
-                                                        primary={<Typography variant="body2">Task: {task.name}</Typography>}
-                                                        secondary={<Typography variant="caption">{new Date(task.created_at).toLocaleString()}</Typography>}
-                                                    />
-                                                </ListItemButton>
-                                            ))}
-                                        </List>
-                                    </Collapse>
-                                    <Divider />
-                                </React.Fragment>
-                            ))}
-                        </List>
-                    )}
-                </Paper>
-            </Box>
-            {/* Thread/Task Details */}
-            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', maxWidth: 'calc(100vw - 450px)', width: '100%' }}>
-                {loading ? (
-                    <Paper sx={{ p: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CircularProgress />
-                    </Paper>
-                ) : error ? (
-                    <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-                ) : selectedThread ? (
-                    selectedTask ? (
-                        <Paper sx={{ p: 0, height: '100%', overflow: 'auto', width: '100%', maxWidth: '100%', wordWrap: 'break-word', overflowWrap: 'break-word', hyphens: 'auto', '& *': { maxWidth: '100% !important', wordWrap: 'break-word !important', overflowWrap: 'break-word !important', whiteSpace: 'pre-wrap' } }}>
-                            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50', maxWidth: '100%', overflow: 'hidden' }}>
-                                <Card sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-                                    <CardHeader title={`Task: ${selectedTask.name}`} titleTypographyProps={{ variant: 'h6' }} avatar={<DataObject />} />
-                                    <CardContent>
-                                        <Typography variant="body2" color="text.secondary"><strong>Task ID:</strong> {selectedTask.task_id}</Typography>
-                                        <Typography variant="body2" color="text.secondary"><strong>Created:</strong> {new Date(selectedTask.created_at).toLocaleString()}</Typography>
-                                    </CardContent>
-                                </Card>
-                                <Card sx={{ maxWidth: '100%', overflow: 'hidden', mt: 2 }}>
-                                    <CardHeader title="Input Context" titleTypographyProps={{ variant: 'subtitle1' }} />
-                                    <CardContent>
-                                        <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '120px', maxWidth: '100%' }}>{JSON.stringify(selectedTask.input_context, null, 2)}</pre>
-                                    </CardContent>
-                                </Card>
-                                <Card sx={{ maxWidth: '100%', overflow: 'hidden', mt: 2 }}>
-                                    <CardHeader title="Injected Context" titleTypographyProps={{ variant: 'subtitle1' }} />
-                                    <CardContent>
-                                        <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '120px', maxWidth: '100%' }}>{JSON.stringify(selectedTask.injected_context, null, 2)}</pre>
-                                    </CardContent>
-                                </Card>
-                                <Card sx={{ maxWidth: '100%', overflow: 'hidden', mt: 2 }}>
-                                    <CardHeader title="Output Context" titleTypographyProps={{ variant: 'subtitle1' }} />
-                                    <CardContent>
-                                        <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '120px', maxWidth: '100%' }}>{JSON.stringify(selectedTask.output_context, null, 2)}</pre>
-                                    </CardContent>
-                                </Card>
-                            </Box>
-                            <Box sx={{ p: 2, mt: 2 }}>
-                                <Typography variant="h6" gutterBottom>Feedback & Review</Typography>
-                                {(selectedTask.feedback && selectedTask.feedback.length > 0) ? (
-                                    <List sx={{ mb: 2 }}>
-                                        {selectedTask.feedback.map((fb, idx) => (
-                                            <React.Fragment key={idx}>
-                                                <ListItemText
-                                                    primary={<><b>{fb.user}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>{new Date(fb.timestamp).toLocaleString()}</span></>}
-                                                    secondary={fb.comment}
-                                                    sx={{ mb: 1 }}
-                                                />
-                                                <Divider />
-                                            </React.Fragment>
-                                        ))}
-                                    </List>
-                                ) : (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No feedback yet. Be the first to comment!</Typography>
-                                )}
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    minRows={2}
-                                    maxRows={4}
-                                    label="Add feedback or review"
-                                    value={newFeedback}
-                                    onChange={e => setNewFeedback(e.target.value)}
-                                    error={!!feedbackError}
-                                    helperText={feedbackError}
-                                    sx={{ mb: 1 }}
-                                />
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                    <IconButton color="primary" onClick={handleAddFeedback}>
-                                        <Typography variant="button">Submit</Typography>
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                            {/* Similarity Explorer Placeholder */}
-                            <Box sx={{ p: 2, mt: 2 }}>
-                                <Typography variant="h6" gutterBottom>Similarity Explorer <span style={{ color: '#888', fontSize: '0.85em' }}>(Preview)</span></Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    This section will show tasks from other process runs that are semantically similar to this task, enabling cross-process insights and meta-process discovery.
-                                </Typography>
-                                <List>
-                                    {MOCK_SIMILAR_TASKS.map((sim, idx) => (
-                                        <React.Fragment key={idx}>
-                                            <ListItemText
-                                                primary={<><b>{sim.process_name} (v{sim.process_version})</b> &mdash; Task: <b>{sim.task_name}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>[Similarity: {(sim.similarity * 100).toFixed(1)}%]</span></>}
-                                                secondary={<span style={{ color: '#555' }}>{sim.context_snippet}</span>}
-                                                sx={{ mb: 1 }}
-                                            />
-                                            <Divider />
-                                        </React.Fragment>
-                                    ))}
-                                </List>
-                            </Box>
-                        </Paper>
-                    ) : (
-                        <Paper sx={{ p: 0, height: '100%', overflow: 'auto', width: '100%', maxWidth: '100%', wordWrap: 'break-word', overflowWrap: 'break-word', hyphens: 'auto', '& *': { maxWidth: '100% !important', wordWrap: 'break-word !important', overflowWrap: 'break-word !important', whiteSpace: 'pre-wrap' } }}>
-                            {/* Thread Feedback Section */}
-                            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50', maxWidth: '100%', overflow: 'hidden' }}>
-                                <Typography variant="h6" gutterBottom>Thread Feedback & Review</Typography>
-                                {(selectedThread.feedback && selectedThread.feedback.length > 0) ? (
-                                    <List sx={{ mb: 2 }}>
-                                        {selectedThread.feedback.map((fb, idx) => (
-                                            <React.Fragment key={idx}>
-                                                <ListItemText
-                                                    primary={<><b>{fb.user}</b> <span style={{ color: '#888', fontSize: '0.85em' }}>{new Date(fb.timestamp).toLocaleString()}</span></>}
-                                                    secondary={fb.comment}
-                                                    sx={{ mb: 1 }}
-                                                />
-                                                <Divider />
-                                            </React.Fragment>
-                                        ))}
-                                    </List>
-                                ) : (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No thread feedback yet. Be the first to comment!</Typography>
-                                )}
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    minRows={2}
-                                    maxRows={4}
-                                    label="Add thread feedback or review"
-                                    value={newThreadFeedback}
-                                    onChange={e => setNewThreadFeedback(e.target.value)}
-                                    error={!!threadFeedbackError}
-                                    helperText={threadFeedbackError}
-                                    sx={{ mb: 1 }}
-                                />
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                    <IconButton color="primary" onClick={handleAddThreadFeedback}>
-                                        <Typography variant="button">Submit</Typography>
-                                    </IconButton>
-                                </Box>
-                            </Box>
+                                        <div className="flex items-center gap-2 max-w-full overflow-hidden">
+                                            <Icon name="type-hierarchy" size="md" className="flex-shrink-0 text-theme-accent-primary" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-medium text-theme-text-primary truncate">
+                                                    {thread.process_name}
+                                                </div>
+                                                <div className="text-xs text-theme-text-secondary">
+                                                    v{thread.process_version} • {thread.thread_id.substring(0, 8)}...
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(thread.status)}`}>
+                                                {thread.status}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Thread Details */}
+                <div className="flex-1 min-w-0 overflow-hidden max-w-[calc(100vw-450px)] w-full">
+                    {selectedThread ? (
+                        <Card variant="outlined" padding="none" className="h-full">
                             {/* Thread Header */}
-                            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50', maxWidth: '100%', overflow: 'hidden' }}>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <Card sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-                                        <CardHeader title="Process Thread Information" titleTypographyProps={{ variant: 'h6' }} avatar={<DataObject />} />
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary"><strong>Thread ID:</strong> {selectedThread.thread_id}</Typography>
-                                            <Typography variant="body2" color="text.secondary"><strong>Process:</strong> {selectedThread.process_name} (v{selectedThread.process_version})</Typography>
-                                            <Typography variant="body2" color="text.secondary"><strong>Created:</strong> {new Date(selectedThread.created_at).toLocaleString()}</Typography>
-                                            <Typography variant="body2" color="text.secondary"><strong>Status:</strong> {selectedThread.status}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                    <Card sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-                                        <CardHeader title="Thread Metadata" titleTypographyProps={{ variant: 'h6' }} avatar={<Psychology />} />
-                                        <CardContent>
-                                            {selectedThread.metadata && Object.keys(selectedThread.metadata).length > 0 ? (
-                                                <pre style={{ fontSize: '0.75rem', overflow: 'auto', maxHeight: '150px', maxWidth: '100%' }}>
-                                                    {JSON.stringify(selectedThread.metadata, null, 2)}
-                                                </pre>
-                                            ) : (
-                                                <Typography variant="body2" color="text.secondary">No metadata available</Typography>
+                            <div className="p-4 border-b border-theme-border bg-theme-surface-elevated">
+                                <div className="flex items-center justify-between max-w-full overflow-hidden">
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-lg font-semibold text-theme-text-primary truncate">
+                                            {selectedThread.process_name}
+                                        </h3>
+                                        <div className="flex items-center gap-4 text-sm text-theme-text-secondary mt-1">
+                                            <span>Thread: {selectedThread.thread_id}</span>
+                                            <span>Version: {selectedThread.process_version}</span>
+                                            <span>Created: {formatDateTime(selectedThread.created_at)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 ml-4">
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            leftIcon="comment"
+                                            onClick={() => setShowFeedback(!showFeedback)}
+                                        >
+                                            Add Feedback
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Feedback Form */}
+                            {showFeedback && (
+                                <div className="p-4 border-b border-theme-border bg-theme-surface-hover">
+                                    <FormField label="Add Feedback">
+                                        <div className="space-y-3">
+                                            <Input
+                                                value={feedbackComment}
+                                                onChange={(e) => setFeedbackComment(e.target.value)}
+                                                placeholder="Share your feedback about this thread..."
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <Button size="sm" variant="tertiary" onClick={() => setShowFeedback(false)}>
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="primary"
+                                                    onClick={handleAddFeedback}
+                                                    disabled={!feedbackComment.trim()}
+                                                >
+                                                    Submit
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </FormField>
+                                </div>
+                            )}
+
+                            {/* Tasks */}
+                            <div className="p-4 border-b border-theme-border bg-theme-surface-elevated">
+                                <h4 className="text-md font-medium text-theme-text-primary mb-3">
+                                    Tasks ({selectedThread.tasks.length})
+                                </h4>
+                                <div className="space-y-3">
+                                    {selectedThread.tasks.map((task) => (
+                                        <div key={task.task_id} className="bg-theme-surface rounded-lg p-3 border border-theme-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h5 className="font-medium text-theme-text-primary">{task.name}</h5>
+                                                <span className="text-xs text-theme-text-secondary">{task.task_id}</span>
+                                            </div>
+                                            <div className="text-sm text-theme-text-secondary">
+                                                Created: {formatDateTime(task.created_at)}
+                                            </div>
+                                            {task.feedback && task.feedback.length > 0 && (
+                                                <div className="mt-2 text-sm">
+                                                    <span className="text-theme-accent-success">
+                                                        {task.feedback.length} feedback item(s)
+                                                    </span>
+                                                </div>
                                             )}
-                                        </CardContent>
-                                    </Card>
-                                </Box>
-                            </Box>
-                            {/* Task List */}
-                            <Box sx={{ p: 2, maxWidth: '100%', overflow: 'hidden', wordWrap: 'break-word' }}>
-                                <Typography variant="h6" gutterBottom>Service Tasks ({selectedThread.tasks.length})</Typography>
-                                {selectedThread.tasks.map((task, idx) => (
-                                    <Card key={task.task_id} sx={{ mb: 2, maxWidth: '100%', wordWrap: 'break-word', overflow: 'hidden' }}>
-                                        <CardHeader
-                                            title={`Task: ${task.name}`}
-                                            subheader={new Date(task.created_at).toLocaleString()}
-                                            titleTypographyProps={{ variant: 'subtitle1' }}
-                                            avatar={<Typography variant="h6">{idx + 1}</Typography>}
-                                        />
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary"><strong>Input Context:</strong></Typography>
-                                            <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '80px', maxWidth: '100%' }}>{JSON.stringify(task.input_context, null, 2)}</pre>
-                                            <Typography variant="body2" color="text.secondary"><strong>Injected Context:</strong></Typography>
-                                            <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '80px', maxWidth: '100%' }}>{JSON.stringify(task.injected_context, null, 2)}</pre>
-                                            <Typography variant="body2" color="text.secondary"><strong>Output Context:</strong></Typography>
-                                            <pre style={{ fontSize: '0.85rem', overflow: 'auto', maxHeight: '80px', maxWidth: '100%' }}>{JSON.stringify(task.output_context, null, 2)}</pre>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </Box>
-                        </Paper>
-                    )
-                ) : (
-                    <Paper sx={{ p: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Typography variant="h6" color="text.secondary">Select a process thread or task to view its context</Typography>
-                    </Paper>
-                )}
-            </Box>
-        </Box>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Similar Tasks */}
+                            <div className="p-4 border-b border-theme-border bg-theme-surface-elevated">
+                                <div className="flex flex-col gap-2">
+                                    <h4 className="text-md font-medium text-theme-text-primary">Similar Tasks</h4>
+                                    <div className="space-y-2">
+                                        {MOCK_SIMILAR_TASKS.map((similar, index) => (
+                                            <div key={index} className="bg-theme-surface rounded-lg p-3 border border-theme-border">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium text-theme-text-primary">{similar.process_name}</span>
+                                                    <span className="text-sm text-theme-accent-success">
+                                                        {Math.round(similar.similarity_score * 100)}% similar
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-theme-text-secondary mt-1">
+                                                    Overlap: {similar.context_overlap.join(', ')}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Thread Feedback */}
+                            <div className="p-4 overflow-y-auto max-h-64">
+                                <h4 className="text-md font-medium text-theme-text-primary mb-3">Thread Feedback</h4>
+                                {selectedThread.feedback && selectedThread.feedback.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {selectedThread.feedback.map((feedback, index) => (
+                                            <div key={index} className="bg-theme-surface-elevated rounded-lg p-3 border border-theme-border">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-medium text-theme-text-primary">{feedback.user}</span>
+                                                    <span className="text-xs text-theme-text-secondary">
+                                                        {formatDateTime(feedback.timestamp)}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-theme-text-secondary">{feedback.comment}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4 text-theme-text-secondary">
+                                        <Icon name="comment" size="lg" className="mx-auto mb-2 text-theme-text-muted" />
+                                        <p>No feedback yet</p>
+                                        <p className="text-xs">Add feedback to help improve future processes</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    ) : (
+                        <Card variant="outlined" padding="md" className="h-full">
+                            <div className="flex items-center justify-center h-full text-theme-text-secondary">
+                                <div className="text-center">
+                                    <Icon name="type-hierarchy" size="xl" className="mx-auto mb-4 text-theme-text-muted" />
+                                    <p className="text-lg">Select a thread to view details</p>
+                                    <p className="text-sm">Choose from the list to see tasks, feedback, and analysis</p>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };
 

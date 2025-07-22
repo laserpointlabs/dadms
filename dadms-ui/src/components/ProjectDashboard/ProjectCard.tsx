@@ -1,4 +1,6 @@
-import { Project } from '../../types/project';
+import React from 'react';
+import { Project } from '../../types/services/project';
+import { Icon } from '../shared/Icon';
 
 interface ProjectCardProps {
     project: Project;
@@ -10,114 +12,116 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onSelect, onEdit, onDelete }) => {
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'active': return 'badge-success';
-            case 'completed': return 'badge-primary';
-            case 'on_hold': return 'badge-warning';
-            case 'cancelled': return 'badge-error';
-            default: return 'badge-gray';
+            case 'active': return 'text-theme-accent-success';
+            case 'completed': return 'text-theme-accent-info';
+            case 'on_hold': return 'text-theme-accent-warning';
+            case 'cancelled': return 'text-theme-accent-error';
+            default: return 'text-theme-text-muted';
         }
     };
 
-    const getStatusIndicator = (status: string) => {
+    const getStatusIcon = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'active': return 'status-active';
-            case 'completed': return 'status-inactive';
-            case 'on_hold': return 'status-warning';
-            case 'cancelled': return 'status-error';
-            default: return 'status-inactive';
+            case 'active': return 'circle-filled';
+            case 'completed': return 'check-circle';
+            case 'on_hold': return 'warning';
+            case 'cancelled': return 'error';
+            default: return 'circle-filled';
         }
     };
 
     return (
         <div
-            className="card p-6 cursor-pointer transition-all duration-200 hover:border-blue-200 group"
+            className="bg-theme-surface border border-theme-border rounded-lg p-6 cursor-pointer transition-all duration-200 hover:border-theme-accent-primary hover:shadow-lg group"
             onClick={() => onSelect?.(project.id)}
         >
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                        <span className={`status-indicator ${getStatusIndicator(project.status)}`} />
-                        <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-blue-700 transition-colors">
+                        <Icon
+                            name={getStatusIcon(project.status)}
+                            size="sm"
+                            className={getStatusColor(project.status)}
+                        />
+                        <h3 className="text-lg font-semibold text-theme-text-primary truncate group-hover:text-theme-accent-primary transition-colors">
                             {project.name}
                         </h3>
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                        {project.description}
-                    </p>
+                    <span className={`${getStatusColor(project.status)} text-xs font-medium`}>
+                        {project.status.toUpperCase().replace('_', ' ')}
+                    </span>
                 </div>
-
-                {/* Action Buttons */}
                 {(onEdit || onDelete) && (
-                    <div className="flex gap-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {onEdit && (
                             <button
-                                className="btn-secondary text-xs px-3 py-1.5"
-                                onClick={e => { e.stopPropagation(); onEdit(project); }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(project);
+                                }}
+                                className="p-2 hover:bg-theme-surface-hover rounded-md transition-colors"
+                                aria-label="Edit project"
                                 title="Edit project"
                             >
-                                Edit
+                                <Icon name="edit" size="sm" className="text-theme-text-secondary hover:text-theme-text-primary" />
                             </button>
                         )}
                         {onDelete && (
                             <button
-                                className="text-red-600 hover:text-red-700 text-xs px-3 py-1.5 border border-red-200 hover:border-red-300 rounded-md transition-colors"
-                                onClick={e => { e.stopPropagation(); onDelete(project); }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(project);
+                                }}
+                                className="p-2 hover:bg-theme-accent-error hover:bg-opacity-20 rounded-md transition-colors"
+                                aria-label="Delete project"
                                 title="Delete project"
                             >
-                                Delete
+                                <Icon name="trash" size="sm" className="text-theme-text-secondary hover:text-theme-accent-error" />
                             </button>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Decision Context */}
-            {project.decision_context && (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                        <div className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0">
-                            ⚡
-                        </div>
-                        <div>
-                            <div className="text-xs font-medium text-amber-800 mb-1">Decision Context</div>
-                            <div className="text-sm text-amber-700 leading-relaxed">
-                                {project.decision_context}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Description */}
+            <p className="text-theme-text-secondary text-sm mb-4 line-clamp-2">
+                {project.description || 'No description available'}
+            </p>
 
             {/* Metadata */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="badge badge-primary">
-                        {project.knowledge_domain}
-                    </span>
-                    <span className={`badge ${getStatusColor(project.status)}`}>
-                        {project.status}
-                    </span>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                    <span className="text-theme-text-muted">Created</span>
+                    <div className="text-theme-text-secondary font-medium">
+                        {new Date(project.createdAt).toLocaleDateString()}
+                    </div>
                 </div>
-
-                <div className="text-xs text-gray-500">
-                    Created {new Date(project.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    })}
+                <div>
+                    <span className="text-theme-text-muted">Updated</span>
+                    <div className="text-theme-text-secondary font-medium">
+                        {new Date(project.updatedAt).toLocaleDateString()}
+                    </div>
                 </div>
             </div>
 
-            {/* Progress Indicator (if needed) */}
-            {project.status === 'active' && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>Progress</span>
-                        <span>75%</span> {/* This would come from actual project data */}
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1">
-                        <div className="bg-blue-600 h-1 rounded-full" style={{ width: '75%' }}></div>
+            {/* Tags */}
+            {project.tags && project.tags.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-theme-border">
+                    <div className="flex flex-wrap gap-1">
+                        {project.tags.slice(0, 3).map((tag, index) => (
+                            <span
+                                key={index}
+                                className="px-2 py-1 bg-theme-accent-primary bg-opacity-20 text-theme-accent-primary rounded text-xs"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        {project.tags.length > 3 && (
+                            <span className="px-2 py-1 bg-theme-surface-hover text-theme-text-muted rounded text-xs">
+                                +{project.tags.length - 3} more
+                            </span>
+                        )}
                     </div>
                 </div>
             )}

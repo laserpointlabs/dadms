@@ -1,12 +1,7 @@
 "use client";
-import {
-    Box,
-    Tab,
-    Tabs,
-    Typography
-} from '@mui/material';
 import React, { useState } from 'react';
 import ProcessThreadManager from './ProcessThreadManager';
+import { Card, Icon } from './shared';
 import ThreadImpactAnalysis from './ThreadImpactAnalysis';
 
 // Mock types
@@ -47,73 +42,110 @@ interface AnalysisThread {
     };
 }
 
+interface Tab {
+    id: string;
+    name: string;
+    icon: 'type-hierarchy' | 'graph';
+    description: string;
+}
+
+const TABS: Tab[] = [
+    { id: 'threads', name: 'Thread Management', icon: 'type-hierarchy', description: 'Manage process execution threads' },
+    { id: 'analysis', name: 'Impact Analysis', icon: 'graph', description: 'Analyze thread patterns and impacts' }
+];
+
 const MOCK_THREADS: AnalysisThread[] = [
     {
-        id: '1',
-        openai_thread: 'thread-1',
-        openai_assistant: 'assistant-1',
-        name: 'Invoice Approval',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        last_activity: new Date().toISOString(),
+        id: 'thread-1',
+        openai_thread: 'thread_abc123',
+        openai_assistant: 'asst_def456',
+        name: 'UAV Decision Analysis',
+        status: 'completed',
+        created_at: '2024-01-15T10:30:00Z',
+        last_activity: '2024-01-15T11:45:00Z',
         analysis_count: 3,
-        analysis_ids: ['a1', 'a2', 'a3'],
-        process_definition: { name: 'Invoice Process', version: 2, key: 'invoice' }
+        analysis_ids: ['analysis-1', 'analysis-2', 'analysis-3'],
+        process_definition: {
+            name: 'Decision Process',
+            version: 1,
+            key: 'decision-v1'
+        }
     },
     {
-        id: '2',
-        openai_thread: 'thread-2',
-        openai_assistant: 'assistant-2',
-        name: 'Purchase Request',
-        status: 'completed',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        last_activity: new Date(Date.now() - 3600000).toISOString(),
-        analysis_count: 2,
-        analysis_ids: ['a4', 'a5'],
-        process_definition: { name: 'Purchase Process', version: 1, key: 'purchase' }
+        id: 'thread-2',
+        openai_thread: 'thread_xyz789',
+        openai_assistant: 'asst_def456',
+        name: 'Budget Analysis Thread',
+        status: 'active',
+        created_at: '2024-01-16T09:00:00Z',
+        last_activity: '2024-01-16T09:30:00Z',
+        analysis_count: 1,
+        analysis_ids: ['analysis-4']
     }
 ];
 
-const MOCK_THREAD_DATA: ThreadData = {
-    thread_id: 'thread-1',
-    created_at: new Date().toISOString(),
-    metadata: { project: 'Demo', process: 'Invoice Process' },
-    messages: [
-        {
-            id: 'm1',
-            role: 'user',
-            content: [{ type: 'text', text: { value: 'What is the status of invoice 123?' } }],
-            created_at: Math.floor(Date.now() / 1000) - 300,
-        },
-        {
-            id: 'm2',
-            role: 'assistant',
-            content: [{ type: 'text', text: { value: 'Invoice 123 is approved and pending payment.' } }],
-            created_at: Math.floor(Date.now() / 1000) - 200,
-        }
-    ],
-    message_count: 2,
-    status: 'active',
-};
-
 const ThreadManager: React.FC = () => {
-    const [tab, setTab] = useState(0);
+    const [activeTab, setActiveTab] = useState<string>(TABS[0].id);
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'threads':
+                return <ProcessThreadManager threads={MOCK_THREADS} />;
+            case 'analysis':
+                return <ThreadImpactAnalysis threads={MOCK_THREADS} />;
+            default:
+                return <ProcessThreadManager threads={MOCK_THREADS} />;
+        }
+    };
+
     return (
-        <Box sx={{ p: 3, maxWidth: '100%', overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4" component="h1">
-                    Thread Manager
-                </Typography>
-            </Box>
-            <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-                <Tab label="Process Threads" />
-                <Tab label="User Conversation Threads" disabled />
-                <Tab label="Thread Impact Analysis" />
-            </Tabs>
-            {tab === 0 && <ProcessThreadManager />}
-            {/* Future: {tab === 1 && <UserConversationThreadManager />} */}
-            {tab === 2 && <ThreadImpactAnalysis />}
-        </Box>
+        <div className="space-y-6">
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-bold text-theme-text-primary mb-2">Thread Management</h1>
+                <p className="text-theme-text-secondary">
+                    Track process execution threads, collect feedback, and analyze patterns for continuous improvement.
+                </p>
+            </div>
+
+            {/* Tab Navigation */}
+            <Card variant="default" padding="none">
+                <div className="border-b border-theme-border">
+                    <nav className="flex">
+                        {TABS.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`
+                                    flex items-center gap-3 px-6 py-4 text-sm font-medium transition-all duration-200 border-b-2
+                                    ${activeTab === tab.id
+                                        ? 'text-theme-accent-primary bg-theme-surface-elevated border-theme-accent-primary'
+                                        : 'text-theme-text-secondary hover:text-theme-accent-primary hover:bg-theme-surface-hover border-transparent'
+                                    }
+                                `}
+                            >
+                                <Icon
+                                    name={tab.icon}
+                                    size="md"
+                                    className={activeTab === tab.id ? 'text-theme-accent-primary' : 'text-theme-text-muted'}
+                                />
+                                <div className="text-left">
+                                    <div>{tab.name}</div>
+                                    <div className="text-xs text-theme-text-muted">
+                                        {tab.description}
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">
+                    {renderTabContent()}
+                </div>
+            </Card>
+        </div>
     );
 };
 

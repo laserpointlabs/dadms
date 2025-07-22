@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
+import { ThemeSelector } from "../components/shared/ThemeSelector";
+import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
 
 // DADMS Activity Bar Items (replaces generic VS Code icons with DADMS functionality)
@@ -45,9 +47,16 @@ const dadmsActivityItems = [
     },
     {
         id: 'context',
-        icon: 'settings-gear',
+        icon: 'extensions',
         label: 'Context Manager',
         href: '/context',
+        type: 'navigation'
+    },
+    {
+        id: 'settings',
+        icon: 'settings-gear',
+        label: 'Settings',
+        href: '/settings',
         type: 'navigation'
     },
     {
@@ -233,6 +242,9 @@ function StatusBar() {
             </div>
             <div className="vscode-statusbar-right">
                 <div className="vscode-statusbar-item">
+                    <ThemeSelector />
+                </div>
+                <div className="vscode-statusbar-item">
                     <span>DADMS 2.0</span>
                 </div>
                 <div className="vscode-statusbar-item">
@@ -260,38 +272,40 @@ export default function RootLayout({
                 <meta name="description" content="Professional decision intelligence platform for engineering teams" />
             </head>
             <body>
-                <div className="vscode-workbench">
-                    {/* Title Bar */}
-                    <div className="vscode-titlebar">
-                        <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
-                    </div>
+                <ThemeProvider defaultTheme="dark">
+                    <div className="vscode-workbench">
+                        {/* Title Bar */}
+                        <div className="vscode-titlebar">
+                            <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
+                        </div>
 
-                    {/* Main Layout */}
-                    <div className="vscode-main">
-                        {/* Activity Bar */}
-                        <ActivityBar activeView={activeView} onViewChange={setActiveView} />
+                        {/* Main Layout */}
+                        <div className="vscode-main">
+                            {/* Activity Bar */}
+                            <ActivityBar activeView={activeView} onViewChange={setActiveView} />
 
-                        {/* Sidebar */}
-                        <SidebarView activeView={activeView} />
+                            {/* Sidebar */}
+                            <SidebarView activeView={activeView} />
 
-                        {/* Editor Area */}
-                        <div className="vscode-editor-area">
-                            {/* Tab Bar */}
-                            <TabBar />
+                            {/* Editor Area */}
+                            <div className="vscode-editor-area">
+                                {/* Tab Bar */}
+                                <TabBar />
 
-                            {/* Main Content */}
-                            <div className="vscode-editor">
-                                {children}
+                                {/* Main Content */}
+                                <div className="vscode-editor">
+                                    {children}
+                                </div>
                             </div>
                         </div>
+
+                        {/* Status Bar */}
+                        <StatusBar />
                     </div>
 
-                    {/* Status Bar */}
-                    <StatusBar />
-                </div>
-
-                {/* Agent Assistance Component */}
-                <AASCar />
+                    {/* Agent Assistance Component */}
+                    <AASCar />
+                </ThemeProvider>
             </body>
         </html>
     );

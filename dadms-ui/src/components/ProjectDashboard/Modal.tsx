@@ -9,18 +9,21 @@ interface ModalProps {
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+            <div className="bg-theme-surface border border-theme-border rounded-lg shadow-xl w-full max-w-md mx-4 p-6 relative">
                 <button
-                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                    className="absolute top-4 right-4 text-theme-text-secondary hover:text-theme-text-primary text-2xl leading-none transition-colors"
                     onClick={onClose}
                     aria-label="Close"
                 >
                     &times;
                 </button>
-                {title && <h2 className="text-lg font-semibold mb-4">{title}</h2>}
-                {children}
+                {title && <h2 className="text-xl font-semibold mb-4 text-theme-text-primary">{title}</h2>}
+                <div className="text-theme-text-primary">
+                    {children}
+                </div>
             </div>
         </div>
     );
