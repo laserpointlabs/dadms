@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: DADMS 2.0 - UI Frontend API Interfaces
+  description: |
+    TypeScript interface definitions for DADMS 2.0 frontend application.
+    Defines standardized types for React components and API communication.
+  version: 1.0.0
+
+components:
+  schemas:
+    # Core Application Types
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, analyst, stakeholder, viewer]
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        sidebarCollapsed:
+          type: boolean
+        defaultView:
+          type: string
+
+    # Project Types
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, archived, suspended]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        createdAt:
+          type: string
+          format: date-time
+
+    # Knowledge Types
+    KnowledgeDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [document, whitepaper, report, analysis]
+        projectId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+
+    # Decision Types (AADS)
+    DecisionReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        status:
+          type: string
+          enum: [draft, under_review, approved, rejected]
+        participants:
+          type: array
+          items:
+            type: string
+
+    CollaborationMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        message:
+          type: string
+        authorName:
+          type: string
+        messageType:
+          type: string
+          enum: [comment, suggestion, ai_response]
+        timestamp:
+          type: string
+          format: date-time
+
+    WhitePaper:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhitePaperSection'
+        version:
+          type: integer
+
+    WhitePaperSection:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        content:
+          type: string
+        required:
+          type: boolean
+
+    # Process Types
+    ProcessInstance:
+      type: object
+      properties:
+        id:
+          type: string
+        definitionKey:
+          type: string
+        businessKey:
+          type: string
+        status:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+
+    # Thread Types
+    ProcessThread:
+      type: object
+      properties:
+        threadId:
+          type: string
+        processInstanceId:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, failed]
+        taskCount:
+          type: integer
+
+    # AI Assistant Types
+    AIAssistantRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        contextType:
+          type: string
+          enum: [decision_review, white_paper, collaboration]
+
+    AIAssistantResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        confidence:
+          type: number
+        suggestions:
+          type: array
+          items:
+            type: string
+
+    # UI Component Types
+    NavigationItem:
+      type: object
+      properties:
+        name:
+          type: string
+        href:
+          type: string
+        icon:
+          type: string
+        type:
+          type: string
+          enum: [folder, file]
+
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [info, success, warning, error]
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # API Response Types
+    APIResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+
+    APIError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+paths:
+  /api/ui/navigation:
+    get:
+      summary: Get navigation structure
+      responses:
+        '200':
+          description: Navigation items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NavigationItem'
+
+  /api/ui/user/preferences:
+    get:
+      summary: Get user preferences
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences' 
