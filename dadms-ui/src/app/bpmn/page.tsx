@@ -1,55 +1,51 @@
 "use client";
-import React, { useRef } from "react";
+
+import { useState } from 'react';
+import { BPMNModeler } from '../../components/BPMNWorkspace/BPMNModeler';
+import { Alert } from '../../components/shared/Alert';
 import { Button } from '../../components/shared/Button';
-import { PageContent, PageLayout } from '../../components/shared/PageLayout';
+import { LoadingState } from '../../components/shared/LoadingState';
+import { PageLayout } from '../../components/shared/PageLayout';
 
-const MODEL_STORAGE_KEY = "bpmn_workspace_model_xml";
+export default function BPMNWorkspacePage() {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-export default function BPMNWorkspace() {
-    const iframeRef = useRef<HTMLIFrameElement>(null);
-
-    // Send XML to iframe
-    const loadModel = () => {
-        const xml = localStorage.getItem(MODEL_STORAGE_KEY);
-        if (xml && iframeRef.current) {
-            iframeRef.current.contentWindow?.postMessage({ type: "load-bpmn", xml }, "*");
-        }
+    const handleModelerLoad = () => {
+        setIsLoading(false);
+        setError(null);
     };
 
-    // Listen for XML from iframe
-    React.useEffect(() => {
-        const handler = (event: MessageEvent) => {
-            if (event.data?.type === "export-bpmn" && event.data.xml) {
-                localStorage.setItem(MODEL_STORAGE_KEY, event.data.xml);
-                alert("Model saved to localStorage!");
-            }
-        };
-        window.addEventListener("message", handler);
-        return () => window.removeEventListener("message", handler);
-    }, []);
+    const handleModelerError = (error: Error) => {
+        setIsLoading(false);
+        setError(error.message);
+    };
 
-    // Ask iframe to export XML
-    const saveModel = () => {
-        iframeRef.current?.contentWindow?.postMessage({ type: "request-export-bpmn" }, "*");
+    const handleRefresh = () => {
+        setIsLoading(true);
+        setError(null);
+        // Force iframe reload by changing src
+        window.location.reload();
     };
 
     const pageActions = (
         <div className="flex items-center gap-2">
             <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
-                leftIcon="save"
-                onClick={saveModel}
+                leftIcon="refresh"
+                onClick={handleRefresh}
+                disabled={isLoading}
             >
-                Save Model
+                Refresh
             </Button>
             <Button
                 variant="secondary"
                 size="sm"
-                leftIcon="folder-opened"
-                onClick={loadModel}
+                leftIcon="arrow-right"
+                onClick={() => window.open('/comprehensive_bpmn_modeler.html', '_blank')}
             >
-                Load Model
+                Open in New Tab
             </Button>
         </div>
     );
@@ -57,22 +53,49 @@ export default function BPMNWorkspace() {
     return (
         <PageLayout
             title="BPMN Workspace"
-            subtitle="Design and manage business process workflows"
-            icon="graph"
+            subtitle="Design and manage business process workflows with AI-enhanced collaboration"
+            icon="type-hierarchy"
             actions={pageActions}
-            status={{ text: 'Workflow Designer Active', type: 'active' }}
+            status={{
+                text: isLoading ? 'Loading Modeler...' : 'Modeler Ready',
+                type: isLoading ? 'pending' : 'active'
+            }}
         >
-            <PageContent maxWidth="full">
-                <div className="h-full bg-gray-900">
-                    <iframe
-                        ref={iframeRef}
-                        src="/comprehensive_bpmn_modeler.html"
-                        title="BPMN Modeler"
-                        className="w-full h-full border-0"
-                        style={{ minHeight: 'calc(100vh - 200px)' }}
-                    />
-                </div>
-            </PageContent>
+            <div className="relative w-full" style={{ height: 'calc(100vh - 164px)' }}>
+                {error && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-theme-surface bg-opacity-95">
+                        <div className="max-w-md w-full p-4">
+                            <Alert
+                                variant="error"
+                                title="BPMN Modeler Error"
+                                actions={
+                                    <Button variant="primary" onClick={handleRefresh}>
+                                        Retry
+                                    </Button>
+                                }
+                            >
+                                {error}
+                            </Alert>
+                        </div>
+                    </div>
+                )}
+
+                {isLoading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-theme-surface">
+                        <LoadingState
+                            text="Loading BPMN modeler..."
+                            size="lg"
+                        />
+                    </div>
+                )}
+
+                <BPMNModeler
+                    height="100%"
+                    onLoad={handleModelerLoad}
+                    onError={handleModelerError}
+                    className="absolute inset-0 w-full h-full"
+                />
+            </div>
         </PageLayout>
     );
 } 

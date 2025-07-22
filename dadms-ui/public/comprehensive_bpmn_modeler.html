@@ -11,6 +11,97 @@
     <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn.css" />
 
     <style>
+        /* DADMS Theme Variables - Default Dark Theme */
+        :root,
+        [data-theme="dark"],
+        .dark {
+            --theme-bg-primary: #1e1e1e;
+            --theme-bg-secondary: #252526;
+            --theme-bg-tertiary: #333333;
+            --theme-bg-elevated: #2d2d30;
+            --theme-bg-hover: #2a2d2e;
+            --theme-bg-selection: #264f78;
+
+            --theme-surface: #2d2d30;
+            --theme-surface-hover: #3e3e42;
+            --theme-surface-elevated: #383838;
+
+            --theme-text-primary: #d4d4d4;
+            --theme-text-secondary: #cccccc;
+            --theme-text-muted: #6e7681;
+            --theme-text-inverse: #1e1e1e;
+            --theme-text-link: #3794ff;
+
+            --theme-accent-primary: #007acc;
+            --theme-accent-secondary: #3794ff;
+            --theme-accent-success: #4caf50;
+            --theme-accent-warning: #ff9800;
+            --theme-accent-error: #f44336;
+            --theme-accent-info: #2196f3;
+
+            --theme-border: #2d2d30;
+            --theme-border-light: #464647;
+            --theme-border-focus: #007acc;
+
+            --theme-status-active: #4caf50;
+            --theme-status-inactive: #6e7681;
+            --theme-status-pending: #ff9800;
+            --theme-status-error: #f44336;
+
+            /* Semantic colors for better component theming */
+            --theme-card-bg: var(--theme-surface);
+            --theme-card-border: var(--theme-border);
+            --theme-button-bg: var(--theme-surface);
+            --theme-button-border: var(--theme-border-light);
+            --theme-input-bg: var(--theme-bg-secondary);
+            --theme-input-border: var(--theme-border-light);
+        }
+
+        /* Light theme overrides */
+        [data-theme="light"],
+        .light {
+            --theme-bg-primary: #ffffff;
+            --theme-bg-secondary: #f8f9fa;
+            --theme-bg-tertiary: #e9ecef;
+            --theme-bg-elevated: #ffffff;
+            --theme-bg-hover: #f1f3f4;
+            --theme-bg-selection: #cce7ff;
+
+            --theme-surface: #ffffff;
+            --theme-surface-hover: #f8f9fa;
+            --theme-surface-elevated: #ffffff;
+
+            --theme-text-primary: #1f2328;
+            --theme-text-secondary: #656d76;
+            --theme-text-muted: #8b949e;
+            --theme-text-inverse: #ffffff;
+            --theme-text-link: #0969da;
+
+            --theme-accent-primary: #0969da;
+            --theme-accent-secondary: #218bff;
+            --theme-accent-success: #1a7f37;
+            --theme-accent-warning: #bf8700;
+            --theme-accent-error: #d1242f;
+            --theme-accent-info: #0969da;
+
+            --theme-border: #d1d9e0;
+            --theme-border-light: #d8dee4;
+            --theme-border-focus: #0969da;
+
+            --theme-status-active: #1a7f37;
+            --theme-status-inactive: #8b949e;
+            --theme-status-pending: #bf8700;
+            --theme-status-error: #d1242f;
+
+            /* Light theme semantic colors */
+            --theme-card-bg: var(--theme-surface);
+            --theme-card-border: var(--theme-border);
+            --theme-button-bg: var(--theme-surface);
+            --theme-button-border: var(--theme-border-light);
+            --theme-input-bg: var(--theme-bg-primary);
+            --theme-input-border: var(--theme-border-light);
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -19,11 +110,13 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f8f9fa;
+            background-color: var(--theme-bg-primary);
+            color: var(--theme-text-primary);
             height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
 
         .workspace-container {
@@ -35,8 +128,8 @@
 
         /* Menu Bar Styles */
         .menu-bar {
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: var(--theme-bg-secondary);
+            border-bottom: 1px solid var(--theme-border);
             display: flex;
             align-items: center;
             padding: 0;
@@ -44,6 +137,7 @@
             flex-shrink: 0;
             font-size: 13px;
             user-select: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
         .menu-item {
@@ -56,28 +150,30 @@
             border: none;
             padding: 6px 12px;
             cursor: pointer;
-            color: #495057;
+            color: var(--theme-text-secondary);
             font-size: 13px;
-            transition: background-color 0.2s ease;
+            transition: all 0.2s ease;
             border-radius: 0;
         }
 
         .menu-button:hover,
         .menu-button.active {
-            background: #e9ecef;
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
         }
 
         .menu-dropdown {
             position: absolute;
             top: 100%;
             left: 0;
-            background: white;
-            border: 1px solid #dee2e6;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
             border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             min-width: 200px;
             z-index: 1000;
             display: none;
+            transition: background-color 0.2s ease;
         }
 
         .menu-dropdown.show {
@@ -87,7 +183,7 @@
         .menu-dropdown-item {
             display: block;
             padding: 8px 16px;
-            color: #495057;
+            color: var(--theme-text-primary);
             text-decoration: none;
             border: none;
             background: none;
@@ -95,27 +191,27 @@
             text-align: left;
             cursor: pointer;
             font-size: 13px;
-            transition: background-color 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .menu-dropdown-item:hover:not(.disabled) {
-            background: #f8f9fa;
+            background: var(--theme-bg-hover);
         }
 
         .menu-dropdown-item.disabled {
-            color: #adb5bd;
+            color: var(--theme-text-muted);
             cursor: not-allowed;
         }
 
         .menu-dropdown-item .shortcut {
             float: right;
-            color: #6c757d;
+            color: var(--theme-text-muted);
             font-size: 12px;
         }
 
         .menu-separator {
             height: 1px;
-            background: #dee2e6;
+            background: var(--theme-border);
             margin: 4px 0;
         }
 
@@ -124,11 +220,11 @@
             margin-left: auto;
             padding: 6px 12px;
             font-size: 12px;
-            color: #6c757d;
+            color: var(--theme-text-muted);
         }
 
         .file-status.modified {
-            color: #dc3545;
+            color: var(--theme-accent-error);
         }
 
         .main-content {
@@ -147,18 +243,20 @@
         .canvas-main-area {
             display: flex;
             flex-direction: column;
-            background: white;
-            border: 1px solid #ddd;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
             overflow: hidden;
             position: relative;
             flex: 1;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
         .canvas-container {
-            background: white;
+            background: var(--theme-surface);
             overflow: hidden;
             position: relative;
             flex: 1;
+            transition: background-color 0.2s ease;
         }
 
         .canvas {
@@ -176,13 +274,14 @@
             line-height: 1.4;
             box-sizing: border-box;
             resize: none;
-            background: #f8f9fa;
-            color: #333;
+            background: var(--theme-input-bg);
+            color: var(--theme-text-primary);
             border-radius: 4px;
             outline: none;
             overflow: auto;
             overflow-x: hidden;
             overflow-y: auto;
+            transition: all 0.2s ease;
         }
 
         .hidden {
@@ -190,13 +289,13 @@
         }
 
         .xml-editor:focus {
-            background: #ffffff;
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+            background: var(--theme-surface);
+            box-shadow: 0 0 0 2px var(--theme-border-focus);
         }
 
         .xml-editor:disabled {
-            background: #f5f5f5;
-            color: #666;
+            background: var(--theme-bg-tertiary);
+            color: var(--theme-text-muted);
             cursor: not-allowed;
             opacity: 0.8;
         }
@@ -204,7 +303,7 @@
         /* Properties splitter styles */
         .properties-splitter {
             width: 4px;
-            background-color: #dee2e6;
+            background-color: var(--theme-border);
             cursor: col-resize;
             position: relative;
             transition: background-color 0.2s ease;
@@ -212,17 +311,17 @@
         }
 
         .properties-splitter:hover {
-            background-color: #007bff;
+            background-color: var(--theme-accent-primary);
         }
 
         .properties-splitter.dragging {
-            background-color: #007bff;
+            background-color: var(--theme-accent-primary);
         }
 
         /* Properties panel */
         .properties {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
+            background: var(--theme-bg-secondary);
+            border: 1px solid var(--theme-border);
             border-left: none;
             display: flex;
             flex-direction: column;
@@ -230,7 +329,7 @@
             width: 25%;
             min-width: 250px;
             max-width: 50%;
-            transition: width 0.3s ease, min-width 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .properties.collapsed {
@@ -239,14 +338,15 @@
         }
 
         .properties-header {
-            background: #e9ecef;
-            border-bottom: 1px solid #ddd;
+            background: var(--theme-bg-tertiary);
+            border-bottom: 1px solid var(--theme-border);
             padding: 8px 12px;
             min-height: 40px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
         .properties-toggle-btn {
@@ -254,7 +354,7 @@
             border: none;
             cursor: pointer;
             font-size: 12px;
-            color: #495057;
+            color: var(--theme-text-secondary);
             padding: 2px;
             border-radius: 2px;
             transition: all 0.2s ease;
@@ -267,8 +367,8 @@
         }
 
         .properties-toggle-btn:hover {
-            background: #dee2e6;
-            color: #212529;
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
         }
 
         .properties.collapsed .properties-content {
@@ -288,7 +388,7 @@
             margin: 0;
             font-size: 14px;
             font-weight: 600;
-            color: #495057;
+            color: var(--theme-text-primary);
         }
 
         .properties-content {
@@ -300,10 +400,11 @@
         /* Property Groups */
         .property-group {
             margin-bottom: 1px;
-            border: 1px solid #cccccc;
+            border: 1px solid var(--theme-border);
             border-radius: 0;
-            background: #ffffff;
+            background: var(--theme-surface);
             overflow: hidden;
+            transition: all 0.2s ease;
         }
 
         .property-group-header {
@@ -311,20 +412,20 @@
             align-items: center;
             gap: 6px;
             padding: 8px 12px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #cccccc;
+            background: var(--theme-bg-secondary);
+            border-bottom: 1px solid var(--theme-border);
             cursor: pointer;
-            transition: background-color 0.15s ease;
+            transition: all 0.2s ease;
             user-select: none;
         }
 
         .property-group-header:hover {
-            background: #e9ecef;
+            background: var(--theme-bg-hover);
         }
 
         .collapse-icon {
             font-size: 10px;
-            color: #333333;
+            color: var(--theme-text-primary);
             transition: transform 0.2s ease;
             width: 12px;
             text-align: center;
@@ -339,13 +440,13 @@
             margin: 0;
             font-size: 12px;
             font-weight: 600;
-            color: #222222;
+            color: var(--theme-text-primary);
         }
 
         .property-group-content {
             padding: 0;
             margin: 0;
-            background: #ffffff;
+            background: var(--theme-surface);
         }
 
         .property-group-content.collapsed {
@@ -362,7 +463,7 @@
             margin-bottom: 4px;
             padding: 0;
             font-weight: 600;
-            color: #333333;
+            color: var(--theme-text-primary);
             font-size: 11px;
             letter-spacing: 0.3px;
         }
@@ -373,20 +474,20 @@
             width: 100%;
             margin: 0;
             padding: 6px 8px;
-            border: 1px solid #cccccc;
+            border: 1px solid var(--theme-border);
             border-radius: 4px;
             font-size: 12px;
             box-sizing: border-box;
-            background: #ffffff;
-            color: #111827;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            background: var(--theme-input-bg);
+            color: var(--theme-text-primary);
+            transition: all 0.2s ease;
         }
 
         .property-field input:focus,
         .property-field select:focus,
         .property-field textarea:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--theme-border-focus);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
@@ -397,7 +498,7 @@
         }
 
         .property-field select {
-            background: #ffffff;
+            background: var(--theme-input-bg);
             cursor: pointer;
         }
 
@@ -405,23 +506,24 @@
         .element-info {
             margin-bottom: 1px;
             padding: 12px;
-            background: #ffffff;
-            border: 1px solid #cccccc;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
             border-radius: 0;
-            border-left: 4px solid #007bff;
+            border-left: 4px solid var(--theme-accent-primary);
+            transition: all 0.2s ease;
         }
 
         .element-info h4 {
             margin: 0 0 8px 0;
             font-size: 14px;
             font-weight: 600;
-            color: #222222;
+            color: var(--theme-text-primary);
         }
 
         .element-info p {
             margin: 0;
             font-size: 12px;
-            color: #555555;
+            color: var(--theme-text-secondary);
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
 
@@ -431,10 +533,11 @@
             justify-content: space-between;
             align-items: stretch;
             padding: 0;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            background: var(--theme-bg-secondary);
+            border-top: 1px solid var(--theme-border);
             min-height: 36px;
             flex-shrink: 0;
+            transition: all 0.2s ease;
         }
 
         .toolbar-left {
@@ -452,12 +555,12 @@
         .toolbar-btn {
             padding: 0 16px;
             border: none;
-            background: #f8f9fa;
+            background: var(--theme-bg-secondary);
             border-radius: 0;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
-            color: #495057;
+            color: var(--theme-text-secondary);
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
@@ -467,22 +570,22 @@
         }
 
         .toolbar-btn:hover {
-            background: #e9ecef;
-            color: #495057;
+            background: var(--theme-bg-hover);
+            color: var(--theme-text-primary);
         }
 
         .toolbar-btn.active {
-            background: #d6d8db;
-            color: #495057;
+            background: var(--theme-bg-selection);
+            color: var(--theme-text-primary);
         }
 
         .toolbar-btn.active:hover {
-            background: #d6d8db;
+            background: var(--theme-bg-selection);
         }
 
         .status-message {
             font-size: 12px;
-            color: #6c757d;
+            color: var(--theme-text-muted);
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -490,15 +593,15 @@
         }
 
         .status-message.success {
-            color: #28a745;
+            color: var(--theme-status-active);
         }
 
         .status-message.error {
-            color: #dc3545;
+            color: var(--theme-status-error);
         }
 
         .status-message.info {
-            color: #17a2b8;
+            color: var(--theme-accent-info);
         }
 
         /* XML Edit Toggle Switch */
@@ -510,7 +613,7 @@
 
         .toggle-label {
             font-size: 12px;
-            color: #666;
+            color: var(--theme-text-muted);
             font-weight: 500;
         }
 
@@ -534,7 +637,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
+            background-color: var(--theme-border-light);
             transition: .4s;
             border-radius: 20px;
         }
@@ -546,67 +649,225 @@
             width: 16px;
             left: 2px;
             bottom: 2px;
-            background-color: white;
+            background-color: var(--theme-surface);
             transition: .4s;
             border-radius: 50%;
         }
 
         input:checked+.slider {
-            background-color: #007bff;
+            background-color: var(--theme-accent-primary);
         }
 
         input:checked+.slider:before {
             transform: translateX(20px);
         }
 
-        /* BPMN.js Palette Styling */
+        /* BPMN.js Palette Styling - Enhanced for dark theme */
         .djs-palette {
-            background: white;
-            border: 1px solid #ddd;
+            background: var(--theme-surface) !important;
+            border: 1px solid var(--theme-border-light) !important;
             border-radius: 4px;
             left: 20px !important;
             top: 20px !important;
             position: absolute;
             z-index: 100;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
 
         .djs-palette .entry {
             border-radius: 3px;
+            transition: background-color 0.2s ease;
+            border: 1px solid transparent !important;
         }
 
         .djs-palette .entry:hover {
-            background: #e9ecef;
+            background: var(--theme-bg-hover) !important;
+            border-color: var(--theme-border-light) !important;
         }
 
         .djs-palette .entry div {
-            color: #333;
+            color: var(--theme-text-primary) !important;
+            filter: contrast(1.5) brightness(1.5) !important;
+            opacity: 0.9 !important;
         }
 
-        /* Context pad styling */
-        .djs-context-pad .entry {
-            background: white !important;
-            border: 1px solid #ccc !important;
-        }
-
-        .djs-context-pad .entry:hover {
-            background: #f0f0f0 !important;
-        }
-
-        .djs-context-pad .entry div {
-            color: #333 !important;
+        .djs-palette .entry:hover div {
+            filter: contrast(1.8) brightness(1.8) !important;
             opacity: 1 !important;
         }
 
-        /* Popup menu fixes */
+        .djs-palette .entry.selected {
+            background: var(--theme-accent-primary) !important;
+            border-color: var(--theme-accent-primary) !important;
+        }
+
+        .djs-palette .entry.selected div {
+            color: white !important;
+            filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Context pad styling - Enhanced for dark theme */
+        .djs-context-pad {
+            background: var(--theme-surface) !important;
+            border: 1px solid var(--theme-border-light) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .djs-context-pad .entry {
+            background: var(--theme-surface) !important;
+            border: 1px solid var(--theme-border-light) !important;
+            transition: all 0.2s ease;
+            border-radius: 2px !important;
+        }
+
+        .djs-context-pad .entry:hover {
+            background: var(--theme-bg-hover) !important;
+            border-color: var(--theme-accent-primary) !important;
+        }
+
+        .djs-context-pad .entry div {
+            color: var(--theme-text-primary) !important;
+            opacity: 1 !important;
+            filter: contrast(1.5) brightness(1.5) !important;
+        }
+
+        .djs-context-pad .entry:hover div {
+            filter: contrast(1.8) brightness(1.8) !important;
+        }
+
+        /* Popup menu fixes - Theme Aware */
         .djs-popup,
         .djs-popup-body,
         .djs-popup-content {
-            background: white !important;
-            color: #333 !important;
+            background: var(--theme-surface) !important;
+            color: var(--theme-text-primary) !important;
+            border: 1px solid var(--theme-border) !important;
+            transition: all 0.2s ease;
         }
 
         .djs-popup * {
-            color: #333 !important;
+            color: var(--theme-text-primary) !important;
+        }
+
+        /* BPMN Canvas styling - Theme Aware */
+        .djs-canvas {
+            background: var(--theme-surface) !important;
+            transition: background-color 0.2s ease;
+        }
+
+        /* BPMN Shape styling - Enhanced for dark theme visibility */
+        .djs-shape .djs-visual> :first-child {
+            fill: var(--theme-surface) !important;
+            stroke: var(--theme-text-primary) !important;
+            stroke-width: 2px !important;
+            opacity: 0.9 !important;
+        }
+
+        .djs-shape .djs-visual text {
+            fill: var(--theme-text-primary) !important;
+            font-weight: 500 !important;
+        }
+
+        /* Connection styling - Enhanced visibility */
+        .djs-connection .djs-visual> :first-child {
+            stroke: var(--theme-text-primary) !important;
+            stroke-width: 2px !important;
+            opacity: 0.8 !important;
+        }
+
+        /* Arrow heads for connections */
+        .djs-connection .djs-visual marker path {
+            fill: var(--theme-text-primary) !important;
+            stroke: var(--theme-text-primary) !important;
+            opacity: 0.8 !important;
+        }
+
+        /* Sequence flow arrows - make them more visible */
+        .djs-connection[data-element-id*="SequenceFlow"] .djs-visual> :first-child {
+            stroke: var(--theme-text-primary) !important;
+            stroke-width: 3px !important;
+            opacity: 0.9 !important;
+        }
+
+        /* Gateway symbols and task icons */
+        .djs-shape .djs-visual path,
+        .djs-shape .djs-visual circle,
+        .djs-shape .djs-visual polygon {
+            stroke: var(--theme-text-primary) !important;
+            stroke-width: 1.5px !important;
+            opacity: 0.8 !important;
+        }
+
+        /* Special styling for gateway symbols */
+        .djs-shape[data-element-id*="Gateway"] .djs-visual path {
+            stroke: var(--theme-text-primary) !important;
+            stroke-width: 2px !important;
+            opacity: 1 !important;
+        }
+
+        /* Start/End event styling */
+        .djs-shape[data-element-id*="StartEvent"] .djs-visual> :first-child {
+            fill: var(--theme-accent-success) !important;
+            fill-opacity: 0.1 !important;
+            stroke: var(--theme-accent-success) !important;
+            stroke-width: 3px !important;
+        }
+
+        .djs-shape[data-element-id*="EndEvent"] .djs-visual> :first-child {
+            fill: var(--theme-accent-error) !important;
+            fill-opacity: 0.1 !important;
+            stroke: var(--theme-accent-error) !important;
+            stroke-width: 3px !important;
+        }
+
+        /* Task highlighting */
+        .djs-shape[data-element-id*="Task"] .djs-visual> :first-child {
+            fill: var(--theme-accent-primary) !important;
+            fill-opacity: 0.05 !important;
+            stroke: var(--theme-accent-primary) !important;
+        }
+
+        /* Gateway highlighting */
+        .djs-shape[data-element-id*="Gateway"] .djs-visual> :first-child {
+            fill: var(--theme-accent-warning) !important;
+            fill-opacity: 0.1 !important;
+            stroke: var(--theme-accent-warning) !important;
+        }
+
+        /* Selected elements styling */
+        .djs-element.selected .djs-outline {
+            stroke: var(--theme-accent-primary) !important;
+            stroke-width: 3px !important;
+        }
+
+        /* Resize handles */
+        .resize-handle {
+            fill: var(--theme-accent-primary) !important;
+            stroke: var(--theme-bg-primary) !important;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--theme-text-primary);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--theme-bg-hover);
+            border-color: var(--theme-border-focus);
         }
 
         /* Responsive behavior */
@@ -625,7 +886,7 @@
             .properties {
                 width: 100%;
                 height: 40%;
-                border-left: 1px solid #ddd;
+                border-left: 1px solid var(--theme-border);
                 border-top: none;
             }
 
@@ -638,6 +899,11 @@
 
 <body>
     <div class="workspace-container">
+        <!-- Theme Toggle Button -->
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+            🌓 Theme
+        </button>
+
         <!-- Menu Bar -->
         <div class="menu-bar">
             <div class="menu-item">
@@ -834,6 +1100,7 @@
         let modeler;
         let selectedElement = null;
         let currentView = 'diagram';
+        let currentTheme = 'dark'; // Default theme
 
         // Property cache to store extension properties extracted from XML
         let propertyCache = {};
@@ -858,6 +1125,83 @@
         </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>
 </bpmn:definitions>`;
+
+        // Theme management functions
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            updateStatus(`Switched to ${currentTheme} theme`, 'success');
+        }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+
+            // Remove existing theme classes/attributes
+            root.classList.remove('light', 'dark');
+            root.removeAttribute('data-theme');
+
+            // Apply new theme
+            root.setAttribute('data-theme', theme);
+            root.classList.add(theme);
+
+            // Store theme preference
+            localStorage.setItem('dadms-bpmn-theme', theme);
+            currentTheme = theme;
+
+            // Force refresh the canvas to apply theme changes to BPMN elements
+            if (modeler) {
+                setTimeout(() => {
+                    refreshCanvas();
+                }, 100);
+            }
+        }
+
+        function initializeTheme() {
+            // Try to get theme from localStorage, fallback to system preference
+            const savedTheme = localStorage.getItem('dadms-bpmn-theme');
+            let theme = 'dark'; // Default
+
+            if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+                theme = savedTheme;
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                theme = 'light';
+            }
+
+            applyTheme(theme);
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', initializeTheme);
+
+        // Listen for theme changes from parent window (DADMS UI)
+        function listenForParentThemeChanges() {
+            if (window.parent && window.parent !== window) {
+                // Listen for messages from parent window
+                window.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'theme-change') {
+                        const newTheme = event.data.theme;
+                        if (newTheme && (newTheme === 'light' || newTheme === 'dark')) {
+                            applyTheme(newTheme);
+                            updateStatus(`Theme synchronized: ${newTheme}`, 'success');
+                        }
+                    }
+                });
+
+                // Also check if parent has theme in localStorage
+                try {
+                    const parentTheme = window.parent.localStorage.getItem('dadms-theme');
+                    if (parentTheme && (parentTheme === 'light' || parentTheme === 'dark')) {
+                        applyTheme(parentTheme);
+                    }
+                } catch (e) {
+                    // Cross-origin restrictions, ignore
+                    console.log('Cannot access parent localStorage (cross-origin)');
+                }
+            }
+        }
+
+        // Start listening for parent theme changes
+        document.addEventListener('DOMContentLoaded', listenForParentThemeChanges);
 
         // Function to properly format XML with consistent indentation
         function formatXML(xml) {
