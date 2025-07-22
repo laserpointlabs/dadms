@@ -1,11 +1,7 @@
 "use client";
-import { Delete, Info, PlayArrow, Refresh, Schema, Settings, Visibility, Warning } from '@mui/icons-material';
-import {
-    Alert,
-    Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem, Paper, Select, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
 import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, AlertDialog, Button, Card, Icon } from './shared';
+import { FormField, Select } from './shared/FormField';
 
 // Mock types
 interface ProcessInstance {
@@ -103,11 +99,18 @@ const ProcessManager: React.FC = () => {
         }
     }, [autoRefresh, fetchProcessInstances]);
 
-    const getStatusColor = (status: string, isActive: boolean) => {
-        if (isActive) return 'success';
-        if (status === 'COMPLETED') return 'info';
-        if (status === 'EXTERNALLY_TERMINATED' || status === 'INTERNALLY_TERMINATED') return 'error';
-        return 'default';
+    const getStatusColor = (status: string, isActive: boolean): string => {
+        if (isActive) return 'text-theme-accent-success';
+        if (status === 'COMPLETED') return 'text-theme-accent-info';
+        if (status === 'EXTERNALLY_TERMINATED' || status === 'INTERNALLY_TERMINATED') return 'text-theme-accent-error';
+        return 'text-theme-text-secondary';
+    };
+
+    const getStatusBgColor = (status: string, isActive: boolean): string => {
+        if (isActive) return 'bg-theme-accent-success bg-opacity-20';
+        if (status === 'COMPLETED') return 'bg-theme-accent-info bg-opacity-20';
+        if (status === 'EXTERNALLY_TERMINATED' || status === 'INTERNALLY_TERMINATED') return 'bg-theme-accent-error bg-opacity-20';
+        return 'bg-theme-surface-hover';
     };
 
     const formatDateTime = (dateTime: string | undefined) => {
@@ -129,274 +132,284 @@ const ProcessManager: React.FC = () => {
         return `${seconds}s`;
     };
 
+    const handleStartProcess = () => {
+        if (selectedDefinition) {
+            // TODO: Implement actual process start
+            console.log('Starting process:', selectedDefinition.key, 'with variables:', startVariables);
+            setStartDialogOpen(false);
+            setStartVariables('{}');
+        }
+    };
+
+    const handleDeleteInstance = () => {
+        if (selectedInstance) {
+            // TODO: Implement actual process deletion
+            setProcessInstances(prev => prev.filter(p => p.id !== selectedInstance.id));
+            setDeleteDialogOpen(false);
+            setSelectedInstance(null);
+        }
+    };
+
     return (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4" component="h1">
-                    Process Management
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={autoRefresh}
-                                onChange={(e) => setAutoRefresh(e.target.checked)}
-                                color="primary"
-                            />
-                        }
-                        label="Auto-refresh (5s)"
-                    />
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-theme-text-primary">Process Management</h1>
+                <div className="flex items-center gap-4">
+                    {/* Auto-refresh toggle */}
+                    <label className="flex items-center gap-2 text-sm text-theme-text-secondary">
+                        <input
+                            type="checkbox"
+                            checked={autoRefresh}
+                            onChange={(e) => setAutoRefresh(e.target.checked)}
+                            className="text-theme-accent-primary"
+                        />
+                        Auto-refresh (5s)
+                    </label>
                     <Button
-                        variant="contained"
-                        startIcon={<Refresh />}
+                        variant="primary"
+                        leftIcon="refresh"
                         onClick={handleRefresh}
                         disabled={loading}
+                        loading={loading}
                     >
                         Refresh
                     </Button>
-                </Box>
-            </Box>
+                </div>
+            </div>
+
+            {/* Error Alert */}
             {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert variant="error" title="Error" onClose={() => setError(null)}>
                     {error}
                 </Alert>
             )}
+
             {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Active Processes
-                            </Typography>
-                            <Typography variant="h4" color="success.main">
-                                {counts.active}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Total Processes
-                            </Typography>
-                            <Typography variant="h4">
-                                {counts.total}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Available Definitions
-                            </Typography>
-                            <Typography variant="h4" color="primary.main">
-                                {Object.keys(groupedProcessDefinitions).length}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card variant="default" padding="md">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg mx-auto mb-3">
+                            <Icon name="circle-filled" size="lg" className="text-theme-accent-success" />
+                        </div>
+                        <p className="text-sm text-theme-text-secondary mb-1">Active Processes</p>
+                        <p className="text-3xl font-bold text-theme-accent-success">{counts.active}</p>
+                    </div>
+                </Card>
+                <Card variant="default" padding="md">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center w-12 h-12 bg-theme-accent-primary bg-opacity-20 rounded-lg mx-auto mb-3">
+                            <Icon name="graph" size="lg" className="text-theme-accent-primary" />
+                        </div>
+                        <p className="text-sm text-theme-text-secondary mb-1">Total Processes</p>
+                        <p className="text-3xl font-bold text-theme-text-primary">{counts.total}</p>
+                    </div>
+                </Card>
+                <Card variant="default" padding="md">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center w-12 h-12 bg-theme-accent-info bg-opacity-20 rounded-lg mx-auto mb-3">
+                            <Icon name="file" size="lg" className="text-theme-accent-info" />
+                        </div>
+                        <p className="text-sm text-theme-text-secondary mb-1">Available Definitions</p>
+                        <p className="text-3xl font-bold text-theme-accent-info">{Object.keys(groupedProcessDefinitions).length}</p>
+                    </div>
+                </Card>
+            </div>
+
             {/* Process Definitions Section */}
-            <Paper sx={{ p: 2, mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                    <Settings sx={{ mr: 1 }} />
-                    Process Definitions
-                </Typography>
-                <Grid container spacing={2}>
+            <Card variant="default" padding="md">
+                <div className="flex items-center gap-2 mb-4">
+                    <Icon name="settings-gear" size="md" className="text-theme-accent-primary" />
+                    <h2 className="text-xl font-semibold text-theme-text-primary">Process Definitions</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Object.entries(groupedProcessDefinitions).map(([key, definitions]) => {
                         const selectedVersion = selectedVersions[key] || definitions[0]?.id || '';
                         const selectedDefinition = definitions.find(def => def.id === selectedVersion) || definitions[0];
                         return (
-                            <Grid item xs={12} sm={6} md={4} key={key}>
-                                <Card variant="outlined">
-                                    <CardContent>
-                                        <Typography variant="subtitle1" noWrap>
+                            <Card key={key} variant="outlined" padding="md">
+                                <div className="space-y-3">
+                                    <div>
+                                        <h3 className="font-medium text-theme-text-primary truncate">
                                             {selectedDefinition?.name || key}
-                                        </Typography>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Key: {key}
-                                        </Typography>
-                                        <Box sx={{ mt: 1, mb: 2 }}>
-                                            <FormControl size="small" fullWidth>
-                                                <InputLabel>Version</InputLabel>
-                                                <Select
-                                                    value={selectedVersion}
-                                                    label="Version"
-                                                    onChange={(e) => setSelectedVersions(prev => ({
-                                                        ...prev,
-                                                        [key]: e.target.value
-                                                    }))}
-                                                >
-                                                    {definitions.map((def) => (
-                                                        <MenuItem key={def.id} value={def.id}>
-                                                            v{def.version} {def.version === Math.max(...definitions.map(d => d.version)) && '(latest)'}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                        </h3>
+                                        <p className="text-sm text-theme-text-secondary">Key: {key}</p>
+                                    </div>
+
+                                    <FormField label="Version">
+                                        <Select
+                                            value={selectedVersion}
+                                            onChange={(e) => setSelectedVersions(prev => ({
+                                                ...prev,
+                                                [key]: e.target.value
+                                            }))}
+                                        >
+                                            {definitions.map((def) => (
+                                                <option key={def.id} value={def.id}>
+                                                    v{def.version} {def.version === Math.max(...definitions.map(d => d.version)) ? '(latest)' : ''}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </FormField>
+
+                                    <div className="flex justify-between items-center pt-2">
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="primary"
+                                                leftIcon="arrow-right"
+                                                onClick={() => {
+                                                    setSelectedDefinition(selectedDefinition);
+                                                    setStartDialogOpen(true);
+                                                }}
+                                                disabled={!selectedDefinition}
+                                            >
+                                                Start
+                                            </Button>
+                                            <div title="View process documentation">
                                                 <Button
-                                                    size="small"
-                                                    variant="contained"
-                                                    startIcon={<PlayArrow />}
-                                                    onClick={() => {
-                                                        setSelectedDefinition(selectedDefinition);
-                                                        setStartDialogOpen(true);
-                                                    }}
-                                                    disabled={!selectedDefinition}
-                                                >
-                                                    Start Process
-                                                </Button>
-                                                <IconButton size="small" color="primary" title="View process documentation">
-                                                    <Info />
-                                                </IconButton>
-                                                <IconButton size="small" color="primary" title="View process model">
-                                                    <Schema />
-                                                </IconButton>
-                                            </Box>
-                                            <IconButton size="small" color="error" title="Delete process definition">
-                                                <Delete />
-                                            </IconButton>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
+                                                    size="sm"
+                                                    variant="tertiary"
+                                                    leftIcon="info"
+                                                    onClick={() => { }}
+                                                />
+                                            </div>
+                                            <div title="View process model">
+                                                <Button
+                                                    size="sm"
+                                                    variant="tertiary"
+                                                    leftIcon="file"
+                                                    onClick={() => { }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div title="Delete process definition">
+                                            <Button
+                                                size="sm"
+                                                variant="danger"
+                                                leftIcon="trash"
+                                                onClick={() => { }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
                         );
                     })}
-                </Grid>
-            </Paper>
+                </div>
+            </Card>
+
             {/* Process Instances Table */}
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Instance ID</TableCell>
-                            <TableCell>Process Name</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Start Time</TableCell>
-                            <TableCell>Duration</TableCell>
-                            <TableCell>Business Key</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {processInstances.map((instance) => (
-                            <TableRow key={instance.id}>
-                                <TableCell>
-                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                        {instance.id.substring(0, 8)}...
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2">
-                                        {instance.processDefinitionName || instance.processDefinitionKey}
-                                    </Typography>
-                                    <Typography variant="caption" color="textSecondary">
-                                        v{instance.processDefinitionVersion}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={instance.isActive ? 'ACTIVE' : (instance.state || 'COMPLETED')}
-                                        color={getStatusColor(instance.status, instance.isActive)}
-                                        size="small"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2">
+            <Card variant="default" padding="none">
+                <div className="p-4 border-b border-theme-border">
+                    <h2 className="text-xl font-semibold text-theme-text-primary">Process Instances</h2>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-theme-surface-hover">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Instance ID</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Process Name</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Status</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Start Time</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Duration</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Business Key</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-theme-text-secondary">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-theme-border">
+                            {processInstances.map((instance) => (
+                                <tr key={instance.id} className="hover:bg-theme-surface-hover">
+                                    <td className="px-4 py-3">
+                                        <span className="text-sm font-mono text-theme-text-primary">
+                                            {instance.id.substring(0, 8)}...
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div>
+                                            <p className="text-sm text-theme-text-primary">
+                                                {instance.processDefinitionName || instance.processDefinitionKey}
+                                            </p>
+                                            <p className="text-xs text-theme-text-secondary">
+                                                v{instance.processDefinitionVersion}
+                                            </p>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBgColor(instance.status, instance.isActive)} ${getStatusColor(instance.status, instance.isActive)}`}>
+                                            {instance.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-theme-text-primary">
                                         {formatDateTime(instance.startTime)}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2">
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-theme-text-primary">
                                         {getDuration(instance.startTime, instance.endTime)}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2">
-                                        {instance.businessKey || 'N/A'}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Tooltip title="View Details">
-                                        <IconButton size="small">
-                                            <Visibility />
-                                        </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title={instance.isActive ? "Terminate Process" : "Delete Process Instance"}>
-                                        <IconButton size="small" color="error" onClick={() => {
-                                            setSelectedInstance(instance);
-                                            setDeleteDialogOpen(true);
-                                        }}>
-                                            <Delete />
-                                        </IconButton>
-                                    </Tooltip>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-                <DialogTitle>
-                    <Warning color="warning" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    {selectedInstance?.isActive ? 'Terminate Process Instance' : 'Delete Process Instance'}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Are you sure you want to {selectedInstance?.isActive ? 'terminate' : 'delete'} process instance{' '}
-                        <strong>{selectedInstance?.id}</strong>?
-                        <br />
-                        <br />
-                        {selectedInstance?.isActive
-                            ? 'This action cannot be undone and will stop all active tasks in this process.'
-                            : 'This action will permanently remove this process instance from the system.'
-                        }
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                    <Button color="error" variant="contained">
-                        {selectedInstance?.isActive ? 'Terminate' : 'Delete'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-theme-text-primary">
+                                        {instance.businessKey || '-'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex gap-1">
+                                            <div title="View details">
+                                                <Button
+                                                    size="sm"
+                                                    variant="tertiary"
+                                                    leftIcon="search"
+                                                    onClick={() => { }}
+                                                />
+                                            </div>
+                                            {instance.isActive && (
+                                                <div title="View incidents">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="tertiary"
+                                                        leftIcon="warning"
+                                                        onClick={() => { }}
+                                                    />
+                                                </div>
+                                            )}
+                                            <div title="Delete instance">
+                                                <Button
+                                                    size="sm"
+                                                    variant="danger"
+                                                    leftIcon="trash"
+                                                    onClick={() => {
+                                                        setSelectedInstance(instance);
+                                                        setDeleteDialogOpen(true);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+
             {/* Start Process Dialog */}
-            <Dialog open={startDialogOpen} onClose={() => setStartDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>
-                    Start Process: {selectedDefinition?.name || selectedDefinition?.key}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText sx={{ mb: 2 }}>
-                        Enter initial variables for the process (JSON format):
-                    </DialogContentText>
-                    <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        variant="outlined"
-                        label="Process Variables (JSON)"
-                        value={startVariables}
-                        onChange={(e) => setStartVariables(e.target.value)}
-                        placeholder='{"key": "value", "number": 42}'
-                        sx={{ mt: 1 }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setStartDialogOpen(false)}>Cancel</Button>
-                    <Button variant="contained" color="primary">
-                        Start Process
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+            <AlertDialog
+                open={startDialogOpen}
+                onClose={() => setStartDialogOpen(false)}
+                title="Start Process Instance"
+                description={`Starting process: ${selectedDefinition?.name}. You can provide initial variables for the process instance in JSON format.`}
+                onConfirm={handleStartProcess}
+                confirmText="Start Process"
+            />
+
+            {/* Delete Instance Dialog */}
+            <AlertDialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                title="Delete Process Instance"
+                description={`Are you sure you want to delete process instance ${selectedInstance?.id}? This action cannot be undone.`}
+                onConfirm={handleDeleteInstance}
+                confirmText="Delete"
+                variant="error"
+            />
+        </div>
     );
 };
 

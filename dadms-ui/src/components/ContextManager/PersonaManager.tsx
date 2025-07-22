@@ -1,7 +1,7 @@
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import { Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, OutlinedInput, Select, TextField, Typography } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
+import { Modal } from '../ProjectDashboard/Modal';
+import { Button, Card, Icon } from '../shared';
+import { FormField, Input, Select, TextArea } from '../shared/FormField';
 
 interface Persona {
     id: string;
@@ -48,82 +48,182 @@ export default function PersonaManager({ personas, setPersonas }: PersonaManager
     const handleDelete = (id: string) => setPersonas(ps => ps.filter(p => p.id !== id));
 
     return (
-        <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Personas</Typography>
-                <Button variant="contained" onClick={() => handleOpen()}>Add Persona</Button>
-            </Box>
-            {personas.map(p => (
-                <Card key={p.id} sx={{ mb: 2 }}>
-                    <CardContent>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Box>
-                                <Typography variant="subtitle1" fontWeight={600}>{p.name}</Typography>
-                                <Typography variant="body2" color="text.secondary">Role: {p.role}</Typography>
-                                <Box mt={1} mb={1}>
-                                    {p.expertise.map((e, i) => <Chip key={i} label={e} size="small" sx={{ mr: 1 }} />)}
-                                </Box>
-                                <Typography variant="body2">Guidelines: {p.guidelines}</Typography>
-                                <Box mt={1}>
-                                    {p.tags.map((tag, i) => <Chip key={i} label={tag} size="small" color="primary" sx={{ mr: 1 }} />)}
-                                </Box>
-                                <Box mt={1}>
-                                    {p.tool_ids.map((tid, i) => <Chip key={i} label={MOCK_TOOLS.find(t => t.id === tid)?.name || tid} size="small" color="secondary" sx={{ mr: 1 }} />)}
-                                </Box>
-                            </Box>
-                            <Box>
-                                <IconButton onClick={() => handleOpen(p)}><EditIcon /></IconButton>
-                                <IconButton onClick={() => handleDelete(p.id)} color="error"><DeleteIcon /></IconButton>
-                            </Box>
-                        </Box>
-                    </CardContent>
-                </Card>
-            ))}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{editing ? "Edit Persona" : "Add Persona"}</DialogTitle>
-                <DialogContent>
-                    <TextField label="Name" fullWidth margin="normal" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                    <TextField label="Role" fullWidth margin="normal" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
-                    <TextField label="Expertise (comma separated)" fullWidth margin="normal" value={form.expertise.join(", ")} onChange={e => setForm(f => ({ ...f, expertise: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))} />
-                    <TextField label="Guidelines" fullWidth margin="normal" multiline rows={2} value={form.guidelines} onChange={e => setForm(f => ({ ...f, guidelines: e.target.value }))} />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Tags</InputLabel>
-                        <Select
-                            multiple
-                            value={form.tags}
-                            onChange={e => setForm(f => ({ ...f, tags: e.target.value as string[] }))}
-                            input={<OutlinedInput label="Tags" />}
-                            renderValue={(selected) => (selected as string[]).join(", ")}
-                        >
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-theme-text-primary">Personas</h2>
+                <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                    Add Persona
+                </Button>
+            </div>
+
+            {/* Personas List */}
+            <div className="space-y-4">
+                {personas.map(persona => (
+                    <Card key={persona.id} variant="default" padding="md">
+                        <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Icon name="robot" size="md" className="text-theme-accent-primary" />
+                                    <div>
+                                        <h3 className="text-lg font-medium text-theme-text-primary">{persona.name}</h3>
+                                        <p className="text-sm text-theme-text-secondary">Role: {persona.role}</p>
+                                    </div>
+                                </div>
+
+                                {/* Expertise */}
+                                {persona.expertise.length > 0 && (
+                                    <div className="mb-3">
+                                        <p className="text-sm text-theme-text-secondary mb-1">Expertise:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {persona.expertise.map((skill, i) => (
+                                                <span key={i} className="px-2 py-1 bg-theme-accent-primary bg-opacity-20 text-theme-accent-primary text-xs rounded">
+                                                    {skill}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Guidelines */}
+                                <div className="mb-3">
+                                    <p className="text-sm text-theme-text-secondary mb-1">Guidelines:</p>
+                                    <p className="text-sm text-theme-text-primary">{persona.guidelines}</p>
+                                </div>
+
+                                {/* Tags */}
+                                {persona.tags.length > 0 && (
+                                    <div className="mb-3">
+                                        <p className="text-sm text-theme-text-secondary mb-1">Tags:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {persona.tags.map((tag, i) => (
+                                                <span key={i} className="px-2 py-1 bg-theme-accent-secondary bg-opacity-20 text-theme-accent-secondary text-xs rounded">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tools */}
+                                {persona.tool_ids.length > 0 && (
+                                    <div>
+                                        <p className="text-sm text-theme-text-secondary mb-1">Tools:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {persona.tool_ids.map((toolId, i) => {
+                                                const tool = MOCK_TOOLS.find(t => t.id === toolId);
+                                                return tool ? (
+                                                    <span key={i} className="px-2 py-1 bg-theme-accent-info bg-opacity-20 text-theme-accent-info text-xs rounded">
+                                                        {tool.name}
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 ml-4">
+                                <Button
+                                    variant="tertiary"
+                                    size="sm"
+                                    leftIcon="edit"
+                                    onClick={() => handleOpen(persona)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    leftIcon="trash"
+                                    onClick={() => handleDelete(persona.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+
+                {personas.length === 0 && (
+                    <Card variant="outlined" padding="lg" className="text-center">
+                        <Icon name="robot" size="xl" className="text-theme-text-muted mb-4" />
+                        <h3 className="text-lg font-medium text-theme-text-primary mb-2">No personas yet</h3>
+                        <p className="text-theme-text-secondary mb-4">
+                            Create AI personas to define specific roles and expertise areas
+                        </p>
+                        <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                            Create Your First Persona
+                        </Button>
+                    </Card>
+                )}
+            </div>
+
+            {/* Edit/Create Modal */}
+            <Modal isOpen={open} onClose={handleClose} title={editing ? "Edit Persona" : "Add Persona"}>
+                <div className="space-y-4">
+                    <FormField label="Name" required>
+                        <Input
+                            value={form.name}
+                            onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="Enter persona name"
+                        />
+                    </FormField>
+
+                    <FormField label="Role" required>
+                        <Input
+                            value={form.role}
+                            onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))}
+                            placeholder="Enter role or job title"
+                        />
+                    </FormField>
+
+                    <FormField label="Expertise" helpText="Comma-separated skills and areas of expertise">
+                        <Input
+                            value={form.expertise.join(", ")}
+                            onChange={(e) => setForm(f => ({ ...f, expertise: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
+                            placeholder="e.g., Risk Analysis, Financial Modeling"
+                        />
+                    </FormField>
+
+                    <FormField label="Guidelines" required>
+                        <TextArea
+                            rows={3}
+                            value={form.guidelines}
+                            onChange={(e) => setForm(f => ({ ...f, guidelines: e.target.value }))}
+                            placeholder="Describe how this persona should behave and make decisions"
+                        />
+                    </FormField>
+
+                    <FormField label="Tags">
+                        <Select value={""} onChange={() => { }}>
+                            <option value="">Select tags...</option>
                             {MOCK_TAGS.map(tag => (
-                                <MenuItem key={tag} value={tag}>
-                                    {tag}
-                                </MenuItem>
+                                <option key={tag} value={tag}>{tag}</option>
                             ))}
                         </Select>
-                    </FormControl>
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Tools</InputLabel>
-                        <Select
-                            multiple
-                            value={form.tool_ids}
-                            onChange={e => setForm(f => ({ ...f, tool_ids: e.target.value as string[] }))}
-                            input={<OutlinedInput label="Tools" />}
-                            renderValue={(selected) => (selected as string[]).map(tid => MOCK_TOOLS.find(t => t.id === tid)?.name || tid).join(", ")}
-                        >
+                    </FormField>
+
+                    <FormField label="Tools">
+                        <Select value={""} onChange={() => { }}>
+                            <option value="">Select tools...</option>
                             {MOCK_TOOLS.map(tool => (
-                                <MenuItem key={tool.id} value={tool.id}>
-                                    {tool.name}
-                                </MenuItem>
+                                <option key={tool.id} value={tool.id}>{tool.name}</option>
                             ))}
                         </Select>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSave} variant="contained">Save</Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+                    </FormField>
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="secondary" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleSave}>
+                            {editing ? "Update" : "Create"} Persona
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
     );
 } 

@@ -1,26 +1,39 @@
-import { Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemText, MenuItem, OutlinedInput, Select, TextField, Typography } from '@mui/material';
 import React, { useState } from 'react';
+import { Modal } from '../ProjectDashboard/Modal';
+import { Button, Card, Icon } from '../shared';
+import { FormField, Input, Select, TextArea } from '../shared/FormField';
+
 // Local Team type for this component
 interface Team {
     id: string;
     name: string;
     description?: string;
     persona_ids: string[];
-    uses_moderator: boolean;
-    moderator_id?: string;
     decision_type: string;
 }
 
 const DECISION_TYPES = [
-    { value: 'voting', label: 'Voting (majority/plurality)' },
+    { value: 'voting', label: 'Voting (majority)' },
+    { value: 'consensus', label: 'Consensus (all agree)' },
     { value: 'moderator', label: 'Moderator decides' },
-    { value: 'third_party', label: 'Third party decides' },
-    { value: 'consensus', label: 'Consensus (all must agree)' },
-    { value: 'random', label: 'Random/Lottery' },
+    { value: 'random', label: 'Random selection' },
 ];
 
 const initialTeams: Team[] = [
-    { id: 't1', name: 'AI Experts', description: 'LLM and AI specialists', persona_ids: ['1', '2'], uses_moderator: false, decision_type: 'voting' },
+    {
+        id: 't1',
+        name: 'AI Experts',
+        description: 'LLM and AI specialists for technical decisions',
+        persona_ids: ['1', '2'],
+        decision_type: 'voting'
+    },
+    {
+        id: 't2',
+        name: 'Risk Assessment Team',
+        description: 'Financial and operational risk evaluation',
+        persona_ids: ['1'],
+        decision_type: 'consensus'
+    },
 ];
 
 interface TeamsTabProps {
@@ -35,10 +48,8 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ personas }) => {
         name: string;
         description: string;
         persona_ids: string[];
-        uses_moderator: boolean;
-        moderator_id?: string;
         decision_type: string;
-    }>({ name: '', description: '', persona_ids: [], uses_moderator: false, moderator_id: undefined, decision_type: 'voting' });
+    }>({ name: '', description: '', persona_ids: [], decision_type: 'voting' });
 
     const handleOpen = (team?: Team) => {
         if (team) {
@@ -47,137 +58,193 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ personas }) => {
                 name: team.name,
                 description: team.description || '',
                 persona_ids: team.persona_ids,
-                uses_moderator: team.uses_moderator || false,
-                moderator_id: team.moderator_id,
-                decision_type: team.decision_type || 'voting',
+                decision_type: team.decision_type,
             });
         } else {
             setEditingTeam(null);
-            setForm({ name: '', description: '', persona_ids: [], uses_moderator: false, moderator_id: undefined, decision_type: 'voting' });
+            setForm({ name: '', description: '', persona_ids: [], decision_type: 'voting' });
         }
         setOpen(true);
     };
-    const handleClose = () => setOpen(false);
+
+    const handleClose = () => {
+        setOpen(false);
+        setEditingTeam(null);
+    };
 
     const handleSave = () => {
         if (editingTeam) {
             setTeams(ts => ts.map(t => t.id === editingTeam.id ? { ...editingTeam, ...form } : t));
         } else {
-            setTeams(ts => [...ts, { id: Date.now().toString(), ...form }]);
+            setTeams(ts => [...ts, { ...form, id: Date.now().toString() }]);
         }
-        setOpen(false);
+        handleClose();
+    };
+
+    const handleDelete = (id: string) => {
+        setTeams(ts => ts.filter(t => t.id !== id));
+    };
+
+    const getDecisionTypeLabel = (value: string) => {
+        return DECISION_TYPES.find(dt => dt.value === value)?.label || value;
     };
 
     return (
-        <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Teams</Typography>
-                <Button variant="contained" onClick={() => handleOpen()}>Create Team</Button>
-            </Box>
-            <List>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-theme-text-primary">Teams</h2>
+                <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                    Add Team
+                </Button>
+            </div>
+
+            {/* Teams List */}
+            <div className="space-y-4">
                 {teams.map(team => (
-                    <ListItem key={team.id}>
-                        <ListItemText
-                            primary={team.name}
-                            secondary={<>
-                                {team.description && <>{team.description}<br /></>}
-                                <b>Decision Type:</b> {DECISION_TYPES.find(dt => dt.value === team.decision_type)?.label || team.decision_type}<br />
-                                {team.uses_moderator && team.moderator_id && (
-                                    <>
-                                        <b>Moderator:</b> {personas.find(p => p.id === team.moderator_id)?.name || team.moderator_id}<br />
-                                    </>
-                                )}
-                            </>}
-                        />
-                        <Box>
-                            {team.persona_ids.map((pid: string) => {
-                                const persona = personas.find(p => p.id === pid);
-                                return persona ? <Chip key={pid} label={persona.name} sx={{ mr: 1 }} /> : null;
-                            })}
-                        </Box>
-                        <Button size="small" onClick={() => handleOpen(team)} sx={{ ml: 2 }}>Edit</Button>
-                    </ListItem>
+                    <Card key={team.id} variant="default" padding="md">
+                        <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Icon name="type-hierarchy" size="md" className="text-theme-accent-primary" />
+                                    <div>
+                                        <h3 className="text-lg font-medium text-theme-text-primary">{team.name}</h3>
+                                        {team.description && (
+                                            <p className="text-sm text-theme-text-secondary">{team.description}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Team Members */}
+                                <div className="mb-3">
+                                    <p className="text-sm text-theme-text-secondary mb-1">
+                                        Members ({team.persona_ids.length}):
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {team.persona_ids.map(personaId => {
+                                            const persona = personas.find(p => p.id === personaId);
+                                            return persona ? (
+                                                <span key={personaId} className="px-2 py-1 bg-theme-accent-primary bg-opacity-20 text-theme-accent-primary text-xs rounded">
+                                                    {persona.name}
+                                                </span>
+                                            ) : null;
+                                        })}
+                                        {team.persona_ids.length === 0 && (
+                                            <span className="text-theme-text-muted text-xs">No members assigned</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Decision Type */}
+                                <div>
+                                    <p className="text-sm text-theme-text-secondary mb-1">Decision Method:</p>
+                                    <span className="px-2 py-1 bg-theme-accent-info bg-opacity-20 text-theme-accent-info text-xs rounded">
+                                        {getDecisionTypeLabel(team.decision_type)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 ml-4">
+                                <Button
+                                    variant="tertiary"
+                                    size="sm"
+                                    leftIcon="edit"
+                                    onClick={() => handleOpen(team)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    leftIcon="trash"
+                                    onClick={() => handleDelete(team.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
                 ))}
-            </List>
-            {/* Dialog for create/edit team */}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{editingTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Name"
-                        fullWidth
-                        margin="normal"
-                        value={form.name}
-                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    />
-                    <TextField
-                        label="Description"
-                        fullWidth
-                        margin="normal"
-                        value={form.description}
-                        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Personas</InputLabel>
-                        <Select
-                            multiple
-                            value={form.persona_ids}
-                            onChange={e => setForm(f => ({ ...f, persona_ids: e.target.value as string[] }))}
-                            input={<OutlinedInput label="Personas" />}
-                            renderValue={(selected) => (selected as string[]).map(pid => personas.find(p => p.id === pid)?.name || pid).join(", ")}
-                        >
-                            {personas.map(p => (
-                                <MenuItem key={p.id} value={p.id}>
-                                    {p.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={form.uses_moderator}
-                                onChange={e => setForm(f => ({ ...f, uses_moderator: e.target.checked, moderator_id: e.target.checked ? f.moderator_id : undefined }))}
-                            />
-                        }
-                        label="Team employs a moderator"
-                        sx={{ mt: 2 }}
-                    />
-                    {form.uses_moderator && (
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Moderator Persona</InputLabel>
-                            <Select
-                                value={form.moderator_id || ''}
-                                onChange={e => setForm(f => ({ ...f, moderator_id: e.target.value as string }))}
-                                input={<OutlinedInput label="Moderator Persona" />}
-                            >
-                                {personas.map(p => (
-                                    <MenuItem key={p.id} value={p.id}>
-                                        {p.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    )}
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Decision Agreement Type</InputLabel>
+
+                {teams.length === 0 && (
+                    <Card variant="outlined" padding="lg" className="text-center">
+                        <Icon name="type-hierarchy" size="xl" className="text-theme-text-muted mb-4" />
+                        <h3 className="text-lg font-medium text-theme-text-primary mb-2">No teams yet</h3>
+                        <p className="text-theme-text-secondary mb-4">
+                            Create teams of personas with specific decision-making protocols
+                        </p>
+                        <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                            Create Your First Team
+                        </Button>
+                    </Card>
+                )}
+            </div>
+
+            {/* Edit/Create Modal */}
+            <Modal isOpen={open} onClose={handleClose} title={editingTeam ? "Edit Team" : "Add Team"}>
+                <div className="space-y-4">
+                    <FormField label="Team Name" required>
+                        <Input
+                            value={form.name}
+                            onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="Enter team name"
+                        />
+                    </FormField>
+
+                    <FormField label="Description" helpText="Optional description of the team's purpose">
+                        <TextArea
+                            rows={2}
+                            value={form.description}
+                            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Describe what this team does"
+                        />
+                    </FormField>
+
+                    <FormField label="Decision Method" required>
                         <Select
                             value={form.decision_type}
-                            onChange={e => setForm(f => ({ ...f, decision_type: e.target.value as string }))}
-                            input={<OutlinedInput label="Decision Agreement Type" />}
+                            onChange={(e) => setForm(f => ({ ...f, decision_type: e.target.value }))}
                         >
-                            {DECISION_TYPES.map(dt => (
-                                <MenuItem key={dt.value} value={dt.value}>{dt.label}</MenuItem>
+                            {DECISION_TYPES.map(type => (
+                                <option key={type.value} value={type.value}>{type.label}</option>
                             ))}
                         </Select>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button color="primary" variant="contained" onClick={handleSave}>Save</Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+                    </FormField>
+
+                    <FormField label="Team Members" helpText="Select personas to include in this team">
+                        <div className="space-y-2 max-h-32 overflow-y-auto p-2 border border-theme-input-border rounded">
+                            {personas.map(persona => (
+                                <label key={persona.id} className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.persona_ids.includes(persona.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setForm(f => ({ ...f, persona_ids: [...f.persona_ids, persona.id] }));
+                                            } else {
+                                                setForm(f => ({ ...f, persona_ids: f.persona_ids.filter(id => id !== persona.id) }));
+                                            }
+                                        }}
+                                        className="text-theme-accent-primary"
+                                    />
+                                    <span className="text-theme-text-primary">{persona.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </FormField>
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="secondary" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleSave}>
+                            {editingTeam ? "Update" : "Create"} Team
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
     );
 };
 

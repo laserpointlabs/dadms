@@ -15,15 +15,14 @@ const TABS = [
 export default function AASCar() {
     const [visible, setVisible] = useState(true);
     const [height, setHeight] = useState(280);
-    const [position, setPosition] = useState(() => ({
-        x: Math.max(20, typeof window !== 'undefined' ? window.innerWidth - 420 : 400),
-        y: Math.max(20, typeof window !== 'undefined' ? window.innerHeight - 300 : 100)
-    }));
+    // Use safe initial values for SSR
+    const [position, setPosition] = useState({ x: 400, y: 100 });
     const [activeTab, setActiveTab] = useState(TAB_AAS);
     const [aasInput, setAasInput] = useState("");
     const [isMinimized, setIsMinimized] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isDetached, setIsDetached] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
     const detachedWindowRef = useRef<Window | null>(null);
     const dragRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +30,17 @@ export default function AASCar() {
     const startHeight = useRef<number>(height);
     const startPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const startMouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    // Initialize position after mount to avoid hydration issues
+    useEffect(() => {
+        if (!isInitialized && typeof window !== 'undefined') {
+            setPosition({
+                x: Math.max(20, window.innerWidth - 420),
+                y: Math.max(20, window.innerHeight - 300)
+            });
+            setIsInitialized(true);
+        }
+    }, [isInitialized]);
 
     // Function to open agent assistant in separate window
     const openDetachedWindow = () => {
@@ -387,10 +397,12 @@ export default function AASCar() {
     };
 
     const resetPosition = () => {
-        setPosition({
-            x: Math.max(20, typeof window !== 'undefined' ? window.innerWidth - 420 : 400),
-            y: Math.max(20, typeof window !== 'undefined' ? window.innerHeight - 300 : 100)
-        });
+        if (typeof window !== 'undefined') {
+            setPosition({
+                x: Math.max(20, window.innerWidth - 420),
+                y: Math.max(20, window.innerHeight - 300)
+            });
+        }
     };
 
     if (!visible && !isDetached) {
@@ -446,14 +458,14 @@ export default function AASCar() {
         <div
             className={`fixed border z-40 flex flex-col overflow-hidden ${isDragging ? 'shadow-2xl' : 'shadow-lg'}`}
             style={{
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                width: "400px",
-                height: `${displayHeight}px`,
-                backgroundColor: 'var(--vscode-bg-secondary)',
-                borderColor: 'var(--vscode-border)',
+                left: position.x + 'px',
+                top: position.y + 'px',
+                width: '400px',
+                height: displayHeight + 'px',
+                backgroundColor: '#252526',
+                borderColor: '#2d2d30',
                 borderRadius: '3px',
-                transition: isMinimized ? "height 0.3s ease" : isDragging ? "none" : "box-shadow 0.2s ease"
+                transition: isMinimized ? 'height 0.3s ease' : isDragging ? 'none' : 'box-shadow 0.2s ease'
             }}
         >
             {/* Resize Handle */}
@@ -480,14 +492,14 @@ export default function AASCar() {
                 }}
                 className={`px-3 py-2 flex items-center justify-between ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`}
                 style={{
-                    backgroundColor: 'var(--vscode-bg-tertiary)',
-                    borderBottom: '1px solid var(--vscode-border)',
-                    color: 'var(--vscode-text-primary)'
+                    backgroundColor: '#333333',
+                    borderBottom: '1px solid #2d2d30',
+                    color: '#d4d4d4'
                 }}
                 title="Drag to move • Right-click to reset position"
             >
                 <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 flex items-center justify-center" style={{ backgroundColor: 'var(--vscode-accent-blue)', borderRadius: '2px' }}>
+                    <div className="w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#007acc', borderRadius: '2px' }}>
                         <span className="text-white text-xs">A</span>
                     </div>
                     <h3 className="text-sm">Agent Assistant</h3>

@@ -1,134 +1,226 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from 'react';
+import { Button, Card, Icon } from '../shared';
 
 interface Domain {
     id: string;
     name: string;
-    description?: string;
+    description: string;
+    documentCount: number;
+    createdAt: string;
 }
 
-const initialDomains: Domain[] = [
-    { id: "1", name: "Quality", description: "Quality standards and info" },
-    { id: "2", name: "UAVs", description: "Approved UAVs and specs" },
+const MOCK_DOMAINS: Domain[] = [
+    {
+        id: '1',
+        name: 'Strategic Planning',
+        description: 'Documents related to organizational strategy and planning processes.',
+        documentCount: 24,
+        createdAt: '2024-01-15T10:00:00Z'
+    },
+    {
+        id: '2',
+        name: 'Technical Architecture',
+        description: 'Engineering and technical documentation for system design.',
+        documentCount: 18,
+        createdAt: '2024-01-10T14:30:00Z'
+    }
 ];
 
-export const DomainManagement: React.FC = () => {
-    const [domains, setDomains] = useState<Domain[]>(initialDomains);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editDomain, setEditDomain] = useState<Domain | null>(null);
-    const [form, setForm] = useState<{ name: string; description: string }>({ name: "", description: "" });
+const DomainManagement: React.FC = () => {
+    const [domains, setDomains] = useState<Domain[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [modalType, setModalType] = useState<'create' | 'edit' | 'delete'>('create');
+    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [editTarget, setEditTarget] = useState<Domain | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Domain | null>(null);
-    const [error, setError] = useState<string | null>(null);
 
-    const openAdd = () => {
-        setEditDomain(null);
-        setForm({ name: "", description: "" });
-        setModalOpen(true);
-        setError(null);
+    useEffect(() => {
+        // Simulate API call
+        setTimeout(() => {
+            setDomains(MOCK_DOMAINS);
+            setLoading(false);
+        }, 1000);
+    }, []);
+
+    const handleCreate = () => {
+        setModalType('create');
+        setFormData({ name: '', description: '' });
+        setShowModal(true);
     };
-    const openEdit = (domain: Domain) => {
-        setEditDomain(domain);
-        setForm({ name: domain.name, description: domain.description || "" });
-        setModalOpen(true);
-        setError(null);
+
+    const handleEdit = (domain: Domain) => {
+        setModalType('edit');
+        setEditTarget(domain);
+        setFormData({ name: domain.name, description: domain.description });
+        setShowModal(true);
     };
-    const closeModal = () => {
-        setModalOpen(false);
-        setEditDomain(null);
-        setForm({ name: "", description: "" });
-        setError(null);
+
+    const handleDelete = (domain: Domain) => {
+        setModalType('delete');
+        setDeleteTarget(domain);
+        setShowModal(true);
     };
-    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!form.name.trim()) {
-            setError("Name is required");
-            return;
-        }
-        if (editDomain) {
-            setDomains(domains.map(d => d.id === editDomain.id ? { ...editDomain, ...form } : d));
-        } else {
-            setDomains([...domains, { id: Date.now().toString(), ...form }]);
-        }
-        closeModal();
-    };
-    const handleDelete = () => {
-        if (deleteTarget) {
+
+    const handleSubmit = () => {
+        if (modalType === 'create') {
+            const newDomain: Domain = {
+                id: Date.now().toString(),
+                name: formData.name,
+                description: formData.description,
+                documentCount: 0,
+                createdAt: new Date().toISOString()
+            };
+            setDomains([...domains, newDomain]);
+        } else if (modalType === 'edit' && editTarget) {
+            setDomains(domains.map(d =>
+                d.id === editTarget.id
+                    ? { ...d, name: formData.name, description: formData.description }
+                    : d
+            ));
+        } else if (modalType === 'delete' && deleteTarget) {
             setDomains(domains.filter(d => d.id !== deleteTarget.id));
-            setDeleteTarget(null);
         }
+
+        setShowModal(false);
+        setFormData({ name: '', description: '' });
+        setEditTarget(null);
+        setDeleteTarget(null);
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Icon name="loading" size="lg" className="text-theme-accent-primary animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Domains</h2>
-                <button className="bg-blue-600 text-white px-3 py-1 rounded" onClick={openAdd}>Add Domain</button>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-theme-text-primary">Knowledge Domains</h2>
+                <Button variant="primary" leftIcon="add" onClick={handleCreate}>
+                    Create Domain
+                </Button>
             </div>
-            <table className="w-full mb-4">
-                <thead>
-                    <tr className="text-left text-xs text-gray-500">
-                        <th className="py-1">Name</th>
-                        <th className="py-1">Description</th>
-                        <th className="py-1">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {domains.map(domain => (
-                        <tr key={domain.id} className="border-b">
-                            <td className="py-2 font-medium">{domain.name}</td>
-                            <td className="py-2">{domain.description}</td>
-                            <td className="py-2">
-                                <button className="text-blue-600 mr-2" onClick={() => openEdit(domain)}>Edit</button>
-                                <button className="text-red-600" onClick={() => setDeleteTarget(domain)}>Delete</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            {/* Modal for Add/Edit */}
-            {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-6 relative">
-                        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={closeModal}>&times;</button>
-                        <h3 className="text-lg font-semibold mb-4">{editDomain ? "Edit Domain" : "Add Domain"}</h3>
-                        <form onSubmit={handleSubmit} className="space-y-2">
-                            <input
-                                name="name"
-                                value={form.name}
-                                onChange={handleFormChange}
-                                placeholder="Domain Name"
-                                className="w-full border rounded px-2 py-1"
-                                required
-                            />
-                            <textarea
-                                name="description"
-                                value={form.description}
-                                onChange={handleFormChange}
-                                placeholder="Description (optional)"
-                                className="w-full border rounded px-2 py-1"
-                                rows={2}
-                            />
-                            {error && <div className="text-red-600 text-xs">{error}</div>}
-                            <button type="submit" className="bg-blue-600 text-white px-4 py-1 rounded">{editDomain ? "Save" : "Add"}</button>
-                        </form>
+
+            {domains.length === 0 ? (
+                <Card variant="outlined" padding="lg">
+                    <div className="text-center py-8">
+                        <Icon name="folder" size="xl" className="text-theme-text-muted mb-4" />
+                        <p className="text-theme-text-secondary mb-4">No domains yet</p>
+                        <Button variant="primary" leftIcon="add" onClick={handleCreate}>
+                            Create your first domain
+                        </Button>
                     </div>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {domains.map((domain) => (
+                        <Card key={domain.id} variant="outlined" padding="md">
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-medium text-theme-text-primary mb-1">{domain.name}</h3>
+                                    <div className="text-xs text-theme-text-muted">{domain.documentCount} documents</div>
+                                    <p className="text-sm text-theme-text-secondary">{domain.description}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-3 border-t border-theme-border">
+                                    <span className="text-xs text-theme-text-muted">
+                                        Created {new Date(domain.createdAt).toLocaleDateString()}
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <Button size="sm" variant="tertiary" leftIcon="edit" onClick={() => handleEdit(domain)} />
+                                        <Button size="sm" variant="danger" leftIcon="trash" onClick={() => handleDelete(domain)} />
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
                 </div>
             )}
-            {/* Delete Confirmation */}
-            {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6 relative">
-                        <h3 className="text-lg font-semibold mb-4">Delete Domain?</h3>
-                        <p>Are you sure you want to delete <b>{deleteTarget.name}</b>?</p>
-                        <div className="flex gap-2 mt-4">
-                            <button className="bg-red-600 text-white px-4 py-1 rounded" onClick={handleDelete}>Delete</button>
-                            <button className="bg-gray-200 px-4 py-1 rounded" onClick={() => setDeleteTarget(null)}>Cancel</button>
+
+            {/* Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-theme-surface rounded-lg shadow-xl max-w-md w-full border border-theme-border">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-semibold text-theme-text-primary">
+                                    {modalType === 'create' ? 'Create Domain' :
+                                        modalType === 'edit' ? 'Edit Domain' : 'Delete Domain'}
+                                </h3>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                >
+                                    <Icon name="close" size="sm" />
+                                </button>
+                            </div>
+
+                            {modalType === 'delete' ? (
+                                <div>
+                                    <p className="text-theme-text-secondary mb-6">
+                                        Are you sure you want to delete <strong className="text-theme-text-primary">{deleteTarget?.name}</strong>?
+                                        This action cannot be undone.
+                                    </p>
+                                    <div className="flex gap-3">
+                                        <Button variant="tertiary" onClick={() => setShowModal(false)} className="flex-1">
+                                            Cancel
+                                        </Button>
+                                        <Button variant="danger" onClick={handleSubmit} className="flex-1">
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-theme-text-primary mb-1">
+                                            Domain Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-theme-input-bg border border-theme-input-border rounded px-3 py-2 text-theme-text-primary placeholder-theme-text-muted focus:border-theme-accent-primary focus:outline-none"
+                                            placeholder="Enter domain name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-theme-text-primary mb-1">
+                                            Description
+                                        </label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            rows={3}
+                                            className="w-full bg-theme-input-bg border border-theme-input-border rounded px-3 py-2 text-theme-text-primary placeholder-theme-text-muted focus:border-theme-accent-primary focus:outline-none"
+                                            placeholder="Enter domain description"
+                                        />
+                                    </div>
+                                    <div className="flex gap-3 pt-4">
+                                        <Button variant="tertiary" onClick={() => setShowModal(false)} className="flex-1">
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            variant="primary"
+                                            onClick={handleSubmit}
+                                            className="flex-1"
+                                            disabled={!formData.name.trim()}
+                                        >
+                                            {modalType === 'create' ? 'Create' : 'Save'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
         </div>
     );
-}; 
+};
+
+export default DomainManagement; 

@@ -1,5 +1,7 @@
 "use client";
 import React, { useRef } from "react";
+import { Button } from '../../components/shared/Button';
+import { PageContent, PageLayout } from '../../components/shared/PageLayout';
 
 const MODEL_STORAGE_KEY = "bpmn_workspace_model_xml";
 
@@ -31,21 +33,46 @@ export default function BPMNWorkspace() {
         iframeRef.current?.contentWindow?.postMessage({ type: "request-export-bpmn" }, "*");
     };
 
-    return (
-        <div className="flex flex-col h-screen w-full">
-            <div className="flex items-center gap-4 p-4 bg-white border-b">
-                <h1 className="text-2xl font-bold text-blue-700 flex-1">BPMN Workspace</h1>
-                <button onClick={saveModel} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Model</button>
-                <button onClick={loadModel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Load Model</button>
-            </div>
-            <div className="flex-1">
-                <iframe
-                    ref={iframeRef}
-                    src="/comprehensive_bpmn_modeler.html"
-                    title="BPMN Modeler"
-                    className="w-full h-full border-0"
-                />
-            </div>
+    const pageActions = (
+        <div className="flex items-center gap-2">
+            <Button
+                variant="primary"
+                size="sm"
+                leftIcon="save"
+                onClick={saveModel}
+            >
+                Save Model
+            </Button>
+            <Button
+                variant="secondary"
+                size="sm"
+                leftIcon="folder-opened"
+                onClick={loadModel}
+            >
+                Load Model
+            </Button>
         </div>
+    );
+
+    return (
+        <PageLayout
+            title="BPMN Workspace"
+            subtitle="Design and manage business process workflows"
+            icon="graph"
+            actions={pageActions}
+            status={{ text: 'Workflow Designer Active', type: 'active' }}
+        >
+            <PageContent maxWidth="full">
+                <div className="h-full bg-gray-900">
+                    <iframe
+                        ref={iframeRef}
+                        src="/comprehensive_bpmn_modeler.html"
+                        title="BPMN Modeler"
+                        className="w-full h-full border-0"
+                        style={{ minHeight: 'calc(100vh - 200px)' }}
+                    />
+                </div>
+            </PageContent>
+        </PageLayout>
     );
 } 

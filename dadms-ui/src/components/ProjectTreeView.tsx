@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchProjects } from '../services/projectApi';
-import { Project } from '../types/project';
+import { Project } from '../types/services/project';
 
 // Define project object types that can be associated with projects
 interface ProjectObject {
@@ -46,11 +46,11 @@ const getIconForType = (type: string): string => {
     const iconMap: Record<string, string> = {
         project: 'project',
         ontology: 'type-hierarchy',
-        knowledge: 'library',
-        data_model: 'database',
+        knowledge: 'library-books',
+        data_model: 'file',
         model: 'beaker',
-        simulation: 'play-circle',
-        process: 'pulse',
+        simulation: 'pulse',
+        process: 'graph',
         thread: 'list-tree',
         folder: 'folder',
         object: 'file'
@@ -75,6 +75,7 @@ export default function ProjectTreeView() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [treeData, setTreeData] = useState<TreeNode[]>([]);
 
@@ -82,13 +83,18 @@ export default function ProjectTreeView() {
     useEffect(() => {
         const loadProjects = async () => {
             try {
+                setLoading(true);
+                setError(null);
                 const response = await fetchProjects();
-                setProjects(response.projects);
-                if (response.projects.length > 0) {
-                    setSelectedProject(response.projects[0]);
+                const projectsList = response.items || [];
+                setProjects(projectsList);
+                if (projectsList.length > 0) {
+                    setSelectedProject(projectsList[0]);
                 }
             } catch (error) {
                 console.error('Failed to load projects:', error);
+                setError('Failed to load projects');
+                setProjects([]);
             } finally {
                 setLoading(false);
             }
@@ -217,6 +223,23 @@ export default function ProjectTreeView() {
             <div className="tree-loading">
                 <div className="loading-spinner" />
                 <span>Loading projects...</span>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="tree-error">
+                <i className="codicon codicon-error" />
+                <p>Error loading projects</p>
+                <p className="error-detail">{error}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="tree-action-button"
+                >
+                    <i className="codicon codicon-refresh" />
+                    Retry
+                </button>
             </div>
         );
     }

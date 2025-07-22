@@ -1,7 +1,7 @@
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import { Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, OutlinedInput, Select, TextField, Typography } from "@mui/material";
 import { useState } from "react";
+import { Modal } from '../ProjectDashboard/Modal';
+import { Button, Card, Icon } from '../shared';
+import { FormField, Input, TextArea } from '../shared/FormField';
 
 interface Tool {
     id: string;
@@ -42,59 +42,137 @@ export default function ToolManager() {
     const handleDelete = (id: string) => setTools(ts => ts.filter(t => t.id !== id));
 
     return (
-        <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Tools</Typography>
-                <Button variant="contained" onClick={() => handleOpen()}>Add Tool</Button>
-            </Box>
-            {tools.map(t => (
-                <Card key={t.id} sx={{ mb: 2 }}>
-                    <CardContent>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Box>
-                                <Typography variant="subtitle1" fontWeight={600}>{t.name}</Typography>
-                                <Typography variant="body2" color="text.secondary">{t.description}</Typography>
-                                {t.api_spec && <Typography variant="caption" color="text.secondary">API: {t.api_spec}</Typography>}
-                                <Box mt={1}>
-                                    {t.tags.map((tag, i) => <Chip key={i} label={tag} size="small" color="primary" sx={{ mr: 1 }} />)}
-                                </Box>
-                            </Box>
-                            <Box>
-                                <IconButton onClick={() => handleOpen(t)}><EditIcon /></IconButton>
-                                <IconButton onClick={() => handleDelete(t.id)} color="error"><DeleteIcon /></IconButton>
-                            </Box>
-                        </Box>
-                    </CardContent>
-                </Card>
-            ))}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{editing ? "Edit Tool" : "Add Tool"}</DialogTitle>
-                <DialogContent>
-                    <TextField label="Name" fullWidth margin="normal" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                    <TextField label="Description" fullWidth margin="normal" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                    <TextField label="API Spec (optional)" fullWidth margin="normal" value={form.api_spec} onChange={e => setForm(f => ({ ...f, api_spec: e.target.value }))} />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Tags</InputLabel>
-                        <Select
-                            multiple
-                            value={form.tags}
-                            onChange={e => setForm(f => ({ ...f, tags: e.target.value as string[] }))}
-                            input={<OutlinedInput label="Tags" />}
-                            renderValue={(selected) => (selected as string[]).join(", ")}
-                        >
-                            {MOCK_TAGS.map(tag => (
-                                <MenuItem key={tag} value={tag}>
-                                    {tag}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSave} variant="contained">Save</Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-theme-text-primary">Tools</h2>
+                <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                    Add Tool
+                </Button>
+            </div>
+
+            {/* Tools List */}
+            <div className="space-y-4">
+                {tools.map(tool => (
+                    <Card key={tool.id} variant="default" padding="md">
+                        <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Icon name="extensions" size="md" className="text-theme-accent-primary" />
+                                    <div>
+                                        <h3 className="text-lg font-medium text-theme-text-primary">{tool.name}</h3>
+                                        <p className="text-sm text-theme-text-secondary">{tool.description}</p>
+                                    </div>
+                                </div>
+
+                                {/* API Spec */}
+                                {tool.api_spec && (
+                                    <div className="mb-3">
+                                        <p className="text-sm text-theme-text-secondary mb-1">API Specification:</p>
+                                        <span className="px-2 py-1 bg-theme-accent-info bg-opacity-20 text-theme-accent-info text-xs rounded">
+                                            {tool.api_spec}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Tags */}
+                                {tool.tags.length > 0 && (
+                                    <div>
+                                        <p className="text-sm text-theme-text-secondary mb-1">Tags:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {tool.tags.map((tag, i) => (
+                                                <span key={i} className="px-2 py-1 bg-theme-accent-secondary bg-opacity-20 text-theme-accent-secondary text-xs rounded">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 ml-4">
+                                <Button
+                                    variant="tertiary"
+                                    size="sm"
+                                    leftIcon="edit"
+                                    onClick={() => handleOpen(tool)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    leftIcon="trash"
+                                    onClick={() => handleDelete(tool.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+
+                {tools.length === 0 && (
+                    <Card variant="outlined" padding="lg" className="text-center">
+                        <Icon name="extensions" size="xl" className="text-theme-text-muted mb-4" />
+                        <h3 className="text-lg font-medium text-theme-text-primary mb-2">No tools yet</h3>
+                        <p className="text-theme-text-secondary mb-4">
+                            Add API integrations and tools for your personas to use
+                        </p>
+                        <Button variant="primary" leftIcon="add" onClick={() => handleOpen()}>
+                            Add Your First Tool
+                        </Button>
+                    </Card>
+                )}
+            </div>
+
+            {/* Edit/Create Modal */}
+            <Modal isOpen={open} onClose={handleClose} title={editing ? "Edit Tool" : "Add Tool"}>
+                <div className="space-y-4">
+                    <FormField label="Name" required>
+                        <Input
+                            value={form.name}
+                            onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="Enter tool name"
+                        />
+                    </FormField>
+
+                    <FormField label="Description" required>
+                        <TextArea
+                            rows={2}
+                            value={form.description}
+                            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Describe what this tool does"
+                        />
+                    </FormField>
+
+                    <FormField label="API Specification" helpText="Optional API spec format or version">
+                        <Input
+                            value={form.api_spec || ''}
+                            onChange={(e) => setForm(f => ({ ...f, api_spec: e.target.value }))}
+                            placeholder="e.g., OpenAPI 3.0, REST API"
+                        />
+                    </FormField>
+
+                    <FormField label="Tags" helpText="Comma-separated tags for categorization">
+                        <Input
+                            value={form.tags.join(", ")}
+                            onChange={(e) => setForm(f => ({ ...f, tags: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
+                            placeholder="e.g., simulation, analysis, external API"
+                        />
+                    </FormField>
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="secondary" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleSave}>
+                            {editing ? "Update" : "Create"} Tool
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
     );
 } 
