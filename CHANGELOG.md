@@ -1,6 +1,63 @@
 # Changelog
 
-## [2.0.0-alpha.7] - 2025-01-02
+## [2.0.0-alpha.3] - 2025-01-17
+
+### Added
+- **🎨 Major UI/UX Enhancement with Theme System**
+  - Complete dark/light theme implementation with ThemeContext and ThemeToggle
+  - Enhanced activity bar with grouped navigation and hover popouts
+  - Advanced AASCar component with improved window management and theming
+  - New shared component library (Alert, Button, Card, FormField, Icon, LoadingState)
+  - VSCode-style editor component integration
+  - Project tree view component for hierarchical project navigation
+
+- **🏗️ AADS Service Implementation**
+  - Complete Agent Assistant & Documentation Service (AADS) foundation
+  - Approval, Chat, Decision, and White Paper controllers
+  - Decision service with comprehensive business logic
+  - RESTful API endpoints for agent assistance workflows
+
+- **📊 Comprehensive Architecture Documentation**
+  - Complete OpenAPI specifications for all 20+ microservices
+  - Detailed service specifications and API endpoint documentation
+  - UI component guidelines and theming specifications
+  - Enhanced development process documentation
+
+- **🎯 Enhanced User Experience**
+  - Settings page with advanced configuration options
+  - Ontology workspace page for knowledge management
+  - Improved BPMN modeler with theme integration
+  - Enhanced project dashboard with better card layouts
+  - Thread impact analysis improvements
+
+### Changed
+- **🔧 Infrastructure & Configuration**
+  - Updated Docker Compose configuration for better service orchestration
+  - Enhanced database schema with policy documentation
+  - Improved package.json configurations across all services
+  - Updated Tailwind configuration with custom theme support
+
+- **📁 Documentation Reorganization**
+  - Moved architecture docs to dedicated architecture/ folder
+  - Reorganized API documentation with comprehensive coverage
+  - Enhanced README files with better setup instructions
+  - Added frontend and backend development guidelines
+
+### Fixed
+- **🐛 UI/UX Improvements**
+  - Fixed theme consistency across all components and pages
+  - Improved responsive design for mobile and desktop
+  - Enhanced error handling with ErrorBoundary components
+  - Fixed navigation and routing issues
+
+### Technical Debt Reduction
+- **♻️ Code Quality & Organization**
+  - Standardized component structure and naming conventions
+  - Improved TypeScript type definitions across services
+  - Enhanced validation utilities and form handling
+  - Better separation of concerns in service architecture
+
+## [2.0.0-alpha.2] - 2025-07-17
 
 ### Added
 - **🎨 Advanced Theme Selector & Testing System**
