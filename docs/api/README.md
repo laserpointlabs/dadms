@@ -48,6 +48,10 @@ This directory contains API documentation for all DADMS services.
 - **[BPMN Workspace Service API](bpmn_workspace_service_openapi.yaml)** (Port 3021) - **📋 SPECIFICATION: AI-enhanced BPMN workflow design environment**
   - **[Detailed API Endpoints](../development/backend/bpmn_workspace_service_api_endpoints.md)** - Comprehensive API reference with examples
 
+### Frontend APIs
+- **[UI Frontend API Interfaces](ui_api_interfaces.yaml)** (Port 3000) - **📋 SPECIFICATION: TypeScript interfaces for React frontend and API communication**
+  - **[UI Component Guidelines](../development/frontend/ui_component_guidelines.md)** - Comprehensive component development patterns and standards
+
 ## API Standards
 
 ### REST Conventions

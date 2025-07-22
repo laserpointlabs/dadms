@@ -234,6 +234,7 @@ flowchart TD
 - **[Process Manager Service](./process_manager_service_specification.md)** - 📋 **SPECIFICATION** - Comprehensive BPMN process execution engine with task management and analytics (Port 3007)
 - **[Thread Manager Service](./thread_manager_service_specification.md)** - 📋 **SPECIFICATION** - Process thread tracking with feedback collection, similarity analysis, and impact assessment (Port 3008)
 - **[Agent Assistant & Documentation Service (AADS)](./aads_service_specification.md)** - 📋 **SPECIFICATION** - Decision finalization with AI assistance, collaboration, documentation, and approval workflows (Port 3005)
+- **[User Interface Specification](./ui_specification.md)** - 📋 **SPECIFICATION** - React/Next.js frontend with VS Code-inspired design and comprehensive component architecture (Port 3000)
 - **[EventManager Service](./event_manager_specification.md)** - Central event processing and distribution hub
 - **[Data Manager Service](./data_manager_specification.md)** - External data ingestion and processing gateway
 - **[Model Manager Service](./model_manager_specification.md)** - Computational model registry and lifecycle management
