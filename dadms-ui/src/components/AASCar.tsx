@@ -92,10 +92,46 @@ export default function AASCar() {
             'menubar=no',
             'location=no',
             'status=no',
-            'titlebar=yes'
+            'directories=no',
+            'personalbar=no',
+            'titlebar=no',
+            'chrome=no',
+            'modal=no',
+            'minimizable=no',
+            'maximizable=no'
         ].join(',');
 
-        const newWindow = window.open('', 'DADMS_Agent_Assistant', windowFeatures);
+        // Try creating a blob URL to avoid about:blank
+        const basicHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <title>DADMS Assistant</title>
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            background: #1e1e1e; 
+            color: #fff; 
+            font-family: sans-serif; 
+            height: 100vh;
+            overflow: hidden;
+        }
+        .loading {
+            padding: 20px;
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">Loading DADMS Assistant...</div>
+</body>
+</html>`;
+
+        const blob = new Blob([basicHTML], { type: 'text/html' });
+        const blobURL = URL.createObjectURL(blob);
+
+        const newWindow = window.open(blobURL, 'DADMS_Agent_Assistant', windowFeatures);
 
         if (!newWindow) {
             alert('Popup blocked! Please allow popups for this site to use the detached agent assistant.');
@@ -114,44 +150,85 @@ export default function AASCar() {
         newWindow.addEventListener('beforeunload', () => {
             setIsDetached(false);
             detachedWindowRef.current = null;
+            // Clean up blob URL
+            URL.revokeObjectURL(blobURL);
         });
+
+        // Basic window setup without aggressive focus management
+        try {
+            newWindow.focus();
+        } catch (e) {
+            console.warn('Window focus may be restricted by browser security settings');
+        }
     };
 
     const setupDetachedWindow = (win: Window) => {
         const doc = win.document;
-        doc.title = 'DADMS Agent Assistant';
 
-        // Use theme variables for styling
-        const isDarkTheme = theme === 'dark';
-        const themeVars = isDarkTheme ? {
-            '--bg-primary': '#1e1e1e',
-            '--bg-secondary': '#252526',
-            '--bg-tertiary': '#333333',
-            '--surface': '#2d2d30',
-            '--surface-hover': '#3e3e42',
-            '--text-primary': '#d4d4d4',
-            '--text-secondary': '#cccccc',
-            '--text-muted': '#6e7681',
-            '--border': '#2d2d30',
-            '--accent-primary': '#007acc',
-            '--accent-success': '#4caf50',
-            '--input-bg': '#3c3c3c',
-            '--input-border': '#2d2d30'
-        } : {
-            '--bg-primary': '#ffffff',
-            '--bg-secondary': '#f8f9fa',
-            '--bg-tertiary': '#e9ecef',
-            '--surface': '#ffffff',
-            '--surface-hover': '#f8f9fa',
-            '--text-primary': '#1f2328',
-            '--text-secondary': '#656d76',
-            '--text-muted': '#8b949e',
-            '--border': '#d1d9e0',
-            '--accent-primary': '#0969da',
-            '--accent-success': '#1a7f37',
-            '--input-bg': '#ffffff',
-            '--input-border': '#d8dee4'
+        // Immediately replace the entire document to avoid about:blank
+        doc.open();
+        doc.write('<!DOCTYPE html><html><head><title>DADMS Assistant</title><style>html,body{margin:0;padding:0;background:#1e1e1e;color:#fff;font-family:sans-serif;}</style></head><body><div style="padding:20px;">Loading DADMS Assistant...</div></body></html>');
+        doc.close();
+
+        // Try to modify the URL in the address bar (may not work due to security)
+        try {
+            if (win.history && win.history.replaceState) {
+                win.history.replaceState({}, 'DADMS Assistant', '#dadms-assistant');
+            }
+        } catch (e) {
+            // Ignore if not allowed
+        }
+
+        // Function to get current theme variables
+        const getThemeVars = (currentTheme: string) => {
+            const isDarkTheme = currentTheme === 'dark';
+            return isDarkTheme ? {
+                '--bg-primary': '#1e1e1e',
+                '--bg-secondary': '#252526',
+                '--bg-tertiary': '#333333',
+                '--surface': '#2d2d30',
+                '--surface-hover': '#3e3e42',
+                '--text-primary': '#d4d4d4',
+                '--text-secondary': '#cccccc',
+                '--text-muted': '#6e7681',
+                '--border': '#2d2d30',
+                '--accent-primary': '#007acc',
+                '--accent-success': '#4caf50',
+                '--input-bg': '#3c3c3c',
+                '--input-border': '#2d2d30'
+            } : {
+                '--bg-primary': '#ffffff',
+                '--bg-secondary': '#f8f9fa',
+                '--bg-tertiary': '#e9ecef',
+                '--surface': '#ffffff',
+                '--surface-hover': '#f8f9fa',
+                '--text-primary': '#1f2328',
+                '--text-secondary': '#656d76',
+                '--text-muted': '#8b949e',
+                '--border': '#d1d9e0',
+                '--accent-primary': '#0969da',
+                '--accent-success': '#1a7f37',
+                '--input-bg': '#ffffff',
+                '--input-border': '#d8dee4'
+            };
         };
+
+        // Function to update theme in detached window
+        const updateDetachedWindowTheme = (currentTheme: string) => {
+            if (!win || win.closed) return;
+
+            const themeVars = getThemeVars(currentTheme);
+            const rootElement = win.document.documentElement;
+
+            if (rootElement) {
+                Object.entries(themeVars).forEach(([key, value]) => {
+                    rootElement.style.setProperty(key, value);
+                });
+            }
+        };
+
+        // Initial theme setup
+        const themeVars = getThemeVars(theme);
 
         // Add styles
         doc.head.innerHTML = `
@@ -160,32 +237,71 @@ export default function AASCar() {
                     ${Object.entries(themeVars).map(([key, value]) => `${key}: ${value};`).join('')}
                 }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
+                html, body { 
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
                     background: var(--bg-primary); 
                     color: var(--text-primary); 
                     height: 100vh; 
+                    width: 100vw;
                     overflow: hidden;
+                    margin: 0;
+                    padding: 0;
+                    border: none;
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
                 }
                 .container { 
                     height: 100vh; 
+                    width: 100vw;
                     display: flex; 
                     flex-direction: column; 
-                    border: 1px solid var(--border);
+                    border: none;
+                    border-radius: 0;
+                    overflow: hidden;
+                    box-shadow: inset 0 0 0 2px var(--accent-primary);
+                    position: relative;
                 }
                 .header { 
                     background: var(--bg-secondary); 
-                    padding: 8px 12px; 
+                    padding: 6px 12px; 
                     border-bottom: 1px solid var(--border); 
                     display: flex; 
                     align-items: center; 
                     justify-content: space-between;
                     cursor: move;
+                    user-select: none;
+                    min-height: 32px;
+                    position: relative;
+                    z-index: 1000;
+                    background: linear-gradient(135deg, var(--bg-secondary), var(--surface));
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
                 .header h3 { 
                     font-size: 13px; 
                     font-weight: 600; 
                     color: var(--text-primary);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .header .icon {
+                    width: 16px;
+                    height: 16px;
+                    background: var(--accent-primary);
+                    border-radius: 3px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .header .status-dot {
+                    width: 8px;
+                    height: 8px;
+                    background: var(--accent-success);
+                    border-radius: 50%;
+                    margin-left: 6px;
                 }
                 .close-btn { 
                     background: none; 
@@ -194,10 +310,17 @@ export default function AASCar() {
                     cursor: pointer; 
                     padding: 4px 8px; 
                     border-radius: 2px; 
+                    font-size: 14px;
+                    font-weight: bold;
+                    min-width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
                 .close-btn:hover { 
-                    background: var(--surface-hover); 
-                    color: var(--text-primary);
+                    background: #ff4444; 
+                    color: white;
                 }
                 .tabs { 
                     display: flex; 
@@ -205,11 +328,16 @@ export default function AASCar() {
                     border-bottom: 1px solid var(--border); 
                 }
                 .tab { 
-                    padding: 8px 16px; 
+                    padding: 12px 16px; 
                     cursor: pointer; 
                     border-right: 1px solid var(--border); 
                     font-size: 12px;
                     color: var(--text-secondary);
+                    user-select: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 40px;
                 }
                 .tab:hover { 
                     background: var(--surface-hover); 
@@ -220,6 +348,18 @@ export default function AASCar() {
                     border-bottom: 2px solid var(--accent-primary); 
                     color: var(--text-primary);
                 }
+                .tab-icon {
+                    display: inline-block;
+                    width: 16px;
+                    height: 16px;
+                    line-height: 16px;
+                    text-align: center;
+                    font-size: 14px;
+                    font-weight: normal;
+                }
+                .tab-icon[data-icon="robot"]::before { content: "◇"; }
+                .tab-icon[data-icon="warning"]::before { content: "△"; }
+                .tab-icon[data-icon="info"]::before { content: "○"; }
                 .content { 
                     flex: 1; 
                     padding: 12px; 
@@ -237,31 +377,38 @@ export default function AASCar() {
                     border: 1px solid var(--input-border); 
                     color: var(--text-primary); 
                     padding: 8px; 
-                    border-radius: 2px; 
+                    border-radius: 4px; 
                     font-family: inherit;
                     resize: none;
+                    font-size: 12px;
                 }
                 .input-box:focus { 
                     outline: none; 
                     border-color: var(--accent-primary); 
+                    box-shadow: 0 0 0 2px var(--accent-primary)20;
                 }
                 .send-btn { 
                     background: var(--accent-primary); 
                     border: none; 
                     color: white; 
-                    padding: 4px 12px; 
+                    padding: 6px 12px; 
                     margin-top: 4px; 
-                    border-radius: 2px; 
+                    border-radius: 4px; 
                     cursor: pointer; 
                     font-size: 12px;
+                    font-weight: 500;
                 }
                 .send-btn:hover { 
                     opacity: 0.9; 
                 }
+                .send-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
                 .message { 
                     margin-bottom: 8px; 
-                    padding: 6px; 
-                    border-radius: 2px; 
+                    padding: 8px; 
+                    border-radius: 6px; 
                     font-size: 12px; 
                     line-height: 1.4;
                 }
@@ -279,20 +426,31 @@ export default function AASCar() {
                     display: inline-block;
                     margin-right: 4px;
                 }
+
             </style>
         `;
 
         // Add content
         doc.body.innerHTML = `
             <div class="container">
-                <div class="header">
-                    <h3><span class="icon">🔧</span>DADMS Agent Assistant</h3>
-                    <button class="close-btn" onclick="window.close()">×</button>
+                <div class="header" onmousedown="startDrag(event)">
+                    <h3>
+                        <span class="icon"></span>
+                        DADMS Agent Assistant
+                        <span class="status-dot" title="Connected"></span>
+                    </h3>
+                    <button class="close-btn" onclick="window.close()" title="Close Assistant">×</button>
                 </div>
                 <div class="tabs">
-                    <div class="tab active" data-tab="assistant">Assistant</div>
-                    <div class="tab" data-tab="errors">Errors</div>
-                    <div class="tab" data-tab="info">Info</div>
+                    <div class="tab active" data-tab="assistant" title="Assistant">
+                        <span class="tab-icon" data-icon="robot"></span>
+                    </div>
+                    <div class="tab" data-tab="errors" title="Errors">
+                        <span class="tab-icon" data-icon="warning"></span>
+                    </div>
+                    <div class="tab" data-tab="info" title="Info">
+                        <span class="tab-icon" data-icon="info"></span>
+                    </div>
                 </div>
                 <div class="content" id="content">
                     <div class="message assistant-message">
@@ -301,14 +459,15 @@ export default function AASCar() {
                         <br><br>
                         <strong>Benefits of detached mode:</strong><br>
                         • Takes no space in your main browser<br>
-                        • Always visible while you work<br>
-                        • Can be positioned anywhere on your desktop<br>
-                        • Persistent across browser tabs
+                        • Independent window you can position anywhere<br>
+                        • Persistent across browser tabs<br>
+                        • Follows your UI theme automatically<br>
+                        • Drag the header to move this window
                     </div>
                 </div>
                 <div class="input-area">
                     <textarea class="input-box" id="messageInput" placeholder="Ask me anything about DADMS..." rows="2"></textarea>
-                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                    <button class="send-btn" id="sendButton" onclick="sendMessage()" disabled>Send</button>
                 </div>
             </div>
         `;
@@ -317,6 +476,58 @@ export default function AASCar() {
         const script = doc.createElement('script');
         script.textContent = `
             let activeTab = 'assistant';
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            // Basic window management
+            window.addEventListener('focus', function() {
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.style.boxShadow = 'inset 0 0 0 2px var(--accent-primary)';
+                }
+            });
+            
+            window.addEventListener('blur', function() {
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.style.boxShadow = 'inset 0 0 0 1px var(--border)';
+                }
+            });
+            
+            // Window dragging functionality
+            function startDrag(e) {
+                isDragging = true;
+                dragOffset.x = e.clientX;
+                dragOffset.y = e.clientY;
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+                e.preventDefault();
+            }
+            
+            function doDrag(e) {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - dragOffset.x;
+                const deltaY = e.clientY - dragOffset.y;
+                
+                window.moveBy(deltaX, deltaY);
+                
+                dragOffset.x = e.clientX;
+                dragOffset.y = e.clientY;
+            }
+            
+            function stopDrag() {
+                isDragging = false;
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+            }
+            
+            // Update send button state
+            function updateSendButton() {
+                const input = document.getElementById('messageInput');
+                const button = document.getElementById('sendButton');
+                button.disabled = !input.value.trim();
+            }
             
             function sendMessage() {
                 const input = document.getElementById('messageInput');
@@ -341,8 +552,12 @@ export default function AASCar() {
                 }, 500);
                 
                 input.value = '';
+                updateSendButton();
                 content.scrollTop = content.scrollHeight;
             }
+            
+            // Handle input changes
+            document.getElementById('messageInput').addEventListener('input', updateSendButton);
             
             // Handle Enter key
             document.getElementById('messageInput').addEventListener('keydown', function(e) {
@@ -362,16 +577,34 @@ export default function AASCar() {
                     const tabType = this.dataset.tab;
                     
                     if (tabType === 'errors') {
-                        content.innerHTML = '<div class="message assistant-message"><strong>System Status:</strong><br>• No errors detected<br>• All services running normally<br>• Last check: ' + new Date().toLocaleTimeString() + '</div>';
+                        content.innerHTML = '<div class="message assistant-message"><strong>System Status:</strong><br>• No errors detected<br>• All services running normally<br>• Last check: ' + new Date().toLocaleTimeString() + '<br>• Theme: ${theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>';
                     } else if (tabType === 'info') {
-                        content.innerHTML = '<div class="message assistant-message"><strong>DADMS Information:</strong><br>• Version: 2.0.0-alpha.2<br>• Mode: Development<br>• UI Theme: ${theme === 'dark' ? 'Dark' : 'Light'}<br>• Agent Assistant: Detached Mode</div>';
+                        content.innerHTML = '<div class="message assistant-message"><strong>DADMS Information:</strong><br>• Version: 2.0.0-alpha.2<br>• Mode: Development<br>• UI Theme: ${theme === 'dark' ? 'Dark Mode' : 'Light Mode'}<br>• Agent Assistant: Detached Mode</div>';
                     } else {
-                        content.innerHTML = '<div class="message assistant-message"><strong>DADMS Agent Assistant:</strong> I\\'m your AI assistant running in a separate window. I can help you with decision analysis, process management, and system navigation.<br><br><strong>Benefits of detached mode:</strong><br>• Takes no space in your main browser<br>• Always visible while you work<br>• Can be positioned anywhere on your desktop<br>• Persistent across browser tabs</div>';
+                        content.innerHTML = '<div class="message assistant-message"><strong>DADMS Agent Assistant:</strong> I\\'m your AI assistant running in a separate window. I can help you with decision analysis, process management, and system navigation.<br><br><strong>Benefits of detached mode:</strong><br>• Takes no space in your main browser<br>• Independent window you can position anywhere<br>• Persistent across browser tabs<br>• Follows your UI theme automatically<br>• Drag the header to move this window</div>';
                     }
                 });
             });
+            
+            // Listen for theme changes from parent window
+            window.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'themeChange') {
+                    updateDetachedWindowTheme(event.data.theme);
+                }
+            });
+            
+            // Prevent context menu
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+            
+            // Initial setup
+            updateSendButton();
         `;
         doc.head.appendChild(script);
+
+        // Store the theme update function reference for later use
+        (win as Window & { updateDetachedWindowTheme?: (theme: string) => void }).updateDetachedWindowTheme = updateDetachedWindowTheme;
 
         // Focus the window
         win.focus();
@@ -457,7 +690,7 @@ export default function AASCar() {
         return () => window.removeEventListener('resize', handleResize);
     }, [height, isMinimized]);
 
-    // Monitor detached window status
+    // Monitor detached window status and theme changes
     useEffect(() => {
         if (!isDetached || !detachedWindowRef.current) return;
 
@@ -471,6 +704,18 @@ export default function AASCar() {
         const interval = setInterval(checkWindowStatus, 1000);
         return () => clearInterval(interval);
     }, [isDetached]);
+
+    // Update detached window theme when theme changes
+    useEffect(() => {
+        if (!isDetached || !detachedWindowRef.current || detachedWindowRef.current.closed) return;
+
+        try {
+            // Send theme change message to detached window
+            detachedWindowRef.current.postMessage({ type: 'themeChange', theme: theme }, '*');
+        } catch (e) {
+            console.warn('Could not send theme change to detached window:', e);
+        }
+    }, [theme, isDetached]);
 
     const handleAasSend = () => {
         if (aasInput.trim()) {
@@ -634,7 +879,7 @@ export default function AASCar() {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`
-                                            px-3 py-2 text-xs font-medium transition-all duration-200 border-b-2 flex items-center gap-1
+                                            px-3 py-3 text-xs font-medium transition-all duration-200 border-b-2 flex items-center justify-center min-w-[40px]
                                             ${activeTab === tab.id
                                                 ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
                                                 : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
@@ -643,7 +888,6 @@ export default function AASCar() {
                                         title={tab.description}
                                     >
                                         <Icon name={tab.icon as CodiconName} size="sm" />
-                                        {tab.name}
                                     </button>
                                 ))}
                             </nav>
@@ -943,4 +1187,4 @@ export default function AASCar() {
             )}
         </div>
     );
-} 
+}
