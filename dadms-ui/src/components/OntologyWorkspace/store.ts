@@ -67,6 +67,12 @@ interface OntologyWorkspaceStore {
     // Validation
     validateOntology: () => Promise<void>;
 
+    // Ontology Properties
+    updateOntologyProperties: (updates: Partial<Pick<OntologyState, 'name' | 'description' | 'namespace' | 'author' | 'customProperties'>>) => void;
+    addOntologyCustomProperty: (key: string, value: any) => void;
+    updateOntologyCustomProperty: (key: string, value: any) => void;
+    deleteOntologyCustomProperty: (key: string) => void;
+
     // Save/Load Operations
     saveOntologyToFile: () => void;
     loadOntologyFromFile: (file: File) => Promise<void>;
@@ -88,6 +94,15 @@ const createMockWorkspace = (): WorkspaceState => ({
             id: 'ontology-1',
             name: 'Basic Ontology',
             description: 'Simple ontology for testing with entities and properties',
+            version: '1.0.0',
+            namespace: 'http://example.com/ontology/basic',
+            author: 'DADMS User',
+            created: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            customProperties: {
+                domain: 'Test Domain',
+                purpose: 'Learning and Development'
+            },
             nodes: [
                 {
                     id: 'node-1',
@@ -158,9 +173,7 @@ const createMockWorkspace = (): WorkspaceState => ({
                     }
                 }
             ],
-            viewport: { x: 0, y: 0, zoom: 1 },
-            lastModified: new Date().toISOString(),
-            version: '1.0.0'
+            viewport: { x: 0, y: 0, zoom: 1 }
         }
     ],
     activeOntologyId: 'ontology-1',
@@ -250,11 +263,15 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         id: `ontology-${Date.now()}`,
                         name: 'New Ontology',
                         description: 'A new ontology for decision intelligence modeling',
+                        version: '1.0.0',
+                        namespace: `http://example.com/ontology/${Date.now()}`,
+                        author: 'DADMS User',
+                        created: new Date().toISOString(),
+                        lastModified: new Date().toISOString(),
+                        customProperties: {},
                         nodes: [],
                         edges: [],
-                        viewport: { x: 0, y: 0, zoom: 1 },
-                        lastModified: new Date().toISOString(),
-                        version: '1.0.0'
+                        viewport: { x: 0, y: 0, zoom: 1 }
                     };
 
                     const updatedWorkspace = {
@@ -531,6 +548,47 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                     set({ isValidating: false, validationResult: mockResult });
                 },
 
+                // Ontology Properties
+                updateOntologyProperties: (updates) => set(state => ({
+                    activeOntology: state.activeOntology ? {
+                        ...state.activeOntology,
+                        ...updates,
+                        lastModified: new Date().toISOString()
+                    } : null
+                })),
+                addOntologyCustomProperty: (key, value) => set(state => ({
+                    activeOntology: state.activeOntology ? {
+                        ...state.activeOntology,
+                        customProperties: {
+                            ...state.activeOntology.customProperties,
+                            [key]: value
+                        },
+                        lastModified: new Date().toISOString()
+                    } : null
+                })),
+                updateOntologyCustomProperty: (key, value) => set(state => ({
+                    activeOntology: state.activeOntology ? {
+                        ...state.activeOntology,
+                        customProperties: {
+                            ...state.activeOntology.customProperties,
+                            [key]: value
+                        },
+                        lastModified: new Date().toISOString()
+                    } : null
+                })),
+                deleteOntologyCustomProperty: (key) => set(state => ({
+                    activeOntology: state.activeOntology ? {
+                        ...state.activeOntology,
+                        customProperties: Object.keys(state.activeOntology.customProperties || {}).reduce((acc, k) => {
+                            if (k !== key && state.activeOntology) {
+                                acc[k] = state.activeOntology.customProperties[k];
+                            }
+                            return acc;
+                        }, {} as Record<string, any>),
+                        lastModified: new Date().toISOString()
+                    } : null
+                })),
+
                 // Save/Load Operations
                 saveOntologyToFile: () => {
                     const { workspace, activeOntology } = get();
@@ -581,11 +639,15 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                                 id: `ontology-${Date.now()}`,
                                 name: newName,
                                 description: sourceOntology.description,
+                                version: sourceOntology.version,
+                                namespace: sourceOntology.namespace,
+                                author: sourceOntology.author,
+                                created: sourceOntology.created,
+                                lastModified: new Date().toISOString(),
+                                customProperties: { ...sourceOntology.customProperties },
                                 nodes: [...sourceOntology.nodes],
                                 edges: [...sourceOntology.edges],
-                                viewport: { ...sourceOntology.viewport },
-                                lastModified: new Date().toISOString(),
-                                version: '1.0.0'
+                                viewport: { ...sourceOntology.viewport }
                             };
                             const updatedWorkspace = {
                                 ...workspace,
