@@ -7,9 +7,19 @@ import { useOntologyWorkspaceStore } from './store';
 
 interface OntologyToolbarProps {
     className?: string;
+    isPropertiesPanelOpen?: boolean;
+    isExternalPanelOpen?: boolean;
+    onTogglePropertiesPanel?: () => void;
+    onToggleExternalPanel?: () => void;
 }
 
-const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ className }) => {
+const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ 
+    className,
+    isPropertiesPanelOpen = false,
+    isExternalPanelOpen = false,
+    onTogglePropertiesPanel,
+    onToggleExternalPanel
+}) => {
     const {
         activeOntology,
         isValidating,
@@ -258,6 +268,33 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ className }) => {
             </div>
 
             <div style={rightSectionStyle}>
+                {/* Panel Toggle Buttons */}
+                {onTogglePropertiesPanel && onToggleExternalPanel && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.xs }}>
+                        <button
+                            style={{
+                                ...buttonStyle('secondary'),
+                                color: isPropertiesPanelOpen ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                            }}
+                            onClick={onTogglePropertiesPanel}
+                            title="Toggle properties panel"
+                        >
+                            <Icon name="settings-gear" size="sm" />
+                        </button>
+                        <button
+                            style={{
+                                ...buttonStyle('secondary'),
+                                color: isExternalPanelOpen ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                            }}
+                            onClick={onToggleExternalPanel}
+                            title="Toggle external references panel"
+                        >
+                            <Icon name="references" size="sm" />
+                        </button>
+                        <div style={dividerStyle} />
+                    </div>
+                )}
+
                 <div style={statusStyle}>
                     {activeOntology && (
                         <>
