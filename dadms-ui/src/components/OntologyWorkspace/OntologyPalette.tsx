@@ -24,9 +24,10 @@ const paletteItems: PaletteItem[] = [
         type: 'data_property',
         label: 'Data Property',
         description: 'Attributes and literal values',
-        icon: 'add',
+        icon: 'symbol-field',
         color: dadmsTheme.colors.accent.info,
     },
+
 ];
 
 interface OntologyPaletteProps {
@@ -65,6 +66,16 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+    };
+
+    const collapsedHeaderStyle = {
+        padding: dadmsTheme.spacing.md,
+        borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
+        background: dadmsTheme.colors.background.tertiary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
     };
 
     const titleStyle = {
@@ -162,16 +173,25 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
 
     return (
         <div style={containerStyle}>
-            <div style={headerStyle}>
-                {!isCollapsed && <div style={titleStyle}>Ontology Elements</div>}
-                <button
-                    style={collapseButtonStyle}
-                    onClick={onToggleCollapse}
-                    title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
-                >
-                    {isCollapsed ? '»' : '«'}
-                </button>
-            </div>
+            {isCollapsed ? (
+                <div style={collapsedHeaderStyle} onClick={onToggleCollapse} title="Expand ontology elements panel">
+                    <Icon name="symbol-class" size="md" />
+                </div>
+            ) : (
+                <div style={headerStyle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.sm }}>
+                        <Icon name="symbol-class" size="md" />
+                        <div style={titleStyle}>Ontology Elements</div>
+                    </div>
+                    <button
+                        style={collapseButtonStyle}
+                        onClick={onToggleCollapse}
+                        title="Collapse palette"
+                    >
+                        <Icon name="chevron-right" size="sm" />
+                    </button>
+                </div>
+            )}
 
             <div style={contentStyle}>
                 {/* Connection Mode Toggle */}
@@ -195,28 +215,54 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                     </button>
                 )}
 
+                {/* Relationship Icon for Collapsed Mode */}
+                {isCollapsed && onConnectionModeToggle && (
+                    <div
+                        style={{
+                            ...iconContainerStyle(isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.accent.secondary),
+                            width: '100%',
+                            marginBottom: dadmsTheme.spacing.sm,
+                            cursor: 'pointer',
+                        }}
+                        onClick={onConnectionModeToggle}
+                        title={isConnectionMode ? 'Exit connection mode' : 'Enter connection mode to create relationships'}
+                    >
+                        <Icon name="arrow-right" size="md" color="#ffffff" />
+                    </div>
+                )}
+
                 {/* Entity Types */}
                 {paletteItems.map((item) => (
                     <div
                         key={item.type}
-                        style={itemStyle(item.color)}
+                        style={isCollapsed ? {
+                            ...iconContainerStyle(item.color),
+                            width: '100%',
+                            marginBottom: dadmsTheme.spacing.sm,
+                            cursor: 'grab',
+                            transition: dadmsTheme.transitions.fast,
+                            userSelect: 'none' as const,
+                            boxShadow: dadmsTheme.shadows.sm,
+                        } : itemStyle(item.color)}
                         onDragStart={(event) => onDragStart(event, item.type)}
                         draggable
                         title={item.description}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = dadmsTheme.colors.background.hover;
-                            e.currentTarget.style.borderColor = item.color;
-                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            if (!isCollapsed) {
+                                e.currentTarget.style.background = dadmsTheme.colors.background.hover;
+                                e.currentTarget.style.borderColor = item.color;
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = dadmsTheme.colors.background.primary;
-                            e.currentTarget.style.borderColor = dadmsTheme.colors.border.default;
-                            e.currentTarget.style.transform = 'translateY(0)';
+                            if (!isCollapsed) {
+                                e.currentTarget.style.background = dadmsTheme.colors.background.primary;
+                                e.currentTarget.style.borderColor = dadmsTheme.colors.border.default;
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }
                         }}
                     >
-                        <div style={iconContainerStyle(item.color)}>
-                            <Icon name={item.icon} size="md" color="#ffffff" />
-                        </div>
+                        <Icon name={item.icon} size="md" color="#ffffff" />
                         {!isCollapsed && (
                             <div style={{ flex: 1 }}>
                                 <div style={labelStyle}>{item.label}</div>

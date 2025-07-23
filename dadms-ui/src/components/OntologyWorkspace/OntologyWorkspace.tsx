@@ -5,6 +5,7 @@ import { dadmsTheme } from '../../design-system/theme';
 import { Icon } from '../shared/Icon';
 import DualViewEditor from './DualViewEditor';
 import ExternalReferencePanel from './ExternalReferencePanel';
+import OntologyExplorer from './OntologyExplorer';
 import OntologyPalette from './OntologyPalette';
 import OntologyToolbar from './OntologyToolbar';
 import PropertiesPanel from './PropertiesPanel';
@@ -35,6 +36,9 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
     } = useOntologyWorkspaceStore();
 
     const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
+    const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(false);
+    const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState(false);
+    const [isReferencesCollapsed, setIsReferencesCollapsed] = useState(false);
     const [isConnectionMode, setIsConnectionMode] = useState(false);
 
     // Ensure workspace exists when component mounts
@@ -183,6 +187,12 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
 
             {/* Main Content Area */}
             <div style={mainContentStyle}>
+                {/* Left Panel - Ontology Explorer */}
+                <OntologyExplorer
+                    isOpen={!isExplorerCollapsed}
+                    onToggle={() => setIsExplorerCollapsed(!isExplorerCollapsed)}
+                />
+
                 {/* Left Panel - Entity Palette */}
                 <OntologyPalette
                     isCollapsed={isPaletteCollapsed}
@@ -243,12 +253,16 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
                 <PropertiesPanel
                     isOpen={isPropertiesPanelOpen}
                     onToggle={togglePropertiesPanel}
+                    isCollapsed={isPropertiesCollapsed}
+                    onToggleCollapse={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
                 />
 
                 {/* Right Panel - External References */}
                 <ExternalReferencePanel
                     isOpen={isExternalPanelOpen}
                     onToggle={toggleExternalPanel}
+                    isCollapsed={isReferencesCollapsed}
+                    onToggleCollapse={() => setIsReferencesCollapsed(!isReferencesCollapsed)}
                 />
             </div>
 
