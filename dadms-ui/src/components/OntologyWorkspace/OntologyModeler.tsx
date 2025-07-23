@@ -6,6 +6,7 @@ import ReactFlow, {
     Background,
     BackgroundVariant,
     Connection,
+    ConnectionMode,
     Controls,
     Edge,
     EdgeTypes,
@@ -682,6 +683,12 @@ const OntologyModelerInner: React.FC = () => {
                 zoomOnDoubleClick={false}
                 selectNodesOnDrag={false}
                 fitView={false}
+                connectionMode={ConnectionMode.Loose}
+                defaultEdgeOptions={{
+                    type: 'dadms_relationship',
+                    animated: false,
+                    style: { strokeWidth: 2 },
+                }}
             >
                 <Controls
                     style={controlsStyle}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { EdgeLabelRenderer, EdgeProps, getBezierPath } from 'reactflow';
+import { EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from 'reactflow';
 import { dadmsTheme } from '../../../design-system/theme';
 import { OntologyEdgeData } from '../types';
 
@@ -17,13 +17,15 @@ const DADMSRelationshipEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
 }) => {
     const { relationshipType, properties, strength = 1, isInferred = false } = data || {};
 
-    const [edgePath, labelX, labelY] = getBezierPath({
+    // Use smooth step path for better routing with multiple handles
+    const [edgePath, labelX, labelY] = getSmoothStepPath({
         sourceX,
         sourceY,
         sourcePosition,
         targetX,
         targetY,
         targetPosition,
+        borderRadius: 8,
     });
 
     // Determine edge color based on relationship type
@@ -106,8 +108,33 @@ const DADMSRelationshipEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
     const strokeWidth = selected ? 3 : Math.max(1, 2 * strength);
     const strokeDasharray = isInferred ? '5,5' : undefined;
 
+    // Create custom arrow marker
+    const arrowId = `arrow-${id}`;
+    const arrowSize = 8;
+
     return (
         <>
+            {/* Define arrow marker */}
+            <defs>
+                <marker
+                    id={arrowId}
+                    viewBox="0 0 10 10"
+                    refX="5"
+                    refY="3"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto"
+                    markerUnits="strokeWidth"
+                >
+                    <path
+                        d="M 0 0 L 0 6 L 6 3 z"
+                        fill={edgeColor}
+                        stroke={edgeColor}
+                        strokeWidth="0.5"
+                    />
+                </marker>
+            </defs>
+
             <path
                 id={id}
                 style={{
@@ -117,10 +144,11 @@ const DADMSRelationshipEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
                     fill: 'none',
                     opacity: isInferred ? 0.7 : 1,
                     filter: selected ? 'drop-shadow(0 0 6px rgba(0, 123, 255, 0.6))' : undefined,
+                    cursor: 'pointer',
                 }}
                 className="react-flow__edge-path"
                 d={edgePath}
-                markerEnd={markerEnd}
+                markerEnd={`url(#${arrowId})`}
             />
 
             <EdgeLabelRenderer>
