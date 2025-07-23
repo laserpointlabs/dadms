@@ -29,6 +29,8 @@ interface OntologyWorkspaceStore {
     selectedEdges: string[];
     isPropertiesPanelOpen: boolean;
     isExternalPanelOpen: boolean;
+    isMinimapVisible: boolean;
+    isFullscreen: boolean;
     isValidating: boolean;
     validationResult: ValidationResult | null;
 
@@ -64,6 +66,8 @@ interface OntologyWorkspaceStore {
     // UI State
     togglePropertiesPanel: () => void;
     toggleExternalPanel: () => void;
+    toggleMinimap: () => void;
+    toggleFullscreen: () => void;
 
     // Validation
     validateOntology: () => Promise<void>;
@@ -238,6 +242,8 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 selectedEdges: [],
                 isPropertiesPanelOpen: true,
                 isExternalPanelOpen: false,
+                isMinimapVisible: true,
+                isFullscreen: false,
                 isValidating: false,
                 validationResult: null,
 
@@ -557,6 +563,22 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                     set({
                         ...state,
                         isExternalPanelOpen: !state.isExternalPanelOpen
+                    });
+                },
+
+                toggleMinimap: () => {
+                    const state = get();
+                    set({
+                        ...state,
+                        isMinimapVisible: !state.isMinimapVisible
+                    });
+                },
+
+                toggleFullscreen: () => {
+                    const state = get();
+                    set({
+                        ...state,
+                        isFullscreen: !state.isFullscreen
                     });
                 },
 

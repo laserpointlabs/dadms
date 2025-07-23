@@ -34,7 +34,9 @@ export type CodiconName =
     // Panel specific
     | 'files' | 'settings-gear' | 'references' | 'symbol-class'
     // Generic
-    | 'refresh' | 'filter' | 'sort-precedence' | 'ellipsis' | 'more' | 'loading' | 'sync' | 'tag';
+    | 'refresh' | 'filter' | 'sort-precedence' | 'ellipsis' | 'more' | 'loading' | 'sync' | 'tag'
+    // Display
+    | 'map' | 'screen-full' | 'screen-normal';
 
 const sizeMap = {
     xs: 12,
