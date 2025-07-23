@@ -316,7 +316,7 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 },
 
                 updateNode: (nodeId, updates) => {
-                    const { workspace, activeOntology } = get();
+                    const { workspace, activeOntology, selectedNodes, selectedEdges } = get();
                     if (workspace && activeOntology) {
                         const updatedOntology = {
                             ...activeOntology,
@@ -333,7 +333,9 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         };
                         set({
                             workspace: updatedWorkspace,
-                            activeOntology: updatedOntology
+                            activeOntology: updatedOntology,
+                            selectedNodes,
+                            selectedEdges
                         });
                     }
                 },
@@ -385,7 +387,7 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 },
 
                 updateEdge: (edgeId, updates) => {
-                    const { workspace, activeOntology } = get();
+                    const { workspace, activeOntology, selectedNodes, selectedEdges } = get();
                     if (workspace && activeOntology) {
                         const updatedOntology = {
                             ...activeOntology,
@@ -402,7 +404,9 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         };
                         set({
                             workspace: updatedWorkspace,
-                            activeOntology: updatedOntology
+                            activeOntology: updatedOntology,
+                            selectedNodes,
+                            selectedEdges
                         });
                     }
                 },
@@ -458,13 +462,21 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 clearSelection: () => set({ selectedNodes: [], selectedEdges: [] }),
 
                 // Dual View
-                setViewMode: (mode) => set(state => ({
-                    dualView: { ...state.dualView, activeMode: mode }
-                })),
+                setViewMode: (mode) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        dualView: { ...state.dualView, activeMode: mode }
+                    });
+                },
 
-                setOwlContent: (content) => set(state => ({
-                    dualView: { ...state.dualView, owlContent: content, isSync: false }
-                })),
+                setOwlContent: (content) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        dualView: { ...state.dualView, owlContent: content, isSync: false }
+                    });
+                },
 
                 syncViews: () => {
                     // Mock sync functionality - in real implementation would convert between formats
@@ -491,40 +503,62 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
     rdfs:domain :Mission ;
     rdfs:range :Stakeholder .`;
 
-                            set(state => ({
+                            const state = get();
+                            set({
+                                ...state,
                                 dualView: {
                                     ...state.dualView,
                                     owlContent: mockOwlContent,
                                     isSync: true
                                 }
-                            }));
+                            });
                         }
                     }
                 },
 
                 // External References
-                addExternalReference: (reference) => set(state => ({
-                    externalReferences: [...state.externalReferences, reference]
-                })),
+                addExternalReference: (reference) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        externalReferences: [...state.externalReferences, reference]
+                    });
+                },
 
-                removeExternalReference: (referenceId) => set(state => ({
-                    externalReferences: state.externalReferences.filter(ref => ref.id !== referenceId)
-                })),
+                removeExternalReference: (referenceId) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        externalReferences: state.externalReferences.filter(ref => ref.id !== referenceId)
+                    });
+                },
 
-                toggleExternalReference: (referenceId) => set(state => ({
-                    externalReferences: state.externalReferences.map(ref =>
-                        ref.id === referenceId ? { ...ref, isVisible: !ref.isVisible } : ref
-                    )
-                })),
+                toggleExternalReference: (referenceId) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        externalReferences: state.externalReferences.map(ref =>
+                            ref.id === referenceId ? { ...ref, isVisible: !ref.isVisible } : ref
+                        )
+                    });
+                },
 
                 // UI State
-                togglePropertiesPanel: () => set(state => ({
-                    isPropertiesPanelOpen: !state.isPropertiesPanelOpen
-                })),
+                togglePropertiesPanel: () => {
+                    const state = get();
+                    set({
+                        ...state,
+                        isPropertiesPanelOpen: !state.isPropertiesPanelOpen
+                    });
+                },
 
-                toggleExternalPanel: () => set(state => ({
-                    isExternalPanelOpen: !state.isExternalPanelOpen
-                })),
+                toggleExternalPanel: () => {
+                    const state = get();
+                    set({
+                        ...state,
+                        isExternalPanelOpen: !state.isExternalPanelOpen
+                    });
+                },
 
                 // Validation
                 validateOntology: async () => {
@@ -557,49 +591,65 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 },
 
                 // Ontology Properties
-                updateOntologyProperties: (updates) => set(state => ({
-                    activeOntology: state.activeOntology ? {
-                        ...state.activeOntology,
-                        ...updates,
-                        lastModified: new Date().toISOString()
-                    } : null
-                })),
-                addOntologyCustomProperty: (key, value) => set(state => ({
-                    activeOntology: state.activeOntology ? {
-                        ...state.activeOntology,
-                        customProperties: {
-                            ...state.activeOntology.customProperties,
-                            [key]: value
-                        },
-                        lastModified: new Date().toISOString()
-                    } : null
-                })),
-                updateOntologyCustomProperty: (key, value) => set(state => ({
-                    activeOntology: state.activeOntology ? {
-                        ...state.activeOntology,
-                        customProperties: {
-                            ...state.activeOntology.customProperties,
-                            [key]: value
-                        },
-                        lastModified: new Date().toISOString()
-                    } : null
-                })),
-                deleteOntologyCustomProperty: (key) => set(state => ({
-                    activeOntology: state.activeOntology ? {
-                        ...state.activeOntology,
-                        customProperties: Object.keys(state.activeOntology.customProperties || {}).reduce((acc, k) => {
-                            if (k !== key && state.activeOntology) {
-                                acc[k] = state.activeOntology.customProperties[k];
-                            }
-                            return acc;
-                        }, {} as Record<string, any>),
-                        lastModified: new Date().toISOString()
-                    } : null
-                })),
+                updateOntologyProperties: (updates) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        activeOntology: state.activeOntology ? {
+                            ...state.activeOntology,
+                            ...updates,
+                            lastModified: new Date().toISOString()
+                        } : null
+                    });
+                },
+                addOntologyCustomProperty: (key, value) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        activeOntology: state.activeOntology ? {
+                            ...state.activeOntology,
+                            customProperties: {
+                                ...state.activeOntology.customProperties,
+                                [key]: value
+                            },
+                            lastModified: new Date().toISOString()
+                        } : null
+                    });
+                },
+                updateOntologyCustomProperty: (key, value) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        activeOntology: state.activeOntology ? {
+                            ...state.activeOntology,
+                            customProperties: {
+                                ...state.activeOntology.customProperties,
+                                [key]: value
+                            },
+                            lastModified: new Date().toISOString()
+                        } : null
+                    });
+                },
+                deleteOntologyCustomProperty: (key) => {
+                    const state = get();
+                    set({
+                        ...state,
+                        activeOntology: state.activeOntology ? {
+                            ...state.activeOntology,
+                            customProperties: Object.keys(state.activeOntology.customProperties || {}).reduce((acc, k) => {
+                                if (k !== key && state.activeOntology) {
+                                    acc[k] = state.activeOntology.customProperties[k];
+                                }
+                                return acc;
+                            }, {} as Record<string, any>),
+                            lastModified: new Date().toISOString()
+                        } : null
+                    });
+                },
 
                 // Custom Relationship Types
                 addCustomRelationshipType: (typeName) => {
-                    const { workspace, activeOntology } = get();
+                    const { workspace, activeOntology, selectedNodes, selectedEdges } = get();
                     if (workspace && activeOntology) {
                         const updatedOntology = {
                             ...activeOntology,
@@ -614,12 +664,14 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         };
                         set({
                             workspace: updatedWorkspace,
-                            activeOntology: updatedOntology
+                            activeOntology: updatedOntology,
+                            selectedNodes,
+                            selectedEdges
                         });
                     }
                 },
                 removeCustomRelationshipType: (typeName) => {
-                    const { workspace, activeOntology } = get();
+                    const { workspace, activeOntology, selectedNodes, selectedEdges } = get();
                     if (workspace && activeOntology) {
                         const updatedOntology = {
                             ...activeOntology,
@@ -634,7 +686,9 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         };
                         set({
                             workspace: updatedWorkspace,
-                            activeOntology: updatedOntology
+                            activeOntology: updatedOntology,
+                            selectedNodes,
+                            selectedEdges
                         });
                     }
                 },
@@ -671,7 +725,12 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                                             ont.id === activeOntology?.id ? loadedOntology : ont
                                         )
                                     };
-                                    set({ workspace: updatedWorkspace, activeOntology: loadedOntology });
+                                    const state = get();
+                                    set({
+                                        ...state,
+                                        workspace: updatedWorkspace,
+                                        activeOntology: loadedOntology
+                                    });
                                 }
                             } catch (error) {
                                 console.error('Error loading ontology from file:', error);
@@ -705,7 +764,9 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                                 ...workspace,
                                 ontologies: [...workspace.ontologies, newOntology]
                             };
+                            const state = get();
                             set({
+                                ...state,
                                 workspace: updatedWorkspace,
                                 activeOntology: newOntology
                             });
@@ -714,15 +775,23 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 },
 
                 deleteOntology: (ontologyId: string) => {
-                    const { workspace } = get();
+                    const { workspace, selectedNodes, selectedEdges } = get();
                     if (workspace) {
                         const updatedWorkspace = {
                             ...workspace,
                             ontologies: workspace.ontologies.filter(ont => ont.id !== ontologyId)
                         };
-                        set({ workspace: updatedWorkspace });
+                        set({
+                            workspace: updatedWorkspace,
+                            selectedNodes,
+                            selectedEdges
+                        });
                         if (workspace.activeOntologyId === ontologyId) {
-                            set({ activeOntology: null });
+                            set({
+                                activeOntology: null,
+                                selectedNodes,
+                                selectedEdges
+                            });
                         }
                     }
                 },
@@ -731,7 +800,9 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                 loadMockWorkspace: () => {
                     const mockWorkspace = createMockWorkspace();
                     const mockReferences = createMockExternalReferences();
+                    const state = get();
                     set({
+                        ...state,
                         workspace: mockWorkspace,
                         activeOntology: mockWorkspace.ontologies[0],
                         externalReferences: mockReferences

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dadmsTheme } from '../../design-system/theme';
 import { Icon } from '../shared/Icon';
 import { useOntologyWorkspaceStore } from './store';
@@ -331,30 +331,68 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     const [localOntologyNamespace, setLocalOntologyNamespace] = useState<string>('');
     const [localOntologyAuthor, setLocalOntologyAuthor] = useState<string>('');
 
-    const selectedNode = selectedNodes.length === 1
-        ? activeOntology?.nodes.find(n => n.id === selectedNodes[0])
-        : null;
+    // Use useMemo to stabilize selectedNode and selectedEdge references
+    // Only depend on IDs and ontology ID to prevent unnecessary recalculations
+    const selectedNode = useMemo(() => {
+        if (selectedNodes.length !== 1 || !activeOntology?.nodes) return null;
+        return activeOntology.nodes.find(n => n.id === selectedNodes[0]) || null;
+    }, [selectedNodes.length === 1 ? selectedNodes[0] : null, activeOntology?.id]);
 
-    const selectedEdge = selectedEdges.length === 1
-        ? activeOntology?.edges.find(e => e.id === selectedEdges[0])
-        : null;
+    const selectedEdge = useMemo(() => {
+        if (selectedEdges.length !== 1 || !activeOntology?.edges) return null;
+        return activeOntology.edges.find(e => e.id === selectedEdges[0]) || null;
+    }, [selectedEdges.length === 1 ? selectedEdges[0] : null, activeOntology?.id]);
 
-    // Update refs when selection changes
+    // Track the current selection IDs to avoid unnecessary updates
+    const currentSelectedNodeId = selectedNodes.length === 1 ? selectedNodes[0] : null;
+    const currentSelectedEdgeId = selectedEdges.length === 1 ? selectedEdges[0] : null;
+
+    // Defensive programming: maintain selection even if there are brief inconsistencies
+    const hasValidSelection = !!(currentSelectedNodeId || currentSelectedEdgeId);
+    const shouldShowNodeProperties = !!(selectedNode && currentSelectedNodeId);
+    const shouldShowEdgeProperties = !!(selectedEdge && currentSelectedEdgeId);
+    const shouldShowOntologyProperties = !hasValidSelection;
+
+    // Debug logging to track selection state (can be removed after testing)
+    // console.log('PropertiesPanel render:', {
+    //     selectedNodeId: currentSelectedNodeId,
+    //     selectedEdgeId: currentSelectedEdgeId,
+    //     hasValidSelection,
+    //     shouldShowNodeProperties,
+    //     shouldShowEdgeProperties,
+    //     shouldShowOntologyProperties
+    // });
+
+    // Update refs when selection changes (but not when just the data changes)
     useEffect(() => {
+        // console.log('PropertiesPanel: Selection changed', { nodeId: currentSelectedNodeId, edgeId: currentSelectedEdgeId });
         selectedNodeRef.current = selectedNode;
         selectedEdgeRef.current = selectedEdge;
-    }, [selectedNode, selectedEdge]);
+    }, [currentSelectedNodeId, currentSelectedEdgeId, selectedNode, selectedEdge]);
 
-    // Update local state when selection changes
+    // Keep refs updated with latest data when the underlying objects change
     useEffect(() => {
-        if (selectedNode) {
+        if (selectedNode && currentSelectedNodeId === selectedNode.id) {
+            selectedNodeRef.current = selectedNode;
+        }
+    }, [selectedNode, currentSelectedNodeId]);
+
+    useEffect(() => {
+        if (selectedEdge && currentSelectedEdgeId === selectedEdge.id) {
+            selectedEdgeRef.current = selectedEdge;
+        }
+    }, [selectedEdge, currentSelectedEdgeId]);
+
+    // Update local state only when selection ID changes (not when data updates)
+    useEffect(() => {
+        if (selectedNode && currentSelectedNodeId) {
             setLocalLabel(selectedNode.data.label);
             setLocalEntityType(selectedNode.data.entityType);
             setLocalDescription(selectedNode.data.description || '');
         }
-    }, [selectedNode?.id]); // Only update when node ID changes
+    }, [currentSelectedNodeId]); // Only depend on the ID, not the whole node object
 
-    // Update local ontology properties when active ontology changes
+    // Update local ontology properties when active ontology ID changes (not on every update)
     useEffect(() => {
         if (activeOntology) {
             setLocalOntologyName(activeOntology.name);
@@ -367,22 +405,24 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     // Create stable debounced update functions using useCallback with empty deps
     const debouncedUpdateNode = useCallback(
         debounce((nodeId: string, updates: any) => {
+            // Preserve the current selection during update
             updateNode(nodeId, updates);
-        }, 500), // Increased debounce time to prevent frequent updates
+        }, 300), // Reduced debounce time for better responsiveness
         [] // Empty dependencies to prevent recreation
     );
 
     const debouncedUpdateEdge = useCallback(
         debounce((edgeId: string, updates: any) => {
+            // Preserve the current selection during update
             updateEdge(edgeId, updates);
-        }, 500),
+        }, 300),
         []
     );
 
     const debouncedUpdateOntology = useCallback(
         debounce((updates: any) => {
             updateOntologyProperties(updates);
-        }, 500),
+        }, 300),
         []
     );
 
@@ -665,7 +705,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         );
     }
 
-    const hasSelection = selectedNode || selectedEdge;
+    const hasSelection = hasValidSelection;
 
     return (
         <div style={containerStyle}>
@@ -941,7 +981,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                     )
                 ) : (
                     <>
-                        {selectedNode && (
+                        {shouldShowNodeProperties && selectedNode && (
                             <>
                                 <div style={sectionStyle}>
                                     <div style={sectionTitleStyle}>Node Properties</div>
@@ -1045,7 +1085,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                             </>
                         )}
 
-                        {selectedEdge && (
+                        {shouldShowEdgeProperties && selectedEdge && (
                             <div style={sectionStyle}>
                                 <div style={sectionTitleStyle}>Edge Properties</div>
 
