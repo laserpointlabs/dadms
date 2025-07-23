@@ -86,26 +86,7 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
         overflow: 'hidden',
     };
 
-    const panelToggleStyle = {
-        position: 'absolute' as const,
-        top: dadmsTheme.spacing.md,
-        right: dadmsTheme.spacing.md,
-        zIndex: dadmsTheme.zIndex.dropdown,
-        display: 'flex',
-        gap: dadmsTheme.spacing.xs,
-    };
 
-    const toggleButtonStyle = (isActive: boolean) => ({
-        padding: dadmsTheme.spacing.xs,
-        background: isActive ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.background.secondary,
-        border: `1px solid ${isActive ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.border.default}`,
-        borderRadius: dadmsTheme.borderRadius.sm,
-        color: isActive ? dadmsTheme.colors.text.inverse : dadmsTheme.colors.text.primary,
-        cursor: 'pointer',
-        fontSize: dadmsTheme.typography.fontSize.xs,
-        transition: dadmsTheme.transitions.fast,
-        boxShadow: dadmsTheme.shadows.sm,
-    });
 
     const validationBannerStyle = {
         background: validationResult?.warnings.length
@@ -146,7 +127,12 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
     return (
         <div style={containerStyle} className={className}>
             {/* Toolbar */}
-            <OntologyToolbar />
+            <OntologyToolbar
+                isPropertiesPanelOpen={isPropertiesPanelOpen}
+                isExternalPanelOpen={isExternalPanelOpen}
+                onTogglePropertiesPanel={togglePropertiesPanel}
+                onToggleExternalPanel={toggleExternalPanel}
+            />
 
             {/* Validation Banner */}
             {validationResult && (
@@ -225,25 +211,7 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
                         </div>
                     )}
 
-                    {/* Panel Toggle Buttons */}
-                    <div style={panelToggleStyle}>
-                        <button
-                            style={toggleButtonStyle(isPropertiesPanelOpen)}
-                            onClick={togglePropertiesPanel}
-                            title="Toggle properties panel"
-                        >
-                            <Icon name="settings-gear" size="sm" />
-                            Properties
-                        </button>
-                        <button
-                            style={toggleButtonStyle(isExternalPanelOpen)}
-                            onClick={toggleExternalPanel}
-                            title="Toggle external references panel"
-                        >
-                            <Icon name="type-hierarchy" size="sm" />
-                            References
-                        </button>
-                    </div>
+
 
                     {/* Main Editor */}
                     <DualViewEditor />
