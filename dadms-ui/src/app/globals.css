@@ -4,6 +4,19 @@
 @import "tailwindcss";
 @import "@vscode/codicons/dist/codicon.css";
 
+/* Ensure codicon font loads properly without theme interference */
+.codicon {
+    font-family: 'codicon' !important;
+    font-display: swap;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure codicons render in all contexts */
+.codicon::before {
+    font-family: 'codicon' !important;
+}
+
 /* DADMS Theme System - CSS Variables for Light/Dark Mode */
 /* Dark theme - explicit application */
 :root,
