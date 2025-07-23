@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { dadmsTheme } from '../../design-system/theme';
-import { Icon } from '../shared/Icon';
+import { CodiconName, Icon } from '../shared/Icon';
 import { useOntologyWorkspaceStore } from './store';
 
 interface OntologyExplorerProps {
@@ -13,10 +13,11 @@ interface OntologyExplorerProps {
 interface TreeNode {
     id: string;
     label: string;
-    type: 'entity' | 'data_property' | 'relationship' | 'ontology' | 'folder';
+    type: 'entity' | 'data_property' | 'relationship' | 'ontology' | 'folder' | 'external_ontology' | 'external_entity' | 'external_property';
     children?: TreeNode[];
     node?: any;
     edge?: any;
+    externalReference?: any;
 }
 
 const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle }) => {
@@ -28,7 +29,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
         setSelectedEdges,
     } = useOntologyWorkspaceStore();
 
-    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['ontology', 'entities', 'relationships', 'properties']));
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['ontology', 'entities', 'relationships', 'properties', 'external-ontologies']));
     const [searchQuery, setSearchQuery] = useState('');
 
     // Build tree structure from ontology data
@@ -85,6 +86,19 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                             type: 'data_property' as const,
                             node
                         }))
+                    },
+                    {
+                        id: 'external-ontologies',
+                        label: 'Imported External Ontologies (0)',
+                        type: 'folder',
+                        children: [
+                            {
+                                id: 'external-placeholder',
+                                label: 'No external ontologies imported',
+                                type: 'external_ontology' as const,
+                                children: []
+                            }
+                        ]
                     }
                 ]
             }
@@ -156,7 +170,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
         const isExpanded = expandedNodes.has(node.id);
         const isSelected = isNodeSelected(node);
         const hasChildren = node.children && node.children.length > 0;
-        const isClickable = node.type === 'entity' || node.type === 'data_property' || node.type === 'relationship';
+        const isClickable = node.type === 'entity' || node.type === 'data_property' || node.type === 'relationship' || node.type === 'external_entity' || node.type === 'external_property';
 
         const nodeStyle = {
             display: 'flex',
@@ -170,15 +184,20 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
             transition: dadmsTheme.transitions.fast,
             borderRadius: dadmsTheme.borderRadius.sm,
             marginBottom: '1px',
+            opacity: node.type.startsWith('external_') ? 0.8 : 1,
+            fontStyle: node.type.startsWith('external_') ? 'italic' as const : 'normal',
         };
 
-        const getIconName = (type: string): string => {
+        const getIconName = (type: string): CodiconName => {
             switch (type) {
                 case 'ontology': return 'project';
                 case 'folder': return 'folder';
                 case 'entity': return 'circle-filled';
                 case 'data_property': return 'add';
                 case 'relationship': return 'arrow-right';
+                case 'external_ontology': return 'references';
+                case 'external_entity': return 'symbol-class';
+                case 'external_property': return 'symbol-field';
                 default: return 'file';
             }
         };
@@ -190,6 +209,9 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                 case 'entity': return dadmsTheme.colors.accent.primary;
                 case 'data_property': return dadmsTheme.colors.accent.info;
                 case 'relationship': return dadmsTheme.colors.accent.secondary;
+                case 'external_ontology': return dadmsTheme.colors.accent.warning;
+                case 'external_entity': return dadmsTheme.colors.accent.warning;
+                case 'external_property': return dadmsTheme.colors.accent.warning;
                 default: return dadmsTheme.colors.text.muted;
             }
         };
@@ -198,6 +220,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
             <div key={node.id}>
                 <div
                     style={nodeStyle}
+                    title={node.type.startsWith('external_') ? `${node.label} (External - Read Only)` : node.label}
                     onClick={() => {
                         if (hasChildren) {
                             toggleExpanded(node.id);
@@ -243,6 +266,15 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                         whiteSpace: 'nowrap' as const,
                     }}>
                         {node.label}
+                        {node.type.startsWith('external_') && (
+                            <span style={{
+                                fontSize: dadmsTheme.typography.fontSize.xs,
+                                color: dadmsTheme.colors.text.muted,
+                                marginLeft: dadmsTheme.spacing.xs,
+                            }}>
+                                (external)
+                            </span>
+                        )}
                     </span>
                 </div>
                 {hasChildren && isExpanded && (
