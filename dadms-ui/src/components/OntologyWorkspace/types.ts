@@ -82,11 +82,15 @@ export interface OntologyState {
     id: string;
     name: string;
     description?: string;
+    version: string;
+    namespace?: string;
+    author?: string;
+    created: string;
+    lastModified: string;
+    customProperties: Record<string, any>;
     nodes: OntologyNode[];
     edges: OntologyEdge[];
     viewport: { x: number; y: number; zoom: number };
-    lastModified: string;
-    version: string;
 }
 
 // Dual View Types

@@ -17,6 +17,10 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         selectedEdges,
         updateNode,
         updateEdge,
+        updateOntologyProperties,
+        addOntologyCustomProperty,
+        updateOntologyCustomProperty,
+        deleteOntologyCustomProperty,
     } = useOntologyWorkspaceStore();
 
     const [editingProperty, setEditingProperty] = useState<string | null>(null);
@@ -30,6 +34,12 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     const [localLabel, setLocalLabel] = useState<string>('');
     const [localEntityType, setLocalEntityType] = useState<string>('');
     const [localDescription, setLocalDescription] = useState<string>('');
+
+    // Local state for ontology properties
+    const [localOntologyName, setLocalOntologyName] = useState<string>('');
+    const [localOntologyDescription, setLocalOntologyDescription] = useState<string>('');
+    const [localOntologyNamespace, setLocalOntologyNamespace] = useState<string>('');
+    const [localOntologyAuthor, setLocalOntologyAuthor] = useState<string>('');
 
     const selectedNode = selectedNodes.length === 1
         ? activeOntology?.nodes.find(n => n.id === selectedNodes[0])
@@ -54,6 +64,16 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         }
     }, [selectedNode?.id]); // Only update when node ID changes
 
+    // Update local ontology properties when active ontology changes
+    useEffect(() => {
+        if (activeOntology) {
+            setLocalOntologyName(activeOntology.name);
+            setLocalOntologyDescription(activeOntology.description || '');
+            setLocalOntologyNamespace(activeOntology.namespace || '');
+            setLocalOntologyAuthor(activeOntology.author || '');
+        }
+    }, [activeOntology?.id]); // Only update when ontology ID changes
+
     // Create stable debounced update functions using useCallback with empty deps
     const debouncedUpdateNode = useCallback(
         debounce((nodeId: string, updates: any) => {
@@ -65,6 +85,13 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     const debouncedUpdateEdge = useCallback(
         debounce((edgeId: string, updates: any) => {
             updateEdge(edgeId, updates);
+        }, 500),
+        []
+    );
+
+    const debouncedUpdateOntology = useCallback(
+        debounce((updates: any) => {
+            updateOntologyProperties(updates);
         }, 500),
         []
     );
@@ -96,6 +123,9 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                     },
                 },
             });
+        } else if (activeOntology) {
+            // Handle ontology custom properties
+            updateOntologyCustomProperty(key, propertyValue);
         }
         setEditingProperty(null);
         setPropertyValue('');
@@ -136,6 +166,13 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                     },
                 });
             }
+        } else if (activeOntology) {
+            // Handle ontology custom properties
+            const key = prompt('Property name:');
+            if (key && key.trim()) {
+                const value = prompt('Property value:', '');
+                addOntologyCustomProperty(key.trim(), value || '');
+            }
         }
     };
 
@@ -160,6 +197,9 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                         properties: newProperties,
                     },
                 });
+            } else if (activeOntology) {
+                // Handle ontology custom properties
+                deleteOntologyCustomProperty(key);
             }
         }
     };
@@ -201,6 +241,27 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                 }
             });
         }
+    };
+
+    // Ontology property handlers
+    const handleOntologyNameChange = (value: string) => {
+        setLocalOntologyName(value);
+        debouncedUpdateOntology({ name: value });
+    };
+
+    const handleOntologyDescriptionChange = (value: string) => {
+        setLocalOntologyDescription(value);
+        debouncedUpdateOntology({ description: value });
+    };
+
+    const handleOntologyNamespaceChange = (value: string) => {
+        setLocalOntologyNamespace(value);
+        debouncedUpdateOntology({ namespace: value });
+    };
+
+    const handleOntologyAuthorChange = (value: string) => {
+        setLocalOntologyAuthor(value);
+        debouncedUpdateOntology({ author: value });
     };
 
     const containerStyle = {
@@ -331,12 +392,191 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
 
             <div style={contentStyle}>
                 {!hasSelection ? (
-                    <div style={emptyStateStyle}>
-                        <div style={{ marginBottom: dadmsTheme.spacing.md }}>
-                            <Icon name="settings-gear" size="xl" />
+                    // Show ontology properties when nothing is selected
+                    activeOntology ? (
+                        <>
+                            <div style={sectionStyle}>
+                                <div style={sectionTitleStyle}>Ontology Properties</div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Name</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={localOntologyName}
+                                        onChange={(e) => handleOntologyNameChange(e.target.value)}
+                                        placeholder="Ontology name"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Description</label>
+                                    <textarea
+                                        style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' as const }}
+                                        value={localOntologyDescription}
+                                        onChange={(e) => handleOntologyDescriptionChange(e.target.value)}
+                                        placeholder="Describe the purpose and scope of this ontology"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Namespace URI</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={localOntologyNamespace}
+                                        onChange={(e) => handleOntologyNamespaceChange(e.target.value)}
+                                        placeholder="http://example.com/ontology/"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Author</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={localOntologyAuthor}
+                                        onChange={(e) => handleOntologyAuthorChange(e.target.value)}
+                                        placeholder="Author name"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Version</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={activeOntology.version}
+                                        readOnly
+                                        placeholder="Version"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Created</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={new Date(activeOntology.created).toLocaleDateString()}
+                                        readOnly
+                                        placeholder="Creation date"
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Last Modified</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={new Date(activeOntology.lastModified).toLocaleString()}
+                                        readOnly
+                                        placeholder="Last modification"
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={sectionStyle}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                    <div style={sectionTitleStyle}>Custom Properties</div>
+                                    <button
+                                        style={buttonStyle('primary', 'xs')}
+                                        onClick={handleAddProperty}
+                                        title="Add new custom property"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+
+                                {Object.entries(activeOntology.customProperties || {}).map(([key, value]) => (
+                                    <div key={key} style={propertyRowStyle}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
+                                                {key}
+                                            </div>
+                                            {editingProperty === key ? (
+                                                <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
+                                                    <input
+                                                        style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
+                                                        value={propertyValue}
+                                                        onChange={(e) => setPropertyValue(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') handlePropertySave(key);
+                                                            if (e.key === 'Escape') handlePropertyCancel();
+                                                        }}
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        style={saveButtonStyle}
+                                                        onClick={() => handlePropertySave(key)}
+                                                    >
+                                                        <Icon name="check" size="sm" />
+                                                    </button>
+                                                    <button
+                                                        style={buttonStyle('secondary', 'xs')}
+                                                        onClick={handlePropertyCancel}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        fontSize: dadmsTheme.typography.fontSize.xs,
+                                                        color: dadmsTheme.colors.text.secondary,
+                                                        cursor: 'pointer',
+                                                        marginTop: '2px'
+                                                    }}
+                                                    onClick={() => handlePropertyEdit(key, value)}
+                                                >
+                                                    {String(value)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            style={buttonStyle('secondary', 'xs')}
+                                            onClick={() => handleDeleteProperty(key)}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {Object.keys(activeOntology.customProperties || {}).length === 0 && (
+                                    <div style={{
+                                        textAlign: 'center' as const,
+                                        color: dadmsTheme.colors.text.muted,
+                                        fontSize: dadmsTheme.typography.fontSize.xs,
+                                        padding: dadmsTheme.spacing.md,
+                                        fontStyle: 'italic'
+                                    }}>
+                                        No custom properties defined. Click + to add one.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={sectionStyle}>
+                                <div style={sectionTitleStyle}>Statistics</div>
+                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, color: dadmsTheme.colors.text.secondary }}>
+                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                        <strong>Entities:</strong> {activeOntology.nodes.filter(n => n.type === 'entity').length}
+                                    </div>
+                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                        <strong>Data Properties:</strong> {activeOntology.nodes.filter(n => n.type === 'data_property').length}
+                                    </div>
+                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                        <strong>Relationships:</strong> {activeOntology.edges.length}
+                                    </div>
+                                    <div>
+                                        <strong>Total Elements:</strong> {activeOntology.nodes.length + activeOntology.edges.length}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={emptyStateStyle}>
+                            <div style={{ marginBottom: dadmsTheme.spacing.md }}>
+                                <Icon name="project" size="xl" />
+                            </div>
+                            <div>No ontology loaded</div>
+                            <div style={{ fontSize: dadmsTheme.typography.fontSize.sm, marginTop: dadmsTheme.spacing.sm }}>
+                                Create or load an ontology to view its properties
+                            </div>
                         </div>
-                        <div>Select a node or edge to view its properties</div>
-                    </div>
+                    )
                 ) : (
                     <>
                         {selectedNode && (

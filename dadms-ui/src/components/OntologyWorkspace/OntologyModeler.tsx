@@ -392,6 +392,10 @@ const OntologyModelerInner: React.FC = () => {
                     setEdges((eds) => addEdge(newEdge, eds));
                     storeAddEdge(newEdge);
 
+                    // Automatically select the newly created edge to show its properties
+                    setSelectedNodes([]);
+                    setSelectedEdges([newEdge.id]);
+
                     console.log('Successfully created edge:', newEdge);
                 } catch (error) {
                     console.error('Error creating edge:', error);
@@ -401,7 +405,7 @@ const OntologyModelerInner: React.FC = () => {
             // Always clear the pending connection and hide selector
             setPendingConnection(null);
         },
-        [pendingConnection, setEdges, storeAddEdge],
+        [pendingConnection, setEdges, storeAddEdge, setSelectedNodes, setSelectedEdges],
     );
 
     const handleRelationshipCancel = useCallback(() => {
@@ -467,8 +471,12 @@ const OntologyModelerInner: React.FC = () => {
 
             setNodes((nds) => nds.concat(newNode));
             addNode(newNode);
+
+            // Automatically select the newly created node
+            setSelectedNodes([newNode.id]);
+            setSelectedEdges([]);
         },
-        [project, setNodes, addNode],
+        [project, setNodes, addNode, setSelectedNodes, setSelectedEdges],
     );
 
     const onSelectionChange = useCallback(
@@ -491,6 +499,17 @@ const OntologyModelerInner: React.FC = () => {
             console.log('Edge clicked:', edge);
         },
         [],
+    );
+
+    // Handle canvas click to show ontology properties
+    const onPaneClick = useCallback(
+        (event: React.MouseEvent) => {
+            // Clear node and edge selections to show ontology properties
+            setSelectedNodes([]);
+            setSelectedEdges([]);
+            console.log('Canvas clicked - showing ontology properties');
+        },
+        [setSelectedNodes, setSelectedEdges],
     );
 
     // Custom styles for DADMS theme
@@ -525,6 +544,7 @@ const OntologyModelerInner: React.FC = () => {
                 onNodeClick={onNodeClick}
                 onEdgeClick={onEdgeClick}
                 onNodeDragStop={onNodeDragStop}
+                onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes as NodeTypes}
                 edgeTypes={edgeTypes as EdgeTypes}
                 style={reactFlowStyle}
