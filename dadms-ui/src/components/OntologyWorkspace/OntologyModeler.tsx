@@ -353,6 +353,7 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
 };
 
 const OntologyModelerInner: React.FC = () => {
+    const { isMinimapVisible } = useOntologyWorkspaceStore();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { project } = useReactFlow();
 
@@ -698,25 +699,27 @@ const OntologyModelerInner: React.FC = () => {
                     position="top-left"
                 />
 
-                <MiniMap
-                    style={minimapStyle}
-                    nodeColor={(node) => {
-                        switch (node.type) {
-                            case 'entity':
-                                return dadmsTheme.colors.accent.primary;
-                            case 'data_property':
-                                return dadmsTheme.colors.accent.info;
-                            case 'external_reference':
-                                return dadmsTheme.colors.border.light;
-                            default:
-                                return dadmsTheme.colors.border.default;
-                        }
-                    }}
-                    nodeStrokeWidth={2}
-                    position="bottom-right"
-                    pannable={true}
-                    zoomable={true}
-                />
+                {isMinimapVisible && (
+                    <MiniMap
+                        style={minimapStyle}
+                        nodeColor={(node) => {
+                            switch (node.type) {
+                                case 'entity':
+                                    return dadmsTheme.colors.accent.primary;
+                                case 'data_property':
+                                    return dadmsTheme.colors.accent.info;
+                                case 'external_reference':
+                                    return dadmsTheme.colors.border.light;
+                                default:
+                                    return dadmsTheme.colors.border.default;
+                            }
+                        }}
+                        nodeStrokeWidth={2}
+                        position="bottom-right"
+                        pannable={true}
+                        zoomable={true}
+                    />
+                )}
 
                 <Background
                     variant={BackgroundVariant.Dots}

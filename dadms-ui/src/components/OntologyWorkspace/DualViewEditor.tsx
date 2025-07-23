@@ -19,6 +19,10 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
         setOwlContent,
         syncViews,
         activeOntology,
+        isMinimapVisible,
+        isFullscreen,
+        toggleMinimap,
+        toggleFullscreen,
     } = useOntologyWorkspaceStore();
 
     const [localOwlContent, setLocalOwlContent] = useState(dualView.owlContent);
@@ -198,6 +202,30 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
                     >
                         <Icon name="sync" size="sm" />
                         Sync
+                    </button>
+
+                    {dualView.activeMode === 'diagram' && (
+                        <button
+                            style={{
+                                ...buttonStyle('secondary'),
+                                color: isMinimapVisible ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                            }}
+                            onClick={toggleMinimap}
+                            title="Toggle minimap visibility"
+                        >
+                            <Icon name="map" size="sm" />
+                        </button>
+                    )}
+
+                    <button
+                        style={{
+                            ...buttonStyle('secondary'),
+                            color: isFullscreen ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                        }}
+                        onClick={toggleFullscreen}
+                        title="Toggle fullscreen mode"
+                    >
+                        <Icon name={isFullscreen ? "screen-normal" : "screen-full"} size="sm" />
                     </button>
                 </div>
             </div>
