@@ -11,7 +11,7 @@ interface PaletteItem {
     color: string;
 }
 
-// Simple ontology entity definitions
+// Simplified ontology entity definitions - removed object_property since it should be an edge
 const paletteItems: PaletteItem[] = [
     {
         type: 'entity',
@@ -19,13 +19,6 @@ const paletteItems: PaletteItem[] = [
         description: 'Classes, concepts, and individuals',
         icon: 'circle-filled',
         color: dadmsTheme.colors.accent.primary,
-    },
-    {
-        type: 'object_property',
-        label: 'Object Property',
-        description: 'Relationships between entities',
-        icon: 'arrow-right',
-        color: dadmsTheme.colors.accent.success,
     },
     {
         type: 'data_property',
@@ -39,11 +32,15 @@ const paletteItems: PaletteItem[] = [
 interface OntologyPaletteProps {
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    onConnectionModeToggle?: () => void;
+    isConnectionMode?: boolean;
 }
 
 const OntologyPalette: React.FC<OntologyPaletteProps> = ({
     isCollapsed = false,
-    onToggleCollapse
+    onToggleCollapse,
+    onConnectionModeToggle,
+    isConnectionMode = false
 }) => {
     const onDragStart = (event: React.DragEvent, nodeType: string) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
@@ -120,6 +117,21 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
         },
     });
 
+    const connectionButtonStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        padding: dadmsTheme.spacing.md,
+        marginBottom: dadmsTheme.spacing.md,
+        background: isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.background.primary,
+        border: `2px solid ${isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.border.default}`,
+        borderRadius: dadmsTheme.borderRadius.lg,
+        cursor: 'pointer',
+        transition: dadmsTheme.transitions.fast,
+        userSelect: 'none' as const,
+        boxShadow: dadmsTheme.shadows.sm,
+        width: '100%',
+    };
+
     const labelStyle = {
         fontSize: dadmsTheme.typography.fontSize.sm,
         fontWeight: dadmsTheme.typography.fontWeight.medium,
@@ -162,6 +174,28 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
             </div>
 
             <div style={contentStyle}>
+                {/* Connection Mode Toggle */}
+                {!isCollapsed && onConnectionModeToggle && (
+                    <button
+                        style={connectionButtonStyle}
+                        onClick={onConnectionModeToggle}
+                        title={isConnectionMode ? 'Exit connection mode' : 'Enter connection mode to create relationships'}
+                    >
+                        <div style={iconContainerStyle(isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.accent.secondary)}>
+                            <Icon name="arrow-right" size="md" color="#ffffff" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={labelStyle}>
+                                {isConnectionMode ? 'Exit Connection Mode' : 'Create Relationships'}
+                            </div>
+                            <div style={descriptionStyle}>
+                                {isConnectionMode ? 'Click to exit connection mode' : 'Connect entities with object properties'}
+                            </div>
+                        </div>
+                    </button>
+                )}
+
+                {/* Entity Types */}
                 {paletteItems.map((item) => (
                     <div
                         key={item.type}
@@ -205,8 +239,7 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                             color: dadmsTheme.colors.text.muted,
                             lineHeight: 1.4,
                         }}>
-                            <strong>Usage:</strong> Drag elements onto the canvas to build your ontology.
-                            Create entities, properties, and relationships.
+                            <strong>Usage:</strong> Drag entities onto the canvas. Use "Create Relationships" to connect entities with object properties.
                         </div>
                     </div>
                 )}

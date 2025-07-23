@@ -1,17 +1,49 @@
 import { Edge, Node } from 'reactflow';
 
-// Simplified Ontology Entity Types
+// Simplified Ontology Entity Types - removed object_property since it's now represented as edges
 export type DADMSEntityType =
     | 'entity'
-    | 'object_property'
     | 'data_property';
 
+// More comprehensive relationship types for object properties as edges
 export type DADMSRelationshipType =
+    // Basic OWL relationships
     | 'subclass_of'
     | 'instance_of'
+    | 'equivalent_to'
+
+    // Decision Intelligence relationships
+    | 'influences'
+    | 'depends_on'
+    | 'conflicts_with'
+    | 'supports_decision'
+    | 'requires_approval'
+    | 'has_stakeholder'
+    | 'has_responsibility'
+    | 'has_authority'
+    | 'manages'
+    | 'reports_to'
+
+    // Knowledge relationships
+    | 'contains'
+    | 'references'
+    | 'implements'
+    | 'validates'
+    | 'contradicts'
+
+    // Process relationships
+    | 'triggers'
+    | 'follows'
+    | 'uses_resource'
+    | 'produces_output'
+
+    // Generic relationships
     | 'relates_to'
     | 'has_property'
-    | 'equivalent_to';
+    | 'part_of'
+
+    // Allow custom relationships as strings
+    | string;
 
 // Node Data Structure
 export interface OntologyNodeData {

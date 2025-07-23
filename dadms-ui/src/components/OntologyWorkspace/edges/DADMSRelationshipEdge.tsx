@@ -28,7 +28,10 @@ const DADMSRelationshipEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
 
     // Determine edge color based on relationship type
     const getEdgeColor = () => {
+        if (!relationshipType) return dadmsTheme.colors.border.light;
+
         switch (relationshipType) {
+            // Decision Intelligence relationships
             case 'influences':
                 return dadmsTheme.colors.accent.info;
             case 'depends_on':
@@ -39,8 +42,63 @@ const DADMSRelationshipEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
                 return dadmsTheme.colors.accent.success;
             case 'requires_approval':
                 return dadmsTheme.colors.accent.secondary;
-            default:
+
+            // Organizational relationships
+            case 'has_stakeholder':
+            case 'has_responsibility':
+            case 'has_authority':
+                return '#9C27B0'; // Purple for authority/responsibility
+            case 'manages':
+            case 'reports_to':
+                return '#FF9800'; // Orange for management hierarchy
+
+            // Knowledge relationships
+            case 'contains':
+            case 'references':
+                return '#4CAF50'; // Green for knowledge containment
+            case 'implements':
+            case 'validates':
+                return '#2196F3'; // Blue for implementation/validation
+            case 'contradicts':
+                return '#F44336'; // Red for conflicts
+
+            // Process relationships
+            case 'triggers':
+            case 'follows':
+                return '#795548'; // Brown for process flow
+            case 'uses_resource':
+            case 'produces_output':
+                return '#607D8B'; // Blue grey for resources
+
+            // Basic OWL relationships
+            case 'subclass_of':
+                return '#3F51B5'; // Indigo for hierarchy
+            case 'instance_of':
+                return '#E91E63'; // Pink for instantiation
+            case 'equivalent_to':
+                return '#FF5722'; // Deep orange for equivalence
+
+            // Generic relationships
+            case 'has_property':
+                return dadmsTheme.colors.accent.info;
+            case 'part_of':
+                return '#8BC34A'; // Light green for composition
+            case 'relates_to':
                 return dadmsTheme.colors.border.light;
+
+            // Custom relationships - generate a consistent color based on the relationship name
+            default:
+                // Simple hash function to generate consistent colors for custom relationships
+                let hash = 0;
+                for (let i = 0; i < relationshipType.length; i++) {
+                    const char = relationshipType.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32bit integer
+                }
+
+                // Generate a color from the hash
+                const hue = Math.abs(hash) % 360;
+                return `hsl(${hue}, 60%, 50%)`; // Consistent saturation and lightness
         }
     };
 

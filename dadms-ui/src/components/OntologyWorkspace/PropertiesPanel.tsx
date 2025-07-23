@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { dadmsTheme } from '../../design-system/theme';
 import { Icon } from '../shared/Icon';
 import { useOntologyWorkspaceStore } from './store';
@@ -22,7 +22,11 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     const [editingProperty, setEditingProperty] = useState<string | null>(null);
     const [propertyValue, setPropertyValue] = useState<string>('');
 
-    // Local state for inputs to prevent re-render issues
+    // Use refs to store the current values and avoid stale closures
+    const selectedNodeRef = useRef<any>(null);
+    const selectedEdgeRef = useRef<any>(null);
+
+    // Local state for inputs to prevent re-render issues and maintain focus
     const [localLabel, setLocalLabel] = useState<string>('');
     const [localEntityType, setLocalEntityType] = useState<string>('');
     const [localDescription, setLocalDescription] = useState<string>('');
@@ -35,6 +39,12 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         ? activeOntology?.edges.find(e => e.id === selectedEdges[0])
         : null;
 
+    // Update refs when selection changes
+    useEffect(() => {
+        selectedNodeRef.current = selectedNode;
+        selectedEdgeRef.current = selectedEdge;
+    }, [selectedNode, selectedEdge]);
+
     // Update local state when selection changes
     useEffect(() => {
         if (selectedNode) {
@@ -44,12 +54,19 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         }
     }, [selectedNode?.id]); // Only update when node ID changes
 
-    // Debounced update functions
+    // Create stable debounced update functions using useCallback with empty deps
     const debouncedUpdateNode = useCallback(
         debounce((nodeId: string, updates: any) => {
             updateNode(nodeId, updates);
-        }, 300),
-        [updateNode]
+        }, 500), // Increased debounce time to prevent frequent updates
+        [] // Empty dependencies to prevent recreation
+    );
+
+    const debouncedUpdateEdge = useCallback(
+        debounce((edgeId: string, updates: any) => {
+            updateEdge(edgeId, updates);
+        }, 500),
+        []
     );
 
     const handlePropertyEdit = (key: string, value: any) => {
@@ -58,23 +75,23 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     };
 
     const handlePropertySave = (key: string) => {
-        if (selectedNode) {
-            debouncedUpdateNode(selectedNode.id, {
+        if (selectedNodeRef.current) {
+            debouncedUpdateNode(selectedNodeRef.current.id, {
                 data: {
-                    ...selectedNode.data,
+                    ...selectedNodeRef.current.data,
                     properties: {
-                        ...selectedNode.data.properties,
+                        ...selectedNodeRef.current.data.properties,
                         [key]: propertyValue,
                     },
                 },
             });
-        } else if (selectedEdge) {
-            debouncedUpdateNode(selectedEdge.id, {
+        } else if (selectedEdgeRef.current) {
+            debouncedUpdateEdge(selectedEdgeRef.current.id, {
                 data: {
-                    relationshipType: 'relates_to',
-                    ...selectedEdge.data,
+                    relationshipType: selectedEdgeRef.current.data?.relationshipType || 'relates_to',
+                    ...selectedEdgeRef.current.data,
                     properties: {
-                        ...selectedEdge.data?.properties,
+                        ...selectedEdgeRef.current.data?.properties,
                         [key]: propertyValue,
                     },
                 },
@@ -90,30 +107,30 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     };
 
     const handleAddProperty = () => {
-        if (selectedNode) {
+        if (selectedNodeRef.current) {
             const key = prompt('Property name:');
             if (key && key.trim()) {
                 const value = prompt('Property value:', '');
-                debouncedUpdateNode(selectedNode.id, {
+                debouncedUpdateNode(selectedNodeRef.current.id, {
                     data: {
-                        ...selectedNode.data,
+                        ...selectedNodeRef.current.data,
                         properties: {
-                            ...selectedNode.data.properties,
+                            ...selectedNodeRef.current.data.properties,
                             [key.trim()]: value || '',
                         },
                     },
                 });
             }
-        } else if (selectedEdge) {
+        } else if (selectedEdgeRef.current) {
             const key = prompt('Property name:');
             if (key && key.trim()) {
                 const value = prompt('Property value:', '');
-                debouncedUpdateNode(selectedEdge.id, {
+                debouncedUpdateEdge(selectedEdgeRef.current.id, {
                     data: {
-                        relationshipType: 'relates_to',
-                        ...selectedEdge.data,
+                        relationshipType: selectedEdgeRef.current.data?.relationshipType || 'relates_to',
+                        ...selectedEdgeRef.current.data,
                         properties: {
-                            ...selectedEdge.data?.properties,
+                            ...selectedEdgeRef.current.data?.properties,
                             [key.trim()]: value || '',
                         },
                     },
@@ -124,22 +141,22 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
 
     const handleDeleteProperty = (key: string) => {
         if (confirm(`Are you sure you want to delete the property "${key}"?`)) {
-            if (selectedNode) {
-                const newProperties = { ...selectedNode.data.properties };
+            if (selectedNodeRef.current) {
+                const newProperties = { ...selectedNodeRef.current.data.properties };
                 delete newProperties[key];
-                debouncedUpdateNode(selectedNode.id, {
+                debouncedUpdateNode(selectedNodeRef.current.id, {
                     data: {
-                        ...selectedNode.data,
+                        ...selectedNodeRef.current.data,
                         properties: newProperties,
                     },
                 });
-            } else if (selectedEdge) {
-                const newProperties = { ...selectedEdge.data?.properties };
+            } else if (selectedEdgeRef.current) {
+                const newProperties = { ...selectedEdgeRef.current.data?.properties };
                 delete newProperties[key];
-                debouncedUpdateNode(selectedEdge.id, {
+                debouncedUpdateEdge(selectedEdgeRef.current.id, {
                     data: {
-                        relationshipType: 'relates_to',
-                        ...selectedEdge.data,
+                        relationshipType: selectedEdgeRef.current.data?.relationshipType || 'relates_to',
+                        ...selectedEdgeRef.current.data,
                         properties: newProperties,
                     },
                 });
@@ -147,38 +164,39 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         }
     };
 
+    // Immediate UI updates with debounced store updates
     const handleLabelChange = (value: string) => {
         setLocalLabel(value);
-        if (selectedNode) {
-            debouncedUpdateNode(selectedNode.id, {
-                data: { ...selectedNode.data, label: value }
+        if (selectedNodeRef.current) {
+            debouncedUpdateNode(selectedNodeRef.current.id, {
+                data: { ...selectedNodeRef.current.data, label: value }
             });
         }
     };
 
     const handleEntityTypeChange = (value: string) => {
         setLocalEntityType(value);
-        if (selectedNode) {
-            debouncedUpdateNode(selectedNode.id, {
-                data: { ...selectedNode.data, entityType: value }
+        if (selectedNodeRef.current) {
+            debouncedUpdateNode(selectedNodeRef.current.id, {
+                data: { ...selectedNodeRef.current.data, entityType: value }
             });
         }
     };
 
     const handleDescriptionChange = (value: string) => {
         setLocalDescription(value);
-        if (selectedNode) {
-            debouncedUpdateNode(selectedNode.id, {
-                data: { ...selectedNode.data, description: value }
+        if (selectedNodeRef.current) {
+            debouncedUpdateNode(selectedNodeRef.current.id, {
+                data: { ...selectedNodeRef.current.data, description: value }
             });
         }
     };
 
     const handleRelationshipTypeChange = (value: string) => {
-        if (selectedEdge) {
-            debouncedUpdateNode(selectedEdge.id, {
+        if (selectedEdgeRef.current) {
+            debouncedUpdateEdge(selectedEdgeRef.current.id, {
                 data: {
-                    ...selectedEdge.data,
+                    ...selectedEdgeRef.current.data,
                     relationshipType: value as any
                 }
             });
@@ -434,34 +452,190 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                                     <select
                                         style={inputStyle}
                                         value={selectedEdge.data?.relationshipType || 'relates_to'}
-                                        onChange={(e) => handleRelationshipTypeChange(e.target.value)}
+                                        onChange={(e) => {
+                                            if (e.target.value === '__custom__') {
+                                                const customType = prompt('Enter custom relationship type:');
+                                                if (customType && customType.trim()) {
+                                                    const formattedType = customType.trim().toLowerCase().replace(/\s+/g, '_');
+                                                    handleRelationshipTypeChange(formattedType);
+                                                }
+                                            } else {
+                                                handleRelationshipTypeChange(e.target.value);
+                                            }
+                                        }}
                                     >
-                                        <option value="subclass_of">Subclass Of</option>
-                                        <option value="instance_of">Instance Of</option>
-                                        <option value="relates_to">Relates To</option>
-                                        <option value="has_property">Has Property</option>
-                                        <option value="equivalent_to">Equivalent To</option>
+                                        <optgroup label="Basic OWL Relationships">
+                                            <option value="subclass_of">Subclass Of</option>
+                                            <option value="instance_of">Instance Of</option>
+                                            <option value="equivalent_to">Equivalent To</option>
+                                        </optgroup>
+
+                                        <optgroup label="Decision Intelligence">
+                                            <option value="influences">Influences</option>
+                                            <option value="depends_on">Depends On</option>
+                                            <option value="conflicts_with">Conflicts With</option>
+                                            <option value="supports_decision">Supports Decision</option>
+                                            <option value="requires_approval">Requires Approval</option>
+                                        </optgroup>
+
+                                        <optgroup label="Organizational">
+                                            <option value="has_stakeholder">Has Stakeholder</option>
+                                            <option value="has_responsibility">Has Responsibility</option>
+                                            <option value="has_authority">Has Authority</option>
+                                            <option value="manages">Manages</option>
+                                            <option value="reports_to">Reports To</option>
+                                        </optgroup>
+
+                                        <optgroup label="Knowledge">
+                                            <option value="contains">Contains</option>
+                                            <option value="references">References</option>
+                                            <option value="implements">Implements</option>
+                                            <option value="validates">Validates</option>
+                                            <option value="contradicts">Contradicts</option>
+                                        </optgroup>
+
+                                        <optgroup label="Process">
+                                            <option value="triggers">Triggers</option>
+                                            <option value="follows">Follows</option>
+                                            <option value="uses_resource">Uses Resource</option>
+                                            <option value="produces_output">Produces Output</option>
+                                        </optgroup>
+
+                                        <optgroup label="Generic">
+                                            <option value="relates_to">Relates To</option>
+                                            <option value="has_property">Has Property</option>
+                                            <option value="part_of">Part Of</option>
+                                        </optgroup>
+
+                                        {/* Show current custom relationship if not in predefined list */}
+                                        {selectedEdge.data?.relationshipType &&
+                                            !['subclass_of', 'instance_of', 'equivalent_to', 'influences', 'depends_on', 'conflicts_with', 'supports_decision', 'requires_approval', 'has_stakeholder', 'has_responsibility', 'has_authority', 'manages', 'reports_to', 'contains', 'references', 'implements', 'validates', 'contradicts', 'triggers', 'follows', 'uses_resource', 'produces_output', 'relates_to', 'has_property', 'part_of'].includes(selectedEdge.data.relationshipType) && (
+                                                <optgroup label="Custom">
+                                                    <option value={selectedEdge.data.relationshipType}>
+                                                        {selectedEdge.data.relationshipType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </option>
+                                                </optgroup>
+                                            )}
+
+                                        <optgroup label="Actions">
+                                            <option value="__custom__">+ Add Custom Relationship...</option>
+                                        </optgroup>
                                     </select>
                                 </div>
 
-                                {selectedEdge.data?.properties && Object.keys(selectedEdge.data.properties).length > 0 && (
-                                    <div>
-                                        <div style={sectionTitleStyle}>Edge Properties</div>
-                                        {Object.entries(selectedEdge.data.properties).map(([key, value]) => (
-                                            <div key={key} style={propertyRowStyle}>
-                                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
-                                                    {key}: {String(value)}
-                                                </div>
-                                                <button
-                                                    style={buttonStyle('secondary', 'xs')}
-                                                    onClick={() => handleDeleteProperty(key)}
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
+                                {/* Edge Metadata */}
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>Strength (0.0 - 1.0)</label>
+                                    <input
+                                        style={inputStyle}
+                                        type="number"
+                                        min="0"
+                                        max="1"
+                                        step="0.1"
+                                        value={selectedEdge.data?.strength || 1.0}
+                                        onChange={(e) => {
+                                            if (selectedEdge) {
+                                                updateEdge(selectedEdge.id, {
+                                                    data: {
+                                                        relationshipType: selectedEdge.data?.relationshipType || 'relates_to',
+                                                        ...selectedEdge.data,
+                                                        strength: parseFloat(e.target.value) || 1.0
+                                                    }
+                                                });
+                                            }
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedEdge.data?.isInferred || false}
+                                            onChange={(e) => {
+                                                if (selectedEdge) {
+                                                    updateEdge(selectedEdge.id, {
+                                                        data: {
+                                                            relationshipType: selectedEdge.data?.relationshipType || 'relates_to',
+                                                            ...selectedEdge.data,
+                                                            isInferred: e.target.checked
+                                                        }
+                                                    });
+                                                }
+                                            }}
+                                            style={{ marginRight: dadmsTheme.spacing.xs }}
+                                        />
+                                        Inferred Relationship
+                                    </label>
+                                </div>
+
+                                {/* Custom Edge Properties */}
+                                <div style={sectionStyle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                        <div style={sectionTitleStyle}>Custom Properties</div>
+                                        <button
+                                            style={buttonStyle('primary', 'xs')}
+                                            onClick={handleAddProperty}
+                                            title="Add new property"
+                                        >
+                                            +
+                                        </button>
                                     </div>
-                                )}
+
+                                    {Object.entries(selectedEdge.data?.properties || {}).map(([key, value]) => (
+                                        <div key={key} style={propertyRowStyle}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
+                                                    {key}
+                                                </div>
+                                                {editingProperty === key ? (
+                                                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
+                                                        <input
+                                                            style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
+                                                            value={propertyValue}
+                                                            onChange={(e) => setPropertyValue(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handlePropertySave(key);
+                                                                if (e.key === 'Escape') handlePropertyCancel();
+                                                            }}
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            style={saveButtonStyle}
+                                                            onClick={() => handlePropertySave(key)}
+                                                        >
+                                                            <Icon name="check" size="sm" />
+                                                        </button>
+                                                        <button
+                                                            style={buttonStyle('secondary', 'xs')}
+                                                            onClick={handlePropertyCancel}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            fontSize: dadmsTheme.typography.fontSize.xs,
+                                                            color: dadmsTheme.colors.text.secondary,
+                                                            cursor: 'pointer',
+                                                            marginTop: '2px'
+                                                        }}
+                                                        onClick={() => handlePropertyEdit(key, value)}
+                                                    >
+                                                        {String(value)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                style={buttonStyle('secondary', 'xs')}
+                                                onClick={() => handleDeleteProperty(key)}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </>
