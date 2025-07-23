@@ -88,6 +88,7 @@ export interface OntologyState {
     created: string;
     lastModified: string;
     customProperties: Record<string, any>;
+    customRelationshipTypes: string[];
     nodes: OntologyNode[];
     edges: OntologyEdge[];
     viewport: { x: number; y: number; zoom: number };

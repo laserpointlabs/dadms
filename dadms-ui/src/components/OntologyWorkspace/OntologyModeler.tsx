@@ -42,16 +42,38 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
 }) => {
     const [customRelationship, setCustomRelationship] = useState('');
     const [showCustomInput, setShowCustomInput] = useState(false);
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['Organizational', 'Basic'])); // Start with some groups collapsed
 
-    // Reset state when selector becomes visible
+    // Get custom relationship types from store
+    const { activeOntology, addCustomRelationshipType } = useOntologyWorkspaceStore();
+    const customRelationshipTypes = activeOntology?.customRelationshipTypes || [];
+
+    // Helper function to format custom relationship type labels
+    const formatCustomTypeLabel = (type: string) => {
+        return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    // Debug logging
     React.useEffect(() => {
         if (isVisible) {
+            console.log('RelationshipSelector opened');
+            console.log('Active ontology:', activeOntology?.name);
+            console.log('Custom relationship types:', customRelationshipTypes);
             setCustomRelationship('');
             setShowCustomInput(false);
         }
-    }, [isVisible]);
+    }, [isVisible, activeOntology, customRelationshipTypes]);
 
     const relationshipGroups = [
+        {
+            title: "Custom Relationships",
+            isCustom: true,
+            relationships: customRelationshipTypes.map(type => ({
+                type: type,
+                label: formatCustomTypeLabel(type),
+                description: 'Custom relationship type'
+            }))
+        },
         {
             title: "Decision Intelligence",
             relationships: [
@@ -84,10 +106,28 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
         if (customRelationship.trim()) {
             // Convert custom string to valid relationship type format
             const customType = customRelationship.trim().toLowerCase().replace(/\s+/g, '_') as DADMSRelationshipType;
+
+            console.log('Creating custom relationship type:', customType);
+
+            // Add to the ontology's custom relationship types if it doesn't exist
+            if (!customRelationshipTypes.includes(customType)) {
+                addCustomRelationshipType(customType);
+            }
+
             onSelect(customType);
             setCustomRelationship('');
             setShowCustomInput(false);
         }
+    };
+
+    const toggleGroup = (groupTitle: string) => {
+        const newCollapsed = new Set(collapsedGroups);
+        if (newCollapsed.has(groupTitle)) {
+            newCollapsed.delete(groupTitle);
+        } else {
+            newCollapsed.add(groupTitle);
+        }
+        setCollapsedGroups(newCollapsed);
     };
 
     if (!isVisible) return null;
@@ -225,56 +265,88 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
                 )}
             </div>
 
-            {relationshipGroups.map((group) => (
-                <div key={group.title} style={{ padding: dadmsTheme.spacing.sm }}>
-                    <h4 style={{
-                        margin: `${dadmsTheme.spacing.sm} 0 ${dadmsTheme.spacing.xs} 0`,
-                        fontSize: dadmsTheme.typography.fontSize.sm,
-                        fontWeight: dadmsTheme.typography.fontWeight.medium,
-                        color: dadmsTheme.colors.text.secondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                    }}>{group.title}</h4>
+            {relationshipGroups
+                .filter(group => !group.isCustom || group.relationships.length > 0) // Only show custom group if it has relationships
+                .map((group) => {
+                    const isCollapsed = collapsedGroups.has(group.title);
+                    const isCustomGroup = group.isCustom;
 
-                    {group.relationships.map((rel) => (
-                        <button
-                            key={rel.type}
-                            onClick={() => onSelect(rel.type)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: dadmsTheme.spacing.sm,
-                                marginBottom: dadmsTheme.spacing.xs,
-                                background: dadmsTheme.colors.background.primary,
-                                border: `1px solid ${dadmsTheme.colors.border.default}`,
-                                borderRadius: dadmsTheme.borderRadius.md,
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                transition: dadmsTheme.transitions.fast,
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = dadmsTheme.colors.background.hover;
-                                e.currentTarget.style.borderColor = dadmsTheme.colors.accent.primary;
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = dadmsTheme.colors.background.primary;
-                                e.currentTarget.style.borderColor = dadmsTheme.colors.border.default;
-                            }}
-                        >
-                            <div style={{
-                                fontSize: dadmsTheme.typography.fontSize.sm,
-                                fontWeight: dadmsTheme.typography.fontWeight.medium,
-                                color: dadmsTheme.colors.text.primary,
-                                marginBottom: '2px',
-                            }}>{rel.label}</div>
-                            <div style={{
-                                fontSize: dadmsTheme.typography.fontSize.xs,
-                                color: dadmsTheme.colors.text.secondary,
-                            }}>{rel.description}</div>
-                        </button>
-                    ))}
-                </div>
-            ))}
+                    return (
+                        <div key={group.title} style={{ padding: dadmsTheme.spacing.sm }}>
+                            <button
+                                onClick={() => toggleGroup(group.title)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    width: '100%',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: `${dadmsTheme.spacing.xs} 0`,
+                                    marginBottom: dadmsTheme.spacing.xs,
+                                }}
+                            >
+                                <h4 style={{
+                                    margin: 0,
+                                    fontSize: dadmsTheme.typography.fontSize.sm,
+                                    fontWeight: dadmsTheme.typography.fontWeight.medium,
+                                    color: isCustomGroup ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    {group.title} {isCustomGroup && group.relationships.length > 0 && `(${group.relationships.length})`}
+                                </h4>
+                                <span style={{
+                                    fontSize: dadmsTheme.typography.fontSize.sm,
+                                    color: dadmsTheme.colors.text.secondary,
+                                    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                    transition: dadmsTheme.transitions.fast,
+                                }}>
+                                    ▼
+                                </span>
+                            </button>
+
+                            {!isCollapsed && group.relationships.map((rel) => (
+                                <button
+                                    key={rel.type}
+                                    onClick={() => onSelect(rel.type)}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        padding: dadmsTheme.spacing.sm,
+                                        marginBottom: dadmsTheme.spacing.xs,
+                                        background: dadmsTheme.colors.background.primary,
+                                        border: `1px solid ${isCustomGroup ? dadmsTheme.colors.accent.secondary : dadmsTheme.colors.border.default}`,
+                                        borderRadius: dadmsTheme.borderRadius.md,
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: dadmsTheme.transitions.fast,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = dadmsTheme.colors.background.hover;
+                                        e.currentTarget.style.borderColor = isCustomGroup ? dadmsTheme.colors.accent.secondary : dadmsTheme.colors.accent.primary;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = dadmsTheme.colors.background.primary;
+                                        e.currentTarget.style.borderColor = isCustomGroup ? dadmsTheme.colors.accent.secondary : dadmsTheme.colors.border.default;
+                                    }}
+                                >
+                                    <div style={{
+                                        fontSize: dadmsTheme.typography.fontSize.sm,
+                                        fontWeight: dadmsTheme.typography.fontWeight.medium,
+                                        color: dadmsTheme.colors.text.primary,
+                                        marginBottom: '2px',
+                                    }}>{rel.label}</div>
+                                    <div style={{
+                                        fontSize: dadmsTheme.typography.fontSize.xs,
+                                        color: dadmsTheme.colors.text.secondary,
+                                    }}>{rel.description}</div>
+                                </button>
+                            ))}
+                        </div>
+                    );
+                })}
         </div>
     );
 };
@@ -296,6 +368,7 @@ const OntologyModelerInner: React.FC = () => {
         deleteNode,
         deleteEdge,
         updateNodePositions,
+        addCustomRelationshipType,
     } = useOntologyWorkspaceStore();
 
     const [nodes, setNodes, onNodesChange] = useNodesState(activeOntology?.nodes || []);

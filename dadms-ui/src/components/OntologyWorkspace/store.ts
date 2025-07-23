@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import {
+    DADMSRelationshipType,
     DualViewState,
     ExternalOntologyReference,
     OntologyEdge,
@@ -73,6 +74,11 @@ interface OntologyWorkspaceStore {
     updateOntologyCustomProperty: (key: string, value: any) => void;
     deleteOntologyCustomProperty: (key: string) => void;
 
+    // Custom Relationship Types
+    addCustomRelationshipType: (typeName: string) => void;
+    removeCustomRelationshipType: (typeName: string) => void;
+    getAvailableRelationshipTypes: () => DADMSRelationshipType[];
+
     // Save/Load Operations
     saveOntologyToFile: () => void;
     loadOntologyFromFile: (file: File) => Promise<void>;
@@ -103,6 +109,7 @@ const createMockWorkspace = (): WorkspaceState => ({
                 domain: 'Test Domain',
                 purpose: 'Learning and Development'
             },
+            customRelationshipTypes: ['manages_workflow', 'coordinates_with', 'escalates_to'],
             nodes: [
                 {
                     id: 'node-1',
@@ -269,6 +276,7 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         created: new Date().toISOString(),
                         lastModified: new Date().toISOString(),
                         customProperties: {},
+                        customRelationshipTypes: [],
                         nodes: [],
                         edges: [],
                         viewport: { x: 0, y: 0, zoom: 1 }
@@ -589,6 +597,49 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                     } : null
                 })),
 
+                // Custom Relationship Types
+                addCustomRelationshipType: (typeName) => {
+                    const { workspace, activeOntology } = get();
+                    if (workspace && activeOntology) {
+                        const updatedOntology = {
+                            ...activeOntology,
+                            customRelationshipTypes: [...activeOntology.customRelationshipTypes, typeName],
+                            lastModified: new Date().toISOString()
+                        };
+                        const updatedWorkspace = {
+                            ...workspace,
+                            ontologies: workspace.ontologies.map(ont =>
+                                ont.id === activeOntology.id ? updatedOntology : ont
+                            )
+                        };
+                        set({
+                            workspace: updatedWorkspace,
+                            activeOntology: updatedOntology
+                        });
+                    }
+                },
+                removeCustomRelationshipType: (typeName) => {
+                    const { workspace, activeOntology } = get();
+                    if (workspace && activeOntology) {
+                        const updatedOntology = {
+                            ...activeOntology,
+                            customRelationshipTypes: activeOntology.customRelationshipTypes.filter(t => t !== typeName),
+                            lastModified: new Date().toISOString()
+                        };
+                        const updatedWorkspace = {
+                            ...workspace,
+                            ontologies: workspace.ontologies.map(ont =>
+                                ont.id === activeOntology.id ? updatedOntology : ont
+                            )
+                        };
+                        set({
+                            workspace: updatedWorkspace,
+                            activeOntology: updatedOntology
+                        });
+                    }
+                },
+                getAvailableRelationshipTypes: () => get().activeOntology?.customRelationshipTypes || [],
+
                 // Save/Load Operations
                 saveOntologyToFile: () => {
                     const { workspace, activeOntology } = get();
@@ -645,6 +696,7 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                                 created: sourceOntology.created,
                                 lastModified: new Date().toISOString(),
                                 customProperties: { ...sourceOntology.customProperties },
+                                customRelationshipTypes: [...sourceOntology.customRelationshipTypes],
                                 nodes: [...sourceOntology.nodes],
                                 edges: [...sourceOntology.edges],
                                 viewport: { ...sourceOntology.viewport }

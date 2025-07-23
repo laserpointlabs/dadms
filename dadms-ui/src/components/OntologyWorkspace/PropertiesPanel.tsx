@@ -5,6 +5,294 @@ import { dadmsTheme } from '../../design-system/theme';
 import { Icon } from '../shared/Icon';
 import { useOntologyWorkspaceStore } from './store';
 
+// Custom Collapsible Relationship Dropdown Component
+interface CollapsibleRelationshipDropdownProps {
+    value: string;
+    onChange: (value: string) => void;
+    customRelationshipTypes: string[];
+    onAddCustomType: (type: string) => void;
+}
+
+const CollapsibleRelationshipDropdown: React.FC<CollapsibleRelationshipDropdownProps> = ({
+    value,
+    onChange,
+    customRelationshipTypes,
+    onAddCustomType
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['Basic OWL Relationships', 'Knowledge', 'Process', 'Generic']));
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Helper function to format custom relationship type labels
+    const formatCustomTypeLabel = (type: string) => {
+        return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    const relationshipGroups = [
+        {
+            title: "Custom Relationships",
+            isCustom: true,
+            relationships: customRelationshipTypes.map(type => ({
+                value: type,
+                label: formatCustomTypeLabel(type)
+            }))
+        },
+        {
+            title: "Decision Intelligence",
+            relationships: [
+                { value: 'influences', label: 'Influences' },
+                { value: 'depends_on', label: 'Depends On' },
+                { value: 'conflicts_with', label: 'Conflicts With' },
+                { value: 'supports_decision', label: 'Supports Decision' },
+                { value: 'requires_approval', label: 'Requires Approval' },
+            ]
+        },
+        {
+            title: "Organizational",
+            relationships: [
+                { value: 'has_stakeholder', label: 'Has Stakeholder' },
+                { value: 'has_responsibility', label: 'Has Responsibility' },
+                { value: 'has_authority', label: 'Has Authority' },
+                { value: 'manages', label: 'Manages' },
+                { value: 'reports_to', label: 'Reports To' },
+            ]
+        },
+        {
+            title: "Basic OWL Relationships",
+            relationships: [
+                { value: 'subclass_of', label: 'Subclass Of' },
+                { value: 'instance_of', label: 'Instance Of' },
+                { value: 'equivalent_to', label: 'Equivalent To' },
+            ]
+        },
+        {
+            title: "Knowledge",
+            relationships: [
+                { value: 'contains', label: 'Contains' },
+                { value: 'references', label: 'References' },
+                { value: 'implements', label: 'Implements' },
+                { value: 'validates', label: 'Validates' },
+                { value: 'contradicts', label: 'Contradicts' },
+            ]
+        },
+        {
+            title: "Process",
+            relationships: [
+                { value: 'triggers', label: 'Triggers' },
+                { value: 'follows', label: 'Follows' },
+                { value: 'uses_resource', label: 'Uses Resource' },
+                { value: 'produces_output', label: 'Produces Output' },
+            ]
+        },
+        {
+            title: "Generic",
+            relationships: [
+                { value: 'relates_to', label: 'Relates To' },
+                { value: 'has_property', label: 'Has Property' },
+                { value: 'part_of', label: 'Part Of' },
+            ]
+        }
+    ];
+
+    // Get the display label for the current value
+    const getDisplayLabel = (val: string) => {
+        // Check in all relationship groups
+        const allRelationships = [
+            ...relationshipGroups.flatMap(group => group.relationships),
+        ];
+        const found = allRelationships.find(rel => rel.value === val);
+        return found ? found.label : formatCustomTypeLabel(val);
+    };
+
+    const toggleGroup = (groupTitle: string) => {
+        const newCollapsed = new Set(collapsedGroups);
+        if (newCollapsed.has(groupTitle)) {
+            newCollapsed.delete(groupTitle);
+        } else {
+            newCollapsed.add(groupTitle);
+        }
+        setCollapsedGroups(newCollapsed);
+    };
+
+    const handleSelect = (newValue: string) => {
+        if (newValue === '__custom__') {
+            const customType = prompt('Enter custom relationship type:');
+            if (customType && customType.trim()) {
+                const formattedType = customType.trim().toLowerCase().replace(/\s+/g, '_');
+                onAddCustomType(formattedType);
+                onChange(formattedType);
+            }
+        } else {
+            onChange(newValue);
+        }
+        setIsOpen(false);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    const inputStyle = {
+        width: '100%',
+        padding: dadmsTheme.spacing.xs,
+        background: dadmsTheme.colors.background.primary,
+        border: `1px solid ${dadmsTheme.colors.border.default}`,
+        borderRadius: dadmsTheme.borderRadius.sm,
+        color: dadmsTheme.colors.text.primary,
+        fontSize: dadmsTheme.typography.fontSize.sm,
+        fontFamily: dadmsTheme.typography.fontFamily.default,
+    };
+
+    return (
+        <div ref={dropdownRef} style={{ position: 'relative' }}>
+            {/* Dropdown trigger */}
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    ...inputStyle,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    textAlign: 'left' as const,
+                }}
+            >
+                <span>{getDisplayLabel(value)}</span>
+                <span style={{
+                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: dadmsTheme.transitions.fast,
+                    fontSize: dadmsTheme.typography.fontSize.xs,
+                }}>
+                    ▼
+                </span>
+            </button>
+
+            {/* Dropdown menu */}
+            {isOpen && (
+                <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: dadmsTheme.colors.background.elevated,
+                    border: `1px solid ${dadmsTheme.colors.border.default}`,
+                    borderRadius: dadmsTheme.borderRadius.sm,
+                    boxShadow: dadmsTheme.shadows.lg,
+                    zIndex: 1000,
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    marginTop: '2px',
+                }}>
+                    {relationshipGroups
+                        .filter(group => !group.isCustom || group.relationships.length > 0)
+                        .map((group) => {
+                            const isCollapsed = collapsedGroups.has(group.title);
+                            const isCustomGroup = group.isCustom;
+
+                            return (
+                                <div key={group.title}>
+                                    <button
+                                        onClick={() => toggleGroup(group.title)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            background: dadmsTheme.colors.background.secondary,
+                                            border: 'none',
+                                            borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
+                                            cursor: 'pointer',
+                                            padding: dadmsTheme.spacing.xs,
+                                            fontSize: dadmsTheme.typography.fontSize.xs,
+                                            fontWeight: dadmsTheme.typography.fontWeight.medium,
+                                            color: isCustomGroup ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary,
+                                            textTransform: 'uppercase' as const,
+                                            letterSpacing: '0.5px',
+                                        }}
+                                    >
+                                        <span>
+                                            {group.title} {isCustomGroup && group.relationships.length > 0 && `(${group.relationships.length})`}
+                                        </span>
+                                        <span style={{
+                                            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                            transition: dadmsTheme.transitions.fast,
+                                        }}>
+                                            ▼
+                                        </span>
+                                    </button>
+
+                                    {!isCollapsed && group.relationships.map((rel) => (
+                                        <button
+                                            key={rel.value}
+                                            onClick={() => handleSelect(rel.value)}
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: dadmsTheme.spacing.xs,
+                                                background: value === rel.value ? dadmsTheme.colors.background.hover : dadmsTheme.colors.background.primary,
+                                                border: 'none',
+                                                borderBottom: `1px solid ${dadmsTheme.colors.border.light}`,
+                                                cursor: 'pointer',
+                                                textAlign: 'left' as const,
+                                                fontSize: dadmsTheme.typography.fontSize.sm,
+                                                color: dadmsTheme.colors.text.primary,
+                                                transition: dadmsTheme.transitions.fast,
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (value !== rel.value) {
+                                                    e.currentTarget.style.background = dadmsTheme.colors.background.hover;
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (value !== rel.value) {
+                                                    e.currentTarget.style.background = dadmsTheme.colors.background.primary;
+                                                }
+                                            }}
+                                        >
+                                            {rel.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        })}
+
+                    {/* Add Custom Relationship Option */}
+                    <button
+                        onClick={() => handleSelect('__custom__')}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: dadmsTheme.spacing.xs,
+                            background: dadmsTheme.colors.accent.primary,
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left' as const,
+                            fontSize: dadmsTheme.typography.fontSize.sm,
+                            color: dadmsTheme.colors.text.inverse,
+                            fontWeight: dadmsTheme.typography.fontWeight.medium,
+                        }}
+                    >
+                        + Add Custom Relationship...
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface PropertiesPanelProps {
     isOpen: boolean;
     onToggle: () => void;
@@ -21,6 +309,8 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         addOntologyCustomProperty,
         updateOntologyCustomProperty,
         deleteOntologyCustomProperty,
+        addCustomRelationshipType,
+        removeCustomRelationshipType,
     } = useOntologyWorkspaceStore();
 
     const [editingProperty, setEditingProperty] = useState<string | null>(null);
@@ -549,6 +839,78 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
                             </div>
 
                             <div style={sectionStyle}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                    <div style={sectionTitleStyle}>Custom Relationship Types</div>
+                                    <button
+                                        style={buttonStyle('primary', 'xs')}
+                                        onClick={() => {
+                                            const newType = prompt('Enter new custom relationship type:');
+                                            if (newType && newType.trim()) {
+                                                const formattedType = newType.trim().toLowerCase().replace(/\s+/g, '_');
+                                                if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
+                                                    addCustomRelationshipType(formattedType);
+                                                }
+                                            }
+                                        }}
+                                        title="Add new custom relationship type"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                {activeOntology?.customRelationshipTypes && activeOntology.customRelationshipTypes.length > 0 ? (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: dadmsTheme.spacing.xs }}>
+                                        {activeOntology.customRelationshipTypes.map((type) => (
+                                            <div
+                                                key={type}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    background: dadmsTheme.colors.background.secondary,
+                                                    border: `1px solid ${dadmsTheme.colors.border.default}`,
+                                                    borderRadius: dadmsTheme.borderRadius.sm,
+                                                    padding: dadmsTheme.spacing.xs,
+                                                    fontSize: dadmsTheme.typography.fontSize.xs
+                                                }}
+                                            >
+                                                <span style={{ marginRight: dadmsTheme.spacing.xs }}>
+                                                    {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                </span>
+                                                <button
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        color: dadmsTheme.colors.text.secondary,
+                                                        padding: '0',
+                                                        fontSize: dadmsTheme.typography.fontSize.sm,
+                                                        lineHeight: '1'
+                                                    }}
+                                                    onClick={() => {
+                                                        if (confirm(`Remove custom relationship type "${type}"?`)) {
+                                                            removeCustomRelationshipType(type);
+                                                        }
+                                                    }}
+                                                    title="Remove custom relationship type"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        textAlign: 'center' as const,
+                                        color: dadmsTheme.colors.text.muted,
+                                        fontSize: dadmsTheme.typography.fontSize.xs,
+                                        padding: dadmsTheme.spacing.md,
+                                        fontStyle: 'italic'
+                                    }}>
+                                        No custom relationship types defined. Click + to add one.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={sectionStyle}>
                                 <div style={sectionTitleStyle}>Statistics</div>
                                 <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, color: dadmsTheme.colors.text.secondary }}>
                                     <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
@@ -689,78 +1051,17 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
 
                                 <div style={fieldStyle}>
                                     <label style={labelStyle}>Relationship Type</label>
-                                    <select
-                                        style={inputStyle}
+                                    <CollapsibleRelationshipDropdown
                                         value={selectedEdge.data?.relationshipType || 'relates_to'}
-                                        onChange={(e) => {
-                                            if (e.target.value === '__custom__') {
-                                                const customType = prompt('Enter custom relationship type:');
-                                                if (customType && customType.trim()) {
-                                                    const formattedType = customType.trim().toLowerCase().replace(/\s+/g, '_');
-                                                    handleRelationshipTypeChange(formattedType);
-                                                }
-                                            } else {
-                                                handleRelationshipTypeChange(e.target.value);
+                                        onChange={handleRelationshipTypeChange}
+                                        customRelationshipTypes={activeOntology?.customRelationshipTypes || []}
+                                        onAddCustomType={(formattedType) => {
+                                            // Add to the ontology's custom relationship types if it doesn't exist
+                                            if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
+                                                addCustomRelationshipType(formattedType);
                                             }
                                         }}
-                                    >
-                                        <optgroup label="Basic OWL Relationships">
-                                            <option value="subclass_of">Subclass Of</option>
-                                            <option value="instance_of">Instance Of</option>
-                                            <option value="equivalent_to">Equivalent To</option>
-                                        </optgroup>
-
-                                        <optgroup label="Decision Intelligence">
-                                            <option value="influences">Influences</option>
-                                            <option value="depends_on">Depends On</option>
-                                            <option value="conflicts_with">Conflicts With</option>
-                                            <option value="supports_decision">Supports Decision</option>
-                                            <option value="requires_approval">Requires Approval</option>
-                                        </optgroup>
-
-                                        <optgroup label="Organizational">
-                                            <option value="has_stakeholder">Has Stakeholder</option>
-                                            <option value="has_responsibility">Has Responsibility</option>
-                                            <option value="has_authority">Has Authority</option>
-                                            <option value="manages">Manages</option>
-                                            <option value="reports_to">Reports To</option>
-                                        </optgroup>
-
-                                        <optgroup label="Knowledge">
-                                            <option value="contains">Contains</option>
-                                            <option value="references">References</option>
-                                            <option value="implements">Implements</option>
-                                            <option value="validates">Validates</option>
-                                            <option value="contradicts">Contradicts</option>
-                                        </optgroup>
-
-                                        <optgroup label="Process">
-                                            <option value="triggers">Triggers</option>
-                                            <option value="follows">Follows</option>
-                                            <option value="uses_resource">Uses Resource</option>
-                                            <option value="produces_output">Produces Output</option>
-                                        </optgroup>
-
-                                        <optgroup label="Generic">
-                                            <option value="relates_to">Relates To</option>
-                                            <option value="has_property">Has Property</option>
-                                            <option value="part_of">Part Of</option>
-                                        </optgroup>
-
-                                        {/* Show current custom relationship if not in predefined list */}
-                                        {selectedEdge.data?.relationshipType &&
-                                            !['subclass_of', 'instance_of', 'equivalent_to', 'influences', 'depends_on', 'conflicts_with', 'supports_decision', 'requires_approval', 'has_stakeholder', 'has_responsibility', 'has_authority', 'manages', 'reports_to', 'contains', 'references', 'implements', 'validates', 'contradicts', 'triggers', 'follows', 'uses_resource', 'produces_output', 'relates_to', 'has_property', 'part_of'].includes(selectedEdge.data.relationshipType) && (
-                                                <optgroup label="Custom">
-                                                    <option value={selectedEdge.data.relationshipType}>
-                                                        {selectedEdge.data.relationshipType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                    </option>
-                                                </optgroup>
-                                            )}
-
-                                        <optgroup label="Actions">
-                                            <option value="__custom__">+ Add Custom Relationship...</option>
-                                        </optgroup>
-                                    </select>
+                                    />
                                 </div>
 
                                 {/* Edge Metadata */}
