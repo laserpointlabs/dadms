@@ -918,6 +918,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModelerValidationResponse'
 
+  # UI State Management
+  /workspaces/{workspaceId}/modeler/ui/state:
+    get:
+      tags: [Modeler Canvas]
+      summary: Get modeler UI state
+      description: Retrieve current UI state including panel visibility, canvas settings, and layout preferences
+      operationId: getModelerUIState
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          description: UI state retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelerUIState'
+        '404':
+          description: Workspace not found
+        '500':
+          description: Internal server error
+
+  /workspaces/{workspaceId}/modeler/ui/preferences:
+    put:
+      tags: [Modeler Canvas]
+      summary: Update modeler UI preferences
+      description: Update UI preferences including panel visibility, canvas settings, and layout preferences
+      operationId: updateModelerUIPreferences
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelerUIPreferences'
+      responses:
+        '200':
+          description: UI preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelerUIPreferences'
+        '400':
+          description: Invalid preferences data
+        '404':
+          description: Workspace not found
+        '500':
+          description: Internal server error
+
   # Health & Monitoring
   /health:
     get:
@@ -3227,6 +3276,87 @@ components:
           format: date-time
         error_message:
           type: string
+
+    # UI State Management
+    ModelerUIState:
+      type: object
+      properties:
+        panels:
+          type: object
+          properties:
+            ontology_elements:
+              type: boolean
+              description: Visibility of ontology elements panel
+            properties:
+              type: boolean
+              description: Visibility of properties panel
+            references:
+              type: boolean
+              description: Visibility of references panel
+            explorer:
+              type: boolean
+              description: Visibility of ontology explorer panel
+        canvas:
+          type: object
+          properties:
+            minimap_visible:
+              type: boolean
+              description: Visibility of minimap
+            fullscreen_mode:
+              type: boolean
+              description: Fullscreen mode state
+            zoom_level:
+              type: number
+              description: Current zoom level
+            pan_position:
+              type: object
+              properties:
+                x:
+                  type: number
+                y:
+                  type: number
+        theme:
+          type: string
+          enum: [light, dark]
+          description: Current theme setting
+        layout:
+          type: object
+          properties:
+            sidebar_width:
+              type: number
+              description: Width of sidebar panels
+            toolbar_height:
+              type: number
+              description: Height of toolbar
+            panel_heights:
+              type: object
+              additionalProperties:
+                type: number
+              description: Heights of individual panels
+
+    ModelerUIPreferences:
+      type: object
+      properties:
+        auto_save:
+          type: boolean
+          description: Enable auto-save functionality
+        auto_validate:
+          type: boolean
+          description: Enable automatic validation
+        show_minimap:
+          type: boolean
+          description: Show minimap by default
+        compact_mode:
+          type: boolean
+          description: Use compact UI mode
+        animation_speed:
+          type: string
+          enum: [fast, normal, slow]
+          description: Animation speed preference
+        default_theme:
+          type: string
+          enum: [light, dark, system]
+          description: Default theme preference
 
   securitySchemes:
     BearerAuth:
