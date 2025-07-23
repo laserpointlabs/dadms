@@ -12,11 +12,13 @@ export default function BPMNWorkspacePage() {
     const [error, setError] = useState<string | null>(null);
 
     const handleModelerLoad = () => {
+        console.log('BPMN modeler loaded successfully');
         setIsLoading(false);
         setError(null);
     };
 
     const handleModelerError = (error: Error) => {
+        console.error('BPMN modeler error:', error);
         setIsLoading(false);
         setError(error.message);
     };

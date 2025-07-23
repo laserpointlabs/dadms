@@ -100,7 +100,35 @@ graph TD
   * Process-ontology linking for BPMN enhancement
   * Multi-project ontology inheritance and extension
 
-### 3.2. DADMS Ontology Types
+### 3.2. Enhanced UI Components (Latest Implementation)
+
+#### 3.2.1. Collapsible Panel System
+* **Collapsible Ontology Elements Panel:** Toggle visibility of ontology element types with smooth animations
+* **Collapsible Properties Panel:** Expandable/collapsible property editing interface
+* **Collapsible References Panel:** Toggle external ontology reference display
+* **Compact Header Design:** Reduced vertical heights and simplified text-based headers matching BPMN canvas style
+* **Theme-Consistent Styling:** All panels use DADMS theme variables for seamless light/dark mode switching
+
+#### 3.2.2. Ontology Explorer Panel
+* **Visual Ontology Browser:** Hierarchical display of ontology elements with proper icons
+* **VS Code Codicon Integration:** Consistent icon system using VS Code codicon names
+* **Theme-Aware Icons:** Icons automatically adapt to light/dark theme changes
+* **Smooth Transitions:** CSS transitions for panel expand/collapse animations
+* **Compact Layout:** Reduced padding and toolbar heights for efficient space usage
+
+#### 3.2.3. Advanced Canvas Controls
+* **Minimap Toggle:** Show/hide minimap for large ontology navigation
+* **Fullscreen Mode:** Toggle fullscreen mode with fixed positioning and full viewport usage
+* **Properties/References Toggle:** Icon-only toggle buttons moved from canvas header to toolbar
+* **Enhanced Toolbar:** Streamlined toolbar with essential controls and improved UX
+
+#### 3.2.4. BPMN Workspace Integration
+* **Improved Loading Performance:** Enhanced iframe loading with retry logic and timeout handling
+* **Theme Synchronization:** Robust theme message passing between parent and iframe
+* **Error Handling:** Comprehensive error handling for iframe loading failures
+* **Loading States:** Better user feedback during BPMN modeler initialization
+
+### 3.3. DADMS Ontology Types
 
 * **Decision Entities:** Decisions, Alternatives, Criteria, Constraints, Outcomes
 * **Stakeholder Entities:** Personas, Teams, Roles, Responsibilities, Authority Levels
@@ -109,7 +137,7 @@ graph TD
 * **Context Entities:** Scenarios, Environments, Time Periods, Organizational Contexts
 * **Relationship Types:** Influences, DependsOn, ConflictsWith, SupportsDecision, RequiresApproval
 
-#### 3.2.1. DADMS Ontology Type Hierarchy
+#### 3.3.1. DADMS Ontology Type Hierarchy
 
 ```mermaid
 graph TB
@@ -178,7 +206,7 @@ graph TB
     SCEN -.->|withinContext| ORG
 ```
 
-### 3.3. AI-Assisted Ontology Generation (AADS Integration)
+### 3.4. AI-Assisted Ontology Generation (AADS Integration)
 
 * **Natural Language Ontology Creation:** Users can request ontologies using natural language via AADS integration
 * **AI-Generated OWL Injection:** AADS generates complete OWL ontologies and injects them directly into the modeler canvas
@@ -187,7 +215,7 @@ graph TB
 * **Domain-Specific Templates:** AAS can generate ontologies for specific decision intelligence domains (risk assessment, stakeholder analysis, process optimization)
 * **Validation and Reasoning:** AI-generated ontologies automatically validated and reasoned upon injection
 
-### 3.4. Dual-View Editor (Diagram/OWL Mode)
+### 3.5. Dual-View Editor (Diagram/OWL Mode)
 
 * **Visual Diagram Mode:** Primary React Flow canvas for interactive ontology modeling and visualization
 * **OWL Text Mode:** Switchable text editor showing complete OWL/RDF/Turtle representation of the ontology
@@ -197,7 +225,7 @@ graph TB
 * **Format Selection:** Support for multiple serialization formats (OWL/XML, RDF/XML, Turtle, N-Triples, JSON-LD)
 * **Export Compatibility:** Generated OWL text fully compatible with Protégé, TopBraid, and other ontology tools
 
-### 3.5. Ontology Import and Reference Management
+### 3.6. Ontology Import and Reference Management
 
 * **External Ontology Discovery:** Browse and search available ontologies from DADMS registry, external repositories, and standard ontology libraries
 * **Reference Mode (Default):** External ontologies appear as linked nodes in the diagram with distinct visual styling (dashed borders, different colors)
@@ -208,7 +236,7 @@ graph TB
 * **Namespace Management:** Automatic namespace handling to prevent URI conflicts between imported and local ontologies
 * **Impact Analysis:** Show potential impacts before importing external ontology elements
 
-#### 3.5.1. Ontology Import Workflow
+#### 3.6.1. Ontology Import Workflow
 
 ```mermaid
 graph TD
@@ -238,14 +266,16 @@ graph TD
     style G fill:#fff3e0
 ```
 
-### 3.6. DADMS Theme Integration
+### 3.7. DADMS Theme Integration
 
 * **Seamless UI:** Full integration with DADMS design system and theme switching
 * **Responsive Design:** Optimized for desktop, tablet, and mobile decision-making scenarios
 * **Accessibility:** WCAG 2.1 AA compliance for inclusive decision support
 * **Customization:** Role-based UI customization for different user types (analysts, executives, SMEs)
+* **Compact Layout:** Reduced vertical heights and efficient space utilization
+* **Icon System:** VS Code codicon integration for consistent visual language
 
-#### 3.6.1. User Interaction Flow
+#### 3.7.1. User Interaction Flow
 
 ```mermaid
 graph TD
@@ -271,6 +301,9 @@ graph TD
         DUAL_VIEW["Switch Diagram/OWL View"]
         AI_ASSIST["Request AAS Assistance"]
         VALIDATE["Validate & Reason"]
+        TOGGLE_PANELS["Toggle Collapsible Panels"]
+        MINIMAP["Toggle Minimap"]
+        FULLSCREEN["Toggle Fullscreen Mode"]
     end
     
     MODELING --> ADD_NODE
@@ -281,6 +314,9 @@ graph TD
     MODELING --> DUAL_VIEW
     MODELING --> AI_ASSIST
     MODELING --> VALIDATE
+    MODELING --> TOGGLE_PANELS
+    MODELING --> MINIMAP
+    MODELING --> FULLSCREEN
     
     ADD_NODE --> SAVE_DECISION{"Save Changes?"}
     ADD_REL --> SAVE_DECISION
@@ -291,6 +327,9 @@ graph TD
     AAS_INJECT --> SAVE_DECISION
     CONFIRM --> SAVE_DECISION
     VALIDATE --> SAVE_DECISION
+    TOGGLE_PANELS --> SAVE_DECISION
+    MINIMAP --> SAVE_DECISION
+    FULLSCREEN --> SAVE_DECISION
     
     SAVE_DECISION -->|Yes| PERSIST["Persist to Neo4j via Workspace"]
     SAVE_DECISION -->|No| MODELING
@@ -308,9 +347,12 @@ graph TD
     style AI_ASSIST fill:#e3f2fd
     style DUAL_VIEW fill:#e1f5fe
     style VALIDATE fill:#f3e5f5
+    style TOGGLE_PANELS fill:#e8f5e8
+    style MINIMAP fill:#fce4ec
+    style FULLSCREEN fill:#f1f8e9
 ```
 
-#### 3.6.2. AAS-Assisted Ontology Generation Workflow
+#### 3.7.2. AAS-Assisted Ontology Generation Workflow
 
 ```mermaid
 graph TD
@@ -431,6 +473,8 @@ graph TB
 * **POST /workspaces/{workspaceId}/modeler/import/selective** - Import specific elements with confirmation
 * **GET /workspaces/{workspaceId}/modeler/examples/search** - Search example ontology library for patterns
 * **WebSocket /ws/workspaces/{workspaceId}/modeler** - Real-time collaborative modeling updates
+* **PUT /workspaces/{workspaceId}/modeler/ui/preferences** - Update UI preferences (panel visibility, minimap, fullscreen)
+* **GET /workspaces/{workspaceId}/modeler/ui/state** - Get current UI state for persistence
 
 ### 4.3. Example Ontology Library Integration
 
@@ -455,6 +499,12 @@ graph TB
 - [x] Neo4j integration via workspace service
 - [x] Project Service integration via workspace
 - [x] Basic collaboration features through workspace WebSocket
+- [x] Collapsible panel system with smooth animations
+- [x] Ontology explorer panel with VS Code codicon integration
+- [x] Compact UI design with reduced vertical heights
+- [x] Minimap toggle and fullscreen mode
+- [x] Enhanced toolbar with icon-only controls
+- [x] Improved BPMN workspace loading performance
 - [ ] Dual-view editor (diagram/OWL text mode)
 - [ ] External ontology reference system (visual only)
 - [ ] Basic import preview functionality
@@ -491,28 +541,34 @@ gantt
     Core Node Types             :done, nodes, 2024-01-08, 2024-01-14
     Neo4j Integration via WS    :done, neo4j, 2024-01-15, 2024-01-21
     Project Service via WS      :done, project, 2024-01-22, 2024-01-28
-    Basic Collaboration via WS  :active, collab1, 2024-01-29, 2024-02-04
-    Dual-View Editor            :dualview, 2024-02-05, 2024-02-11
-    Reference System            :reference, 2024-02-12, 2024-02-18
+    Basic Collaboration via WS  :done, collab1, 2024-01-29, 2024-02-04
+    Collapsible Panel System    :done, panels, 2024-02-05, 2024-02-11
+    Ontology Explorer Panel     :done, explorer, 2024-02-12, 2024-02-18
+    Compact UI Design           :done, compact, 2024-02-19, 2024-02-25
+    Minimap & Fullscreen        :done, controls, 2024-02-26, 2024-03-04
+    Enhanced Toolbar            :done, toolbar, 2024-03-05, 2024-03-11
+    BPMN Loading Improvements   :done, bpmn, 2024-03-12, 2024-03-18
+    Dual-View Editor            :dualview, 2024-03-19, 2024-03-25
+    Reference System            :reference, 2024-03-26, 2024-04-01
     
     section Phase 2 Enhanced Modeler
-    AADS Integration            :aads, 2024-02-19, 2024-02-25
-    Example Ontology Library    :examples, 2024-02-26, 2024-03-04
-    Fuseki SPARQL via WS        :fuseki, 2024-03-05, 2024-03-11
-    LLM Enhanced Integration    :llm, 2024-03-12, 2024-03-18
-    Knowledge Service via WS    :knowledge, 2024-03-19, 2024-03-25
-    Context Manager via WS      :context, 2024-03-26, 2024-04-01
-    Advanced Validation via WS  :validation, 2024-04-02, 2024-04-08
-    Full Import Workflows       :import, 2024-04-09, 2024-04-15
+    AADS Integration            :aads, 2024-04-02, 2024-04-08
+    Example Ontology Library    :examples, 2024-04-09, 2024-04-15
+    Fuseki SPARQL via WS        :fuseki, 2024-04-16, 2024-04-22
+    LLM Enhanced Integration    :llm, 2024-04-23, 2024-04-29
+    Knowledge Service via WS    :knowledge, 2024-04-30, 2024-05-06
+    Context Manager via WS      :context, 2024-05-07, 2024-05-13
+    Advanced Validation via WS  :validation, 2024-05-14, 2024-05-20
+    Full Import Workflows       :import, 2024-05-21, 2024-05-27
     
     section Phase 3 Enterprise Modeler
-    Advanced AAS Training       :aas_training, 2024-04-16, 2024-04-22
-    Semantic Search Library     :search, 2024-04-23, 2024-04-29
-    Enterprise Registry via WS  :registry, 2024-04-30, 2024-05-06
-    Advanced Analytics via WS   :analytics, 2024-05-07, 2024-05-13
-    External Integrations via WS :external, 2024-05-14, 2024-05-20
-    Performance Optimization    :perf, 2024-05-21, 2024-05-27
-    Cross-Ontology Reasoning    :reasoning, 2024-05-28, 2024-06-03
+    Advanced AAS Training       :aas_training, 2024-05-28, 2024-06-03
+    Semantic Search Library     :search, 2024-06-04, 2024-06-10
+    Enterprise Registry via WS  :registry, 2024-06-11, 2024-06-17
+    Advanced Analytics via WS   :analytics, 2024-06-18, 2024-06-24
+    External Integrations via WS :external, 2024-06-25, 2024-07-01
+    Performance Optimization    :perf, 2024-07-02, 2024-07-08
+    Cross-Ontology Reasoning    :reasoning, 2024-07-09, 2024-07-15
 ```
 
 ---
@@ -524,18 +580,24 @@ gantt
 * **Graph Query Response:** < 2 seconds for semantic relationship queries through workspace
 * **Collaboration Latency:** < 500ms for real-time collaborative edits in modeler
 * **Integration Response:** < 3 seconds for cross-service semantic context retrieval
+* **UI Responsiveness:** < 100ms for panel toggle animations and theme switching
+* **BPMN Loading Time:** < 5 seconds for BPMN workspace initialization (target optimization)
 
 ### 6.2. Modeler User Adoption Metrics
 * **Decision Context Coverage:** >80% of decisions have associated ontological context created in modeler
 * **Stakeholder Network Completeness:** >90% of key stakeholders modeled with relationships
 * **Reuse Rate:** >60% of ontological elements reused across projects through modeler
 * **User Engagement:** >70% of decision analysts actively using ontology modeler
+* **Panel Usage:** >85% of users utilize collapsible panels for workspace organization
+* **Fullscreen Adoption:** >60% of users utilize fullscreen mode for complex modeling sessions
 
 ### 6.3. Modeler Quality Metrics
 * **Semantic Consistency:** >95% of ontologies created in modeler pass consistency validation
 * **Relationship Completeness:** <5% missing critical relationships in decision contexts
 * **Knowledge Integration:** >80% of project documents linked to ontological concepts via modeler
 * **Decision Support Effectiveness:** >75% improvement in decision quality metrics
+* **UI Accessibility:** 100% WCAG 2.1 AA compliance for inclusive decision support
+* **Theme Consistency:** 100% theme variable usage across all UI components
 
 ### 6.4. AAS Integration Metrics (Modeler-Specific)
 * **AI Generation Success Rate:** >90% of AAS-generated ontologies in modeler validate successfully
@@ -553,4 +615,4 @@ gantt
 
 ---
 
-**This specification provides the comprehensive requirements for implementing the Ontology Modeler as a core visual component within the DADMS Ontology Workspace Service, with specific focus on decision intelligence modeling, AAS integration, and seamless operation within the broader workspace ecosystem.**
+**This specification provides the comprehensive requirements for implementing the Ontology Modeler as a core visual component within the DADMS Ontology Workspace Service, with specific focus on decision intelligence modeling, AAS integration, and seamless operation within the broader workspace ecosystem. The latest implementation includes enhanced UI components with collapsible panels, compact design, advanced canvas controls, and improved BPMN workspace integration.**
