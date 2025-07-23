@@ -512,6 +512,34 @@ const OntologyModelerInner: React.FC = () => {
         [setSelectedNodes, setSelectedEdges],
     );
 
+    // Handle node deletion
+    const onNodesDelete = useCallback(
+        (deletedNodes: Node[]) => {
+            deletedNodes.forEach(node => {
+                deleteNode(node.id);
+                console.log('Deleted node:', node.id);
+            });
+            // Clear selection after deletion
+            setSelectedNodes([]);
+            setSelectedEdges([]);
+        },
+        [deleteNode, setSelectedNodes, setSelectedEdges],
+    );
+
+    // Handle edge deletion
+    const onEdgesDelete = useCallback(
+        (deletedEdges: Edge[]) => {
+            deletedEdges.forEach(edge => {
+                deleteEdge(edge.id);
+                console.log('Deleted edge:', edge.id);
+            });
+            // Clear selection after deletion
+            setSelectedNodes([]);
+            setSelectedEdges([]);
+        },
+        [deleteEdge, setSelectedNodes, setSelectedEdges],
+    );
+
     // Custom styles for DADMS theme
     const reactFlowStyle = {
         background: dadmsTheme.colors.background.primary,
@@ -545,6 +573,8 @@ const OntologyModelerInner: React.FC = () => {
                 onEdgeClick={onEdgeClick}
                 onNodeDragStop={onNodeDragStop}
                 onPaneClick={onPaneClick}
+                onNodesDelete={onNodesDelete}
+                onEdgesDelete={onEdgesDelete}
                 nodeTypes={nodeTypes as NodeTypes}
                 edgeTypes={edgeTypes as EdgeTypes}
                 style={reactFlowStyle}
