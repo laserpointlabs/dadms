@@ -111,26 +111,97 @@ const SimpleOntologyNode: React.FC<SimpleOntologyNodeProps> = ({ data, selected 
 
     return (
         <div style={nodeStyle}>
-            {/* Connection handles */}
+            {/* Connection handles - Multiple attachment points */}
+            {/* Top handles */}
             <Handle
                 type="target"
                 position={Position.Top}
+                id="top"
                 style={{
                     background: nodeColor,
                     border: `2px solid ${dadmsTheme.colors.background.primary}`,
-                    width: '10px',
-                    height: '10px',
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
                 }}
+                className="react-flow__handle"
+            />
+
+            {/* Right handles */}
+            <Handle
+                type="target"
+                position={Position.Right}
+                id="right-target"
+                style={{
+                    background: nodeColor,
+                    border: `2px solid ${dadmsTheme.colors.background.primary}`,
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
+                }}
+                className="react-flow__handle"
             />
             <Handle
                 type="source"
-                position={Position.Bottom}
+                position={Position.Right}
+                id="right-source"
                 style={{
                     background: nodeColor,
                     border: `2px solid ${dadmsTheme.colors.background.primary}`,
-                    width: '10px',
-                    height: '10px',
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
                 }}
+                className="react-flow__handle"
+            />
+
+            {/* Bottom handles */}
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                id="bottom"
+                style={{
+                    background: nodeColor,
+                    border: `2px solid ${dadmsTheme.colors.background.primary}`,
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
+                }}
+                className="react-flow__handle"
+            />
+
+            {/* Left handles */}
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="left-target"
+                style={{
+                    background: nodeColor,
+                    border: `2px solid ${dadmsTheme.colors.background.primary}`,
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
+                }}
+                className="react-flow__handle"
+            />
+            <Handle
+                type="source"
+                position={Position.Left}
+                id="left-source"
+                style={{
+                    background: nodeColor,
+                    border: `2px solid ${dadmsTheme.colors.background.primary}`,
+                    width: '12px',
+                    height: '12px',
+                    opacity: 0.8,
+                    transition: 'all 0.2s ease',
+                }}
+                className="react-flow__handle"
             />
 
             {/* Node header */}

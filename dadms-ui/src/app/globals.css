@@ -867,3 +867,47 @@ html {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 }
+
+/* React Flow Handle Improvements */
+.react-flow__handle {
+    transition: all 0.2s ease !important;
+}
+
+.react-flow__handle:hover {
+    transform: scale(1.2) !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6) !important;
+}
+
+.react-flow__handle.connecting {
+    transform: scale(1.3) !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.8) !important;
+}
+
+/* React Flow Edge Improvements */
+.react-flow__edge-path {
+    transition: stroke-width 0.2s ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+    stroke-width: 3px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 6px rgba(0, 123, 255, 0.6));
+}
+
+/* React Flow Node Improvements */
+.react-flow__node {
+    transition: all 0.2s ease;
+}
+
+.react-flow__node:hover {
+    z-index: 10;
+}
+
+.react-flow__node.selected {
+    z-index: 10;
+}
