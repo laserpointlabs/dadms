@@ -74,6 +74,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
         // Initialize theme from localStorage or system preference on first load
         const initialTheme = getInitialTheme();
+
         if (initialTheme !== theme) {
             setThemeState(initialTheme);
         }
@@ -82,6 +83,28 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         applyTheme(initialTheme);
         setMounted(true);
     }, []);
+
+    // Apply theme when theme state changes
+    useEffect(() => {
+        if (mounted) {
+            const applyTheme = (themeToApply: ThemeMode) => {
+                const root = document.documentElement;
+
+                // Remove any existing theme classes/attributes
+                root.classList.remove('light', 'dark');
+                root.removeAttribute('data-theme');
+
+                // Apply new theme
+                root.setAttribute('data-theme', themeToApply);
+                root.classList.add(themeToApply);
+
+                // Save to localStorage
+                localStorage.setItem('dadms-theme', themeToApply);
+            };
+
+            applyTheme(theme);
+        }
+    }, [theme, mounted]);
 
 
 
