@@ -5,48 +5,48 @@
 
 export const dadmsTheme = {
     colors: {
-        // Background colors matching VS Code dark theme
+        // Background colors using CSS variables that respond to theme changes
         background: {
-            primary: '#1e1e1e',      // Editor background
-            secondary: '#252526',    // Sidebar background
-            tertiary: '#333333',     // Activity bar background
-            elevated: '#2d2d30',     // Elevated surfaces (modals, dropdowns)
-            hover: '#2a2d2e',        // Hover state
-            selection: '#264f78',    // Selection background
+            primary: 'var(--theme-bg-primary)',      // Editor background
+            secondary: 'var(--theme-bg-secondary)',    // Sidebar background
+            tertiary: 'var(--theme-bg-tertiary)',     // Activity bar background
+            elevated: 'var(--theme-bg-elevated)',     // Elevated surfaces (modals, dropdowns)
+            hover: 'var(--theme-bg-hover)',        // Hover state
+            selection: 'var(--theme-bg-selection)',    // Selection background
         },
 
         // Text colors
         text: {
-            primary: '#d4d4d4',      // Primary text
-            secondary: '#cccccc',    // Secondary text
-            muted: '#6e7681',        // Muted/disabled text
-            inverse: '#1e1e1e',      // Text on light backgrounds
-            link: '#3794ff',         // Link color
+            primary: 'var(--theme-text-primary)',      // Primary text
+            secondary: 'var(--theme-text-secondary)',    // Secondary text
+            muted: 'var(--theme-text-muted)',        // Muted/disabled text
+            inverse: 'var(--theme-text-inverse)',      // Text on light backgrounds
+            link: 'var(--theme-text-link)',         // Link color
         },
 
         // Accent colors
         accent: {
-            primary: '#007acc',      // VS Code blue
-            secondary: '#3794ff',    // Lighter blue
-            success: '#4caf50',      // Green
-            warning: '#ff9800',      // Orange
-            error: '#f44336',        // Red
-            info: '#2196f3',         // Info blue
+            primary: 'var(--theme-accent-primary)',      // VS Code blue
+            secondary: 'var(--theme-accent-secondary)',    // Lighter blue
+            success: 'var(--theme-accent-success)',      // Green
+            warning: 'var(--theme-accent-warning)',      // Orange
+            error: 'var(--theme-accent-error)',        // Red
+            info: 'var(--theme-accent-info)',         // Info blue
         },
 
         // Border colors
         border: {
-            default: '#2d2d30',      // Default border
-            light: '#464647',        // Light border
-            focus: '#007acc',        // Focus border
+            default: 'var(--theme-border)',      // Default border
+            light: 'var(--theme-border-light)',        // Light border
+            focus: 'var(--theme-border-focus)',        // Focus border
         },
 
         // Status colors
         status: {
-            active: '#4caf50',
-            inactive: '#6e7681',
-            pending: '#ff9800',
-            error: '#f44336',
+            active: 'var(--theme-status-active)',
+            inactive: 'var(--theme-status-inactive)',
+            pending: 'var(--theme-status-pending)',
+            error: 'var(--theme-status-error)',
         }
     },
 
