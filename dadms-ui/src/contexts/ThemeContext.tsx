@@ -52,7 +52,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         return systemTheme;
     };
 
-    const [theme, setThemeState] = useState<ThemeMode>(getInitialTheme);
+    const [theme, setThemeState] = useState<ThemeMode>(defaultTheme); // Start with default to avoid hydration issues
     const [mounted, setMounted] = useState(false);
 
     // Apply theme immediately on mount and when theme changes
@@ -72,20 +72,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
             localStorage.setItem('dadms-theme', themeToApply);
         };
 
-        // Apply theme immediately
-        applyTheme(theme);
-        setMounted(true);
-    }, [theme]);
-
-    // Initialize theme from localStorage or system preference on first load
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const initialTheme = getInitialTheme();
-            if (initialTheme !== theme) {
-                setThemeState(initialTheme);
-            }
+        // Initialize theme from localStorage or system preference on first load
+        const initialTheme = getInitialTheme();
+        if (initialTheme !== theme) {
+            setThemeState(initialTheme);
         }
+
+        // Apply theme immediately
+        applyTheme(initialTheme);
+        setMounted(true);
     }, []);
+
+
 
     // Listen for system theme changes
     useEffect(() => {
@@ -112,15 +110,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     };
 
     const value: ThemeContextType = {
-        theme,
+        theme: mounted ? theme : defaultTheme, // Use default theme during SSR
         toggleTheme,
         setTheme,
     };
-
-    // Prevent hydration mismatch by not rendering until mounted
-    if (!mounted) {
-        return <div style={{ visibility: 'hidden' }}>{children}</div>;
-    }
 
     return (
         <ThemeContext.Provider value={value}>

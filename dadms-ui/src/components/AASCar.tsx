@@ -19,9 +19,12 @@ export default function AASCar() {
     const { theme } = useTheme();
     const { isDocked: contextIsDocked, dockedHeight: contextDockedHeight, setIsDocked: setContextIsDocked, setDockedHeight: setContextDockedHeight } = useAgentAssistant();
 
+    // Add hydration state to prevent SSR/client mismatch
+    const [isHydrated, setIsHydrated] = useState(false);
+
     // Initialize local state from context (which loads from localStorage)
-    const [visible, setVisible] = useState(!contextIsDocked); // If docked, don't show floating
-    const [height, setHeight] = useState(contextDockedHeight || 280);
+    const [visible, setVisible] = useState(false); // Start hidden to avoid hydration issues
+    const [height, setHeight] = useState(280);
     const [position, setPosition] = useState({ x: 400, y: 100 });
     const [activeTab, setActiveTab] = useState(TAB_AAS);
     const [aasInput, setAasInput] = useState("");
@@ -30,7 +33,7 @@ export default function AASCar() {
     const conversationRef = useRef<HTMLTextAreaElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isDetached, setIsDetached] = useState(false);
-    const [isDocked, setIsDocked] = useState(contextIsDocked);
+    const [isDocked, setIsDocked] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     const detachedWindowRef = useRef<Window | null>(null);
     const dragRef = useRef<HTMLDivElement>(null);
@@ -39,6 +42,14 @@ export default function AASCar() {
     const startHeight = useRef<number>(height);
     const startPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const startMouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    // Handle hydration - set initial state after client-side mount
+    useEffect(() => {
+        setIsHydrated(true);
+        setIsDocked(contextIsDocked);
+        setHeight(contextDockedHeight || 280);
+        setVisible(!contextIsDocked);
+    }, [contextIsDocked, contextDockedHeight]);
 
     // Initialize position after mount to avoid hydration issues
     useEffect(() => {
@@ -756,6 +767,11 @@ export default function AASCar() {
             });
         }
     };
+
+    // Don't render anything until hydrated to prevent SSR/client mismatch
+    if (!isHydrated) {
+        return null;
+    }
 
     // Show control buttons when not visible
     if (!visible && !isDetached && !isDocked) {

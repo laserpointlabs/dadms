@@ -75,8 +75,8 @@ export const AgentAssistantProvider: React.FC<AgentAssistantProviderProps> = ({ 
     };
 
     const value: AgentAssistantContextType = {
-        isDocked,
-        dockedHeight,
+        isDocked: mounted ? isDocked : false,
+        dockedHeight: mounted ? dockedHeight : 0,
         setIsDocked,
         setDockedHeight,
     };
