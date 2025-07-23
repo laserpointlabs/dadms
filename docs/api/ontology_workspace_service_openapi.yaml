@@ -41,6 +41,16 @@ tags:
     description: Ontology management within workspaces
   - name: Visual Editing
     description: Visual layout and styling operations
+  - name: Modeler Canvas
+    description: Ontology Modeler visual canvas operations
+  - name: Dual-View Editor
+    description: Diagram/OWL text dual-view editing
+  - name: AAS Integration
+    description: AI-Assisted ontology generation via AADS
+  - name: Example Library
+    description: Curated example ontology library operations
+  - name: Import/Reference
+    description: External ontology import and reference management
   - name: Validation
     description: Ontology validation and quality checking
   - name: Collaboration
@@ -614,6 +624,299 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UsageAnalytics'
+
+  # Ontology Modeler Component Endpoints
+  /workspaces/{workspaceId}/modeler/canvas:
+    get:
+      tags: [Modeler Canvas]
+      summary: Get modeler canvas state
+      description: Retrieve the current state of the modeler canvas including node positions and layout
+      operationId: getModelerCanvas
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: ontologyId
+          in: query
+          description: Filter canvas for specific ontology
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Canvas state retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelerCanvasState'
+    put:
+      tags: [Modeler Canvas]
+      summary: Update modeler canvas state
+      description: Update the modeler canvas with new node positions and connections
+      operationId: updateModelerCanvas
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CanvasUpdateRequest'
+      responses:
+        '200':
+          description: Canvas updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasUpdateResponse'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/dual-view:
+    get:
+      tags: [Dual-View Editor]
+      summary: Get dual-view state
+      description: Retrieve current dual-view editor state and mode
+      operationId: getDualViewState
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      responses:
+        '200':
+          description: Dual-view state retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DualViewState'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/dual-view/mode:
+    put:
+      tags: [Dual-View Editor]
+      summary: Switch view mode
+      description: Switch between diagram and OWL text editing modes
+      operationId: switchDualViewMode
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DualViewModeRequest'
+      responses:
+        '200':
+          description: View mode switched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DualViewModeResponse'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/owl-text:
+    get:
+      tags: [Dual-View Editor]
+      summary: Get OWL text representation
+      description: Retrieve the OWL text representation of the ontology
+      operationId: getOWLText
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+        - name: format
+          in: query
+          description: OWL serialization format
+          schema:
+            type: string
+            enum: [turtle, rdf_xml, owl_xml, n3, json_ld]
+            default: turtle
+      responses:
+        '200':
+          description: OWL text retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OWLTextResponse'
+    put:
+      tags: [Dual-View Editor]
+      summary: Update via OWL text
+      description: Update the ontology by providing OWL text content
+      operationId: updateOWLText
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OWLTextUpdateRequest'
+      responses:
+        '200':
+          description: Ontology updated via OWL text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OWLTextUpdateResponse'
+
+  /workspaces/{workspaceId}/modeler/generate:
+    post:
+      tags: [AAS Integration]
+      summary: Generate ontology via AAS
+      description: Request AADS to generate an ontology from natural language description
+      operationId: generateOntologyAAS
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASGenerationRequest'
+      responses:
+        '200':
+          description: Ontology generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASGenerationResponse'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/aas-refine:
+    put:
+      tags: [AAS Integration]
+      summary: Refine ontology via AAS
+      description: Request AAS to refine an existing ontology based on feedback
+      operationId: refineOntologyAAS
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - $ref: '#/components/parameters/OntologyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AASRefinementRequest'
+      responses:
+        '200':
+          description: Ontology refined successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AASRefinementResponse'
+
+  /workspaces/{workspaceId}/modeler/examples/search:
+    get:
+      tags: [Example Library]
+      summary: Search example library
+      description: Search the curated example ontology library
+      operationId: searchExampleLibrary
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: query
+          in: query
+          description: Search query string
+          schema:
+            type: string
+        - name: domain
+          in: query
+          description: Domain filter
+          schema:
+            type: string
+        - name: similarity_threshold
+          in: query
+          description: Minimum similarity score
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+      responses:
+        '200':
+          description: Examples found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleSearchResponse'
+
+  /workspaces/{workspaceId}/modeler/examples/semantic-search:
+    post:
+      tags: [Example Library]
+      summary: Semantic search examples
+      description: Perform semantic search using vector similarity
+      operationId: semanticSearchExamples
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SemanticSearchRequest'
+      responses:
+        '200':
+          description: Semantic search completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SemanticSearchResponse'
+
+  /workspaces/{workspaceId}/modeler/import/reference:
+    post:
+      tags: [Import/Reference]
+      summary: Add ontology reference
+      description: Add external ontology as reference (non-importing)
+      operationId: addOntologyReference
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OntologyReferenceRequest'
+      responses:
+        '200':
+          description: Reference added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OntologyReferenceResponse'
+
+  /workspaces/{workspaceId}/modeler/import/selective:
+    post:
+      tags: [Import/Reference]
+      summary: Selective element import
+      description: Import specific elements with user confirmation
+      operationId: selectiveElementImport
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectiveImportRequest'
+      responses:
+        '200':
+          description: Import preview or completion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectiveImportResponse'
+
+  /workspaces/{workspaceId}/modeler/validate:
+    post:
+      tags: [Validation]
+      summary: Validate modeler state
+      description: Validate current modeler state including ontology and layout
+      operationId: validateModelerState
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelerValidationRequest'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelerValidationResponse'
 
   # Health & Monitoring
   /health:
@@ -1792,6 +2095,853 @@ components:
         config:
           type: object
           additionalProperties: true
+
+    # Ontology Modeler Component Schemas
+    ModelerCanvasState:
+      type: object
+      required:
+        - canvas_state
+        - workspace_id
+        - last_updated
+      properties:
+        canvas_state:
+          type: object
+          properties:
+            viewport:
+              type: object
+              properties:
+                x:
+                  type: number
+                y:
+                  type: number
+                zoom:
+                  type: number
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasEdge'
+            layout_metadata:
+              type: object
+        workspace_id:
+          type: string
+          format: uuid
+        last_updated:
+          type: string
+          format: date-time
+
+    CanvasNode:
+      type: object
+      required:
+        - id
+        - type
+        - position
+        - data
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [decision_entity, stakeholder_entity, process_entity, knowledge_entity, context_entity]
+        position:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        data:
+          type: object
+          properties:
+            label:
+              type: string
+            entity_type:
+              type: string
+            properties:
+              type: object
+              additionalProperties: true
+        style:
+          type: object
+          additionalProperties: true
+
+    CanvasEdge:
+      type: object
+      required:
+        - id
+        - source
+        - target
+        - type
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+        type:
+          type: string
+          enum: [influences, depends_on, conflicts_with, supports_decision, requires_approval]
+        style:
+          type: object
+          additionalProperties: true
+
+    CanvasUpdateRequest:
+      type: object
+      properties:
+        canvas_update:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasEdge'
+            viewport:
+              type: object
+              properties:
+                x:
+                  type: number
+                y:
+                  type: number
+                zoom:
+                  type: number
+        update_type:
+          type: string
+          enum: [incremental, full_replace]
+
+    CanvasUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        canvas_id:
+          type: string
+        updated_elements:
+          type: object
+          properties:
+            nodes_updated:
+              type: integer
+            edges_updated:
+              type: integer
+            viewport_updated:
+              type: boolean
+        last_updated:
+          type: string
+          format: date-time
+
+    DualViewState:
+      type: object
+      properties:
+        dual_view_state:
+          type: object
+          properties:
+            active_mode:
+              type: string
+              enum: [diagram, owl_text]
+            available_modes:
+              type: array
+              items:
+                type: string
+            sync_status:
+              type: string
+              enum: [synchronized, out_of_sync, syncing]
+            last_sync:
+              type: string
+              format: date-time
+            owl_format:
+              type: string
+            available_formats:
+              type: array
+              items:
+                type: string
+        diagram_state:
+          type: object
+          properties:
+            node_count:
+              type: integer
+            edge_count:
+              type: integer
+            validation_status:
+              type: string
+        owl_text_state:
+          type: object
+          properties:
+            line_count:
+              type: integer
+            syntax_errors:
+              type: array
+              items:
+                type: string
+            warnings:
+              type: array
+              items:
+                type: string
+
+    DualViewModeRequest:
+      type: object
+      required:
+        - target_mode
+      properties:
+        target_mode:
+          type: string
+          enum: [diagram, owl_text]
+        owl_format:
+          type: string
+          enum: [turtle, rdf_xml, owl_xml, n3, json_ld]
+        preserve_layout:
+          type: boolean
+          default: true
+        auto_sync:
+          type: boolean
+          default: true
+
+    DualViewModeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        active_mode:
+          type: string
+        sync_performed:
+          type: boolean
+        owl_content:
+          type: string
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+
+    OWLTextResponse:
+      type: object
+      properties:
+        owl_content:
+          type: string
+        format:
+          type: string
+        metadata:
+          type: object
+          properties:
+            line_count:
+              type: integer
+            namespace_count:
+              type: integer
+            class_count:
+              type: integer
+            property_count:
+              type: integer
+            individual_count:
+              type: integer
+        validation_status:
+          type: string
+        last_generated:
+          type: string
+          format: date-time
+
+    OWLTextUpdateRequest:
+      type: object
+      required:
+        - owl_content
+      properties:
+        owl_content:
+          type: string
+        format:
+          type: string
+          enum: [turtle, rdf_xml, owl_xml, n3, json_ld]
+        validation_options:
+          type: object
+          properties:
+            strict_mode:
+              type: boolean
+            check_consistency:
+              type: boolean
+            validate_imports:
+              type: boolean
+        update_diagram:
+          type: boolean
+          default: true
+        preserve_layout:
+          type: boolean
+          default: true
+
+    OWLTextUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+        diagram_updated:
+          type: boolean
+        changes_summary:
+          type: object
+          properties:
+            classes_added:
+              type: integer
+            classes_modified:
+              type: integer
+            classes_removed:
+              type: integer
+            properties_added:
+              type: integer
+            properties_modified:
+              type: integer
+            properties_removed:
+              type: integer
+        last_updated:
+          type: string
+          format: date-time
+
+    AASGenerationRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Natural language description of the desired ontology
+        domain:
+          type: string
+          enum: [defense, business, healthcare, education, general]
+        complexity_level:
+          type: string
+          enum: [basic, intermediate, advanced]
+        include_examples:
+          type: boolean
+          default: true
+        target_format:
+          type: string
+          enum: [turtle, rdf_xml, owl_xml]
+        validation_level:
+          type: string
+          enum: [basic, standard, strict]
+        context:
+          type: object
+          properties:
+            project_type:
+              type: string
+            stakeholders:
+              type: array
+              items:
+                type: string
+            constraints:
+              type: array
+              items:
+                type: string
+
+    AASGenerationResponse:
+      type: object
+      properties:
+        generation_id:
+          type: string
+        status:
+          type: string
+          enum: [completed, failed, in_progress]
+        generated_ontology:
+          type: object
+          properties:
+            owl_content:
+              type: string
+            format:
+              type: string
+            metadata:
+              type: object
+        context_used:
+          type: object
+          properties:
+            examples_referenced:
+              type: integer
+            domain_patterns:
+              type: array
+              items:
+                type: string
+            similarity_scores:
+              type: array
+              items:
+                type: number
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+        generation_time_ms:
+          type: integer
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+
+    AASRefinementRequest:
+      type: object
+      required:
+        - refinement_request
+      properties:
+        refinement_request:
+          type: string
+        focus_areas:
+          type: array
+          items:
+            type: string
+        preserve_existing:
+          type: boolean
+          default: true
+        refinement_level:
+          type: string
+          enum: [basic, detailed, comprehensive]
+        validation_level:
+          type: string
+          enum: [basic, standard, strict]
+
+    AASRefinementResponse:
+      type: object
+      properties:
+        refinement_id:
+          type: string
+        status:
+          type: string
+        changes_applied:
+          type: object
+          properties:
+            classes_added:
+              type: integer
+            properties_added:
+              type: integer
+            relationships_added:
+              type: integer
+            annotations_added:
+              type: integer
+        refined_sections:
+          type: array
+          items:
+            type: object
+            properties:
+              section:
+                type: string
+              changes:
+                type: string
+        validation_result:
+          $ref: '#/components/schemas/ValidationResult'
+        refinement_time_ms:
+          type: integer
+
+    ExampleSearchResponse:
+      type: object
+      properties:
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExampleOntology'
+        total_results:
+          type: integer
+        search_metadata:
+          type: object
+          properties:
+            query_time_ms:
+              type: integer
+            sources_searched:
+              type: array
+              items:
+                type: string
+            filters_applied:
+              type: object
+
+    ExampleOntology:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        domain:
+          type: string
+        complexity:
+          type: string
+          enum: [basic, intermediate, advanced]
+        metadata:
+          type: object
+          properties:
+            classes:
+              type: integer
+            properties:
+              type: integer
+            relationships:
+              type: integer
+            quality_score:
+              type: number
+            usage_count:
+              type: integer
+        similarity_score:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        preview:
+          type: object
+          properties:
+            key_concepts:
+              type: array
+              items:
+                type: string
+            sample_relationships:
+              type: array
+              items:
+                type: string
+        created_at:
+          type: string
+          format: date-time
+        last_updated:
+          type: string
+          format: date-time
+
+    SemanticSearchRequest:
+      type: object
+      required:
+        - semantic_query
+      properties:
+        semantic_query:
+          type: object
+          properties:
+            description:
+              type: string
+            context:
+              type: string
+            desired_concepts:
+              type: array
+              items:
+                type: string
+        search_options:
+          type: object
+          properties:
+            similarity_threshold:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+            max_results:
+              type: integer
+            include_patterns:
+              type: boolean
+            domain_preference:
+              type: string
+
+    SemanticSearchResponse:
+      type: object
+      properties:
+        semantic_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticSearchResult'
+        pattern_extraction:
+          type: object
+          properties:
+            common_patterns:
+              type: array
+              items:
+                type: object
+
+    SemanticSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        semantic_similarity:
+          type: number
+        concept_matches:
+          type: array
+          items:
+            type: object
+            properties:
+              query_concept:
+                type: string
+              matched_concepts:
+                type: array
+                items:
+                  type: string
+              similarity:
+                type: number
+        pattern_analysis:
+          type: object
+          properties:
+            structural_patterns:
+              type: array
+              items:
+                type: string
+            semantic_patterns:
+              type: array
+              items:
+                type: string
+        applicability_score:
+          type: number
+        adaptation_suggestions:
+          type: array
+          items:
+            type: string
+
+    OntologyReferenceRequest:
+      type: object
+      required:
+        - external_ontology_id
+      properties:
+        external_ontology_id:
+          type: string
+        reference_type:
+          type: string
+          enum: [visual_only, lightweight, full_metadata]
+        namespace_prefix:
+          type: string
+        display_options:
+          type: object
+          properties:
+            show_in_palette:
+              type: boolean
+            visual_style:
+              type: string
+            color_scheme:
+              type: string
+        access_level:
+          type: string
+          enum: [read_only, reference_only]
+
+    OntologyReferenceResponse:
+      type: object
+      properties:
+        reference_id:
+          type: string
+        status:
+          type: string
+        reference_details:
+          type: object
+          properties:
+            external_ontology_id:
+              type: string
+            namespace_prefix:
+              type: string
+            reference_uri:
+              type: string
+            access_level:
+              type: string
+        visual_integration:
+          type: object
+          properties:
+            palette_items_added:
+              type: integer
+            visual_style_applied:
+              type: boolean
+            namespace_registered:
+              type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    SelectiveImportRequest:
+      type: object
+      required:
+        - reference_id
+        - elements_to_import
+      properties:
+        reference_id:
+          type: string
+        elements_to_import:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [class, property, individual]
+              id:
+                type: string
+              include_properties:
+                type: boolean
+              include_relationships:
+                type: array
+                items:
+                  type: string
+        import_options:
+          type: object
+          properties:
+            namespace_handling:
+              type: string
+              enum: [preserve_original, map_to_local, hybrid]
+            conflict_resolution:
+              type: string
+              enum: [prompt_user, auto_resolve, fail_on_conflict]
+            validation_level:
+              type: string
+        confirmation_required:
+          type: boolean
+
+    SelectiveImportResponse:
+      type: object
+      properties:
+        import_id:
+          type: string
+        status:
+          type: string
+          enum: [pending_confirmation, completed, failed]
+        import_preview:
+          type: object
+          properties:
+            elements_to_import:
+              type: integer
+            dependencies_required:
+              type: array
+              items:
+                type: object
+            potential_conflicts:
+              type: array
+              items:
+                type: object
+            estimated_changes:
+              type: object
+        impact_analysis:
+          type: object
+          properties:
+            namespace_changes:
+              type: integer
+            existing_elements_affected:
+              type: integer
+            validation_impact:
+              type: string
+        confirmation_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    ModelerValidationRequest:
+      type: object
+      properties:
+        validation_scope:
+          type: string
+          enum: [full, ontology_only, visual_only, selective]
+        validation_options:
+          type: object
+          properties:
+            check_ontology_consistency:
+              type: boolean
+            check_visual_layout:
+              type: boolean
+            check_namespace_conflicts:
+              type: boolean
+            check_property_domains:
+              type: boolean
+            reasoning_level:
+              type: string
+              enum: [basic, standard, comprehensive]
+
+    ModelerValidationResponse:
+      type: object
+      properties:
+        validation_id:
+          type: string
+        overall_status:
+          type: string
+          enum: [valid, valid_with_warnings, invalid]
+        validation_results:
+          type: object
+          properties:
+            ontology_consistency:
+              $ref: '#/components/schemas/ConsistencyValidation'
+            visual_layout:
+              $ref: '#/components/schemas/LayoutValidation'
+            namespace_management:
+              $ref: '#/components/schemas/NamespaceValidation'
+            property_validation:
+              $ref: '#/components/schemas/PropertyValidation'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+        quality_metrics:
+          type: object
+          properties:
+            overall_quality:
+              type: number
+            completeness:
+              type: number
+            consistency:
+              type: number
+            usability:
+              type: number
+        validation_time_ms:
+          type: integer
+
+    ConsistencyValidation:
+      type: object
+      properties:
+        status:
+          type: string
+        checked_axioms:
+          type: integer
+        logical_errors:
+          type: array
+          items:
+            type: string
+        consistency_score:
+          type: number
+
+    LayoutValidation:
+      type: object
+      properties:
+        status:
+          type: string
+        orphaned_nodes:
+          type: integer
+        disconnected_components:
+          type: integer
+        layout_quality_score:
+          type: number
+
+    NamespaceValidation:
+      type: object
+      properties:
+        status:
+          type: string
+        namespace_conflicts:
+          type: integer
+        undefined_prefixes:
+          type: array
+          items:
+            type: string
+        redundant_namespaces:
+          type: integer
+
+    PropertyValidation:
+      type: object
+      properties:
+        status:
+          type: string
+        domain_violations:
+          type: integer
+        range_violations:
+          type: integer
+        cardinality_warnings:
+          type: integer
+
+    ValidationWarning:
+      type: object
+      properties:
+        type:
+          type: string
+        element:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+        suggestion:
+          type: string
 
     PublishOptions:
       type: object
