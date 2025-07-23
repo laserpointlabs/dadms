@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
@@ -464,12 +464,18 @@ function StatusBar() {
 function MainContent({ children }: { children: React.ReactNode }) {
     const { isDocked, dockedHeight } = useAgentAssistant();
     const statusBarHeight = 24; // VSCode status bar height from CSS
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Handle hydration to prevent SSR/client mismatch
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
 
     return (
         <div
             className="vscode-editor"
             style={{
-                paddingBottom: isDocked ? `${dockedHeight}px` : '0px',
+                paddingBottom: isHydrated && isDocked ? `${dockedHeight}px` : '0px',
                 transition: 'padding-bottom 0.3s ease'
             }}
         >
