@@ -18,9 +18,9 @@ export interface IconProps {
 // Common Codicon names mapped for DADMS use cases
 export type CodiconName =
     // Navigation
-    | 'files' | 'search' | 'settings-gear' | 'extensions'
+    | 'files' | 'search' | 'settings-gear' | 'extensions' | 'library' | 'git-branch'
     // Actions
-    | 'add' | 'remove' | 'edit' | 'save' | 'close' | 'check' | 'copy' | 'trash'
+    | 'add' | 'remove' | 'edit' | 'save' | 'close' | 'check' | 'copy' | 'trash' | 'cloud-upload' | 'cloud-download'
     // Status
     | 'circle-filled' | 'check-circle' | 'warning' | 'error' | 'info'
     // Arrows
@@ -28,11 +28,13 @@ export type CodiconName =
     // Files
     | 'file' | 'file-text' | 'file-pdf' | 'file-zip' | 'folder' | 'folder-opened'
     // DADMS specific
-    | 'project' | 'library-books' | 'type-hierarchy' | 'robot' | 'graph' | 'pulse' | 'lightbulb' | 'beaker'
+    | 'project' | 'library' | 'type-hierarchy' | 'robot' | 'graph' | 'pulse' | 'lightbulb' | 'beaker'
     // Ontology specific  
-    | 'symbol-class' | 'symbol-property' | 'references'
+    | 'symbol-class' | 'symbol-property' | 'references' | 'symbol-field' | 'symbol-method' | 'symbol-variable'
+    // Panel specific
+    | 'files' | 'settings-gear' | 'references' | 'symbol-class'
     // Generic
-    | 'refresh' | 'filter' | 'sort-precedence' | 'ellipsis' | 'more' | 'loading' | 'sync';
+    | 'refresh' | 'filter' | 'sort-precedence' | 'ellipsis' | 'more' | 'loading' | 'sync' | 'tag';
 
 const sizeMap = {
     xs: 12,
@@ -95,7 +97,7 @@ export const DADMSIcons = {
 
     // Navigation
     projects: 'project',
-    knowledge: 'library-books',
+    knowledge: 'library',
     ontology: 'type-hierarchy',
     llm: 'robot',
     context: 'settings-gear',

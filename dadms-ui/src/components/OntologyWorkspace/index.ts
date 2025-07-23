@@ -1,5 +1,6 @@
 export { default as DualViewEditor } from './DualViewEditor';
 export { default as ExternalReferencePanel } from './ExternalReferencePanel';
+export { default as OntologyExplorer } from './OntologyExplorer';
 export { default as OntologyModeler } from './OntologyModeler';
 export { default as OntologyPalette } from './OntologyPalette';
 export { default as OntologyToolbar } from './OntologyToolbar';

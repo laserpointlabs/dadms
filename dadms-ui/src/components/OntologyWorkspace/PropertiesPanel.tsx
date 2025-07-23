@@ -296,9 +296,11 @@ const CollapsibleRelationshipDropdown: React.FC<CollapsibleRelationshipDropdownP
 interface PropertiesPanelProps {
     isOpen: boolean;
     onToggle: () => void;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
-const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) => {
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isCollapsed = false, onToggleCollapse }) => {
     const {
         activeOntology,
         selectedNodes,
@@ -595,7 +597,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
     };
 
     const containerStyle = {
-        width: isOpen ? '320px' : '0px',
+        width: isOpen ? (isCollapsed ? '48px' : '320px') : '0px',
         height: '100%',
         background: dadmsTheme.colors.background.secondary,
         borderLeft: `1px solid ${dadmsTheme.colors.border.default}`,
@@ -613,6 +615,27 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+    };
+
+    const collapseButtonStyle = {
+        background: 'none',
+        border: 'none',
+        color: dadmsTheme.colors.text.secondary,
+        cursor: 'pointer',
+        padding: dadmsTheme.spacing.xs,
+        borderRadius: dadmsTheme.borderRadius.sm,
+        fontSize: dadmsTheme.typography.fontSize.sm,
+        transition: dadmsTheme.transitions.fast,
+    };
+
+    const collapsedHeaderStyle = {
+        padding: dadmsTheme.spacing.md,
+        borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
+        background: dadmsTheme.colors.background.tertiary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
     };
 
     const titleStyle = {
@@ -709,519 +732,541 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle }) =
 
     return (
         <div style={containerStyle}>
-            <div style={headerStyle}>
-                <div style={titleStyle}>Properties</div>
-                <button
-                    style={buttonStyle('secondary', 'xs')}
-                    onClick={onToggle}
-                    title="Close properties panel"
-                >
-                    ×
-                </button>
-            </div>
+            {isCollapsed ? (
+                <div style={collapsedHeaderStyle} onClick={onToggleCollapse} title="Expand properties panel">
+                    <Icon name="settings-gear" size="md" />
+                </div>
+            ) : (
+                <div style={headerStyle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.sm }}>
+                        <Icon name="settings-gear" size="md" />
+                        <div style={titleStyle}>Properties</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs }}>
+                        {onToggleCollapse && (
+                            <button
+                                style={collapseButtonStyle}
+                                onClick={onToggleCollapse}
+                                title="Collapse properties panel"
+                            >
+                                <Icon name="chevron-right" size="sm" />
+                            </button>
+                        )}
+                        <button
+                            style={buttonStyle('secondary', 'xs')}
+                            onClick={onToggle}
+                            title="Close properties panel"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
 
-            <div style={contentStyle}>
-                {!hasSelection ? (
-                    // Show ontology properties when nothing is selected
-                    activeOntology ? (
-                        <>
-                            <div style={sectionStyle}>
-                                <div style={sectionTitleStyle}>Ontology Properties</div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Name</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={localOntologyName}
-                                        onChange={(e) => handleOntologyNameChange(e.target.value)}
-                                        placeholder="Ontology name"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Description</label>
-                                    <textarea
-                                        style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' as const }}
-                                        value={localOntologyDescription}
-                                        onChange={(e) => handleOntologyDescriptionChange(e.target.value)}
-                                        placeholder="Describe the purpose and scope of this ontology"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Namespace URI</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={localOntologyNamespace}
-                                        onChange={(e) => handleOntologyNamespaceChange(e.target.value)}
-                                        placeholder="http://example.com/ontology/"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Author</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={localOntologyAuthor}
-                                        onChange={(e) => handleOntologyAuthorChange(e.target.value)}
-                                        placeholder="Author name"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Version</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={activeOntology.version}
-                                        readOnly
-                                        placeholder="Version"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Created</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={new Date(activeOntology.created).toLocaleDateString()}
-                                        readOnly
-                                        placeholder="Creation date"
-                                    />
-                                </div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Last Modified</label>
-                                    <input
-                                        style={inputStyle}
-                                        value={new Date(activeOntology.lastModified).toLocaleString()}
-                                        readOnly
-                                        placeholder="Last modification"
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={sectionStyle}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
-                                    <div style={sectionTitleStyle}>Custom Properties</div>
-                                    <button
-                                        style={buttonStyle('primary', 'xs')}
-                                        onClick={handleAddProperty}
-                                        title="Add new custom property"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                {Object.entries(activeOntology.customProperties || {}).map(([key, value]) => (
-                                    <div key={key} style={propertyRowStyle}>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
-                                                {key}
-                                            </div>
-                                            {editingProperty === key ? (
-                                                <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
-                                                    <input
-                                                        style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
-                                                        value={propertyValue}
-                                                        onChange={(e) => setPropertyValue(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') handlePropertySave(key);
-                                                            if (e.key === 'Escape') handlePropertyCancel();
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        style={saveButtonStyle}
-                                                        onClick={() => handlePropertySave(key)}
-                                                    >
-                                                        <Icon name="check" size="sm" />
-                                                    </button>
-                                                    <button
-                                                        style={buttonStyle('secondary', 'xs')}
-                                                        onClick={handlePropertyCancel}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    style={{
-                                                        fontSize: dadmsTheme.typography.fontSize.xs,
-                                                        color: dadmsTheme.colors.text.secondary,
-                                                        cursor: 'pointer',
-                                                        marginTop: '2px'
-                                                    }}
-                                                    onClick={() => handlePropertyEdit(key, value)}
-                                                >
-                                                    {String(value)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            style={buttonStyle('secondary', 'xs')}
-                                            onClick={() => handleDeleteProperty(key)}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ))}
-
-                                {Object.keys(activeOntology.customProperties || {}).length === 0 && (
-                                    <div style={{
-                                        textAlign: 'center' as const,
-                                        color: dadmsTheme.colors.text.muted,
-                                        fontSize: dadmsTheme.typography.fontSize.xs,
-                                        padding: dadmsTheme.spacing.md,
-                                        fontStyle: 'italic'
-                                    }}>
-                                        No custom properties defined. Click + to add one.
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={sectionStyle}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
-                                    <div style={sectionTitleStyle}>Custom Relationship Types</div>
-                                    <button
-                                        style={buttonStyle('primary', 'xs')}
-                                        onClick={() => {
-                                            const newType = prompt('Enter new custom relationship type:');
-                                            if (newType && newType.trim()) {
-                                                const formattedType = newType.trim().toLowerCase().replace(/\s+/g, '_');
-                                                if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
-                                                    addCustomRelationshipType(formattedType);
-                                                }
-                                            }
-                                        }}
-                                        title="Add new custom relationship type"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                                {activeOntology?.customRelationshipTypes && activeOntology.customRelationshipTypes.length > 0 ? (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: dadmsTheme.spacing.xs }}>
-                                        {activeOntology.customRelationshipTypes.map((type) => (
-                                            <div
-                                                key={type}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    background: dadmsTheme.colors.background.secondary,
-                                                    border: `1px solid ${dadmsTheme.colors.border.default}`,
-                                                    borderRadius: dadmsTheme.borderRadius.sm,
-                                                    padding: dadmsTheme.spacing.xs,
-                                                    fontSize: dadmsTheme.typography.fontSize.xs
-                                                }}
-                                            >
-                                                <span style={{ marginRight: dadmsTheme.spacing.xs }}>
-                                                    {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                </span>
-                                                <button
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        color: dadmsTheme.colors.text.secondary,
-                                                        padding: '0',
-                                                        fontSize: dadmsTheme.typography.fontSize.sm,
-                                                        lineHeight: '1'
-                                                    }}
-                                                    onClick={() => {
-                                                        if (confirm(`Remove custom relationship type "${type}"?`)) {
-                                                            removeCustomRelationshipType(type);
-                                                        }
-                                                    }}
-                                                    title="Remove custom relationship type"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        textAlign: 'center' as const,
-                                        color: dadmsTheme.colors.text.muted,
-                                        fontSize: dadmsTheme.typography.fontSize.xs,
-                                        padding: dadmsTheme.spacing.md,
-                                        fontStyle: 'italic'
-                                    }}>
-                                        No custom relationship types defined. Click + to add one.
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={sectionStyle}>
-                                <div style={sectionTitleStyle}>Statistics</div>
-                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, color: dadmsTheme.colors.text.secondary }}>
-                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
-                                        <strong>Entities:</strong> {activeOntology.nodes.filter(n => n.type === 'entity').length}
-                                    </div>
-                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
-                                        <strong>Data Properties:</strong> {activeOntology.nodes.filter(n => n.type === 'data_property').length}
-                                    </div>
-                                    <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
-                                        <strong>Relationships:</strong> {activeOntology.edges.length}
-                                    </div>
-                                    <div>
-                                        <strong>Total Elements:</strong> {activeOntology.nodes.length + activeOntology.edges.length}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div style={emptyStateStyle}>
-                            <div style={{ marginBottom: dadmsTheme.spacing.md }}>
-                                <Icon name="project" size="xl" />
-                            </div>
-                            <div>No ontology loaded</div>
-                            <div style={{ fontSize: dadmsTheme.typography.fontSize.sm, marginTop: dadmsTheme.spacing.sm }}>
-                                Create or load an ontology to view its properties
-                            </div>
-                        </div>
-                    )
-                ) : (
-                    <>
-                        {shouldShowNodeProperties && selectedNode && (
+            {!isCollapsed && (
+                <div style={contentStyle}>
+                    {!hasSelection ? (
+                        // Show ontology properties when nothing is selected
+                        activeOntology ? (
                             <>
                                 <div style={sectionStyle}>
-                                    <div style={sectionTitleStyle}>Node Properties</div>
+                                    <div style={sectionTitleStyle}>Ontology Properties</div>
 
                                     <div style={fieldStyle}>
-                                        <label style={labelStyle}>Label</label>
+                                        <label style={labelStyle}>Name</label>
                                         <input
                                             style={inputStyle}
-                                            value={localLabel}
-                                            onChange={(e) => handleLabelChange(e.target.value)}
+                                            value={localOntologyName}
+                                            onChange={(e) => handleOntologyNameChange(e.target.value)}
+                                            placeholder="Ontology name"
                                         />
                                     </div>
 
                                     <div style={fieldStyle}>
-                                        <label style={labelStyle}>Entity Type</label>
-                                        <input
-                                            style={inputStyle}
-                                            value={localEntityType}
-                                            onChange={(e) => handleEntityTypeChange(e.target.value)}
+                                        <label style={labelStyle}>Description</label>
+                                        <textarea
+                                            style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' as const }}
+                                            value={localOntologyDescription}
+                                            onChange={(e) => handleOntologyDescriptionChange(e.target.value)}
+                                            placeholder="Describe the purpose and scope of this ontology"
                                         />
                                     </div>
 
-                                    {selectedNode.data.description !== undefined && (
-                                        <div style={fieldStyle}>
-                                            <label style={labelStyle}>Description</label>
-                                            <textarea
-                                                style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' as const }}
-                                                value={localDescription}
-                                                onChange={(e) => handleDescriptionChange(e.target.value)}
-                                            />
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Namespace URI</label>
+                                        <input
+                                            style={inputStyle}
+                                            value={localOntologyNamespace}
+                                            onChange={(e) => handleOntologyNamespaceChange(e.target.value)}
+                                            placeholder="http://example.com/ontology/"
+                                        />
+                                    </div>
+
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Author</label>
+                                        <input
+                                            style={inputStyle}
+                                            value={localOntologyAuthor}
+                                            onChange={(e) => handleOntologyAuthorChange(e.target.value)}
+                                            placeholder="Author name"
+                                        />
+                                    </div>
+
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Version</label>
+                                        <input
+                                            style={inputStyle}
+                                            value={activeOntology.version}
+                                            readOnly
+                                            placeholder="Version"
+                                        />
+                                    </div>
+
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Created</label>
+                                        <input
+                                            style={inputStyle}
+                                            value={new Date(activeOntology.created).toLocaleDateString()}
+                                            readOnly
+                                            placeholder="Creation date"
+                                        />
+                                    </div>
+
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Last Modified</label>
+                                        <input
+                                            style={inputStyle}
+                                            value={new Date(activeOntology.lastModified).toLocaleString()}
+                                            readOnly
+                                            placeholder="Last modification"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={sectionStyle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                        <div style={sectionTitleStyle}>Custom Properties</div>
+                                        <button
+                                            style={buttonStyle('primary', 'xs')}
+                                            onClick={handleAddProperty}
+                                            title="Add new custom property"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+
+                                    {Object.entries(activeOntology.customProperties || {}).map(([key, value]) => (
+                                        <div key={key} style={propertyRowStyle}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
+                                                    {key}
+                                                </div>
+                                                {editingProperty === key ? (
+                                                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
+                                                        <input
+                                                            style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
+                                                            value={propertyValue}
+                                                            onChange={(e) => setPropertyValue(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handlePropertySave(key);
+                                                                if (e.key === 'Escape') handlePropertyCancel();
+                                                            }}
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            style={saveButtonStyle}
+                                                            onClick={() => handlePropertySave(key)}
+                                                        >
+                                                            <Icon name="check" size="sm" />
+                                                        </button>
+                                                        <button
+                                                            style={buttonStyle('secondary', 'xs')}
+                                                            onClick={handlePropertyCancel}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            fontSize: dadmsTheme.typography.fontSize.xs,
+                                                            color: dadmsTheme.colors.text.secondary,
+                                                            cursor: 'pointer',
+                                                            marginTop: '2px'
+                                                        }}
+                                                        onClick={() => handlePropertyEdit(key, value)}
+                                                    >
+                                                        {String(value)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                style={buttonStyle('secondary', 'xs')}
+                                                onClick={() => handleDeleteProperty(key)}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    {Object.keys(activeOntology.customProperties || {}).length === 0 && (
+                                        <div style={{
+                                            textAlign: 'center' as const,
+                                            color: dadmsTheme.colors.text.muted,
+                                            fontSize: dadmsTheme.typography.fontSize.xs,
+                                            padding: dadmsTheme.spacing.md,
+                                            fontStyle: 'italic'
+                                        }}>
+                                            No custom properties defined. Click + to add one.
                                         </div>
                                     )}
                                 </div>
 
                                 <div style={sectionStyle}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
-                                        <div style={sectionTitleStyle}>Custom Properties</div>
+                                        <div style={sectionTitleStyle}>Custom Relationship Types</div>
                                         <button
                                             style={buttonStyle('primary', 'xs')}
-                                            onClick={handleAddProperty}
-                                            title="Add new property"
+                                            onClick={() => {
+                                                const newType = prompt('Enter new custom relationship type:');
+                                                if (newType && newType.trim()) {
+                                                    const formattedType = newType.trim().toLowerCase().replace(/\s+/g, '_');
+                                                    if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
+                                                        addCustomRelationshipType(formattedType);
+                                                    }
+                                                }
+                                            }}
+                                            title="Add new custom relationship type"
                                         >
                                             +
                                         </button>
                                     </div>
-
-                                    {Object.entries(selectedNode.data.properties || {}).map(([key, value]) => (
-                                        <div key={key} style={propertyRowStyle}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
-                                                    {key}
-                                                </div>
-                                                {editingProperty === key ? (
-                                                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
-                                                        <input
-                                                            style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
-                                                            value={propertyValue}
-                                                            onChange={(e) => setPropertyValue(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') handlePropertySave(key);
-                                                                if (e.key === 'Escape') handlePropertyCancel();
-                                                            }}
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            style={saveButtonStyle}
-                                                            onClick={() => handlePropertySave(key)}
-                                                        >
-                                                            <Icon name="check" size="sm" />
-                                                        </button>
-                                                        <button
-                                                            style={buttonStyle('secondary', 'xs')}
-                                                            onClick={handlePropertyCancel}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div
+                                    {activeOntology?.customRelationshipTypes && activeOntology.customRelationshipTypes.length > 0 ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: dadmsTheme.spacing.xs }}>
+                                            {activeOntology.customRelationshipTypes.map((type) => (
+                                                <div
+                                                    key={type}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        background: dadmsTheme.colors.background.secondary,
+                                                        border: `1px solid ${dadmsTheme.colors.border.default}`,
+                                                        borderRadius: dadmsTheme.borderRadius.sm,
+                                                        padding: dadmsTheme.spacing.xs,
+                                                        fontSize: dadmsTheme.typography.fontSize.xs
+                                                    }}
+                                                >
+                                                    <span style={{ marginRight: dadmsTheme.spacing.xs }}>
+                                                        {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </span>
+                                                    <button
                                                         style={{
-                                                            fontSize: dadmsTheme.typography.fontSize.xs,
-                                                            color: dadmsTheme.colors.text.secondary,
+                                                            background: 'none',
+                                                            border: 'none',
                                                             cursor: 'pointer',
-                                                            marginTop: '2px'
+                                                            color: dadmsTheme.colors.text.secondary,
+                                                            padding: '0',
+                                                            fontSize: dadmsTheme.typography.fontSize.sm,
+                                                            lineHeight: '1'
                                                         }}
-                                                        onClick={() => handlePropertyEdit(key, value)}
+                                                        onClick={() => {
+                                                            if (confirm(`Remove custom relationship type "${type}"?`)) {
+                                                                removeCustomRelationshipType(type);
+                                                            }
+                                                        }}
+                                                        title="Remove custom relationship type"
                                                     >
-                                                        {String(value)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <button
-                                                style={buttonStyle('secondary', 'xs')}
-                                                onClick={() => handleDeleteProperty(key)}
-                                            >
-                                                ×
-                                            </button>
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div style={{
+                                            textAlign: 'center' as const,
+                                            color: dadmsTheme.colors.text.muted,
+                                            fontSize: dadmsTheme.typography.fontSize.xs,
+                                            padding: dadmsTheme.spacing.md,
+                                            fontStyle: 'italic'
+                                        }}>
+                                            No custom relationship types defined. Click + to add one.
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={sectionStyle}>
+                                    <div style={sectionTitleStyle}>Statistics</div>
+                                    <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, color: dadmsTheme.colors.text.secondary }}>
+                                        <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                            <strong>Entities:</strong> {activeOntology.nodes.filter(n => n.type === 'entity').length}
+                                        </div>
+                                        <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                            <strong>Data Properties:</strong> {activeOntology.nodes.filter(n => n.type === 'data_property').length}
+                                        </div>
+                                        <div style={{ marginBottom: dadmsTheme.spacing.xs }}>
+                                            <strong>Relationships:</strong> {activeOntology.edges.length}
+                                        </div>
+                                        <div>
+                                            <strong>Total Elements:</strong> {activeOntology.nodes.length + activeOntology.edges.length}
+                                        </div>
+                                    </div>
                                 </div>
                             </>
-                        )}
-
-                        {shouldShowEdgeProperties && selectedEdge && (
-                            <div style={sectionStyle}>
-                                <div style={sectionTitleStyle}>Edge Properties</div>
-
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Relationship Type</label>
-                                    <CollapsibleRelationshipDropdown
-                                        value={selectedEdge.data?.relationshipType || 'relates_to'}
-                                        onChange={handleRelationshipTypeChange}
-                                        customRelationshipTypes={activeOntology?.customRelationshipTypes || []}
-                                        onAddCustomType={(formattedType) => {
-                                            // Add to the ontology's custom relationship types if it doesn't exist
-                                            if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
-                                                addCustomRelationshipType(formattedType);
-                                            }
-                                        }}
-                                    />
+                        ) : (
+                            <div style={emptyStateStyle}>
+                                <div style={{ marginBottom: dadmsTheme.spacing.md }}>
+                                    <Icon name="project" size="xl" />
                                 </div>
-
-                                {/* Edge Metadata */}
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>Strength (0.0 - 1.0)</label>
-                                    <input
-                                        style={inputStyle}
-                                        type="number"
-                                        min="0"
-                                        max="1"
-                                        step="0.1"
-                                        value={selectedEdge.data?.strength || 1.0}
-                                        onChange={(e) => {
-                                            if (selectedEdge) {
-                                                updateEdge(selectedEdge.id, {
-                                                    data: {
-                                                        relationshipType: selectedEdge.data?.relationshipType || 'relates_to',
-                                                        ...selectedEdge.data,
-                                                        strength: parseFloat(e.target.value) || 1.0
-                                                    }
-                                                });
-                                            }
-                                        }}
-                                    />
+                                <div>No ontology loaded</div>
+                                <div style={{ fontSize: dadmsTheme.typography.fontSize.sm, marginTop: dadmsTheme.spacing.sm }}>
+                                    Create or load an ontology to view its properties
                                 </div>
+                            </div>
+                        )
+                    ) : (
+                        <>
+                            {shouldShowNodeProperties && selectedNode && (
+                                <>
+                                    <div style={sectionStyle}>
+                                        <div style={sectionTitleStyle}>Node Properties</div>
 
-                                <div style={fieldStyle}>
-                                    <label style={labelStyle}>
+                                        <div style={fieldStyle}>
+                                            <label style={labelStyle}>Label</label>
+                                            <input
+                                                style={inputStyle}
+                                                value={localLabel}
+                                                onChange={(e) => handleLabelChange(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div style={fieldStyle}>
+                                            <label style={labelStyle}>Entity Type</label>
+                                            <input
+                                                style={inputStyle}
+                                                value={localEntityType}
+                                                onChange={(e) => handleEntityTypeChange(e.target.value)}
+                                            />
+                                        </div>
+
+                                        {selectedNode.data.description !== undefined && (
+                                            <div style={fieldStyle}>
+                                                <label style={labelStyle}>Description</label>
+                                                <textarea
+                                                    style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' as const }}
+                                                    value={localDescription}
+                                                    onChange={(e) => handleDescriptionChange(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={sectionStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                            <div style={sectionTitleStyle}>Custom Properties</div>
+                                            <button
+                                                style={buttonStyle('primary', 'xs')}
+                                                onClick={handleAddProperty}
+                                                title="Add new property"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+
+                                        {Object.entries(selectedNode.data.properties || {}).map(([key, value]) => (
+                                            <div key={key} style={propertyRowStyle}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
+                                                        {key}
+                                                    </div>
+                                                    {editingProperty === key ? (
+                                                        <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
+                                                            <input
+                                                                style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
+                                                                value={propertyValue}
+                                                                onChange={(e) => setPropertyValue(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') handlePropertySave(key);
+                                                                    if (e.key === 'Escape') handlePropertyCancel();
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                style={saveButtonStyle}
+                                                                onClick={() => handlePropertySave(key)}
+                                                            >
+                                                                <Icon name="check" size="sm" />
+                                                            </button>
+                                                            <button
+                                                                style={buttonStyle('secondary', 'xs')}
+                                                                onClick={handlePropertyCancel}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            style={{
+                                                                fontSize: dadmsTheme.typography.fontSize.xs,
+                                                                color: dadmsTheme.colors.text.secondary,
+                                                                cursor: 'pointer',
+                                                                marginTop: '2px'
+                                                            }}
+                                                            onClick={() => handlePropertyEdit(key, value)}
+                                                        >
+                                                            {String(value)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    style={buttonStyle('secondary', 'xs')}
+                                                    onClick={() => handleDeleteProperty(key)}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
+                            {shouldShowEdgeProperties && selectedEdge && (
+                                <div style={sectionStyle}>
+                                    <div style={sectionTitleStyle}>Edge Properties</div>
+
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Relationship Type</label>
+                                        <CollapsibleRelationshipDropdown
+                                            value={selectedEdge.data?.relationshipType || 'relates_to'}
+                                            onChange={handleRelationshipTypeChange}
+                                            customRelationshipTypes={activeOntology?.customRelationshipTypes || []}
+                                            onAddCustomType={(formattedType) => {
+                                                // Add to the ontology's custom relationship types if it doesn't exist
+                                                if (activeOntology && !activeOntology.customRelationshipTypes.includes(formattedType)) {
+                                                    addCustomRelationshipType(formattedType);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Edge Metadata */}
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>Strength (0.0 - 1.0)</label>
                                         <input
-                                            type="checkbox"
-                                            checked={selectedEdge.data?.isInferred || false}
+                                            style={inputStyle}
+                                            type="number"
+                                            min="0"
+                                            max="1"
+                                            step="0.1"
+                                            value={selectedEdge.data?.strength || 1.0}
                                             onChange={(e) => {
                                                 if (selectedEdge) {
                                                     updateEdge(selectedEdge.id, {
                                                         data: {
                                                             relationshipType: selectedEdge.data?.relationshipType || 'relates_to',
                                                             ...selectedEdge.data,
-                                                            isInferred: e.target.checked
+                                                            strength: parseFloat(e.target.value) || 1.0
                                                         }
                                                     });
                                                 }
                                             }}
-                                            style={{ marginRight: dadmsTheme.spacing.xs }}
                                         />
-                                        Inferred Relationship
-                                    </label>
-                                </div>
-
-                                {/* Custom Edge Properties */}
-                                <div style={sectionStyle}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
-                                        <div style={sectionTitleStyle}>Custom Properties</div>
-                                        <button
-                                            style={buttonStyle('primary', 'xs')}
-                                            onClick={handleAddProperty}
-                                            title="Add new property"
-                                        >
-                                            +
-                                        </button>
                                     </div>
 
-                                    {Object.entries(selectedEdge.data?.properties || {}).map(([key, value]) => (
-                                        <div key={key} style={propertyRowStyle}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
-                                                    {key}
-                                                </div>
-                                                {editingProperty === key ? (
-                                                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
-                                                        <input
-                                                            style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
-                                                            value={propertyValue}
-                                                            onChange={(e) => setPropertyValue(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') handlePropertySave(key);
-                                                                if (e.key === 'Escape') handlePropertyCancel();
-                                                            }}
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            style={saveButtonStyle}
-                                                            onClick={() => handlePropertySave(key)}
-                                                        >
-                                                            <Icon name="check" size="sm" />
-                                                        </button>
-                                                        <button
-                                                            style={buttonStyle('secondary', 'xs')}
-                                                            onClick={handlePropertyCancel}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        style={{
-                                                            fontSize: dadmsTheme.typography.fontSize.xs,
-                                                            color: dadmsTheme.colors.text.secondary,
-                                                            cursor: 'pointer',
-                                                            marginTop: '2px'
-                                                        }}
-                                                        onClick={() => handlePropertyEdit(key, value)}
-                                                    >
-                                                        {String(value)}
-                                                    </div>
-                                                )}
-                                            </div>
+                                    <div style={fieldStyle}>
+                                        <label style={labelStyle}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedEdge.data?.isInferred || false}
+                                                onChange={(e) => {
+                                                    if (selectedEdge) {
+                                                        updateEdge(selectedEdge.id, {
+                                                            data: {
+                                                                relationshipType: selectedEdge.data?.relationshipType || 'relates_to',
+                                                                ...selectedEdge.data,
+                                                                isInferred: e.target.checked
+                                                            }
+                                                        });
+                                                    }
+                                                }}
+                                                style={{ marginRight: dadmsTheme.spacing.xs }}
+                                            />
+                                            Inferred Relationship
+                                        </label>
+                                    </div>
+
+                                    {/* Custom Edge Properties */}
+                                    <div style={sectionStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dadmsTheme.spacing.sm }}>
+                                            <div style={sectionTitleStyle}>Custom Properties</div>
                                             <button
-                                                style={buttonStyle('secondary', 'xs')}
-                                                onClick={() => handleDeleteProperty(key)}
+                                                style={buttonStyle('primary', 'xs')}
+                                                onClick={handleAddProperty}
+                                                title="Add new property"
                                             >
-                                                ×
+                                                +
                                             </button>
                                         </div>
-                                    ))}
+
+                                        {Object.entries(selectedEdge.data?.properties || {}).map(([key, value]) => (
+                                            <div key={key} style={propertyRowStyle}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, fontWeight: dadmsTheme.typography.fontWeight.medium }}>
+                                                        {key}
+                                                    </div>
+                                                    {editingProperty === key ? (
+                                                        <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs, marginTop: dadmsTheme.spacing.xs }}>
+                                                            <input
+                                                                style={{ ...inputStyle, fontSize: dadmsTheme.typography.fontSize.xs }}
+                                                                value={propertyValue}
+                                                                onChange={(e) => setPropertyValue(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') handlePropertySave(key);
+                                                                    if (e.key === 'Escape') handlePropertyCancel();
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                style={saveButtonStyle}
+                                                                onClick={() => handlePropertySave(key)}
+                                                            >
+                                                                <Icon name="check" size="sm" />
+                                                            </button>
+                                                            <button
+                                                                style={buttonStyle('secondary', 'xs')}
+                                                                onClick={handlePropertyCancel}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            style={{
+                                                                fontSize: dadmsTheme.typography.fontSize.xs,
+                                                                color: dadmsTheme.colors.text.secondary,
+                                                                cursor: 'pointer',
+                                                                marginTop: '2px'
+                                                            }}
+                                                            onClick={() => handlePropertyEdit(key, value)}
+                                                        >
+                                                            {String(value)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    style={buttonStyle('secondary', 'xs')}
+                                                    onClick={() => handleDeleteProperty(key)}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -9,9 +9,11 @@ import { ExternalOntologyReference } from './types';
 interface ExternalReferencePanelProps {
     isOpen: boolean;
     onToggle: () => void;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
-const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen, onToggle }) => {
+const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen, onToggle, isCollapsed = false, onToggleCollapse }) => {
     const {
         externalReferences,
         addExternalReference,
@@ -69,7 +71,7 @@ const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen,
     };
 
     const containerStyle = {
-        width: isOpen ? '320px' : '0px',
+        width: isOpen ? (isCollapsed ? '48px' : '320px') : '0px',
         height: '100%',
         background: dadmsTheme.colors.background.secondary,
         borderLeft: `1px solid ${dadmsTheme.colors.border.default}`,
@@ -146,6 +148,27 @@ const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen,
         opacity: disabled ? 0.6 : 1,
     });
 
+    const collapseButtonStyle = {
+        background: 'none',
+        border: 'none',
+        color: dadmsTheme.colors.text.secondary,
+        cursor: 'pointer',
+        padding: dadmsTheme.spacing.xs,
+        borderRadius: dadmsTheme.borderRadius.sm,
+        fontSize: dadmsTheme.typography.fontSize.sm,
+        transition: dadmsTheme.transitions.fast,
+    };
+
+    const collapsedHeaderStyle = {
+        padding: dadmsTheme.spacing.md,
+        borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
+        background: dadmsTheme.colors.background.tertiary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+    };
+
     const referenceItemStyle = (isVisible: boolean) => ({
         padding: dadmsTheme.spacing.sm,
         margin: dadmsTheme.spacing.xs,
@@ -201,124 +224,146 @@ const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen,
 
     return (
         <div style={containerStyle}>
-            <div style={headerStyle}>
-                <div style={titleStyle}>External References</div>
-                <button
-                    style={buttonStyle('secondary', 'xs')}
-                    onClick={onToggle}
-                    title="Close external references panel"
-                >
-                    ×
-                </button>
-            </div>
-
-            <div style={contentStyle}>
-                <div style={searchSectionStyle}>
-                    <input
-                        style={inputStyle}
-                        placeholder="Search external ontologies..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSearch();
-                        }}
-                    />
-                    <button
-                        style={buttonStyle('primary', 'sm', isSearching || !searchQuery.trim())}
-                        onClick={handleSearch}
-                        disabled={isSearching || !searchQuery.trim()}
-                    >
-                        <Icon name="search" size="sm" />
-                        {isSearching ? 'Searching...' : 'Search'}
-                    </button>
+            {isCollapsed ? (
+                <div style={collapsedHeaderStyle} onClick={onToggleCollapse} title="Expand external references panel">
+                    <Icon name="references" size="md" />
                 </div>
+            ) : (
+                <div style={headerStyle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.sm }}>
+                        <Icon name="references" size="md" />
+                        <div style={titleStyle}>External References</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs }}>
+                        {onToggleCollapse && (
+                            <button
+                                style={collapseButtonStyle}
+                                onClick={onToggleCollapse}
+                                title="Collapse external references panel"
+                            >
+                                <Icon name="chevron-right" size="sm" />
+                            </button>
+                        )}
+                        <button
+                            style={buttonStyle('secondary', 'xs')}
+                            onClick={onToggle}
+                            title="Close external references panel"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
 
-                {searchResults.length > 0 && (
-                    <>
-                        <div style={sectionTitleStyle}>Search Results</div>
-                        <div style={{ padding: dadmsTheme.spacing.sm }}>
-                            {searchResults.map((result) => (
-                                <div key={result.id} style={referenceItemStyle(true)}>
-                                    <div style={referenceHeaderStyle}>
-                                        <div style={referenceNameStyle}>{result.name}</div>
-                                        <button
-                                            style={buttonStyle('primary', 'xs')}
-                                            onClick={() => handleAddReference(result)}
-                                            title="Add as reference"
-                                        >
-                                            + Add
-                                        </button>
-                                    </div>
-                                    <div style={referenceDescStyle}>{result.description}</div>
-                                    <div style={referenceMetaStyle}>
-                                        <span>{result.source.replace(/_/g, ' ')}</span>
-                                        <span>•</span>
-                                        <span>{result.namespacePrefix}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                )}
+            {!isCollapsed && (
+                <div style={contentStyle}>
+                    <div style={searchSectionStyle}>
+                        <input
+                            style={inputStyle}
+                            placeholder="Search external ontologies..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSearch();
+                            }}
+                        />
+                        <button
+                            style={buttonStyle('primary', 'sm', isSearching || !searchQuery.trim())}
+                            onClick={handleSearch}
+                            disabled={isSearching || !searchQuery.trim()}
+                        >
+                            <Icon name="search" size="sm" />
+                            {isSearching ? 'Searching...' : 'Search'}
+                        </button>
+                    </div>
 
-                {externalReferences.length > 0 && (
-                    <>
-                        <div style={sectionTitleStyle}>Referenced Ontologies</div>
-                        <div style={{ padding: dadmsTheme.spacing.sm }}>
-                            {externalReferences.map((reference) => (
-                                <div key={reference.id} style={referenceItemStyle(reference.isVisible)}>
-                                    <div style={referenceHeaderStyle}>
-                                        <div style={referenceNameStyle}>{reference.name}</div>
-                                        <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs }}>
+                    {searchResults.length > 0 && (
+                        <>
+                            <div style={sectionTitleStyle}>Search Results</div>
+                            <div style={{ padding: dadmsTheme.spacing.sm }}>
+                                {searchResults.map((result) => (
+                                    <div key={result.id} style={referenceItemStyle(true)}>
+                                        <div style={referenceHeaderStyle}>
+                                            <div style={referenceNameStyle}>{result.name}</div>
                                             <button
-                                                style={buttonStyle('secondary', 'xs')}
-                                                onClick={() => toggleExternalReference(reference.id)}
-                                                title={reference.isVisible ? 'Hide from canvas' : 'Show on canvas'}
+                                                style={buttonStyle('primary', 'xs')}
+                                                onClick={() => handleAddReference(result)}
+                                                title="Add as reference"
                                             >
-                                                {reference.isVisible ? '👁' : '👁‍🗨'}
-                                            </button>
-                                            <button
-                                                style={buttonStyle('secondary', 'xs')}
-                                                onClick={() => removeExternalReference(reference.id)}
-                                                title="Remove reference"
-                                            >
-                                                ×
+                                                + Add
                                             </button>
                                         </div>
+                                        <div style={referenceDescStyle}>{result.description}</div>
+                                        <div style={referenceMetaStyle}>
+                                            <span>{result.source.replace(/_/g, ' ')}</span>
+                                            <span>•</span>
+                                            <span>{result.namespacePrefix}</span>
+                                        </div>
                                     </div>
-                                    <div style={referenceDescStyle}>{reference.description}</div>
-                                    <div style={referenceMetaStyle}>
-                                        <span>{reference.source.replace(/_/g, ' ')}</span>
-                                        <span>•</span>
-                                        <span>{reference.namespacePrefix}</span>
-                                        <span>•</span>
-                                        <span style={{ color: reference.isLoaded ? dadmsTheme.colors.status.active : dadmsTheme.colors.status.inactive }}>
-                                            {reference.isLoaded ? 'Loaded' : 'Referenced'}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                )}
+                                ))}
+                            </div>
+                        </>
+                    )}
 
-                {externalReferences.length === 0 && searchResults.length === 0 && (
-                    <div style={{
-                        textAlign: 'center' as const,
-                        color: dadmsTheme.colors.text.muted,
-                        fontSize: dadmsTheme.typography.fontSize.sm,
-                        padding: dadmsTheme.spacing.xl,
-                    }}>
-                        <div style={{ marginBottom: dadmsTheme.spacing.md }}>
-                            <Icon name="type-hierarchy" size="xl" />
+                    {externalReferences.length > 0 && (
+                        <>
+                            <div style={sectionTitleStyle}>Referenced Ontologies</div>
+                            <div style={{ padding: dadmsTheme.spacing.sm }}>
+                                {externalReferences.map((reference) => (
+                                    <div key={reference.id} style={referenceItemStyle(reference.isVisible)}>
+                                        <div style={referenceHeaderStyle}>
+                                            <div style={referenceNameStyle}>{reference.name}</div>
+                                            <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs }}>
+                                                <button
+                                                    style={buttonStyle('secondary', 'xs')}
+                                                    onClick={() => toggleExternalReference(reference.id)}
+                                                    title={reference.isVisible ? 'Hide from canvas' : 'Show on canvas'}
+                                                >
+                                                    {reference.isVisible ? '👁' : '👁‍🗨'}
+                                                </button>
+                                                <button
+                                                    style={buttonStyle('secondary', 'xs')}
+                                                    onClick={() => removeExternalReference(reference.id)}
+                                                    title="Remove reference"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style={referenceDescStyle}>{reference.description}</div>
+                                        <div style={referenceMetaStyle}>
+                                            <span>{reference.source.replace(/_/g, ' ')}</span>
+                                            <span>•</span>
+                                            <span>{reference.namespacePrefix}</span>
+                                            <span>•</span>
+                                            <span style={{ color: reference.isLoaded ? dadmsTheme.colors.status.active : dadmsTheme.colors.status.inactive }}>
+                                                {reference.isLoaded ? 'Loaded' : 'Referenced'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {externalReferences.length === 0 && searchResults.length === 0 && (
+                        <div style={{
+                            textAlign: 'center' as const,
+                            color: dadmsTheme.colors.text.muted,
+                            fontSize: dadmsTheme.typography.fontSize.sm,
+                            padding: dadmsTheme.spacing.xl,
+                        }}>
+                            <div style={{ marginBottom: dadmsTheme.spacing.md }}>
+                                <Icon name="type-hierarchy" size="xl" />
+                            </div>
+                            <div>No external references added</div>
+                            <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, marginTop: dadmsTheme.spacing.sm, color: dadmsTheme.colors.text.muted }}>
+                                Search and add external ontologies to reference in your model
+                            </div>
                         </div>
-                        <div>No external references added</div>
-                        <div style={{ fontSize: dadmsTheme.typography.fontSize.xs, marginTop: dadmsTheme.spacing.sm, color: dadmsTheme.colors.text.muted }}>
-                            Search and add external ontologies to reference in your model
-                        </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
