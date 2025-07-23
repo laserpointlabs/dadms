@@ -74,7 +74,7 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
     const mainContentStyle = {
         display: 'flex',
         flex: 1,
-        height: 'calc(100% - 60px)', // Account for toolbar height
+        height: 'calc(100% - 48px)', // Reduced toolbar height
         overflow: 'hidden',
     };
 

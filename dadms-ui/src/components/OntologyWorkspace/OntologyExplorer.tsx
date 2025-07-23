@@ -299,7 +299,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
     };
 
     const headerStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',
@@ -308,7 +308,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
     };
 
     const collapsedHeaderStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',
