@@ -81,11 +81,12 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ className }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         background: dadmsTheme.colors.background.secondary,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         gap: dadmsTheme.spacing.md,
         fontFamily: dadmsTheme.typography.fontFamily.default,
+        height: '48px', // Fixed compact height
     };
 
     const leftSectionStyle = {
@@ -101,39 +102,32 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ className }) => {
     };
 
     const buttonStyle = (variant: 'primary' | 'secondary' | 'warning' = 'secondary', disabled = false) => ({
-        padding: `${dadmsTheme.spacing.xs} ${dadmsTheme.spacing.md}`,
-        background: disabled
-            ? dadmsTheme.colors.background.tertiary
-            : variant === 'primary'
-                ? dadmsTheme.colors.accent.primary
-                : variant === 'warning'
-                    ? dadmsTheme.colors.accent.warning
-                    : dadmsTheme.colors.background.tertiary,
-        border: `1px solid ${disabled
-            ? dadmsTheme.colors.border.default
-            : variant === 'primary'
-                ? dadmsTheme.colors.accent.primary
-                : variant === 'warning'
-                    ? dadmsTheme.colors.accent.warning
-                    : dadmsTheme.colors.border.default
-            }`,
+        padding: `${dadmsTheme.spacing.xs} ${dadmsTheme.spacing.sm}`,
+        background: 'transparent',
+        border: 'none',
         borderRadius: dadmsTheme.borderRadius.sm,
         color: disabled
             ? dadmsTheme.colors.text.muted
             : variant === 'primary'
-                ? dadmsTheme.colors.text.inverse
+                ? dadmsTheme.colors.accent.primary
                 : variant === 'warning'
-                    ? dadmsTheme.colors.text.inverse
+                    ? dadmsTheme.colors.accent.warning
                     : dadmsTheme.colors.text.primary,
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontSize: dadmsTheme.typography.fontSize.sm,
         fontWeight: dadmsTheme.typography.fontWeight.medium,
         transition: dadmsTheme.transitions.fast,
         opacity: disabled ? 0.6 : 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: dadmsTheme.spacing.xs,
+        '&:hover': {
+            background: dadmsTheme.colors.background.tertiary,
+        },
     });
 
     const titleStyle = {
-        fontSize: dadmsTheme.typography.fontSize.lg,
+        fontSize: dadmsTheme.typography.fontSize.md,
         fontWeight: dadmsTheme.typography.fontWeight.semibold,
         color: dadmsTheme.colors.text.primary,
         marginRight: dadmsTheme.spacing.md,

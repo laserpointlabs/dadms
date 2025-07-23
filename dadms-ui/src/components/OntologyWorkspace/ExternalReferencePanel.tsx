@@ -83,7 +83,7 @@ const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen,
     };
 
     const headerStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',
@@ -160,7 +160,7 @@ const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({ isOpen,
     };
 
     const collapsedHeaderStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',

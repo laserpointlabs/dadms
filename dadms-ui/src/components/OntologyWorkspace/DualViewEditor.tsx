@@ -68,7 +68,7 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         background: dadmsTheme.colors.background.secondary,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
     };
@@ -79,7 +79,7 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
     };
 
     const tabStyle = (isActive: boolean) => ({
-        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
+        padding: `${dadmsTheme.spacing.xs} ${dadmsTheme.spacing.sm}`,
         background: isActive ? dadmsTheme.colors.background.primary : 'transparent',
         border: `1px solid ${isActive ? dadmsTheme.colors.border.focus : dadmsTheme.colors.border.default}`,
         borderRadius: dadmsTheme.borderRadius.sm,
@@ -99,13 +99,19 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
 
     const buttonStyle = (variant: 'primary' | 'secondary' = 'secondary') => ({
         padding: `${dadmsTheme.spacing.xs} ${dadmsTheme.spacing.sm}`,
-        background: variant === 'primary' ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.background.tertiary,
-        border: `1px solid ${variant === 'primary' ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.border.default}`,
+        background: 'transparent',
+        border: 'none',
         borderRadius: dadmsTheme.borderRadius.sm,
-        color: variant === 'primary' ? dadmsTheme.colors.text.inverse : dadmsTheme.colors.text.primary,
+        color: variant === 'primary' ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.primary,
         cursor: 'pointer',
         fontSize: dadmsTheme.typography.fontSize.sm,
         transition: dadmsTheme.transitions.fast,
+        display: 'flex',
+        alignItems: 'center',
+        gap: dadmsTheme.spacing.xs,
+        '&:hover': {
+            background: dadmsTheme.colors.background.tertiary,
+        },
     });
 
     const statusStyle = {

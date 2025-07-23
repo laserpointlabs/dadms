@@ -609,7 +609,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
     };
 
     const headerStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',
@@ -629,7 +629,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
     };
 
     const collapsedHeaderStyle = {
-        padding: dadmsTheme.spacing.md,
+        padding: `${dadmsTheme.spacing.sm} ${dadmsTheme.spacing.md}`,
         borderBottom: `1px solid ${dadmsTheme.colors.border.default}`,
         background: dadmsTheme.colors.background.tertiary,
         display: 'flex',
