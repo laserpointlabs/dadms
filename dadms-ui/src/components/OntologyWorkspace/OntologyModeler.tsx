@@ -377,11 +377,29 @@ const OntologyModelerInner: React.FC = () => {
     const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
     const [selectorPosition, setSelectorPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    // Sync with store when activeOntology changes
+    // Sync with store when activeOntology changes (but preserve selection during property updates)
+    const previousOntologyId = React.useRef<string | null>(null);
     React.useEffect(() => {
         if (activeOntology) {
-            setNodes(activeOntology.nodes);
-            setEdges(activeOntology.edges);
+            // Only reset nodes/edges when switching to a different ontology
+            // Don't reset when just updating properties of the same ontology
+            if (previousOntologyId.current !== activeOntology.id) {
+                console.log('OntologyModeler: Switching to ontology', activeOntology.id);
+                setNodes(activeOntology.nodes);
+                setEdges(activeOntology.edges);
+                previousOntologyId.current = activeOntology.id;
+            } else {
+                console.log('OntologyModeler: Updating existing ontology properties, preserving React Flow state');
+                // Just update the data without resetting React Flow's state
+                setNodes(nodes => nodes.map(node => {
+                    const storeNode = activeOntology.nodes.find(n => n.id === node.id);
+                    return storeNode ? { ...node, data: storeNode.data } : node;
+                }));
+                setEdges(edges => edges.map(edge => {
+                    const storeEdge = activeOntology.edges.find(e => e.id === edge.id);
+                    return storeEdge ? { ...edge, data: storeEdge.data } : edge;
+                }));
+            }
         }
     }, [activeOntology, setNodes, setEdges]);
 
