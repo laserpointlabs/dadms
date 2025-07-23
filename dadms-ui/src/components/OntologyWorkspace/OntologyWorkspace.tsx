@@ -35,11 +35,28 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
     } = useOntologyWorkspaceStore();
 
     const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
+    const [isConnectionMode, setIsConnectionMode] = useState(false);
 
     // Ensure workspace exists when component mounts
     useEffect(() => {
         ensureWorkspace();
     }, [ensureWorkspace]);
+
+    const handleConnectionModeToggle = () => {
+        setIsConnectionMode(!isConnectionMode);
+    };
+
+    // Add keyboard shortcut to exit connection mode
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && isConnectionMode) {
+                setIsConnectionMode(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isConnectionMode]);
 
     const containerStyle = {
         display: 'flex',
@@ -170,10 +187,34 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
                 <OntologyPalette
                     isCollapsed={isPaletteCollapsed}
                     onToggleCollapse={() => setIsPaletteCollapsed(!isPaletteCollapsed)}
+                    onConnectionModeToggle={handleConnectionModeToggle}
+                    isConnectionMode={isConnectionMode}
                 />
 
                 {/* Center Content - Dual View Editor */}
                 <div style={centerContentStyle}>
+                    {/* Connection Mode Indicator */}
+                    {isConnectionMode && (
+                        <div style={{
+                            position: 'absolute',
+                            top: dadmsTheme.spacing.md,
+                            left: dadmsTheme.spacing.md,
+                            zIndex: dadmsTheme.zIndex.dropdown,
+                            background: dadmsTheme.colors.accent.success,
+                            color: dadmsTheme.colors.text.inverse,
+                            padding: `${dadmsTheme.spacing.xs} ${dadmsTheme.spacing.sm}`,
+                            borderRadius: dadmsTheme.borderRadius.md,
+                            fontSize: dadmsTheme.typography.fontSize.sm,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: dadmsTheme.spacing.xs,
+                            boxShadow: dadmsTheme.shadows.md,
+                        }}>
+                            <Icon name="arrow-right" size="sm" />
+                            Connection Mode: Click and drag between entities to create relationships
+                        </div>
+                    )}
+
                     {/* Panel Toggle Buttons */}
                     <div style={panelToggleStyle}>
                         <button
@@ -226,6 +267,15 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
                 }}>
                     <div>
                         Workspace: {workspaceId} | Project: {projectId}
+                        {isConnectionMode && (
+                            <span style={{
+                                marginLeft: dadmsTheme.spacing.md,
+                                color: dadmsTheme.colors.accent.success,
+                                fontWeight: dadmsTheme.typography.fontWeight.medium,
+                            }}>
+                                | Connection Mode Active
+                            </span>
+                        )}
                     </div>
                     <div>
                         Last modified: {new Date(activeOntology.lastModified).toLocaleTimeString()}
