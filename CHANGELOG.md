@@ -1,5 +1,54 @@
 # Changelog
 
+## [2.0.0-alpha.4] - 2025-01-23
+
+### Added
+- **🧠 Comprehensive Ontology Workspace Implementation**
+  - Complete OntologyWorkspace component with React Flow integration
+  - OntologyModeler with dual-view editor (diagram/OWL text mode)
+  - Advanced PropertiesPanel with dynamic property editing
+  - OntologyPalette with DADMS-specific node types (Decision, Stakeholder, Process, Knowledge, Context entities)
+  - OntologyExplorer with external ontology browsing and selective import
+  - ExternalReferencePanel for managing ontology dependencies
+
+- **🎨 Enhanced DADMS Ontology Node Types**
+  - DecisionEntityNode with decision-specific properties and visualization
+  - StakeholderEntityNode for personas, teams, and authority modeling
+  - ProcessEntityNode for BPMN integration and process semantics
+  - KnowledgeEntityNode for document and concept management
+  - ContextEntityNode for scenario and environmental modeling
+  - Custom DADMSRelationshipEdge for semantic relationships
+
+- **⚡ Advanced Ontology Management Features**
+  - Zustand-based state management for ontology operations
+  - Real-time dual-view synchronization between diagram and OWL text
+  - External ontology reference system with visual distinction
+  - Comprehensive ontology validation and consistency checking
+  - Minimap and fullscreen toggle for large ontology navigation
+
+- **📚 MVP Documentation & Planning**
+  - Complete ontology modeler specification with implementation roadmap
+  - MVP hybrid configuration approach (JSON + Database)
+  - DADMS MVP NRE estimate for UAV selection analysis use case
+  - Comprehensive API endpoints documentation for ontology services
+
+- **🛠️ Enhanced Development Infrastructure**
+  - Improved theme integration across all components
+  - Enhanced BPMN modeler with better loading states
+  - Expanded shared Icon component with ontology-specific icons
+  - Better error handling and UI state management
+
+### Changed
+- Enhanced ThemeContext with extended color palette for ontology components
+- Improved global CSS with ontology-specific styling
+- Updated design system theme with additional semantic colors
+- Refined component styling for better visual hierarchy
+
+### Fixed
+- BPMN modeler loading state management
+- Theme consistency across ontology components
+- Icon rendering for ontology node types
+
 ## [2.0.0-alpha.3] - 2025-01-17
 
 ### Added
