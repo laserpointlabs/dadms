@@ -189,6 +189,29 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         }
     }, [tabs, activeTabId, saveToStorage]);
 
+    // Ensure current pathname has a tab after initialization
+    useEffect(() => {
+        if (isInitialized.current && pathname && tabs.length > 0) {
+            const existingTab = tabs.find(tab => tab.path === pathname);
+            if (!existingTab) {
+                // Add tab for current pathname if it doesn't exist
+                const { title, icon } = getPageInfo(pathname);
+                const newTab: Tab = {
+                    id: generateTabId(),
+                    title,
+                    icon,
+                    path: pathname,
+                    isActive: true,
+                    isPinned: false,
+                    isModified: false,
+                    canClose: true
+                };
+                setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, isActive: false })).concat(newTab));
+                setActiveTabId(newTab.id);
+            }
+        }
+    }, [pathname, tabs.length, isInitialized.current, getPageInfo, generateTabId]);
+
     // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
@@ -200,8 +223,14 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
     // Add a new tab
     const addTab = useCallback((path: string, title?: string, icon?: string) => {
+        // Check if tab already exists for this path
         const existingTab = tabs.find(tab => tab.path === path);
         if (existingTab) {
+            // If tab exists and is already active, do nothing (prevent duplication)
+            if (existingTab.isActive) {
+                return existingTab.id;
+            }
+
             // Switch to existing tab by updating state directly
             setTabs(prevTabs =>
                 prevTabs.map(tab => ({
@@ -243,8 +272,11 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     // Switch to a specific tab
     const switchTab = useCallback((tabId: string) => {
         const tab = tabs.find(t => t.id === tabId);
-        if (!tab || tab.isActive) return;
+        if (!tab) {
+            return;
+        }
 
+        // Always allow switching, even if tab is already active (for manual clicks)
         setTabs(prevTabs =>
             prevTabs.map(t => ({
                 ...t,
@@ -382,11 +414,13 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         }
 
         const existingTab = tabs.find(tab => tab.path === pathname);
-        if (existingTab && !existingTab.isActive) {
-            // Switch to existing tab
-            switchTab(existingTab.id);
-        } else if (!existingTab) {
-            // Create new tab for this path
+        if (existingTab) {
+            // Always ensure the tab for current pathname is active
+            if (!existingTab.isActive) {
+                switchTab(existingTab.id);
+            }
+        } else {
+            // Create new tab for this path only if it doesn't exist
             addTab(pathname);
         }
     }, [pathname, tabs, switchTab, addTab]);
