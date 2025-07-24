@@ -13,7 +13,7 @@ interface OntologyToolbarProps {
     onToggleExternalPanel?: () => void;
 }
 
-const OntologyToolbar: React.FC<OntologyToolbarProps> = ({ 
+const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
     className,
     isPropertiesPanelOpen = false,
     isExternalPanelOpen = false,
@@ -179,7 +179,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     onClick={handleNewOntology}
                     title="Create new ontology"
                 >
-                    <Icon name="add" size="sm" />
+                    <Icon name="add" size="sm" color={dadmsTheme.colors.text.primary} />
                     New
                 </button>
 
@@ -188,7 +188,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     onClick={handleImport}
                     title="Import ontology from file"
                 >
-                    <Icon name="arrow-down" size="sm" />
+                    <Icon name="arrow-down" size="sm" color={dadmsTheme.colors.text.primary} />
                     Import
                 </button>
 
@@ -198,7 +198,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     disabled={!activeOntology}
                     title="Save current ontology"
                 >
-                    <Icon name="save" size="sm" />
+                    <Icon name="save" size="sm" color={!activeOntology ? dadmsTheme.colors.text.muted : dadmsTheme.colors.accent.primary} />
                     Save
                 </button>
 
@@ -208,7 +208,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     disabled={!activeOntology}
                     title="Export ontology"
                 >
-                    <Icon name="arrow-up" size="sm" />
+                    <Icon name="arrow-up" size="sm" color={!activeOntology ? dadmsTheme.colors.text.muted : dadmsTheme.colors.text.primary} />
                     Export
                 </button>
 
@@ -220,7 +220,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     disabled={!activeOntology || isValidating}
                     title="Validate ontology consistency"
                 >
-                    <Icon name={isValidating ? "loading" : "check"} size="sm" />
+                    <Icon name={isValidating ? "loading" : "check"} size="sm" color={!activeOntology || isValidating ? dadmsTheme.colors.text.muted : dadmsTheme.colors.accent.warning} />
                     {isValidating ? 'Validating...' : 'Validate'}
                 </button>
 
@@ -229,7 +229,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     onClick={handleGenerateAAS}
                     title="Generate ontology using AAS (AI Assistant)"
                 >
-                    <Icon name="robot" size="sm" />
+                    <Icon name="robot" size="sm" color={dadmsTheme.colors.text.primary} />
                     Generate via AAS
                 </button>
 
@@ -240,7 +240,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     onClick={handleLoadMockData}
                     title="Load example ontology for testing"
                 >
-                    <Icon name="project" size="sm" />
+                    <Icon name="project" size="sm" color={dadmsTheme.colors.text.primary} />
                     Load Example
                 </button>
 
@@ -249,7 +249,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                     onClick={handleClearStorage}
                     title="Clear browser storage and refresh"
                 >
-                    <Icon name="trash" size="sm" />
+                    <Icon name="trash" size="sm" color={dadmsTheme.colors.text.primary} />
                     Clear Storage
                 </button>
 
@@ -279,7 +279,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                             onClick={onTogglePropertiesPanel}
                             title="Toggle properties panel"
                         >
-                            <Icon name="settings-gear" size="sm" />
+                            <Icon name="settings-gear" size="sm" color={isPropertiesPanelOpen ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary} />
                         </button>
                         <button
                             style={{
@@ -289,7 +289,7 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                             onClick={onToggleExternalPanel}
                             title="Toggle external references panel"
                         >
-                            <Icon name="references" size="sm" />
+                            <Icon name="references" size="sm" color={isExternalPanelOpen ? dadmsTheme.colors.accent.primary : dadmsTheme.colors.text.secondary} />
                         </button>
                         <div style={dividerStyle} />
                     </div>
@@ -305,10 +305,10 @@ const OntologyToolbar: React.FC<OntologyToolbarProps> = ({
                                 fontSize: dadmsTheme.typography.fontSize.xs,
                                 color: dadmsTheme.colors.text.secondary,
                             }}>
-                                <Icon name="project" size="xs" />
+                                <Icon name="project" size="xs" color={dadmsTheme.colors.text.secondary} />
                                 {activeOntology.nodes.length} nodes
 
-                                <Icon name="type-hierarchy" size="xs" />
+                                <Icon name="type-hierarchy" size="xs" color={dadmsTheme.colors.text.secondary} />
                                 {activeOntology.edges.length} edges
                             </div>
                             {(selectedNodes.length > 0 || selectedEdges.length > 0) && (

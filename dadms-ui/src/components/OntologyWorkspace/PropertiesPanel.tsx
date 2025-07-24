@@ -734,12 +734,12 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
         <div style={containerStyle}>
             {isCollapsed ? (
                 <div style={collapsedHeaderStyle} onClick={onToggleCollapse} title="Expand properties panel">
-                    <Icon name="settings-gear" size="md" />
+                    <Icon name="settings-gear" size="md" color={dadmsTheme.colors.text.primary} />
                 </div>
             ) : (
                 <div style={headerStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.sm }}>
-                        <Icon name="settings-gear" size="md" />
+                        <Icon name="settings-gear" size="md" color={dadmsTheme.colors.text.primary} />
                         <div style={titleStyle}>Properties</div>
                     </div>
                     <div style={{ display: 'flex', gap: dadmsTheme.spacing.xs }}>
@@ -749,7 +749,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
                                 onClick={onToggleCollapse}
                                 title="Collapse properties panel"
                             >
-                                <Icon name="chevron-right" size="sm" />
+                                <Icon name="chevron-right" size="sm" color={dadmsTheme.colors.text.secondary} />
                             </button>
                         )}
                         <button
@@ -877,7 +877,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
                                                             style={saveButtonStyle}
                                                             onClick={() => handlePropertySave(key)}
                                                         >
-                                                            <Icon name="check" size="sm" />
+                                                            <Icon name="check" size="sm" color={dadmsTheme.colors.accent.success} />
                                                         </button>
                                                         <button
                                                             style={buttonStyle('secondary', 'xs')}
@@ -1015,7 +1015,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
                         ) : (
                             <div style={emptyStateStyle}>
                                 <div style={{ marginBottom: dadmsTheme.spacing.md }}>
-                                    <Icon name="project" size="xl" />
+                                    <Icon name="project" size="xl" color={dadmsTheme.colors.text.muted} />
                                 </div>
                                 <div>No ontology loaded</div>
                                 <div style={{ fontSize: dadmsTheme.typography.fontSize.sm, marginTop: dadmsTheme.spacing.sm }}>
@@ -1094,7 +1094,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
                                                                 style={saveButtonStyle}
                                                                 onClick={() => handlePropertySave(key)}
                                                             >
-                                                                <Icon name="check" size="sm" />
+                                                                <Icon name="check" size="sm" color={dadmsTheme.colors.accent.success} />
                                                             </button>
                                                             <button
                                                                 style={buttonStyle('secondary', 'xs')}
@@ -1229,7 +1229,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ isOpen, onToggle, isC
                                                                 style={saveButtonStyle}
                                                                 onClick={() => handlePropertySave(key)}
                                                             >
-                                                                <Icon name="check" size="sm" />
+                                                                <Icon name="check" size="sm" color={dadmsTheme.colors.accent.success} />
                                                             </button>
                                                             <button
                                                                 style={buttonStyle('secondary', 'xs')}

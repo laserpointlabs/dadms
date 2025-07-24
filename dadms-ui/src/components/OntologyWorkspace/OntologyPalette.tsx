@@ -17,15 +17,15 @@ const paletteItems: PaletteItem[] = [
         type: 'entity',
         label: 'Entity',
         description: 'Classes, concepts, and individuals',
-        icon: 'circle-filled',
-        color: dadmsTheme.colors.accent.primary,
+        icon: 'symbol-class', // Proper icon for classes/entities
+        color: '#0969da', // Blue - using actual color instead of CSS variable
     },
     {
         type: 'data_property',
         label: 'Data Property',
         description: 'Attributes and literal values',
-        icon: 'symbol-field',
-        color: dadmsTheme.colors.accent.info,
+        icon: 'symbol-property', // Proper icon for properties
+        color: '#0969da', // Blue - using actual color instead of CSS variable
     },
 
 ];
@@ -175,12 +175,12 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
         <div style={containerStyle}>
             {isCollapsed ? (
                 <div style={collapsedHeaderStyle} onClick={onToggleCollapse} title="Expand ontology elements panel">
-                    <Icon name="symbol-class" size="md" />
+                    <Icon name="symbol-class" size="md" color={dadmsTheme.colors.text.primary} />
                 </div>
             ) : (
                 <div style={headerStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: dadmsTheme.spacing.sm }}>
-                        <Icon name="symbol-class" size="md" />
+                        <Icon name="symbol-class" size="md" color={dadmsTheme.colors.text.primary} />
                         <div style={titleStyle}>Ontology Elements</div>
                     </div>
                     <button
@@ -188,7 +188,7 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                         onClick={onToggleCollapse}
                         title="Collapse palette"
                     >
-                        <Icon name="chevron-right" size="sm" />
+                        <Icon name="chevron-right" size="sm" color={dadmsTheme.colors.text.secondary} />
                     </button>
                 </div>
             )}
@@ -201,7 +201,7 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                         onClick={onConnectionModeToggle}
                         title={isConnectionMode ? 'Exit connection mode' : 'Enter connection mode to create relationships'}
                     >
-                        <div style={iconContainerStyle(isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.accent.secondary)}>
+                        <div style={iconContainerStyle(isConnectionMode ? '#1a7f37' : '#0969da')}>
                             <Icon name="arrow-right" size="md" color="#ffffff" />
                         </div>
                         <div style={{ flex: 1 }}>
@@ -219,7 +219,7 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                 {isCollapsed && onConnectionModeToggle && (
                     <div
                         style={{
-                            ...iconContainerStyle(isConnectionMode ? dadmsTheme.colors.accent.success : dadmsTheme.colors.accent.secondary),
+                            ...iconContainerStyle(isConnectionMode ? '#1a7f37' : '#0969da'),
                             width: '100%',
                             marginBottom: dadmsTheme.spacing.sm,
                             cursor: 'pointer',
@@ -262,7 +262,9 @@ const OntologyPalette: React.FC<OntologyPaletteProps> = ({
                             }
                         }}
                     >
-                        <Icon name={item.icon} size="md" color="#ffffff" />
+                        <div style={iconContainerStyle(item.color)}>
+                            <Icon name={item.icon} size="md" color="#ffffff" />
+                        </div>
                         {!isCollapsed && (
                             <div style={{ flex: 1 }}>
                                 <div style={labelStyle}>{item.label}</div>
