@@ -3,7 +3,8 @@ import { Edge, Node } from 'reactflow';
 // Simplified Ontology Entity Types - removed object_property since it's now represented as edges
 export type DADMSEntityType =
     | 'entity'
-    | 'data_property';
+    | 'data_property'
+    | 'note'; // Added note type
 
 // More comprehensive relationship types for object properties as edges
 export type DADMSRelationshipType =
@@ -54,6 +55,12 @@ export interface OntologyNodeData {
     isExternal?: boolean;
     externalSource?: string;
     confidence?: number;
+    // Note-specific properties
+    noteContent?: string;
+    noteType?: 'info' | 'warning' | 'error' | 'success' | 'general';
+    noteAuthor?: string;
+    noteCreated?: string;
+    noteLastModified?: string;
 }
 
 // Edge Data Structure  

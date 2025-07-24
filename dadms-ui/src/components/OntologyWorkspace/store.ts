@@ -327,7 +327,18 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                         const updatedOntology = {
                             ...activeOntology,
                             nodes: activeOntology.nodes.map(node =>
-                                node.id === nodeId ? { ...node, ...updates } : node
+                                node.id === nodeId ? {
+                                    ...node,
+                                    ...updates,
+                                    data: {
+                                        ...node.data,
+                                        ...(updates.data || {}),
+                                        // Update note metadata when note content changes
+                                        ...(updates.data?.noteContent && {
+                                            noteLastModified: new Date().toISOString()
+                                        })
+                                    }
+                                } : node
                             ),
                             lastModified: new Date().toISOString()
                         };

@@ -474,7 +474,32 @@ const OntologyModelerInner: React.FC = () => {
                     targetHandle: params.targetHandle || null,
                 };
 
-            // Store the connection parameters and show the relationship selector
+            // Check if this is a note connection (either source or target is a note)
+            const sourceNode = nodes.find(n => n.id === connection.source);
+            const targetNode = nodes.find(n => n.id === connection.target);
+            const isNoteConnection = sourceNode?.type === 'note' || targetNode?.type === 'note';
+
+            if (isNoteConnection) {
+                // Automatically create a note connection with dotted line
+                const newEdge: OntologyEdge = {
+                    ...connection,
+                    id: `edge-${Date.now()}`,
+                    type: 'note_connection',
+                    data: {
+                        relationshipType: 'annotates',
+                        properties: {},
+                        strength: 1.0,
+                        isInferred: false,
+                        label: 'Note',
+                    },
+                } as OntologyEdge;
+
+                setEdges((eds) => addEdge(newEdge, eds));
+                storeAddEdge(newEdge);
+                return;
+            }
+
+            // For regular connections, show the relationship selector
             setPendingConnection(connection);
 
             // Calculate position for the selector (center of the canvas)
@@ -489,7 +514,7 @@ const OntologyModelerInner: React.FC = () => {
                 setSelectorPosition({ x: 200, y: 200 });
             }
         },
-        [],
+        [nodes, setEdges, storeAddEdge],
     );
 
     const handleRelationshipSelect = useCallback(
@@ -560,6 +585,8 @@ const OntologyModelerInner: React.FC = () => {
                         return 'MyEntity';
                     case 'data_property':
                         return 'hasValue';
+                    case 'note':
+                        return 'Note';
                     default:
                         return 'NewElement';
                 }
@@ -571,9 +598,24 @@ const OntologyModelerInner: React.FC = () => {
                         return 'Entity';
                     case 'data_property':
                         return 'Data Property';
+                    case 'note':
+                        return 'Note';
                     default:
                         return 'Element';
                 }
+            };
+
+            const getDefaultNoteData = (nodeType: string) => {
+                if (nodeType === 'note') {
+                    return {
+                        noteContent: '',
+                        noteType: 'general' as const,
+                        noteAuthor: 'DADMS User',
+                        noteCreated: new Date().toISOString(),
+                        noteLastModified: new Date().toISOString(),
+                    };
+                }
+                return {};
             };
 
             const newNode: OntologyNode = {
@@ -585,6 +627,7 @@ const OntologyModelerInner: React.FC = () => {
                     entityType: getEntityType(type),
                     properties: {},
                     description: '',
+                    ...getDefaultNoteData(type),
                 },
             };
 
@@ -734,6 +777,8 @@ const OntologyModelerInner: React.FC = () => {
                                     return dadmsTheme.colors.accent.primary;
                                 case 'data_property':
                                     return dadmsTheme.colors.accent.info;
+                                case 'note':
+                                    return dadmsTheme.colors.accent.secondary;
                                 case 'external_reference':
                                     return dadmsTheme.colors.border.light;
                                 default:

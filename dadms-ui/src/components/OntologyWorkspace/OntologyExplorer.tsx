@@ -13,7 +13,7 @@ interface OntologyExplorerProps {
 interface TreeNode {
     id: string;
     label: string;
-    type: 'entity' | 'data_property' | 'relationship' | 'ontology' | 'folder' | 'external_ontology' | 'external_entity' | 'external_property';
+    type: 'entity' | 'data_property' | 'note' | 'relationship' | 'ontology' | 'folder' | 'external_ontology' | 'external_entity' | 'external_property';
     children?: TreeNode[];
     node?: any;
     edge?: any;
@@ -38,6 +38,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
 
         const entities = activeOntology.nodes.filter(n => n.type === 'entity');
         const dataProperties = activeOntology.nodes.filter(n => n.type === 'data_property');
+        const notes = activeOntology.nodes.filter(n => n.type === 'note');
         const relationships = activeOntology.edges;
 
         const tree: TreeNode[] = [
@@ -84,6 +85,17 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                             id: node.id,
                             label: node.data.label || 'Unnamed Property',
                             type: 'data_property' as const,
+                            node
+                        }))
+                    },
+                    {
+                        id: 'notes',
+                        label: `Notes (${notes.length})`,
+                        type: 'folder',
+                        children: notes.map(node => ({
+                            id: node.id,
+                            label: node.data.label || 'Unnamed Note',
+                            type: 'note' as const,
                             node
                         }))
                     },
@@ -144,7 +156,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
     };
 
     const handleNodeClick = (node: TreeNode) => {
-        if (node.type === 'entity' || node.type === 'data_property') {
+        if (node.type === 'entity' || node.type === 'data_property' || node.type === 'note') {
             if (node.node) {
                 setSelectedNodes([node.node.id]);
                 setSelectedEdges([]);
@@ -158,7 +170,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
     };
 
     const isNodeSelected = (node: TreeNode) => {
-        if (node.type === 'entity' || node.type === 'data_property') {
+        if (node.type === 'entity' || node.type === 'data_property' || node.type === 'note') {
             return selectedNodes.includes(node.id);
         } else if (node.type === 'relationship') {
             return selectedEdges.includes(node.id);
@@ -170,7 +182,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
         const isExpanded = expandedNodes.has(node.id);
         const isSelected = isNodeSelected(node);
         const hasChildren = node.children && node.children.length > 0;
-        const isClickable = node.type === 'entity' || node.type === 'data_property' || node.type === 'relationship' || node.type === 'external_entity' || node.type === 'external_property';
+        const isClickable = node.type === 'entity' || node.type === 'data_property' || node.type === 'note' || node.type === 'relationship' || node.type === 'external_entity' || node.type === 'external_property';
 
         const nodeStyle = {
             display: 'flex',
@@ -194,6 +206,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                 case 'folder': return 'folder';
                 case 'entity': return 'symbol-class'; // Updated to match palette
                 case 'data_property': return 'symbol-field'; // Updated to match palette
+                case 'note': return 'file-text'; // Icon for notes
                 case 'relationship': return 'arrow-right';
                 case 'external_ontology': return 'references';
                 case 'external_entity': return 'symbol-class';
@@ -208,6 +221,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                 case 'folder': return dadmsTheme.colors.text.secondary;
                 case 'entity': return dadmsTheme.colors.accent.primary;
                 case 'data_property': return dadmsTheme.colors.accent.info;
+                case 'note': return dadmsTheme.colors.accent.secondary;
                 case 'relationship': return dadmsTheme.colors.accent.secondary;
                 case 'external_ontology': return dadmsTheme.colors.accent.warning;
                 case 'external_entity': return dadmsTheme.colors.accent.warning;
@@ -257,7 +271,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
                         name={getIconName(node.type)}
                         size="sm"
                         color={isSelected ? dadmsTheme.colors.text.inverse : getIconColor(node.type)}
-                        style={{ marginRight: dadmsTheme.spacing.xs }}
+                        className="mr-1"
                     />
                     <span style={{
                         flex: 1,

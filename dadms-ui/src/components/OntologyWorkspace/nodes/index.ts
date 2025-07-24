@@ -1,9 +1,9 @@
 import ExternalReferenceNode from './ExternalReferenceNode';
+import OntologyNoteNode from './OntologyNoteNode';
 import SimpleOntologyNode from './SimpleOntologyNode';
 
 export {
-    ExternalReferenceNode,
-    SimpleOntologyNode
+    ExternalReferenceNode, OntologyNoteNode, SimpleOntologyNode
 };
 
 export const nodeTypes = {
@@ -11,4 +11,5 @@ export const nodeTypes = {
     object_property: SimpleOntologyNode,
     data_property: SimpleOntologyNode,
     external_reference: ExternalReferenceNode,
+    note: OntologyNoteNode,
 }; 
