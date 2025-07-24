@@ -97,7 +97,7 @@ const dadmsActivityGroups: NavigationGroup[] = [
     },
     {
         id: 'ai-services',
-        icon: 'robot',
+        icon: 'chat-sparkle',
         label: 'AI Services',
         items: [
             {

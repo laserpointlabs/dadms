@@ -28,7 +28,7 @@ export type CodiconName =
     // Files
     | 'file' | 'file-text' | 'file-pdf' | 'file-zip' | 'folder' | 'folder-opened'
     // DADMS specific
-    | 'project' | 'library' | 'type-hierarchy' | 'robot' | 'hubot' | 'graph' | 'pulse' | 'lightbulb' | 'beaker'
+    | 'project' | 'library' | 'type-hierarchy' | 'robot' | 'hubot' | 'graph' | 'pulse' | 'lightbulb' | 'lightbulb-sparkle' | 'beaker' | 'chat-sparkle'
     // Tab management
     | 'pin' | 'more' | 'plus'
     // Ontology specific  
