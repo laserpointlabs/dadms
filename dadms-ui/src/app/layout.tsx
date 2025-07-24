@@ -7,6 +7,7 @@ import ProjectTreeView from "../components/ProjectTreeView";
 import { TabBar as EnhancedTabBar } from "../components/shared/TabBar";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
 import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
+import { PanelStateProvider, usePanelState } from "../contexts/PanelStateContext";
 import { TabProvider, useTabs } from "../contexts/TabContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
@@ -470,14 +471,17 @@ function DefaultView({ viewType, isCollapsed, onToggleCollapse }: { viewType: st
     );
 }
 
-function SidebarView({ activeView, isCollapsed, onToggleCollapse }: { activeView: string; isCollapsed: boolean; onToggleCollapse: () => void }) {
+function SidebarView({ activeView }: { activeView: string }) {
+    const { getPanelState, togglePanelCollapsed } = usePanelState();
+    const sidebarState = getPanelState('project-explorer');
+
     switch (activeView) {
         case 'explorer':
-            return <ExplorerView isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
+            return <ExplorerView isCollapsed={sidebarState.isCollapsed} onToggleCollapse={() => togglePanelCollapsed('project-explorer')} />;
         case 'search':
-            return <SearchView isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
+            return <SearchView isCollapsed={sidebarState.isCollapsed} onToggleCollapse={() => togglePanelCollapsed('project-explorer')} />;
         default:
-            return <DefaultView viewType={activeView} isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
+            return <DefaultView viewType={activeView} isCollapsed={sidebarState.isCollapsed} onToggleCollapse={() => togglePanelCollapsed('project-explorer')} />;
     }
 }
 
@@ -551,16 +555,13 @@ function MainContent({ children }: { children: React.ReactNode }) {
 // Main layout component that uses the tab context
 function MainLayout({ children }: { children: React.ReactNode }) {
     const [activeView, setActiveView] = useState('explorer');
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const { navigateToTab } = useTabs();
 
     const handleViewChange = (view: string) => {
         setActiveView(view);
     };
 
-    const handleToggleCollapse = () => {
-        setIsSidebarCollapsed(!isSidebarCollapsed);
-    };
+
 
     return (
         <div className="vscode-workbench">
@@ -584,7 +585,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 <ActivityBar activeView={activeView} onViewChange={handleViewChange} />
 
                 {/* Sidebar */}
-                <SidebarView activeView={activeView} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleCollapse} />
+                <SidebarView activeView={activeView} />
 
                 {/* Editor Area */}
                 <div className="vscode-editor-area">
@@ -618,16 +619,18 @@ export default function RootLayout({
             </head>
             <body>
                 <ThemeProvider defaultTheme="dark">
-                    <TabProvider>
-                        <AgentAssistantProvider>
-                            <MainLayout>
-                                {children}
-                            </MainLayout>
+                    <PanelStateProvider>
+                        <TabProvider>
+                            <AgentAssistantProvider>
+                                <MainLayout>
+                                    {children}
+                                </MainLayout>
 
-                            {/* Agent Assistance Component */}
-                            <AASCar />
-                        </AgentAssistantProvider>
-                    </TabProvider>
+                                {/* Agent Assistance Component */}
+                                <AASCar />
+                            </AgentAssistantProvider>
+                        </TabProvider>
+                    </PanelStateProvider>
                 </ThemeProvider>
             </body>
         </html>
