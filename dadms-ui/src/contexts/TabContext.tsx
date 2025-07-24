@@ -72,13 +72,22 @@ const NAVIGATION_CONFIG = {
     '/test-tabs': { title: 'Test Tabs Page', icon: 'beaker' },
 };
 
+// localStorage keys
+const STORAGE_KEYS = {
+    TABS: 'dadms-tabs',
+    ACTIVE_TAB: 'dadms-active-tab-id'
+} as const;
+
 export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     const [tabs, setTabs] = useState<Tab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
     const pathname = usePathname();
     const router = useRouter();
+
+    // Refs for managing state
     const isInitialized = useRef(false);
     const isNavigating = useRef(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Get page info from navigation configuration
     const getPageInfo = useCallback((path: string) => {
@@ -90,25 +99,131 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     }, []);
 
     // Generate unique tab ID
-    const generateTabId = useCallback(() => {
+    const generateTabId = useCallback((): string => {
         return `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }, []);
 
-    // Find or create tab for a path
-    const findOrCreateTab = useCallback((path: string, title?: string, icon?: string) => {
+    // Debounced save to localStorage
+    const saveToStorage = useCallback((newTabs: Tab[], newActiveTabId: string | null) => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        saveTimeoutRef.current = setTimeout(() => {
+            try {
+                localStorage.setItem(STORAGE_KEYS.TABS, JSON.stringify(newTabs));
+                if (newActiveTabId) {
+                    localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, newActiveTabId);
+                }
+            } catch (error) {
+                console.warn('Failed to save tabs to localStorage:', error);
+            }
+        }, 100);
+    }, []);
+
+    // Load tabs from localStorage
+    const loadFromStorage = useCallback(() => {
+        try {
+            const savedTabs = localStorage.getItem(STORAGE_KEYS.TABS);
+            const savedActiveTabId = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
+
+            if (savedTabs) {
+                const parsedTabs: Tab[] = JSON.parse(savedTabs);
+
+                // Validate and clean the loaded tabs
+                const validTabs = parsedTabs.filter(tab =>
+                    tab.id &&
+                    tab.title &&
+                    tab.path &&
+                    typeof tab.isActive === 'boolean'
+                );
+
+                if (validTabs.length > 0) {
+                    // Ensure only one tab is active
+                    const activeTabId = savedActiveTabId && validTabs.find(t => t.id === savedActiveTabId)
+                        ? savedActiveTabId
+                        : validTabs[0].id;
+
+                    const updatedTabs = validTabs.map(tab => ({
+                        ...tab,
+                        isActive: tab.id === activeTabId
+                    }));
+
+                    setTabs(updatedTabs);
+                    setActiveTabId(activeTabId);
+                    return true; // Successfully loaded
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load tabs from localStorage:', error);
+        }
+        return false; // No valid tabs loaded
+    }, []);
+
+    // Initialize tabs on mount
+    useEffect(() => {
+        const loaded = loadFromStorage();
+        if (!loaded && pathname) {
+            // Create initial tab for current path
+            const { title, icon } = getPageInfo(pathname);
+            const initialTab: Tab = {
+                id: generateTabId(),
+                title,
+                icon,
+                path: pathname,
+                isActive: true,
+                isPinned: false,
+                isModified: false,
+                canClose: false // Initial tab cannot be closed
+            };
+            setTabs([initialTab]);
+            setActiveTabId(initialTab.id);
+        }
+        isInitialized.current = true;
+    }, [loadFromStorage, pathname, getPageInfo, generateTabId]);
+
+    // Save tabs to localStorage when they change
+    useEffect(() => {
+        if (isInitialized.current && tabs.length > 0) {
+            saveToStorage(tabs, activeTabId);
+        }
+    }, [tabs, activeTabId, saveToStorage]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Add a new tab
+    const addTab = useCallback((path: string, title?: string, icon?: string) => {
         const existingTab = tabs.find(tab => tab.path === path);
         if (existingTab) {
-            return existingTab;
+            // Switch to existing tab by updating state directly
+            setTabs(prevTabs =>
+                prevTabs.map(tab => ({
+                    ...tab,
+                    isActive: tab.id === existingTab.id
+                }))
+            );
+            setActiveTabId(existingTab.id);
+
+            // Navigate to the tab's path if different from current pathname
+            if (existingTab.path !== pathname) {
+                isNavigating.current = true;
+                router.push(existingTab.path);
+            }
+            return existingTab.id;
         }
 
         const { title: pageTitle, icon: pageIcon } = getPageInfo(path);
-        const tabTitle = title || pageTitle;
-        const tabIcon = icon || pageIcon;
-
         const newTab: Tab = {
             id: generateTabId(),
-            title: tabTitle,
-            icon: tabIcon,
+            title: title || pageTitle,
+            icon: icon || pageIcon,
             path,
             isActive: true,
             isPinned: false,
@@ -116,53 +231,26 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             canClose: true
         };
 
-        return newTab;
-    }, [tabs, getPageInfo, generateTabId]);
-
-    // Add a new tab
-    const addTab = useCallback((path: string, title?: string, icon?: string) => {
-        const newTab = findOrCreateTab(path, title, icon);
-
         setTabs(prevTabs => {
-            // Check if tab already exists
-            const existingTab = prevTabs.find(tab => tab.path === path);
-            if (existingTab) {
-                // Just activate the existing tab
-                return prevTabs.map(tab => ({
-                    ...tab,
-                    isActive: tab.id === existingTab.id
-                }));
-            }
-
-            // Deactivate all other tabs and add new one
             const updatedTabs = prevTabs.map(tab => ({ ...tab, isActive: false }));
             return [...updatedTabs, newTab];
         });
 
         setActiveTabId(newTab.id);
         return newTab.id;
-    }, [findOrCreateTab]);
-
-    // Navigate to a specific path (creates tab if needed)
-    const navigateToTab = useCallback((path: string) => {
-        isNavigating.current = true;
-        const tabId = addTab(path);
-        router.push(path);
-        return tabId;
-    }, [addTab, router]);
+    }, [tabs, getPageInfo, generateTabId, pathname, router]);
 
     // Switch to a specific tab
     const switchTab = useCallback((tabId: string) => {
         const tab = tabs.find(t => t.id === tabId);
-        if (!tab) return;
+        if (!tab || tab.isActive) return;
 
-        setTabs(prevTabs => {
-            const updatedTabs = prevTabs.map(t => ({
+        setTabs(prevTabs =>
+            prevTabs.map(t => ({
                 ...t,
                 isActive: t.id === tabId
-            }));
-            return updatedTabs;
-        });
+            }))
+        );
 
         setActiveTabId(tabId);
 
@@ -173,20 +261,35 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         }
     }, [tabs, pathname, router]);
 
+    // Navigate to a specific path (creates tab if needed)
+    const navigateToTab = useCallback((path: string) => {
+        isNavigating.current = true;
+        const tabId = addTab(path);
+        router.push(path);
+        return tabId;
+    }, [addTab, router]);
+
     // Close a tab
     const closeTab = useCallback((tabId: string) => {
         setTabs(prevTabs => {
             const tabToClose = prevTabs.find(tab => tab.id === tabId);
-            if (!tabToClose) return prevTabs;
+            if (!tabToClose || !tabToClose.canClose) return prevTabs;
+
+            // Prevent closing the last tab
+            if (prevTabs.length <= 1) {
+                return prevTabs;
+            }
 
             const remainingTabs = prevTabs.filter(tab => tab.id !== tabId);
 
             // If we're closing the active tab, activate the next available tab
             if (tabToClose.isActive && remainingTabs.length > 0) {
                 const nextTab = remainingTabs[remainingTabs.length - 1] || remainingTabs[0];
-                remainingTabs.forEach(tab => {
-                    tab.isActive = tab.id === nextTab.id;
-                });
+                const updatedTabs = remainingTabs.map(tab => ({
+                    ...tab,
+                    isActive: tab.id === nextTab.id
+                }));
+
                 setActiveTabId(nextTab.id);
 
                 // Navigate to the next tab's path
@@ -194,6 +297,8 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
                     isNavigating.current = true;
                     router.push(nextTab.path);
                 }
+
+                return updatedTabs;
             }
 
             return remainingTabs;
@@ -229,16 +334,32 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
     // Close all tabs
     const closeAllTabs = useCallback(() => {
-        setTabs([]);
-        setActiveTabId(null);
+        const homeTab: Tab = {
+            id: generateTabId(),
+            title: 'DADMS 2.0',
+            icon: 'home',
+            path: '/',
+            isActive: true,
+            isPinned: false,
+            isModified: false,
+            canClose: false
+        };
+
+        setTabs([homeTab]);
+        setActiveTabId(homeTab.id);
         router.push('/');
-    }, [router]);
+    }, [router, generateTabId]);
 
     // Close other tabs
     const closeOtherTabs = useCallback((tabId: string) => {
         setTabs(prevTabs => {
             const tabToKeep = prevTabs.find(tab => tab.id === tabId);
-            return tabToKeep ? [tabToKeep] : [];
+            if (!tabToKeep) return prevTabs;
+
+            return [{
+                ...tabToKeep,
+                isActive: true
+            }];
         });
         setActiveTabId(tabId);
     }, []);
@@ -255,65 +376,20 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
     // Handle pathname changes - create or switch to tab
     useEffect(() => {
-        if (!pathname || isNavigating.current) {
+        if (!pathname || isNavigating.current || !isInitialized.current) {
             isNavigating.current = false;
             return;
         }
 
         const existingTab = tabs.find(tab => tab.path === pathname);
-        if (existingTab) {
+        if (existingTab && !existingTab.isActive) {
             // Switch to existing tab
-            setTabs(prevTabs => {
-                const updatedTabs = prevTabs.map(tab => ({
-                    ...tab,
-                    isActive: tab.id === existingTab.id
-                }));
-                return updatedTabs;
-            });
-            setActiveTabId(existingTab.id);
-        } else {
+            switchTab(existingTab.id);
+        } else if (!existingTab) {
             // Create new tab for this path
-            const { title: pageTitle, icon: pageIcon } = getPageInfo(pathname);
-            const newTab: Tab = {
-                id: generateTabId(),
-                title: pageTitle,
-                icon: pageIcon,
-                path: pathname,
-                isActive: true,
-                isPinned: false,
-                isModified: false,
-                canClose: true
-            };
-
-            setTabs(prevTabs => {
-                const updatedTabs = prevTabs.map(tab => ({ ...tab, isActive: false }));
-                return [...updatedTabs, newTab];
-            });
-
-            setActiveTabId(newTab.id);
+            addTab(pathname);
         }
-    }, [pathname, getPageInfo, generateTabId]); // Remove tabs and addTab from dependencies
-
-    // Initialize with current page if no tabs exist
-    useEffect(() => {
-        if (!isInitialized.current && pathname && tabs.length === 0) {
-            isInitialized.current = true;
-            const { title: pageTitle, icon: pageIcon } = getPageInfo(pathname);
-            const newTab: Tab = {
-                id: generateTabId(),
-                title: pageTitle,
-                icon: pageIcon,
-                path: pathname,
-                isActive: true,
-                isPinned: false,
-                isModified: false,
-                canClose: true
-            };
-
-            setTabs([newTab]);
-            setActiveTabId(newTab.id);
-        }
-    }, [pathname, tabs.length, getPageInfo, generateTabId]);
+    }, [pathname, tabs, switchTab, addTab]);
 
     const value: TabContextType = {
         tabs,

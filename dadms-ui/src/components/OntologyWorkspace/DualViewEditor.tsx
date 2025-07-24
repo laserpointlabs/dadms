@@ -277,13 +277,34 @@ const DualViewEditor: React.FC<DualViewEditorProps> = ({ className }) => {
                             scrollBeyondLastLine: false,
                             renderWhitespace: 'selection',
                             bracketPairColorization: { enabled: true },
-                            suggest: {
-                                snippetsPreventQuickSuggestions: false,
-                            },
+                            // Disable features that require file system access
                             quickSuggestions: {
                                 other: true,
-                                comments: true,
-                                strings: true,
+                                comments: false,
+                                strings: false,
+                            },
+                            suggest: {
+                                snippetsPreventQuickSuggestions: false,
+                                showKeywords: true,
+                                showSnippets: false,
+                                showClasses: true,
+                                showFunctions: true,
+                                showVariables: true,
+                                showModules: true,
+                                showProperties: true,
+                                showEvents: true,
+                                showOperators: true,
+                                showUnits: true,
+                                showValues: true,
+                                showConstants: true,
+                                showEnums: true,
+                                showEnumMembers: true,
+                                showColors: true,
+                                showFiles: false,
+                                showReferences: true,
+                                showFolders: false,
+                                showTypeParameters: true,
+                                showWords: true
                             },
                         }}
                         onMount={(editor, monaco) => {

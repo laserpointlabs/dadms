@@ -46,8 +46,8 @@ export default function AADSPage() {
             try {
                 setLoading(true);
                 const [summaryData, messagesData] = await Promise.all([
-                    getMockDecisionSummary(projectId),
-                    getMockChatMessages(projectId)
+                    getMockDecisionSummary(),
+                    getMockChatMessages()
                 ]);
                 setDecisionSummary(summaryData);
                 setChatMessages(messagesData);
@@ -59,7 +59,7 @@ export default function AADSPage() {
         };
 
         loadData();
-    }, [projectId]);
+    }, []); // Empty dependency array since projectId is constant
 
     const handleSendMessage = async () => {
         if (!chatMessage.trim()) return;
@@ -67,9 +67,10 @@ export default function AADSPage() {
         const newMessage: ChatMessage = {
             id: Date.now().toString(),
             content: chatMessage,
-            role: 'user',
+            sender: 'user',
+            senderName: 'Current User',
             timestamp: new Date().toISOString(),
-            user_id: 'current-user'
+            projectId: projectId
         };
 
         setChatMessages(prev => [...prev, newMessage]);
@@ -80,9 +81,10 @@ export default function AADSPage() {
             const aiResponse: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 content: `I understand your question about "${chatMessage}". Based on the current decision context, I recommend considering the following factors...`,
-                role: 'assistant',
+                sender: 'assistant',
+                senderName: 'AI Assistant',
                 timestamp: new Date().toISOString(),
-                user_id: 'ai-assistant'
+                projectId: projectId
             };
             setChatMessages(prev => [...prev, aiResponse]);
         }, 1000);
@@ -93,14 +95,18 @@ export default function AADSPage() {
         try {
             // Mock white paper generation
             const mockWhitePaper: WhitePaper = {
-                id: Date.now().toString(),
-                title: `Decision Analysis: ${decisionSummary?.title || 'Untitled Decision'}`,
-                content: `# Executive Summary\n\nThis document presents a comprehensive analysis of the decision-making process for ${decisionSummary?.title}.\n\n## Key Findings\n\n- Decision criteria have been systematically evaluated\n- Stakeholder input has been collected and analyzed\n- Risk factors have been identified and mitigated\n\n## Recommendations\n\nBased on the analysis, we recommend proceeding with the proposed decision while monitoring key risk indicators.`,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                status: 'draft' as const,
-                project_id: projectId,
-                generated_by: 'current-user'
+                projectId: projectId,
+                sections: [
+                    {
+                        id: "1",
+                        title: "Executive Summary",
+                        content: `# Executive Summary\n\nThis document presents a comprehensive analysis of the decision-making process for ${decisionSummary?.decision || 'Untitled Decision'}.\n\n## Key Findings\n\n- Decision criteria have been systematically evaluated\n- Stakeholder input has been collected and analyzed\n- Risk factors have been identified and mitigated\n\n## Recommendations\n\nBased on the analysis, we recommend proceeding with the proposed decision while monitoring key risk indicators.`,
+                        required: true,
+                        projectId: projectId
+                    }
+                ],
+                lastModified: new Date().toISOString(),
+                version: 1
             };
             setWhitePaper(mockWhitePaper);
         } catch (err) {
@@ -160,7 +166,7 @@ export default function AADSPage() {
                         <Card variant="default" padding="none">
                             <div className="p-4 border-b border-theme-border">
                                 <div className="flex items-center gap-2">
-                                    <Icon name="comment-discussion" size="md" className="text-theme-accent-primary" />
+                                    <Icon name="chat-sparkle" size="md" className="text-theme-accent-primary" />
                                     <h3 className="text-lg font-semibold text-theme-text-primary">AI Decision Assistant</h3>
                                 </div>
                                 <p className="text-sm text-theme-text-secondary mt-1">
