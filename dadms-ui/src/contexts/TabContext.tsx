@@ -57,6 +57,7 @@ const NAVIGATION_CONFIG = {
     '/process': { title: 'Process Manager', icon: 'git-branch' },
     '/thread': { title: 'Thread Manager', icon: 'comment-discussion' },
     '/task': { title: 'Task Orchestrator', icon: 'checklist' },
+    '/user-tasks': { title: 'User Tasks', icon: 'files' },
     '/data': { title: 'Data Manager', icon: 'server' },
     '/analysis': { title: 'Analysis Manager', icon: 'graph-line' },
     '/decision': { title: 'Decision Analytics', icon: 'pie-chart' },
