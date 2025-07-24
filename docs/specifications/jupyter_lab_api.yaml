@@ -1,0 +1,1204 @@
+openapi: 3.0.3
+info:
+  title: DADMS Jupyter Lab Integration API
+  description: |
+    API specification for integrating Jupyter Lab with the DADMS platform.
+    Provides kernel management, notebook operations, and code execution capabilities.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8888
+    description: Jupyter Lab Development Server
+  - url: https://jupyter.dadms.com
+    description: Jupyter Lab Production Server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  # Jupyter Lab Core API
+  /api/status:
+    get:
+      summary: Get Jupyter Lab server status
+      description: Returns the current status of the Jupyter Lab server including version, uptime, and kernel information
+      tags:
+        - Server
+      responses:
+        '200':
+          description: Server status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerStatus'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/kernels:
+    get:
+      summary: List all kernels
+      description: Returns a list of all running kernels
+      tags:
+        - Kernels
+      responses:
+        '200':
+          description: List of kernels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Kernel'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a new kernel
+      description: Creates and starts a new kernel
+      tags:
+        - Kernels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKernelRequest'
+      responses:
+        '201':
+          description: Kernel created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kernel'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/kernels/{kernel_id}:
+    get:
+      summary: Get kernel status
+      description: Returns the current status of a specific kernel
+      tags:
+        - Kernels
+      parameters:
+        - name: kernel_id
+          in: path
+          required: true
+          description: Kernel identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Kernel status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kernel'
+        '404':
+          description: Kernel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Stop kernel
+      description: Stops and removes a kernel
+      tags:
+        - Kernels
+      parameters:
+        - name: kernel_id
+          in: path
+          required: true
+          description: Kernel identifier
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Kernel stopped successfully
+        '404':
+          description: Kernel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/kernels/{kernel_id}/execute:
+    post:
+      summary: Execute code
+      description: Executes Python code in the specified kernel
+      tags:
+        - Execution
+      parameters:
+        - name: kernel_id
+          in: path
+          required: true
+          description: Kernel identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+      responses:
+        '200':
+          description: Code executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Kernel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/kernels/{kernel_id}/restart:
+    post:
+      summary: Restart kernel
+      description: Restarts the specified kernel
+      tags:
+        - Kernels
+      parameters:
+        - name: kernel_id
+          in: path
+          required: true
+          description: Kernel identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Kernel restarted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kernel'
+        '404':
+          description: Kernel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/contents:
+    get:
+      summary: List notebooks
+      description: Returns a list of all notebooks and files
+      tags:
+        - Notebooks
+      parameters:
+        - name: type
+          in: query
+          description: Filter by content type
+          schema:
+            type: string
+            enum: [notebook, file, directory]
+      responses:
+        '200':
+          description: List of notebooks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContentItem'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create notebook
+      description: Creates a new notebook
+      tags:
+        - Notebooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotebookRequest'
+      responses:
+        '201':
+          description: Notebook created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notebook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/contents/{path}:
+    get:
+      summary: Get notebook content
+      description: Returns the content of a specific notebook
+      tags:
+        - Notebooks
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Notebook path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notebook content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notebook'
+        '404':
+          description: Notebook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      summary: Update notebook
+      description: Updates the content of a notebook
+      tags:
+        - Notebooks
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Notebook path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotebookRequest'
+      responses:
+        '200':
+          description: Notebook updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notebook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notebook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete notebook
+      description: Deletes a notebook
+      tags:
+        - Notebooks
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Notebook path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Notebook deleted successfully
+        '404':
+          description: Notebook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # DADMS Integration API
+  /api/projects/{project_id}/jupyter/sessions:
+    get:
+      summary: List project Jupyter sessions
+      description: Returns all Jupyter sessions for a specific project
+      tags:
+        - DADMS Integration
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JupyterSession'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create Jupyter session
+      description: Creates a new Jupyter session for a project
+      tags:
+        - DADMS Integration
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JupyterSession'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/projects/{project_id}/jupyter/sessions/{session_id}:
+    get:
+      summary: Get session details
+      description: Returns details of a specific Jupyter session
+      tags:
+        - DADMS Integration
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          description: Session identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JupyterSession'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/projects/{project_id}/jupyter/sessions/{session_id}/execute:
+    post:
+      summary: Execute analysis
+      description: Executes analysis code in the context of a project session
+      tags:
+        - DADMS Integration
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          description: Session identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteAnalysisRequest'
+      responses:
+        '200':
+          description: Analysis executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteAnalysisResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/projects/{project_id}/jupyter/sessions/{session_id}/results:
+    get:
+      summary: Get execution results
+      description: Returns the results of analysis execution
+      tags:
+        - DADMS Integration
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          description: Project identifier
+          schema:
+            type: string
+        - name: session_id
+          in: path
+          required: true
+          description: Session identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Execution results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResults'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Jupyter Lab API token
+
+  schemas:
+    ServerStatus:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Jupyter Lab version
+          example: "2.4.0"
+        started:
+          type: string
+          format: date-time
+          description: Server start time
+          example: "2025-07-24T16:00:00.000Z"
+        last_activity:
+          type: string
+          format: date-time
+          description: Last activity time
+          example: "2025-07-24T16:30:00.000Z"
+        connections:
+          type: integer
+          description: Number of active connections
+          example: 1
+        kernels:
+          type: integer
+          description: Number of running kernels
+          example: 2
+        kernel_specs:
+          type: object
+          description: Available kernel specifications
+          additionalProperties:
+            $ref: '#/components/schemas/KernelSpec'
+
+    KernelSpec:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Kernel name
+          example: "python3"
+        spec:
+          type: object
+          properties:
+            argv:
+              type: array
+              items:
+                type: string
+              description: Kernel command arguments
+              example: ["python", "-m", "ipykernel_launcher", "-f", "{connection_file}"]
+            env:
+              type: object
+              description: Environment variables
+            display_name:
+              type: string
+              description: Human-readable kernel name
+              example: "Python 3"
+            language:
+              type: string
+              description: Programming language
+              example: "python"
+
+    Kernel:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Kernel identifier
+          example: "kernel-uuid"
+        name:
+          type: string
+          description: Kernel name
+          example: "python3"
+        last_activity:
+          type: string
+          format: date-time
+          description: Last activity time
+          example: "2025-07-24T16:30:00.000Z"
+        execution_state:
+          type: string
+          enum: [idle, busy, starting, dead]
+          description: Current execution state
+          example: "idle"
+        connections:
+          type: integer
+          description: Number of connections
+          example: 1
+
+    CreateKernelRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Kernel name
+          example: "python3"
+        path:
+          type: string
+          description: Working directory path
+          example: "/"
+
+    ExecuteRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: Python code to execute
+          example: "print('Hello, DADMS!')"
+        silent:
+          type: boolean
+          description: Whether to execute silently
+          default: false
+        store_history:
+          type: boolean
+          description: Whether to store in history
+          default: true
+        user_expressions:
+          type: object
+          description: User expressions to evaluate
+          default: {}
+        allow_stdin:
+          type: boolean
+          description: Whether to allow stdin
+          default: false
+
+    ExecuteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Message identifier
+          example: "msg-uuid"
+        header:
+          type: object
+          properties:
+            msg_id:
+              type: string
+              description: Message ID
+            msg_type:
+              type: string
+              description: Message type
+              example: "execute_reply"
+            username:
+              type: string
+              description: Username
+              example: "jovyan"
+            session:
+              type: string
+              description: Session ID
+            date:
+              type: string
+              format: date-time
+              description: Message date
+            version:
+              type: string
+              description: Protocol version
+              example: "5.3"
+        parent_header:
+          type: object
+          description: Parent message header
+        metadata:
+          type: object
+          description: Message metadata
+        content:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [ok, error]
+              description: Execution status
+              example: "ok"
+            execution_count:
+              type: integer
+              description: Execution count
+              example: 1
+            payload:
+              type: array
+              description: Execution payload
+            user_expressions:
+              type: object
+              description: User expression results
+
+    ContentItem:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Item name
+          example: "analysis.ipynb"
+        path:
+          type: string
+          description: Item path
+          example: "analysis.ipynb"
+        type:
+          type: string
+          enum: [notebook, file, directory]
+          description: Content type
+          example: "notebook"
+        created:
+          type: string
+          format: date-time
+          description: Creation time
+          example: "2025-07-24T16:00:00.000Z"
+        last_modified:
+          type: string
+          format: date-time
+          description: Last modification time
+          example: "2025-07-24T16:30:00.000Z"
+        content:
+          type: object
+          nullable: true
+          description: Content (null for list requests)
+        format:
+          type: string
+          nullable: true
+          description: Content format
+        mimetype:
+          type: string
+          nullable: true
+          description: MIME type
+        size:
+          type: integer
+          description: File size in bytes
+          example: 1024
+
+    CreateNotebookRequest:
+      type: object
+      required:
+        - type
+        - path
+      properties:
+        type:
+          type: string
+          enum: [notebook]
+          description: Content type
+          example: "notebook"
+        path:
+          type: string
+          description: Notebook path
+          example: "new_analysis.ipynb"
+
+    Notebook:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Notebook name
+          example: "analysis.ipynb"
+        path:
+          type: string
+          description: Notebook path
+          example: "analysis.ipynb"
+        type:
+          type: string
+          enum: [notebook]
+          description: Content type
+          example: "notebook"
+        created:
+          type: string
+          format: date-time
+          description: Creation time
+          example: "2025-07-24T16:00:00.000Z"
+        last_modified:
+          type: string
+          format: date-time
+          description: Last modification time
+          example: "2025-07-24T16:30:00.000Z"
+        content:
+          type: object
+          properties:
+            cells:
+              type: array
+              items:
+                $ref: '#/components/schemas/Cell'
+              description: Notebook cells
+            metadata:
+              type: object
+              description: Notebook metadata
+            nbformat:
+              type: integer
+              description: Notebook format version
+              example: 4
+            nbformat_minor:
+              type: integer
+              description: Notebook format minor version
+              example: 4
+        format:
+          type: string
+          description: Content format
+          example: "json"
+        mimetype:
+          type: string
+          description: MIME type
+          example: "application/x-ipynb+json"
+        size:
+          type: integer
+          description: File size in bytes
+          example: 1024
+
+    Cell:
+      type: object
+      properties:
+        cell_type:
+          type: string
+          enum: [code, markdown, raw]
+          description: Cell type
+          example: "code"
+        execution_count:
+          type: integer
+          nullable: true
+          description: Execution count
+          example: 1
+        metadata:
+          type: object
+          description: Cell metadata
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CellOutput'
+          description: Cell outputs
+        source:
+          type: array
+          items:
+            type: string
+          description: Cell source code
+          example: ["print('Hello, DADMS!')"]
+
+    CellOutput:
+      type: object
+      properties:
+        output_type:
+          type: string
+          enum: [execute_result, stream, display_data, error]
+          description: Output type
+          example: "stream"
+        name:
+          type: string
+          description: Stream name (for stream outputs)
+          example: "stdout"
+        text:
+          type: string
+          description: Output text
+          example: "Hello, DADMS!\n"
+        data:
+          type: object
+          description: Output data (for rich outputs)
+        execution_count:
+          type: integer
+          description: Execution count (for execute_result)
+          example: 1
+        ename:
+          type: string
+          description: Error name (for error outputs)
+          example: "NameError"
+        evalue:
+          type: string
+          description: Error value (for error outputs)
+          example: "name 'undefined_var' is not defined"
+        traceback:
+          type: array
+          items:
+            type: string
+          description: Error traceback (for error outputs)
+
+    UpdateNotebookRequest:
+      type: object
+      required:
+        - content
+        - type
+      properties:
+        content:
+          type: object
+          properties:
+            cells:
+              type: array
+              items:
+                $ref: '#/components/schemas/Cell'
+              description: Notebook cells
+            metadata:
+              type: object
+              description: Notebook metadata
+            nbformat:
+              type: integer
+              description: Notebook format version
+              example: 4
+            nbformat_minor:
+              type: integer
+              description: Notebook format minor version
+              example: 4
+        type:
+          type: string
+          enum: [notebook]
+          description: Content type
+          example: "notebook"
+
+    JupyterSession:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Session identifier
+          example: "session-uuid"
+        project_id:
+          type: string
+          description: Project identifier
+          example: "project-uuid"
+        name:
+          type: string
+          description: Session name
+          example: "Data Analysis Session"
+        description:
+          type: string
+          description: Session description
+          example: "Interactive analysis for project data"
+        kernel_id:
+          type: string
+          description: Associated kernel ID
+          example: "kernel-uuid"
+        kernel_type:
+          type: string
+          description: Kernel type
+          example: "python3"
+        notebook_name:
+          type: string
+          description: Associated notebook name
+          example: "analysis.ipynb"
+        status:
+          type: string
+          enum: [active, idle, busy, stopped]
+          description: Session status
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation time
+          example: "2025-07-24T16:00:00.000Z"
+        last_activity:
+          type: string
+          format: date-time
+          description: Last activity time
+          example: "2025-07-24T16:30:00.000Z"
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - name
+        - kernel_type
+      properties:
+        name:
+          type: string
+          description: Session name
+          example: "Data Analysis Session"
+        description:
+          type: string
+          description: Session description
+          example: "Interactive analysis for project data"
+        kernel_type:
+          type: string
+          description: Kernel type
+          example: "python3"
+        notebook_name:
+          type: string
+          description: Associated notebook name
+          example: "analysis.ipynb"
+
+    ExecuteAnalysisRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: Analysis code to execute
+          example: "import pandas as pd\n# Analysis code here"
+        context:
+          type: object
+          properties:
+            data_sources:
+              type: array
+              items:
+                type: string
+              description: Available data sources
+              example: ["project_data.csv"]
+            variables:
+              type: array
+              items:
+                type: string
+              description: Available variables
+              example: ["target_column"]
+            parameters:
+              type: object
+              description: Analysis parameters
+          description: Analysis context
+
+    ExecuteAnalysisResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Session identifier
+          example: "session-uuid"
+        execution_id:
+          type: string
+          description: Execution identifier
+          example: "exec-uuid"
+        status:
+          type: string
+          enum: [success, error, running]
+          description: Execution status
+          example: "success"
+        results:
+          type: object
+          description: Execution results
+        error:
+          type: object
+          description: Error information (if any)
+        execution_time:
+          type: number
+          description: Execution time in seconds
+          example: 2.5
+        timestamp:
+          type: string
+          format: date-time
+          description: Execution timestamp
+          example: "2025-07-24T16:30:00.000Z"
+
+    ExecutionResults:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Session identifier
+          example: "session-uuid"
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              execution_id:
+                type: string
+                description: Execution identifier
+              code:
+                type: string
+                description: Executed code
+              output:
+                type: object
+                description: Execution output
+              status:
+                type: string
+                enum: [success, error]
+                description: Execution status
+              execution_time:
+                type: number
+                description: Execution time in seconds
+              timestamp:
+                type: string
+                format: date-time
+                description: Execution timestamp
+          description: List of execution results
+        summary:
+          type: object
+          properties:
+            total_executions:
+              type: integer
+              description: Total number of executions
+              example: 10
+            successful_executions:
+              type: integer
+              description: Number of successful executions
+              example: 8
+            failed_executions:
+              type: integer
+              description: Number of failed executions
+              example: 2
+            average_execution_time:
+              type: number
+              description: Average execution time in seconds
+              example: 1.5
+          description: Execution summary statistics
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "KERNEL_STARTUP_FAILED"
+            message:
+              type: string
+              description: Error message
+              example: "Failed to start kernel due to resource constraints"
+            details:
+              type: object
+              description: Additional error details
+            timestamp:
+              type: string
+              format: date-time
+              description: Error timestamp
+              example: "2025-07-24T16:30:00.000Z"
+
+tags:
+  - name: Server
+    description: Server status and information
+  - name: Kernels
+    description: Kernel management operations
+  - name: Execution
+    description: Code execution operations
+  - name: Notebooks
+    description: Notebook management operations
+  - name: DADMS Integration
+    description: DADMS-specific integration endpoints 
