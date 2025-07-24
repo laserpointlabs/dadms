@@ -88,6 +88,8 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     const isInitialized = useRef(false);
     const isNavigating = useRef(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout>();
+    const lastPathname = useRef<string>('');
+    const uniquePaths = useRef<Set<string>>(new Set()); // Track unique paths to prevent duplicates
 
     // Get page info from navigation configuration
     const getPageInfo = useCallback((path: string) => {
@@ -151,6 +153,10 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
                     setTabs(updatedTabs);
                     setActiveTabId(activeTabId);
+
+                    // Update unique paths set
+                    uniquePaths.current = new Set(updatedTabs.map(tab => tab.path));
+
                     return true; // Successfully loaded
                 }
             }
@@ -167,7 +173,7 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         const loaded = loadFromStorage();
         if (!loaded && pathname) {
             // Create initial tab for current path
-            const { title, icon } = getPageInfo(pathname);
+            const { title, icon } = getPageInfo(pathname || '/');
             const initialTab: Tab = {
                 id: generateTabId(),
                 title,
@@ -180,9 +186,10 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             };
             setTabs([initialTab]);
             setActiveTabId(initialTab.id);
+            uniquePaths.current.add(pathname);
         }
         isInitialized.current = true;
-    }, []); // Empty dependency array - only run once
+    }, [loadFromStorage, pathname, getPageInfo, generateTabId]);
 
     // Save tabs to localStorage when they change
     useEffect(() => {
@@ -200,33 +207,129 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         };
     }, []);
 
-    // Add a new tab
+    // BULLETPROOF: Deduplication effect - removes any duplicate tabs immediately
+    useEffect(() => {
+        if (!isInitialized.current || tabs.length === 0) return;
+
+        const pathCounts = new Map<string, string[]>();
+
+        // Count tabs by path
+        tabs.forEach(tab => {
+            if (!pathCounts.has(tab.path)) {
+                pathCounts.set(tab.path, []);
+            }
+            pathCounts.get(tab.path)!.push(tab.id);
+        });
+
+        // Find duplicates
+        const duplicates = new Map<string, string[]>();
+        pathCounts.forEach((tabIds, path) => {
+            if (tabIds.length > 1) {
+                duplicates.set(path, tabIds);
+            }
+        });
+
+        // Remove duplicates, keeping only the first (most recent) tab for each path
+        if (duplicates.size > 0) {
+            console.warn('Duplicate tabs detected, cleaning up:', duplicates);
+
+            setTabs(prevTabs => {
+                const cleanedTabs: Tab[] = [];
+                const processedPaths = new Set<string>();
+
+                prevTabs.forEach(tab => {
+                    if (!processedPaths.has(tab.path)) {
+                        // Keep the first tab for this path
+                        cleanedTabs.push(tab);
+                        processedPaths.add(tab.path);
+                    } else {
+                        // Remove duplicate tab
+                        console.log(`Removing duplicate tab: ${tab.title} (${tab.path})`);
+                    }
+                });
+
+                return cleanedTabs;
+            });
+        }
+    }, [tabs]);
+
+    // Handle pathname changes - completely rewritten with bulletproof deduplication
+    useEffect(() => {
+        // Skip if not initialized, navigating programmatically, or no pathname
+        if (!isInitialized.current || isNavigating.current || !pathname) {
+            isNavigating.current = false;
+            return;
+        }
+
+        // Skip if pathname hasn't actually changed
+        if (pathname === lastPathname.current) {
+            return;
+        }
+
+        lastPathname.current = pathname;
+
+        // BULLETPROOF: Check if path already exists in our tracking set
+        if (uniquePaths.current.has(pathname)) {
+            // Path exists - just activate the existing tab
+            const existingTab = tabs.find(tab => tab.path === pathname);
+            if (existingTab && !existingTab.isActive) {
+                setTabs(prevTabs =>
+                    prevTabs.map(tab => ({
+                        ...tab,
+                        isActive: tab.id === existingTab.id
+                    }))
+                );
+                setActiveTabId(existingTab.id);
+            }
+        } else {
+            // Path doesn't exist - create new tab and track it
+            const { title, icon } = getPageInfo(pathname || '/');
+            const newTab: Tab = {
+                id: generateTabId(),
+                title,
+                icon,
+                path: pathname,
+                isActive: true,
+                isPinned: false,
+                isModified: false,
+                canClose: true
+            };
+
+            setTabs(prevTabs => {
+                const updatedTabs = prevTabs.map(tab => ({ ...tab, isActive: false }));
+                return [...updatedTabs, newTab];
+            });
+
+            setActiveTabId(newTab.id);
+            uniquePaths.current.add(pathname); // Track this path
+        }
+    }, [pathname, tabs, getPageInfo, generateTabId]);
+
+    // Add a new tab - simplified to prevent duplication
     const addTab = useCallback((path: string, title?: string, icon?: string) => {
-        // Check if tab already exists for this path
-        const existingTab = tabs.find(tab => tab.path === path);
-        if (existingTab) {
-            // If tab exists and is already active, do nothing
-            if (existingTab.isActive) {
-                return existingTab.id;
+        // BULLETPROOF: Check if path already exists in our tracking set
+        if (uniquePaths.current.has(path)) {
+            // Tab exists - just switch to it
+            const existingTab = tabs.find(tab => tab.path === path);
+            if (existingTab && !existingTab.isActive) {
+                setTabs(prevTabs =>
+                    prevTabs.map(tab => ({
+                        ...tab,
+                        isActive: tab.id === existingTab.id
+                    }))
+                );
+                setActiveTabId(existingTab.id);
             }
 
-            // Switch to existing tab
-            setTabs(prevTabs =>
-                prevTabs.map(tab => ({
-                    ...tab,
-                    isActive: tab.id === existingTab.id
-                }))
-            );
-            setActiveTabId(existingTab.id);
-
             // Navigate to the tab's path if different from current pathname
-            if (existingTab.path !== pathname) {
+            if (existingTab && existingTab.path !== pathname) {
                 isNavigating.current = true;
                 router.push(existingTab.path);
             }
-            return existingTab.id;
+            return existingTab?.id || '';
         }
 
+        // Create new tab and track the path
         const { title: pageTitle, icon: pageIcon } = getPageInfo(path);
         const newTab: Tab = {
             id: generateTabId(),
@@ -245,6 +348,7 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         });
 
         setActiveTabId(newTab.id);
+        uniquePaths.current.add(path); // Track this path
         return newTab.id;
     }, [tabs, getPageInfo, generateTabId, pathname, router]);
 
@@ -289,6 +393,9 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             }
 
             const remainingTabs = prevTabs.filter(tab => tab.id !== tabId);
+
+            // Remove from unique paths tracking
+            uniquePaths.current.delete(tabToClose.path);
 
             // If we're closing the active tab, activate the next available tab
             if (tabToClose.isActive && remainingTabs.length > 0) {
@@ -355,6 +462,8 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
         setTabs([homeTab]);
         setActiveTabId(homeTab.id);
+        uniquePaths.current.clear();
+        uniquePaths.current.add('/');
         router.push('/');
     }, [router, generateTabId]);
 
@@ -363,6 +472,10 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         setTabs(prevTabs => {
             const tabToKeep = prevTabs.find(tab => tab.id === tabId);
             if (!tabToKeep) return prevTabs;
+
+            // Update unique paths tracking
+            uniquePaths.current.clear();
+            uniquePaths.current.add(tabToKeep.path);
 
             return [{
                 ...tabToKeep,
@@ -378,34 +491,15 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             const tabIndex = prevTabs.findIndex(tab => tab.id === tabId);
             if (tabIndex === -1) return prevTabs;
 
-            return prevTabs.slice(0, tabIndex + 1);
+            const remainingTabs = prevTabs.slice(0, tabIndex + 1);
+
+            // Update unique paths tracking
+            uniquePaths.current.clear();
+            remainingTabs.forEach(tab => uniquePaths.current.add(tab.path));
+
+            return remainingTabs;
         });
     }, []);
-
-    // Handle pathname changes - only run after initialization
-    useEffect(() => {
-        if (!isInitialized.current || !pathname || isNavigating.current) {
-            isNavigating.current = false;
-            return;
-        }
-
-        const existingTab = tabs.find(tab => tab.path === pathname);
-        if (existingTab) {
-            // If tab exists but is not active, activate it
-            if (!existingTab.isActive) {
-                setTabs(prevTabs =>
-                    prevTabs.map(t => ({
-                        ...t,
-                        isActive: t.id === existingTab.id
-                    }))
-                );
-                setActiveTabId(existingTab.id);
-            }
-        } else {
-            // Create new tab for this path only if it doesn't exist
-            addTab(pathname);
-        }
-    }, [pathname, addTab]); // Removed 'tabs' from dependencies to prevent infinite loops
 
     const value: TabContextType = {
         tabs,
