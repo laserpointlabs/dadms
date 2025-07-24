@@ -12,7 +12,7 @@ const TAB_AAS = "assistant";
 const TABS = [
     { id: TAB_ERRORS, name: "Errors", icon: "warning", description: "System issues" },
     { id: TAB_INFO, name: "Info", icon: "info", description: "System status" },
-    { id: TAB_AAS, name: "Assistant", icon: "robot", description: "AI assistance" },
+    { id: TAB_AAS, name: "Assistant", icon: "book", description: "AI assistance" },
 ];
 
 export default function AASCar() {
