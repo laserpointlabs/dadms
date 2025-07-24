@@ -249,6 +249,13 @@ const dadmsActivityGroups: NavigationGroup[] = [
         label: 'Agent Assistant & Documentation Service',
         href: '/aads',
         type: 'navigation'
+    },
+    {
+        id: 'user-tasks',
+        icon: 'tasklist',
+        label: 'User Tasks',
+        href: '/user-tasks',
+        type: 'navigation'
     }
 ];
 

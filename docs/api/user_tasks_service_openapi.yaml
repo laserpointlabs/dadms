@@ -1,0 +1,1080 @@
+openapi: 3.0.3
+info:
+  title: DADMS User Tasks Service API
+  description: |
+    RESTful API for managing Camunda user tasks within the DADMS platform.
+    
+    This service provides comprehensive task management capabilities including:
+    - Task discovery and filtering
+    - Task claiming and completion
+    - Variable management
+    - Real-time updates via WebSocket
+    - Analytics and reporting
+    
+    The service integrates with Camunda Platform to provide a clean, consistent
+    interface for BPMN user task management.
+  version: 1.0.0
+  contact:
+    name: DADMS Development Team
+    email: dev@dadms.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3022/api
+    description: Development server
+  - url: https://api.dadms.com/api
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /tasks:
+    get:
+      summary: Get user tasks
+      description: Retrieve a paginated list of user tasks with optional filtering
+      operationId: getTasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, overdue]
+        - name: priority
+          in: query
+          description: Filter by priority level
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 3
+        - name: assignee
+          in: query
+          description: Filter by assigned user ID
+          schema:
+            type: string
+        - name: processDefinition
+          in: query
+          description: Filter by process definition key
+          schema:
+            type: string
+        - name: businessKey
+          in: query
+          description: Filter by business key
+          schema:
+            type: string
+        - name: dueDateFrom
+          in: query
+          description: Filter tasks due after this date
+          schema:
+            type: string
+            format: date-time
+        - name: dueDateTo
+          in: query
+          description: Filter tasks due before this date
+          schema:
+            type: string
+            format: date-time
+        - name: createdFrom
+          in: query
+          description: Filter tasks created after this date
+          schema:
+            type: string
+            format: date-time
+        - name: createdTo
+          in: query
+          description: Filter tasks created before this date
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [created, due, priority, name, assignee, processDefinition]
+            default: created
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Successfully retrieved tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/counts:
+    get:
+      summary: Get task counts
+      description: Retrieve task statistics and counts for dashboard display
+      operationId: getTaskCounts
+      responses:
+        '200':
+          description: Successfully retrieved task counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCountsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}:
+    get:
+      summary: Get task details
+      description: Retrieve detailed information about a specific task
+      operationId: getTaskDetails
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailsResponse'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}/claim:
+    post:
+      summary: Claim task
+      description: Claim a task for the current user
+      operationId: claimTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimTaskRequest'
+      responses:
+        '200':
+          description: Task successfully claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimTaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '409':
+          $ref: '#/components/responses/TaskAlreadyClaimed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}/unclaim:
+    post:
+      summary: Unclaim task
+      description: Unclaim a task, making it available for other users
+      operationId: unclaimTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task successfully unclaimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnclaimTaskResponse'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}/complete:
+    post:
+      summary: Complete task
+      description: Complete a task with optional variables and comments
+      operationId: completeTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '200':
+          description: Task successfully completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteTaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}/variables:
+    get:
+      summary: Get task variables
+      description: Retrieve all variables associated with a task
+      operationId: getTaskVariables
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved task variables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskVariablesResponse'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Set task variables
+      description: Set or update variables for a task
+      operationId: setTaskVariables
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The unique identifier of the task
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTaskVariablesRequest'
+      responses:
+        '200':
+          description: Task variables successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetTaskVariablesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/TaskNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/bulk/claim:
+    post:
+      summary: Bulk claim tasks
+      description: Claim multiple tasks in a single operation
+      operationId: bulkClaimTasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkClaimTasksRequest'
+      responses:
+        '200':
+          description: Bulk claim operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkClaimTasksResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/bulk/complete:
+    post:
+      summary: Bulk complete tasks
+      description: Complete multiple tasks with the same variables
+      operationId: bulkCompleteTasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCompleteTasksRequest'
+      responses:
+        '200':
+          description: Bulk complete operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCompleteTasksResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/analytics:
+    get:
+      summary: Get task analytics
+      description: Retrieve analytics and metrics for task management
+      operationId: getTaskAnalytics
+      parameters:
+        - name: timeRange
+          in: query
+          description: Time range for analytics
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+        - name: groupBy
+          in: query
+          description: Grouping for analytics
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Successfully retrieved task analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskAnalyticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserTask:
+      type: object
+      required:
+        - id
+        - name
+        - processInstanceId
+        - processDefinitionKey
+        - created
+        - priority
+        - status
+      properties:
+        id:
+          type: string
+          description: Camunda task ID
+          example: "task-001"
+        name:
+          type: string
+          description: Task name from BPMN
+          example: "Review Budget Approval"
+        description:
+          type: string
+          description: Task description
+          example: "Review and approve the quarterly budget allocation"
+        processInstanceId:
+          type: string
+          description: Associated process instance ID
+          example: "proc-001"
+        processDefinitionKey:
+          type: string
+          description: Process definition identifier
+          example: "budget-approval"
+        processDefinitionName:
+          type: string
+          description: Human-readable process name
+          example: "Budget Approval Process"
+        businessKey:
+          type: string
+          description: Business context identifier
+          example: "BUD-2024-Q3"
+        assignee:
+          type: string
+          description: Assigned user ID
+          example: "john.doe@company.com"
+        created:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+          example: "2024-01-15T08:00:00Z"
+        due:
+          type: string
+          format: date-time
+          description: Optional due date
+          example: "2024-01-17T17:00:00Z"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: Task priority (1=High, 2=Medium, 3=Low)
+          example: 2
+        formKey:
+          type: string
+          description: Associated form identifier
+          example: "budget-review-form"
+        variables:
+          type: object
+          description: Task variables
+          additionalProperties: true
+          example:
+            budgetAmount: 500000
+            department: "Engineering"
+        status:
+          type: string
+          enum: [pending, in_progress, completed, overdue]
+          description: Current task status
+          example: "pending"
+
+    TaskListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserTask'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          example: "Tasks retrieved successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    TaskCountsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            counts:
+              $ref: '#/components/schemas/TaskCounts'
+            byPriority:
+              type: object
+              properties:
+                high:
+                  type: integer
+                  example: 8
+                medium:
+                  type: integer
+                  example: 25
+                low:
+                  type: integer
+                  example: 15
+            byProcess:
+              type: object
+              additionalProperties:
+                type: integer
+              example:
+                "budget-approval": 15
+                "risk-assessment": 20
+                "contract-approval": 13
+        message:
+          type: string
+          example: "Task counts retrieved successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    TaskCounts:
+      type: object
+      properties:
+        pending:
+          type: integer
+          description: Number of pending tasks
+          example: 12
+        inProgress:
+          type: integer
+          description: Number of in-progress tasks
+          example: 5
+        completed:
+          type: integer
+          description: Number of completed tasks
+          example: 28
+        overdue:
+          type: integer
+          description: Number of overdue tasks
+          example: 3
+        total:
+          type: integer
+          description: Total number of tasks
+          example: 48
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        size:
+          type: integer
+          description: Items per page
+          example: 20
+        total:
+          type: integer
+          description: Total number of items
+          example: 45
+        pages:
+          type: integer
+          description: Total number of pages
+          example: 3
+
+    ClaimTaskRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: User ID to assign the task to
+          example: "john.doe@company.com"
+
+    ClaimTaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            taskId:
+              type: string
+              example: "task-001"
+            assignee:
+              type: string
+              example: "john.doe@company.com"
+            claimedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+        message:
+          type: string
+          example: "Task claimed successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    UnclaimTaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            taskId:
+              type: string
+              example: "task-001"
+            unclaimedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:35:00Z"
+        message:
+          type: string
+          example: "Task unclaimed successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:35:00Z"
+
+    CompleteTaskRequest:
+      type: object
+      properties:
+        variables:
+          type: object
+          description: Variables to set when completing the task
+          additionalProperties: true
+          example:
+            approved: true
+            comments: "Budget approved with minor adjustments"
+            approvalDate: "2024-01-15T10:30:00Z"
+        comments:
+          type: string
+          description: Optional comments for task completion
+          example: "Task completed successfully"
+
+    CompleteTaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            taskId:
+              type: string
+              example: "task-001"
+            completedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+            variables:
+              type: object
+              additionalProperties: true
+              example:
+                approved: true
+                comments: "Budget approved with minor adjustments"
+                approvalDate: "2024-01-15T10:30:00Z"
+        message:
+          type: string
+          example: "Task completed successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    TaskVariablesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            variables:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/CamundaVariable'
+        message:
+          type: string
+          example: "Task variables retrieved successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    CamundaVariable:
+      type: object
+      properties:
+        value:
+          description: Variable value
+        type:
+          type: string
+          description: Variable type
+          example: "String"
+        valueInfo:
+          type: object
+          description: Additional value information
+
+    SetTaskVariablesRequest:
+      type: object
+      required:
+        - variables
+      properties:
+        variables:
+          type: object
+          description: Variables to set
+          additionalProperties: true
+          example:
+            approved: true
+            comments: "Budget approved with minor adjustments"
+            approvalDate: "2024-01-15T10:30:00Z"
+
+    SetTaskVariablesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            taskId:
+              type: string
+              example: "task-001"
+            updatedVariables:
+              type: object
+              additionalProperties: true
+            updatedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+        message:
+          type: string
+          example: "Task variables updated successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    BulkClaimTasksRequest:
+      type: object
+      required:
+        - taskIds
+        - userId
+      properties:
+        taskIds:
+          type: array
+          items:
+            type: string
+          description: Array of task IDs to claim
+          example: ["task-001", "task-002", "task-003"]
+        userId:
+          type: string
+          description: User ID to assign tasks to
+          example: "john.doe@company.com"
+
+    BulkClaimTasksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            claimedTasks:
+              type: array
+              items:
+                type: string
+              example: ["task-001", "task-002"]
+            failedTasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/FailedTask'
+            claimedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+        message:
+          type: string
+          example: "Bulk claim operation completed"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    FailedTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+          example: "task-003"
+        reason:
+          type: string
+          example: "Task already claimed by another user"
+
+    BulkCompleteTasksRequest:
+      type: object
+      required:
+        - taskIds
+      properties:
+        taskIds:
+          type: array
+          items:
+            type: string
+          description: Array of task IDs to complete
+          example: ["task-001", "task-002"]
+        variables:
+          type: object
+          description: Variables to set for all tasks
+          additionalProperties: true
+          example:
+            approved: true
+            comments: "Bulk approval completed"
+        comments:
+          type: string
+          description: Comments for bulk completion
+          example: "Bulk completion"
+
+    BulkCompleteTasksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            completedTasks:
+              type: array
+              items:
+                type: string
+              example: ["task-001", "task-002"]
+            failedTasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/FailedTask'
+            completedAt:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+        message:
+          type: string
+          example: "Bulk complete operation completed"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    TaskAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            metrics:
+              $ref: '#/components/schemas/TaskMetrics'
+            trends:
+              $ref: '#/components/schemas/TaskTrends'
+        message:
+          type: string
+          example: "Task analytics retrieved successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    TaskMetrics:
+      type: object
+      properties:
+        averageCompletionTime:
+          type: integer
+          description: Average completion time in milliseconds
+          example: 86400000
+        tasksByProcess:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            "budget-approval": 15
+            "risk-assessment": 20
+            "contract-approval": 13
+        tasksByAssignee:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            "john.doe@company.com": 25
+            "jane.smith@company.com": 18
+            "unassigned": 5
+        overdueTasks:
+          type: integer
+          example: 3
+        completionRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.85
+
+    TaskTrends:
+      type: object
+      properties:
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2024-01-15"
+              created:
+                type: integer
+                example: 5
+              completed:
+                type: integer
+                example: 4
+              overdue:
+                type: integer
+                example: 1
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "TASK_NOT_FOUND"
+            message:
+              type: string
+              example: "Task with specified ID not found"
+            details:
+              type: object
+              additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Invalid request parameters"
+              details:
+                field: "priority"
+                issue: "Must be between 1 and 3"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "Authentication required"
+              details: {}
+            timestamp: "2024-01-15T10:30:00Z"
+
+    TaskNotFound:
+      description: Task not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "TASK_NOT_FOUND"
+              message: "Task with specified ID not found"
+              details:
+                taskId: "task-999"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    TaskAlreadyClaimed:
+      description: Task already claimed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "TASK_ALREADY_CLAIMED"
+              message: "Task is already claimed by another user"
+              details:
+                taskId: "task-001"
+                currentAssignee: "jane.smith@company.com"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An internal server error occurred"
+              details: {}
+            timestamp: "2024-01-15T10:30:00Z"
+
+tags:
+  - name: Tasks
+    description: Task management operations
+  - name: Variables
+    description: Task variable operations
+  - name: Bulk Operations
+    description: Bulk task operations
+  - name: Analytics
+    description: Task analytics and reporting 
