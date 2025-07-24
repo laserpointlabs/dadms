@@ -114,7 +114,7 @@ const dadmsActivityGroups: NavigationGroup[] = [
         items: [
             {
                 id: 'process',
-                icon: 'workflow',
+                icon: 'git-branch',
                 label: 'Process Manager',
                 href: '/process',
                 type: 'navigation'
@@ -228,8 +228,8 @@ const dadmsActivityGroups: NavigationGroup[] = [
     },
     {
         id: 'assistant',
-        icon: 'star-full',
-        label: 'Agent Assistant (AADS)',
+        icon: 'book',
+        label: 'Agent Assistant & Documentation Service',
         href: '/aads',
         type: 'navigation'
     }

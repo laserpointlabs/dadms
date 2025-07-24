@@ -5,7 +5,7 @@ const ProcessPage = () => (
     <PageLayout
         title="Process Manager"
         subtitle="Manage BPMN processes and workflow executions"
-        icon="graph"
+        icon="git-branch"
         status={{ text: 'Process Engine Active', type: 'active' }}
     >
         <div className="max-w-7xl mx-auto py-6 px-4">
