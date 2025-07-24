@@ -311,7 +311,7 @@ export default function AADSPage() {
                             <div className="mb-6">
                                 <h4 className="text-md font-semibold text-theme-text-primary mb-3">Stakeholders</h4>
                                 <div className="space-y-2">
-                                    {decisionSummary?.stakeholders.map((stakeholder, index) => (
+                                    {decisionSummary?.stakeholders?.map((stakeholder, index) => (
                                         <div key={index} className="flex items-center justify-between p-3 bg-theme-surface-elevated rounded-lg border border-theme-border">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 bg-theme-accent-primary bg-opacity-20 rounded-full flex items-center justify-center">
@@ -324,7 +324,11 @@ export default function AADSPage() {
                                                 Pending Review
                                             </div>
                                         </div>
-                                    )) || []}
+                                    )) || (
+                                            <div className="text-center py-4 text-theme-text-secondary">
+                                                <p>No stakeholders assigned</p>
+                                            </div>
+                                        )}
                                 </div>
                             </div>
 
@@ -369,7 +373,7 @@ export default function AADSPage() {
             <PageLayout
                 title="Agent Assistant & Documentation Service"
                 subtitle="AI-powered decision finalization and stakeholder collaboration"
-                icon="robot"
+                icon="book"
                 status={{ text: 'Loading...', type: 'pending' }}
             >
                 <div className="flex items-center justify-center py-12">
@@ -387,7 +391,7 @@ export default function AADSPage() {
             <PageLayout
                 title="Agent Assistant & Documentation Service"
                 subtitle="AI-powered decision finalization and stakeholder collaboration"
-                icon="robot"
+                icon="book"
                 status={{ text: 'Error', type: 'error' }}
             >
                 <Alert variant="error" title="Error Loading AADS" className="m-6">
@@ -401,7 +405,7 @@ export default function AADSPage() {
         <PageLayout
             title="Agent Assistant & Documentation Service"
             subtitle="AI-powered decision finalization and stakeholder collaboration"
-            icon="robot"
+            icon="book"
             status={{ text: 'AADS Active', type: 'active' }}
         >
             <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
