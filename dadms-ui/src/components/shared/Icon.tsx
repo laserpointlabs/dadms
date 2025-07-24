@@ -29,6 +29,8 @@ export type CodiconName =
     | 'file' | 'file-text' | 'file-pdf' | 'file-zip' | 'folder' | 'folder-opened'
     // DADMS specific
     | 'project' | 'library' | 'type-hierarchy' | 'robot' | 'hubot' | 'graph' | 'pulse' | 'lightbulb' | 'beaker'
+    // Tab management
+    | 'pin' | 'more' | 'plus'
     // Ontology specific  
     | 'symbol-class' | 'symbol-property' | 'references' | 'symbol-field' | 'symbol-method' | 'symbol-variable'
     // Panel specific

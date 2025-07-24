@@ -4,8 +4,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
+import { TabBar as EnhancedTabBar } from "../components/shared/TabBar";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
 import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
+import { TabProvider, useTabs } from "../contexts/TabContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
 
@@ -253,12 +255,13 @@ function ActivityBar({ activeView, onViewChange }: { activeView: string; onViewC
     const pathname = usePathname();
     const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
     const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+    const { navigateToTab } = useTabs();
 
     const handleItemClick = (item: NavigationItem) => {
         if (item.type === 'view') {
             onViewChange(item.view!);
         } else if (item.type === 'navigation' && item.href) {
-            window.location.href = item.href;
+            navigateToTab(item.href);
         }
     };
 
@@ -269,7 +272,7 @@ function ActivityBar({ activeView, onViewChange }: { activeView: string; onViewC
         } else {
             // For single items like AADS, navigate directly
             if (group.href) {
-                window.location.href = group.href;
+                navigateToTab(group.href);
             }
         }
     };
@@ -479,31 +482,7 @@ function SidebarView({ activeView, isCollapsed, onToggleCollapse }: { activeView
 }
 
 function TabBar() {
-    const pathname = usePathname();
-
-    const getPageTitle = (path: string | null): string => {
-        if (!path) return 'DADMS 2.0';
-        const item = dadmsActivityGroups.flatMap(group => group.items || []).find(i => i?.href === path);
-        return item ? item.label : 'DADMS 2.0';
-    };
-
-    const getPageIcon = (path: string | null): string => {
-        if (!path) return 'home';
-        const item = dadmsActivityGroups.flatMap(group => group.items || []).find(i => i?.href === path);
-        return item ? item.icon : 'home';
-    };
-
-    return (
-        <div className="vscode-tabs">
-            <div className="vscode-tab active">
-                <i className={`codicon codicon-${getPageIcon(pathname)}`} style={{ marginRight: '8px', fontSize: '16px' }}></i>
-                <div className="vscode-tab-label">{getPageTitle(pathname)}</div>
-                <div className="vscode-tab-close">
-                    <i className="codicon codicon-close"></i>
-                </div>
-            </div>
-        </div>
-    );
+    return <EnhancedTabBar />;
 }
 
 function StatusBar() {
@@ -569,13 +548,11 @@ function MainContent({ children }: { children: React.ReactNode }) {
     );
 }
 
-export default function RootLayout({
-    children,
-}: Readonly<{
-    children: React.ReactNode;
-}>) {
+// Main layout component that uses the tab context
+function MainLayout({ children }: { children: React.ReactNode }) {
     const [activeView, setActiveView] = useState('explorer');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { navigateToTab } = useTabs();
 
     const handleViewChange = (view: string) => {
         setActiveView(view);
@@ -586,6 +563,54 @@ export default function RootLayout({
     };
 
     return (
+        <div className="vscode-workbench">
+            {/* Title Bar */}
+            <div className="vscode-titlebar">
+                <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
+                <div className="titlebar-actions">
+                    <div
+                        className="titlebar-action"
+                        onClick={() => navigateToTab('/settings')}
+                        title="Configuration & Settings"
+                    >
+                        <i className="codicon codicon-settings-gear"></i>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Layout */}
+            <div className="vscode-main">
+                {/* Activity Bar */}
+                <ActivityBar activeView={activeView} onViewChange={handleViewChange} />
+
+                {/* Sidebar */}
+                <SidebarView activeView={activeView} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleCollapse} />
+
+                {/* Editor Area */}
+                <div className="vscode-editor-area">
+                    {/* Tab Bar */}
+                    <TabBar />
+
+                    {/* Main Content with Agent Assistant spacing */}
+                    <MainContent>
+                        {children}
+                    </MainContent>
+                </div>
+            </div>
+
+            {/* Status Bar */}
+            <StatusBar />
+        </div>
+    );
+}
+
+// Root layout that only provides providers
+export default function RootLayout({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    return (
         <html lang="en">
             <head>
                 <title>DADMS 2.0 - Decision Analysis & Decision Management System</title>
@@ -593,49 +618,16 @@ export default function RootLayout({
             </head>
             <body>
                 <ThemeProvider defaultTheme="dark">
-                    <AgentAssistantProvider>
-                        <div className="vscode-workbench">
-                            {/* Title Bar */}
-                            <div className="vscode-titlebar">
-                                <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
-                                <div className="titlebar-actions">
-                                    <div
-                                        className="titlebar-action"
-                                        onClick={() => window.location.href = '/settings'}
-                                        title="Configuration & Settings"
-                                    >
-                                        <i className="codicon codicon-settings-gear"></i>
-                                    </div>
-                                </div>
-                            </div>
+                    <TabProvider>
+                        <AgentAssistantProvider>
+                            <MainLayout>
+                                {children}
+                            </MainLayout>
 
-                            {/* Main Layout */}
-                            <div className="vscode-main">
-                                {/* Activity Bar */}
-                                <ActivityBar activeView={activeView} onViewChange={handleViewChange} />
-
-                                {/* Sidebar */}
-                                <SidebarView activeView={activeView} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleCollapse} />
-
-                                {/* Editor Area */}
-                                <div className="vscode-editor-area">
-                                    {/* Tab Bar */}
-                                    <TabBar />
-
-                                    {/* Main Content with Agent Assistant spacing */}
-                                    <MainContent>
-                                        {children}
-                                    </MainContent>
-                                </div>
-                            </div>
-
-                            {/* Status Bar */}
-                            <StatusBar />
-                        </div>
-
-                        {/* Agent Assistance Component */}
-                        <AASCar />
-                    </AgentAssistantProvider>
+                            {/* Agent Assistance Component */}
+                            <AASCar />
+                        </AgentAssistantProvider>
+                    </TabProvider>
                 </ThemeProvider>
             </body>
         </html>
