@@ -43,7 +43,7 @@ interface TabProviderProps {
     children: ReactNode;
 }
 
-// Navigation configuration - this should match your actual navigation structure
+// Navigation configuration
 const NAVIGATION_CONFIG = {
     '/': { title: 'DADMS 2.0', icon: 'home' },
     '/projects': { title: 'Projects', icon: 'project' },
@@ -160,8 +160,10 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         return false; // No valid tabs loaded
     }, []);
 
-    // Initialize tabs on mount
+    // Initialize tabs on mount - only run once
     useEffect(() => {
+        if (isInitialized.current) return;
+
         const loaded = loadFromStorage();
         if (!loaded && pathname) {
             // Create initial tab for current path
@@ -180,7 +182,7 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             setActiveTabId(initialTab.id);
         }
         isInitialized.current = true;
-    }, [loadFromStorage, pathname, getPageInfo, generateTabId]);
+    }, []); // Empty dependency array - only run once
 
     // Save tabs to localStorage when they change
     useEffect(() => {
@@ -188,29 +190,6 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
             saveToStorage(tabs, activeTabId);
         }
     }, [tabs, activeTabId, saveToStorage]);
-
-    // Ensure current pathname has a tab after initialization
-    useEffect(() => {
-        if (isInitialized.current && pathname && tabs.length > 0) {
-            const existingTab = tabs.find(tab => tab.path === pathname);
-            if (!existingTab) {
-                // Add tab for current pathname if it doesn't exist
-                const { title, icon } = getPageInfo(pathname);
-                const newTab: Tab = {
-                    id: generateTabId(),
-                    title,
-                    icon,
-                    path: pathname,
-                    isActive: true,
-                    isPinned: false,
-                    isModified: false,
-                    canClose: true
-                };
-                setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, isActive: false })).concat(newTab));
-                setActiveTabId(newTab.id);
-            }
-        }
-    }, [pathname, tabs.length, isInitialized.current, getPageInfo, generateTabId]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -226,12 +205,12 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         // Check if tab already exists for this path
         const existingTab = tabs.find(tab => tab.path === path);
         if (existingTab) {
-            // If tab exists and is already active, do nothing (prevent duplication)
+            // If tab exists and is already active, do nothing
             if (existingTab.isActive) {
                 return existingTab.id;
             }
 
-            // Switch to existing tab by updating state directly
+            // Switch to existing tab
             setTabs(prevTabs =>
                 prevTabs.map(tab => ({
                     ...tab,
@@ -272,11 +251,8 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     // Switch to a specific tab
     const switchTab = useCallback((tabId: string) => {
         const tab = tabs.find(t => t.id === tabId);
-        if (!tab) {
-            return;
-        }
+        if (!tab) return;
 
-        // Always allow switching, even if tab is already active (for manual clicks)
         setTabs(prevTabs =>
             prevTabs.map(t => ({
                 ...t,
@@ -406,24 +382,30 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
         });
     }, []);
 
-    // Handle pathname changes - create or switch to tab
+    // Handle pathname changes - only run after initialization
     useEffect(() => {
-        if (!pathname || isNavigating.current || !isInitialized.current) {
+        if (!isInitialized.current || !pathname || isNavigating.current) {
             isNavigating.current = false;
             return;
         }
 
         const existingTab = tabs.find(tab => tab.path === pathname);
         if (existingTab) {
-            // Always ensure the tab for current pathname is active
+            // If tab exists but is not active, activate it
             if (!existingTab.isActive) {
-                switchTab(existingTab.id);
+                setTabs(prevTabs =>
+                    prevTabs.map(t => ({
+                        ...t,
+                        isActive: t.id === existingTab.id
+                    }))
+                );
+                setActiveTabId(existingTab.id);
             }
         } else {
             // Create new tab for this path only if it doesn't exist
             addTab(pathname);
         }
-    }, [pathname, tabs, switchTab, addTab]);
+    }, [pathname, addTab]); // Removed 'tabs' from dependencies to prevent infinite loops
 
     const value: TabContextType = {
         tabs,
