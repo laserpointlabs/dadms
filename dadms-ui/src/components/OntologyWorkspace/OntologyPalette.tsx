@@ -27,7 +27,13 @@ const paletteItems: PaletteItem[] = [
         icon: 'symbol-field', // Better icon for data fields/properties
         color: '#0969da', // Blue - using actual color instead of CSS variable
     },
-
+    {
+        type: 'note',
+        label: 'Note',
+        description: 'Add annotations and comments',
+        icon: 'file-text', // Icon for notes
+        color: '#8250df', // Purple for notes
+    },
 ];
 
 interface OntologyPaletteProps {
