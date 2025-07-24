@@ -12,7 +12,7 @@ const TAB_AAS = "assistant";
 const TABS = [
     { id: TAB_ERRORS, name: "Errors", icon: "warning", description: "System issues" },
     { id: TAB_INFO, name: "Info", icon: "info", description: "System status" },
-    { id: TAB_AAS, name: "Assistant", icon: "book", description: "AI assistance" },
+    { id: TAB_AAS, name: "Assistant", icon: "hubot", description: "AI assistance" },
 ];
 
 export default function AASCar() {
@@ -814,7 +814,7 @@ export default function AASCar() {
                     className="bg-theme-accent-primary text-theme-text-inverse hover:opacity-90 shadow-lg px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-opacity"
                     title="Show Agent Assistant (Double-click to reset position)"
                 >
-                    <Icon name="robot" size="sm" />
+                    <Icon name="hubot" size="sm" />
                     Assistant
                 </button>
                 <button

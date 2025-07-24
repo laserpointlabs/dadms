@@ -230,6 +230,13 @@ const dadmsActivityGroups: NavigationGroup[] = [
                 label: 'Error Manager',
                 href: '/error',
                 type: 'navigation'
+            },
+            {
+                id: 'agent-assistance',
+                icon: 'hubot',
+                label: 'Agent Assistance Service',
+                href: '/agent-assistance',
+                type: 'navigation'
             }
         ]
     },
