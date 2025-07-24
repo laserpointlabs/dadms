@@ -14,7 +14,7 @@
         "@monaco-editor/react": "^4.6.0",
         "@mui/icons-material": "^7.2.0",
         "@mui/material": "^7.2.0",
-        "@vscode/codicons": "^0.0.36",
+        "@vscode/codicons": "^0.0.38",
         "monaco-editor": "^0.52.0",
         "next": "15.4.1",
         "react": "19.1.0",
