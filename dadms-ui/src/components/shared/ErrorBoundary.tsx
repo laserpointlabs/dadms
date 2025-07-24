@@ -1,56 +1,89 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Alert } from './Alert';
-import { Button } from './Button';
+import { useTabs } from '../../contexts/TabContext';
 
 interface Props {
     children: ReactNode;
-    fallback?: (error: Error, resetError: () => void) => ReactNode;
 }
 
 interface State {
     hasError: boolean;
-    error: Error | null;
-    errorInfo: ErrorInfo | null;
+    error?: Error;
+    errorInfo?: ErrorInfo;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-    constructor(props: Props) {
+class ErrorBoundaryClass extends Component<Props & { navigateToTab: (path: string) => void }, State> {
+    constructor(props: Props & { navigateToTab: (path: string) => void }) {
         super(props);
-        this.state = { hasError: false, error: null, errorInfo: null };
+        this.state = { hasError: false };
     }
 
     static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error, errorInfo: null };
+        return { hasError: true, error };
     }
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        // Log error to error reporting service
         console.error('ErrorBoundary caught an error:', error, errorInfo);
-
-        this.setState({
-            error,
-            errorInfo
-        });
+        this.setState({ error, errorInfo });
     }
 
-    resetError = () => {
-        this.setState({ hasError: false, error: null, errorInfo: null });
+    handleGoHome = () => {
+        this.props.navigateToTab('/');
+    };
+
+    handleReload = () => {
+        window.location.reload();
     };
 
     render() {
-        if (this.state.hasError && this.state.error) {
-            if (this.props.fallback) {
-                return this.props.fallback(this.state.error, this.resetError);
-            }
-
+        if (this.state.hasError) {
             return (
-                <DefaultErrorFallback
-                    error={this.state.error}
-                    errorInfo={this.state.errorInfo}
-                    resetError={this.resetError}
-                />
+                <div className="error-boundary">
+                    <div className="error-boundary-content">
+                        <div className="error-boundary-icon">
+                            <i className="codicon codicon-error"></i>
+                        </div>
+                        <h1 className="error-boundary-title">Something went wrong</h1>
+                        <p className="error-boundary-message">
+                            An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
+                        </p>
+
+                        {this.state.error && (
+                            <details className="error-boundary-details">
+                                <summary>Error Details</summary>
+                                <div className="error-boundary-error">
+                                    <h3>Error:</h3>
+                                    <pre>{this.state.error.toString()}</pre>
+
+                                    {this.state.errorInfo && (
+                                        <>
+                                            <h3>Component Stack:</h3>
+                                            <pre>{this.state.errorInfo.componentStack}</pre>
+                                        </>
+                                    )}
+                                </div>
+                            </details>
+                        )}
+
+                        <div className="error-boundary-actions">
+                            <button
+                                className="error-boundary-button primary"
+                                onClick={this.handleGoHome}
+                            >
+                                <i className="codicon codicon-home"></i>
+                                Go to Home
+                            </button>
+                            <button
+                                className="error-boundary-button secondary"
+                                onClick={this.handleReload}
+                            >
+                                <i className="codicon codicon-refresh"></i>
+                                Reload Page
+                            </button>
+                        </div>
+                    </div>
+                </div>
             );
         }
 
@@ -58,100 +91,10 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 }
 
-interface DefaultErrorFallbackProps {
-    error: Error;
-    errorInfo: ErrorInfo | null;
-    resetError: () => void;
-}
-
-const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({
-    error,
-    errorInfo,
-    resetError
-}) => {
-    const [showDetails, setShowDetails] = React.useState(false);
-
-    return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-            <div className="max-w-2xl w-full">
-                <Alert
-                    variant="error"
-                    title="Something went wrong"
-                    actions={
-                        <div className="flex gap-2 mt-4">
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                leftIcon="refresh"
-                                onClick={resetError}
-                            >
-                                Try Again
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                leftIcon="arrow-left"
-                                onClick={() => window.location.href = '/'}
-                            >
-                                Go Home
-                            </Button>
-                        </div>
-                    }
-                >
-                    <p className="mb-2">
-                        An unexpected error occurred while rendering this page.
-                        The error has been logged and our team will investigate.
-                    </p>
-
-                    {process.env.NODE_ENV === 'development' && (
-                        <>
-                            <button
-                                onClick={() => setShowDetails(!showDetails)}
-                                className="text-red-400 hover:text-red-300 text-sm underline mt-2"
-                            >
-                                {showDetails ? 'Hide' : 'Show'} error details
-                            </button>
-
-                            {showDetails && (
-                                <div className="mt-4 space-y-2">
-                                    <div className="bg-gray-800 rounded p-3 border border-gray-700">
-                                        <h4 className="text-sm font-medium text-gray-300 mb-1">
-                                            Error Message:
-                                        </h4>
-                                        <pre className="text-xs text-red-400 overflow-auto">
-                                            {error.message}
-                                        </pre>
-                                    </div>
-
-                                    {error.stack && (
-                                        <div className="bg-gray-800 rounded p-3 border border-gray-700">
-                                            <h4 className="text-sm font-medium text-gray-300 mb-1">
-                                                Stack Trace:
-                                            </h4>
-                                            <pre className="text-xs text-gray-400 overflow-auto max-h-48">
-                                                {error.stack}
-                                            </pre>
-                                        </div>
-                                    )}
-
-                                    {errorInfo?.componentStack && (
-                                        <div className="bg-gray-800 rounded p-3 border border-gray-700">
-                                            <h4 className="text-sm font-medium text-gray-300 mb-1">
-                                                Component Stack:
-                                            </h4>
-                                            <pre className="text-xs text-gray-400 overflow-auto max-h-48">
-                                                {errorInfo.componentStack}
-                                            </pre>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </Alert>
-            </div>
-        </div>
-    );
+// Wrapper component to provide the navigateToTab function
+export const ErrorBoundary: React.FC<Props> = ({ children }) => {
+    const { navigateToTab } = useTabs();
+    return <ErrorBoundaryClass navigateToTab={navigateToTab}>{children}</ErrorBoundaryClass>;
 };
 
 // Higher-order component for wrapping components with error boundary
