@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePanel } from '../contexts/PanelStateContext';
 import { fetchProjects } from '../services/projectApi';
 import { Project } from '../types/services/project';
 
@@ -78,6 +79,9 @@ export default function ProjectTreeView() {
     const [error, setError] = useState<string | null>(null);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [treeData, setTreeData] = useState<TreeNode[]>([]);
+
+    // Use persistent panel state for tree expansion
+    const treePanel = usePanel('project-tree');
 
     // Load projects on mount
     useEffect(() => {

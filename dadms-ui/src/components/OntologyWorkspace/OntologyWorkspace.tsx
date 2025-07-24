@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { usePanel } from '../../contexts/PanelStateContext';
 import { dadmsTheme } from '../../design-system/theme';
 import { Icon } from '../shared/Icon';
 import DualViewEditor from './DualViewEditor';
@@ -36,11 +37,13 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
         isInitialized,
     } = useOntologyWorkspaceStore();
 
-    const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
-    const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(false);
-    const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState(false);
-    const [isReferencesCollapsed, setIsReferencesCollapsed] = useState(false);
     const [isConnectionMode, setIsConnectionMode] = useState(false);
+
+    // Use persistent panel states
+    const palettePanel = usePanel('ontology-palette');
+    const explorerPanel = usePanel('ontology-explorer');
+    const propertiesPanel = usePanel('ontology-properties');
+    const referencesPanel = usePanel('ontology-references');
 
     // Ensure workspace exists when component mounts
     useEffect(() => {
@@ -181,14 +184,14 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
             <div style={mainContentStyle}>
                 {/* Left Panel - Ontology Explorer */}
                 <OntologyExplorer
-                    isOpen={!isExplorerCollapsed}
-                    onToggle={() => setIsExplorerCollapsed(!isExplorerCollapsed)}
+                    isOpen={!explorerPanel.isCollapsed}
+                    onToggle={() => explorerPanel.toggleCollapsed()}
                 />
 
                 {/* Left Panel - Entity Palette */}
                 <OntologyPalette
-                    isCollapsed={isPaletteCollapsed}
-                    onToggleCollapse={() => setIsPaletteCollapsed(!isPaletteCollapsed)}
+                    isCollapsed={palettePanel.isCollapsed}
+                    onToggleCollapse={() => palettePanel.toggleCollapsed()}
                     onConnectionModeToggle={handleConnectionModeToggle}
                     isConnectionMode={isConnectionMode}
                 />
@@ -227,16 +230,16 @@ const OntologyWorkspace: React.FC<OntologyWorkspaceProps> = ({
                 <PropertiesPanel
                     isOpen={isPropertiesPanelOpen}
                     onToggle={togglePropertiesPanel}
-                    isCollapsed={isPropertiesCollapsed}
-                    onToggleCollapse={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                    isCollapsed={propertiesPanel.isCollapsed}
+                    onToggleCollapse={() => propertiesPanel.toggleCollapsed()}
                 />
 
                 {/* Right Panel - External References */}
                 <ExternalReferencePanel
                     isOpen={isExternalPanelOpen}
                     onToggle={toggleExternalPanel}
-                    isCollapsed={isReferencesCollapsed}
-                    onToggleCollapse={() => setIsReferencesCollapsed(!isReferencesCollapsed)}
+                    isCollapsed={referencesPanel.isCollapsed}
+                    onToggleCollapse={() => referencesPanel.toggleCollapsed()}
                 />
             </div>
 

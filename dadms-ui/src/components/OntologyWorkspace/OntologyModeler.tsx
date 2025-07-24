@@ -21,6 +21,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
+import { usePanel } from '../../contexts/PanelStateContext';
 import { dadmsTheme } from '../../design-system/theme';
 import { edgeTypes } from './edges';
 import { nodeTypes } from './nodes';
@@ -43,7 +44,12 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
 }) => {
     const [customRelationship, setCustomRelationship] = useState('');
     const [showCustomInput, setShowCustomInput] = useState(false);
-    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['Organizational', 'Basic'])); // Start with some groups collapsed
+
+    // Use persistent panel states for relationship groups
+    const customGroup = usePanel('relationship-custom');
+    const decisionGroup = usePanel('relationship-decision');
+    const organizationalGroup = usePanel('relationship-organizational');
+    const basicGroup = usePanel('relationship-basic');
 
     // Get custom relationship types from store
     const { activeOntology, addCustomRelationshipType } = useOntologyWorkspaceStore();
@@ -122,13 +128,20 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
     };
 
     const toggleGroup = (groupTitle: string) => {
-        const newCollapsed = new Set(collapsedGroups);
-        if (newCollapsed.has(groupTitle)) {
-            newCollapsed.delete(groupTitle);
-        } else {
-            newCollapsed.add(groupTitle);
+        switch (groupTitle) {
+            case 'Custom Relationships':
+                customGroup.toggleCollapsed();
+                break;
+            case 'Decision Intelligence':
+                decisionGroup.toggleCollapsed();
+                break;
+            case 'Organizational':
+                organizationalGroup.toggleCollapsed();
+                break;
+            case 'Basic':
+                basicGroup.toggleCollapsed();
+                break;
         }
-        setCollapsedGroups(newCollapsed);
     };
 
     if (!isVisible) return null;
@@ -269,7 +282,20 @@ const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
             {relationshipGroups
                 .filter(group => !group.isCustom || group.relationships.length > 0) // Only show custom group if it has relationships
                 .map((group) => {
-                    const isCollapsed = collapsedGroups.has(group.title);
+                    const isCollapsed = (() => {
+                        switch (group.title) {
+                            case 'Custom Relationships':
+                                return customGroup.isCollapsed;
+                            case 'Decision Intelligence':
+                                return decisionGroup.isCollapsed;
+                            case 'Organizational':
+                                return organizationalGroup.isCollapsed;
+                            case 'Basic':
+                                return basicGroup.isCollapsed;
+                            default:
+                                return false;
+                        }
+                    })();
                     const isCustomGroup = group.isCustom;
 
                     return (
