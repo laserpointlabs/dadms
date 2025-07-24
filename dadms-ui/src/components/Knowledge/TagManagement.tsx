@@ -82,7 +82,7 @@ export const TagManagement: React.FC = () => {
         <div>
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">Tags</h2>
-                <button className="bg-blue-600 text-white px-3 py-1 rounded" onClick={openAdd}>Add Tag</button>
+                <button className="bg-theme-accent-primary text-theme-text-inverse px-3 py-1 rounded" onClick={openAdd}>Add Tag</button>
             </div>
             <table className="w-full mb-4">
                 <thead>
@@ -102,8 +102,8 @@ export const TagManagement: React.FC = () => {
                                 <td className="py-2">{tag.description}</td>
                                 <td className="py-2">{domainNames}</td>
                                 <td className="py-2">
-                                    <button className="text-blue-600 mr-2" onClick={() => openEdit(tag)}>Edit</button>
-                                    <button className="text-red-600" onClick={() => setDeleteTarget(tag)}>Delete</button>
+                                    <button className="text-theme-accent-primary mr-2" onClick={() => openEdit(tag)}>Edit</button>
+                                    <button className="text-theme-accent-error" onClick={() => setDeleteTarget(tag)}>Delete</button>
                                 </td>
                             </tr>
                         );
@@ -145,8 +145,8 @@ export const TagManagement: React.FC = () => {
                                     <option key={d.id} value={d.id}>{d.name}</option>
                                 ))}
                             </select>
-                            {error && <div className="text-red-600 text-xs">{error}</div>}
-                            <button type="submit" className="bg-blue-600 text-white px-4 py-1 rounded">{editTag ? "Save" : "Add"}</button>
+                            {error && <div className="text-theme-accent-error text-xs">{error}</div>}
+                            <button type="submit" className="bg-theme-accent-primary text-theme-text-inverse px-4 py-1 rounded">{editTag ? "Save" : "Add"}</button>
                         </form>
                     </div>
                 </div>
@@ -158,7 +158,7 @@ export const TagManagement: React.FC = () => {
                         <h3 className="text-lg font-semibold mb-4">Delete Tag?</h3>
                         <p>Are you sure you want to delete <b>{deleteTarget.name}</b>?</p>
                         <div className="flex gap-2 mt-4">
-                            <button className="bg-red-600 text-white px-4 py-1 rounded" onClick={handleDelete}>Delete</button>
+                            <button className="bg-theme-accent-error text-theme-text-inverse px-4 py-1 rounded" onClick={handleDelete}>Delete</button>
                             <button className="bg-gray-200 px-4 py-1 rounded" onClick={() => setDeleteTarget(null)}>Cancel</button>
                         </div>
                     </div>

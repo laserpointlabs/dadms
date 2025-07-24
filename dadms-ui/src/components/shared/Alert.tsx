@@ -15,40 +15,34 @@ export interface AlertProps {
     actions?: React.ReactNode;
 }
 
-const alertConfig: Record<AlertVariant, {
-    icon: CodiconName;
-    bgColor: string;
-    borderColor: string;
-    textColor: string;
-    iconColor: string;
-}> = {
+const alertConfig: Record<AlertVariant, { icon: CodiconName; bgColor: string; borderColor: string; textColor: string; iconColor: string }> = {
     error: {
         icon: 'error',
-        bgColor: 'bg-red-900 bg-opacity-20',
-        borderColor: 'border-red-700',
-        textColor: 'text-red-300',
-        iconColor: 'text-red-400'
+        bgColor: 'bg-theme-accent-error bg-opacity-20',
+        borderColor: 'border-theme-accent-error border-opacity-30',
+        textColor: 'text-theme-accent-error',
+        iconColor: 'text-theme-accent-error'
     },
     warning: {
         icon: 'warning',
-        bgColor: 'bg-yellow-900 bg-opacity-20',
-        borderColor: 'border-yellow-700',
-        textColor: 'text-yellow-300',
-        iconColor: 'text-yellow-400'
+        bgColor: 'bg-theme-accent-warning bg-opacity-20',
+        borderColor: 'border-theme-accent-warning border-opacity-30',
+        textColor: 'text-theme-accent-warning',
+        iconColor: 'text-theme-accent-warning'
     },
     info: {
         icon: 'info',
-        bgColor: 'bg-blue-900 bg-opacity-20',
-        borderColor: 'border-blue-700',
-        textColor: 'text-blue-300',
-        iconColor: 'text-blue-400'
+        bgColor: 'bg-theme-accent-info bg-opacity-20',
+        borderColor: 'border-theme-accent-info border-opacity-30',
+        textColor: 'text-theme-accent-info',
+        iconColor: 'text-theme-accent-info'
     },
     success: {
-        icon: 'check-circle',
-        bgColor: 'bg-green-900 bg-opacity-20',
-        borderColor: 'border-green-700',
-        textColor: 'text-green-300',
-        iconColor: 'text-green-400'
+        icon: 'check',
+        bgColor: 'bg-theme-accent-success bg-opacity-20',
+        borderColor: 'border-theme-accent-success border-opacity-30',
+        textColor: 'text-theme-accent-success',
+        iconColor: 'text-theme-accent-success'
     }
 };
 
@@ -185,7 +179,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
                 aria-hidden="true"
             />
 
-            <div className="relative bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700">
+            <div className="relative bg-theme-surface rounded-lg shadow-xl max-w-md w-full p-6 border border-theme-border">
                 <div className="flex items-start mb-4">
                     <Icon
                         name={config.icon}
@@ -193,10 +187,10 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
                         className={`${config.iconColor} mr-3`}
                     />
                     <div>
-                        <h3 className="text-lg font-medium text-gray-100 mb-2">
+                        <h3 className="text-lg font-medium text-theme-text-primary mb-2">
                             {title}
                         </h3>
-                        <p className="text-sm text-gray-300">
+                        <p className="text-sm text-theme-text-secondary">
                             {description}
                         </p>
                     </div>
@@ -205,7 +199,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
                 <div className="flex gap-2 justify-end mt-6">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="px-4 py-2 text-sm font-medium text-theme-text-secondary bg-theme-surface-hover rounded hover:bg-theme-bg-hover focus:outline-none focus:ring-2 focus:ring-theme-accent-primary"
                     >
                         {cancelText}
                     </button>
@@ -219,12 +213,12 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
                                 px-4 py-2 text-sm font-medium rounded
                                 focus:outline-none focus:ring-2
                                 ${variant === 'error'
-                                    ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+                                    ? 'bg-theme-accent-error hover:opacity-90 text-theme-text-inverse focus:ring-theme-accent-error'
                                     : variant === 'warning'
-                                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white focus:ring-yellow-500'
+                                        ? 'bg-theme-accent-warning hover:opacity-90 text-theme-text-inverse focus:ring-theme-accent-warning'
                                         : variant === 'success'
-                                            ? 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
-                                            : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
+                                            ? 'bg-theme-accent-success hover:opacity-90 text-theme-text-inverse focus:ring-theme-accent-success'
+                                            : 'bg-theme-accent-primary hover:opacity-90 text-theme-text-inverse focus:ring-theme-accent-primary'
                                 }
                             `}
                         >

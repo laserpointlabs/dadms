@@ -177,12 +177,12 @@ export default function AADSPage() {
                                     >
                                         <div
                                             className={`max-w-[80%] p-3 rounded-lg ${message.role === 'user'
-                                                ? 'bg-theme-accent-primary text-white'
+                                                ? 'bg-theme-accent-primary text-theme-text-inverse'
                                                 : 'bg-theme-surface-elevated text-theme-text-primary border border-theme-border'
                                                 }`}
                                         >
                                             <p className="text-sm">{message.content}</p>
-                                            <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white opacity-70' : 'text-theme-text-muted'
+                                            <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-theme-text-inverse opacity-70' : 'text-theme-text-muted'
                                                 }`}>
                                                 {new Date(message.timestamp).toLocaleTimeString()}
                                             </p>
