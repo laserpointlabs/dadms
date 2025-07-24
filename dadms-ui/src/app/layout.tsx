@@ -71,6 +71,13 @@ const dadmsActivityGroups: NavigationGroup[] = [
                 type: 'navigation'
             },
             {
+                id: 'ontology-modeler',
+                icon: 'edit',
+                label: 'Ontology Modeler',
+                href: '/ontology-modeler',
+                type: 'navigation'
+            },
+            {
                 id: 'bpmn',
                 icon: 'git-branch',
                 label: 'BPMN Workspace',
