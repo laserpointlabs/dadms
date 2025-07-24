@@ -315,6 +315,26 @@ services:
       timeout: 20s
       retries: 3
 
+  # Jupyter Lab - Interactive Development Environment
+  jupyter-lab:
+    image: jupyter/minimal-notebook:latest
+    container_name: jupyter-lab
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=dadms_jupyter_token
+      - JUPYTER_ALLOW_REMOTE_ACCESS=yes
+    ports:
+      - "8888:8888"
+    volumes:
+      - jupyter-data:/home/jovyan/work
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token=dadms_jupyter_token --ServerApp.allow_origin='*' --ServerApp.disable_check_xsrf=True --ServerApp.trust_xheaders=True
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # camunda:
   #   image: camunda/camunda-bpm-platform:latest
   #   container_name: dadms-camunda
@@ -346,6 +366,7 @@ volumes:
   ollama_data:
   minio-data:
   neo4j-data:
+  jupyter-data:
 
 
 networks:
