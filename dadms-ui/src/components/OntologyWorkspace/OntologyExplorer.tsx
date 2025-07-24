@@ -192,8 +192,8 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({ isOpen, onToggle })
             switch (type) {
                 case 'ontology': return 'project';
                 case 'folder': return 'folder';
-                case 'entity': return 'circle-filled';
-                case 'data_property': return 'add';
+                case 'entity': return 'symbol-class'; // Updated to match palette
+                case 'data_property': return 'symbol-field'; // Updated to match palette
                 case 'relationship': return 'arrow-right';
                 case 'external_ontology': return 'references';
                 case 'external_entity': return 'symbol-class';

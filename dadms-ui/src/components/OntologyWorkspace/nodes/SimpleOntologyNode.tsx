@@ -28,13 +28,13 @@ const SimpleOntologyNode: React.FC<SimpleOntologyNodeProps> = ({ data, selected 
     const getNodeIcon = (entityType: string) => {
         switch (entityType) {
             case 'Entity':
-                return 'circle-filled' as const;
+                return 'symbol-class' as const; // Updated to match palette
             case 'Object Property':
                 return 'arrow-right' as const;
             case 'Data Property':
-                return 'add' as const;
+                return 'symbol-field' as const; // Updated to match palette
             default:
-                return 'circle-filled' as const;
+                return 'symbol-class' as const; // Updated to match palette
         }
     };
 
