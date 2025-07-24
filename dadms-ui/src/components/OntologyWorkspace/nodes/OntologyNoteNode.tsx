@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useCallback, useState } from 'react';
-import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
+import { Handle, NodeProps, Position } from 'reactflow';
 import { dadmsTheme } from '../../../design-system/theme';
 import { CodiconName, Icon } from '../../shared/Icon';
+import { useOntologyWorkspaceStore } from '../store';
 import { OntologyNodeData } from '../types';
 
 interface OntologyNoteNodeData extends OntologyNodeData {
@@ -18,7 +19,7 @@ const OntologyNoteNode: React.FC<NodeProps<OntologyNoteNodeData>> = ({ data, sel
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(data.noteContent || '');
     const [isExpanded, setIsExpanded] = useState(false);
-    const { setNodes } = useReactFlow();
+    const { updateNode } = useOntologyWorkspaceStore();
 
     const handleDoubleClick = useCallback(() => {
         setIsEditing(true);
@@ -26,23 +27,16 @@ const OntologyNoteNode: React.FC<NodeProps<OntologyNoteNodeData>> = ({ data, sel
     }, [data.noteContent]);
 
     const handleSave = useCallback(() => {
-        // Update the node data through React Flow's data flow
-        setNodes((nodes) =>
-            nodes.map((node) =>
-                node.id === id
-                    ? {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            noteContent: editContent,
-                            noteLastModified: new Date().toISOString(),
-                        },
-                    }
-                    : node
-            )
-        );
+        // Update the node data through the store to ensure persistence
+        updateNode(id, {
+            data: {
+                ...data,
+                noteContent: editContent,
+                noteLastModified: new Date().toISOString(),
+            },
+        });
         setIsEditing(false);
-    }, [editContent, id, setNodes]);
+    }, [editContent, id, updateNode, data]);
 
     const handleCancel = useCallback(() => {
         setEditContent(data.noteContent || '');
