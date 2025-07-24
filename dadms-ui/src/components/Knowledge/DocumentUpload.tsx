@@ -106,8 +106,8 @@ export const DocumentUpload: React.FC = () => {
                     <label className="block text-sm font-medium">File</label>
                     <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileChange} className="w-full" required />
                 </div>
-                {error && <div className="text-red-600 text-xs">{error}</div>}
-                <button type="submit" className="bg-blue-600 text-white px-4 py-1 rounded">Upload</button>
+                {error && <div className="text-theme-accent-error text-xs">{error}</div>}
+                <button type="submit" className="bg-theme-accent-primary text-theme-text-inverse px-4 py-1 rounded">Upload</button>
             </form>
             <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
             <table className="w-full text-sm">
@@ -128,7 +128,7 @@ export const DocumentUpload: React.FC = () => {
                             <td className="py-1">{f.domainIds ? f.domainIds.map(id => initialDomains.find(d => d.id === id)?.name).filter(Boolean).join(", ") : "--"}</td>
                             <td className="py-1">{f.tagIds.map(id => initialTags.find(t => t.id === id)?.name).filter(Boolean).join(", ")}</td>
                             <td className="py-1">
-                                <button className="text-red-600 text-xs" onClick={() => setDeleteTarget(f)}>Delete</button>
+                                <button className="bg-theme-accent-error text-theme-text-inverse px-4 py-1 rounded" onClick={() => setDeleteTarget(f)}>Delete</button>
                             </td>
                         </tr>
                     ))}
@@ -141,7 +141,7 @@ export const DocumentUpload: React.FC = () => {
                         <h3 className="text-lg font-semibold mb-4">Delete Document?</h3>
                         <p>Are you sure you want to delete <b>{deleteTarget.name}</b>?</p>
                         <div className="flex gap-2 mt-4">
-                            <button className="bg-red-600 text-white px-4 py-1 rounded" onClick={handleDelete}>Delete</button>
+                            <button className="bg-theme-accent-error text-theme-text-inverse px-4 py-1 rounded" onClick={handleDelete}>Delete</button>
                             <button className="bg-gray-200 px-4 py-1 rounded" onClick={() => setDeleteTarget(null)}>Cancel</button>
                         </div>
                     </div>

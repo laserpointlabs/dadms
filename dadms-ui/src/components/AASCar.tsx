@@ -804,7 +804,19 @@ export default function AASCar() {
     // Show control buttons when not visible
     if (!contextVisible && !contextIsDetached && !contextIsDocked) {
         return (
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+            <div className="fixed bottom-16 right-8 z-50 flex flex-col gap-2">
+                <button
+                    onClick={() => setContextVisible(true)}
+                    onDoubleClick={() => {
+                        setContextVisible(true);
+                        resetPosition();
+                    }}
+                    className="bg-theme-accent-primary text-theme-text-inverse hover:opacity-90 shadow-lg px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-opacity"
+                    title="Show Agent Assistant (Double-click to reset position)"
+                >
+                    <Icon name="robot" size="sm" />
+                    Assistant
+                </button>
                 <button
                     onClick={openDetachedWindow}
                     className="bg-theme-surface border border-theme-border-light text-theme-text-primary hover:bg-theme-surface-hover shadow-lg px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors"
@@ -820,18 +832,6 @@ export default function AASCar() {
                 >
                     <Icon name="arrow-down" size="sm" />
                     Dock Assistant
-                </button>
-                <button
-                    onClick={() => setContextVisible(true)}
-                    onDoubleClick={() => {
-                        setContextVisible(true);
-                        resetPosition();
-                    }}
-                    className="bg-theme-accent-primary text-white hover:opacity-90 shadow-lg px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-opacity"
-                    title="Show Agent Assistant (Double-click to reset position)"
-                >
-                    <Icon name="robot" size="sm" />
-                    Assistant
                 </button>
             </div>
         );
@@ -849,7 +849,7 @@ export default function AASCar() {
                         setContextVisible(true);
                     }
                 }}
-                className="fixed bottom-4 right-4 bg-theme-surface border border-theme-border-light text-theme-text-primary hover:bg-theme-surface-hover shadow-lg z-50 px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors"
+                className="fixed bottom-16 right-8 bg-theme-surface border border-theme-border-light text-theme-text-primary hover:bg-theme-surface-hover shadow-lg z-50 px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors"
                 title="Agent Assistant is detached (Click to focus or restore)"
             >
                 <Icon name="ellipsis" size="sm" />
@@ -1018,7 +1018,7 @@ export default function AASCar() {
                                             <button
                                                 onClick={handleAasSend}
                                                 disabled={!aasInput.trim()}
-                                                className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
+                                                className="bg-theme-accent-primary text-theme-text-inverse px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
                                             >
                                                 Send
                                             </button>
@@ -1212,7 +1212,7 @@ export default function AASCar() {
                                             <button
                                                 onClick={handleAasSend}
                                                 disabled={!aasInput.trim()}
-                                                className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
+                                                className="bg-theme-accent-primary text-theme-text-inverse px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
                                             >
                                                 Send
                                             </button>
@@ -1282,7 +1282,7 @@ export default function AASCar() {
             >
                 <div className="flex items-center gap-2">
                     <div className="w-5 h-5 flex items-center justify-center bg-theme-accent-primary rounded-sm">
-                        <Icon name="robot" size="sm" className="text-white" />
+                        <Icon name="robot" size="sm" />
                     </div>
                     <h3 className="text-sm font-medium text-theme-text-primary">Agent Assistant</h3>
                     <div className="w-2 h-2 bg-theme-accent-success rounded-full" title="Active" />
@@ -1394,7 +1394,7 @@ export default function AASCar() {
                                     <div className="bg-theme-accent-primary bg-opacity-10 border border-theme-accent-primary border-opacity-30 rounded-lg p-3">
                                         <div className="flex items-start gap-2">
                                             <div className="w-5 h-5 bg-theme-accent-primary rounded flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                <Icon name="robot" size="sm" className="text-white" />
+                                                <Icon name="robot" size="sm" />
                                             </div>
                                             <div className="text-xs text-theme-text-primary leading-relaxed">
                                                 I&apos;m monitoring your DADMS workspace. I noticed you have 3 active projects.
@@ -1422,7 +1422,7 @@ export default function AASCar() {
                                         <button
                                             onClick={handleAasSend}
                                             disabled={!aasInput.trim()}
-                                            className="bg-theme-accent-primary text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0"
+                                            className="bg-theme-accent-primary text-theme-text-inverse px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0"
                                         >
                                             Send
                                         </button>

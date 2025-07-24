@@ -45,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     const variantClasses = {
         primary: `
-            bg-theme-accent-primary hover:opacity-90 text-white
+            bg-theme-accent-primary hover:opacity-90 text-theme-text-inverse
             focus:ring-theme-accent-primary focus:ring-offset-theme-bg-primary
             border border-transparent
         `,
@@ -60,12 +60,12 @@ export const Button: React.FC<ButtonProps> = ({
             border border-transparent hover:border-theme-border-light
         `,
         danger: `
-            bg-theme-accent-error hover:opacity-90 text-white
+            bg-theme-accent-error hover:opacity-90 text-theme-text-inverse
             focus:ring-theme-accent-error focus:ring-offset-theme-bg-primary
             border border-transparent
         `,
         success: `
-            bg-theme-accent-success hover:opacity-90 text-white
+            bg-theme-accent-success hover:opacity-90 text-theme-text-inverse
             focus:ring-theme-accent-success focus:ring-offset-theme-bg-primary
             border border-transparent
         `,

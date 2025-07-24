@@ -26,7 +26,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                     w-10 h-8 rounded-md
                     bg-theme-surface hover:bg-theme-surface-hover
                     border border-theme-border hover:border-theme-border-light
-                    text-theme-text-secondary hover:text-theme-text-primary
+                    text-theme-text-primary
                     transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-theme-accent-primary focus:ring-offset-2
                     focus:ring-offset-theme-bg-primary
@@ -38,7 +38,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 <Icon
                     name="lightbulb"
                     size="sm"
-                    className={`transition-transform duration-200 ${theme === 'light' ? 'text-gray-800' : 'text-white'}`}
+                    className="transition-transform duration-200"
+                    color="#000000"
                 />
             </button>
         );
@@ -80,7 +81,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                     className={`
                                         w-full flex items-center gap-2 px-3 py-2 rounded-md text-left
                                         hover:bg-theme-surface-hover transition-colors
-                                        ${theme === 'light' ? 'bg-theme-accent-primary text-white' : 'text-theme-text-primary'}
+                                        ${theme === 'light' ? 'bg-theme-accent-primary text-theme-text-inverse' : 'text-theme-text-primary'}
                                     `}
                                 >
                                     <Icon name="lightbulb" size="sm" />
@@ -94,7 +95,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                     className={`
                                         w-full flex items-center gap-2 px-3 py-2 rounded-md text-left
                                         hover:bg-theme-surface-hover transition-colors
-                                        ${theme === 'dark' ? 'bg-theme-accent-primary text-white' : 'text-theme-text-primary'}
+                                        ${theme === 'dark' ? 'bg-theme-accent-primary text-theme-text-inverse' : 'text-theme-text-primary'}
                                     `}
                                 >
                                     <Icon name="circle-filled" size="sm" />
