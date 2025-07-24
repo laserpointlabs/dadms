@@ -76,6 +76,13 @@ const dadmsActivityGroups: NavigationGroup[] = [
                 label: 'BPMN Workspace',
                 href: '/bpmn',
                 type: 'navigation'
+            },
+            {
+                id: 'sysml',
+                icon: 'symbol-class',
+                label: 'SysML Workspace',
+                href: '/sysml',
+                type: 'navigation'
             }
         ]
     },
@@ -325,72 +332,135 @@ function ActivityBar({ activeView, onViewChange }: { activeView: string; onViewC
     );
 }
 
-function ExplorerView() {
+function ExplorerView({ isCollapsed, onToggleCollapse }: { isCollapsed: boolean; onToggleCollapse: () => void }) {
     return (
-        <div className="vscode-sidebar">
+        <div className={`vscode-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
             <div className="vscode-sidebar-header">
-                PROJECT EXPLORER
-            </div>
-            <div className="vscode-sidebar-content">
-                <ProjectTreeView />
-            </div>
-        </div>
-    );
-}
-
-function SearchView() {
-    return (
-        <div className="vscode-sidebar">
-            <div className="vscode-sidebar-header">
-                SEARCH
-            </div>
-            <div className="vscode-sidebar-content" style={{ padding: '16px' }}>
-                <div style={{ color: 'var(--vscode-sideBar-foreground)', fontSize: '13px' }}>
-                    <p>Search functionality will be implemented in future versions.</p>
-                    <p style={{ marginTop: '16px', color: 'var(--vscode-tab-inactiveForeground)' }}>
-                        This will include:
-                    </p>
-                    <ul style={{ marginTop: '8px', paddingLeft: '16px', color: 'var(--vscode-tab-inactiveForeground)' }}>
-                        <li>Global project search</li>
-                        <li>Knowledge base search</li>
-                        <li>Process search</li>
-                        <li>Thread search</li>
-                    </ul>
+                <div className="sidebar-header-content">
+                    <div
+                        className="sidebar-header-left"
+                        onClick={isCollapsed ? onToggleCollapse : undefined}
+                        title={isCollapsed ? "Click to expand Project Explorer" : undefined}
+                    >
+                        <i className="codicon codicon-files sidebar-header-icon"></i>
+                        <span>PROJECT EXPLORER</span>
+                    </div>
+                    <button
+                        className="sidebar-collapse-button"
+                        onClick={onToggleCollapse}
+                        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        <i className={`codicon codicon-${isCollapsed ? 'chevron-right' : 'chevron-left'}`}></i>
+                    </button>
                 </div>
             </div>
+            {!isCollapsed && (
+                <div className="vscode-sidebar-content">
+                    <ProjectTreeView />
+                </div>
+            )}
         </div>
     );
 }
 
-function DefaultView({ viewType }: { viewType: string }) {
+function SearchView({ isCollapsed, onToggleCollapse }: { isCollapsed: boolean; onToggleCollapse: () => void }) {
+    return (
+        <div className={`vscode-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+            <div className="vscode-sidebar-header">
+                <div className="sidebar-header-content">
+                    <div
+                        className="sidebar-header-left"
+                        onClick={isCollapsed ? onToggleCollapse : undefined}
+                        title={isCollapsed ? "Click to expand Search" : undefined}
+                    >
+                        <i className="codicon codicon-search sidebar-header-icon"></i>
+                        <span>SEARCH</span>
+                    </div>
+                    <button
+                        className="sidebar-collapse-button"
+                        onClick={onToggleCollapse}
+                        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        <i className={`codicon codicon-${isCollapsed ? 'chevron-right' : 'chevron-left'}`}></i>
+                    </button>
+                </div>
+            </div>
+            {!isCollapsed && (
+                <div className="vscode-sidebar-content" style={{ padding: '16px' }}>
+                    <div style={{ color: 'var(--vscode-sideBar-foreground)', fontSize: '13px' }}>
+                        <p>Search functionality will be implemented in future versions.</p>
+                        <p style={{ marginTop: '16px', color: 'var(--vscode-tab-inactiveForeground)' }}>
+                            This will include:
+                        </p>
+                        <ul style={{ marginTop: '8px', paddingLeft: '16px', color: 'var(--vscode-tab-inactiveForeground)' }}>
+                            <li>Global project search</li>
+                            <li>Knowledge base search</li>
+                            <li>Process search</li>
+                            <li>Thread search</li>
+                        </ul>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DefaultView({ viewType, isCollapsed, onToggleCollapse }: { viewType: string; isCollapsed: boolean; onToggleCollapse: () => void }) {
     const titles: Record<string, string> = {
         scm: 'SOURCE CONTROL',
         debug: 'RUN AND DEBUG',
         extensions: 'EXTENSIONS'
     };
 
+    const getIconForView = (viewType: string): string => {
+        const iconMap: Record<string, string> = {
+            scm: 'source-control',
+            debug: 'debug',
+            extensions: 'extensions'
+        };
+        return iconMap[viewType] || 'view';
+    };
+
     return (
-        <div className="vscode-sidebar">
+        <div className={`vscode-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
             <div className="vscode-sidebar-header">
-                {titles[viewType] || 'VIEW'}
-            </div>
-            <div className="vscode-sidebar-content" style={{ padding: '16px' }}>
-                <div style={{ color: 'var(--vscode-sideBar-foreground)', fontSize: '13px' }}>
-                    <p>This view will be implemented in future versions of DADMS.</p>
+                <div className="sidebar-header-content">
+                    <div
+                        className="sidebar-header-left"
+                        onClick={isCollapsed ? onToggleCollapse : undefined}
+                        title={isCollapsed ? `Click to expand ${titles[viewType] || 'View'}` : undefined}
+                    >
+                        <i className={`codicon codicon-${getIconForView(viewType)} sidebar-header-icon`}></i>
+                        <span>{titles[viewType] || 'VIEW'}</span>
+                    </div>
+                    <button
+                        className="sidebar-collapse-button"
+                        onClick={onToggleCollapse}
+                        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        <i className={`codicon codicon-${isCollapsed ? 'chevron-right' : 'chevron-left'}`}></i>
+                    </button>
                 </div>
             </div>
+            {!isCollapsed && (
+                <div className="vscode-sidebar-content" style={{ padding: '16px' }}>
+                    <div style={{ color: 'var(--vscode-sideBar-foreground)', fontSize: '13px' }}>
+                        <p>This view will be implemented in future versions of DADMS.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function SidebarView({ activeView }: { activeView: string }) {
+function SidebarView({ activeView, isCollapsed, onToggleCollapse }: { activeView: string; isCollapsed: boolean; onToggleCollapse: () => void }) {
     switch (activeView) {
         case 'explorer':
-            return <ExplorerView />;
+            return <ExplorerView isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
         case 'search':
-            return <SearchView />;
+            return <SearchView isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
         default:
-            return <DefaultView viewType={activeView} />;
+            return <DefaultView viewType={activeView} isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />;
     }
 }
 
@@ -490,6 +560,15 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     const [activeView, setActiveView] = useState('explorer');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+    const handleViewChange = (view: string) => {
+        setActiveView(view);
+    };
+
+    const handleToggleCollapse = () => {
+        setIsSidebarCollapsed(!isSidebarCollapsed);
+    };
 
     return (
         <html lang="en">
@@ -518,10 +597,10 @@ export default function RootLayout({
                             {/* Main Layout */}
                             <div className="vscode-main">
                                 {/* Activity Bar */}
-                                <ActivityBar activeView={activeView} onViewChange={setActiveView} />
+                                <ActivityBar activeView={activeView} onViewChange={handleViewChange} />
 
                                 {/* Sidebar */}
-                                <SidebarView activeView={activeView} />
+                                <SidebarView activeView={activeView} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleCollapse} />
 
                                 {/* Editor Area */}
                                 <div className="vscode-editor-area">

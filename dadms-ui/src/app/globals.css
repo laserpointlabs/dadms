@@ -369,6 +369,11 @@ html {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    transition: width 0.3s ease;
+}
+
+.vscode-sidebar.collapsed {
+    width: 48px;
 }
 
 .vscode-sidebar-header {
@@ -384,6 +389,79 @@ html {
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--theme-border);
     flex-shrink: 0;
+}
+
+.vscode-sidebar.collapsed .vscode-sidebar-header {
+    padding: 0 8px;
+    justify-content: center;
+}
+
+.sidebar-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.vscode-sidebar.collapsed .sidebar-header-content {
+    justify-content: center;
+}
+
+.sidebar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.1s ease;
+}
+
+.sidebar-header-left:hover {
+    opacity: 0.8;
+}
+
+.sidebar-header-icon {
+    font-size: 14px;
+    color: var(--theme-text-secondary);
+}
+
+.vscode-sidebar.collapsed .sidebar-header-left {
+    cursor: pointer;
+    justify-content: center;
+}
+
+.vscode-sidebar.collapsed .sidebar-header-left span {
+    display: none;
+}
+
+.vscode-sidebar.collapsed .sidebar-header-icon {
+    font-size: 16px;
+    color: var(--theme-text-primary);
+}
+
+.vscode-sidebar.collapsed .sidebar-header-left:hover .sidebar-header-icon {
+    color: var(--theme-accent-primary);
+}
+
+.sidebar-collapse-button {
+    background: none;
+    border: none;
+    color: var(--theme-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.sidebar-collapse-button:hover {
+    background-color: var(--theme-surface-hover);
+    color: var(--theme-text-primary);
+}
+
+.sidebar-collapse-button i {
+    font-size: 12px;
 }
 
 .vscode-sidebar-content {
