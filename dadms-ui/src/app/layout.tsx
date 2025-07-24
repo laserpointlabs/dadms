@@ -97,6 +97,20 @@ const dadmsActivityGroups: NavigationGroup[] = [
         ]
     },
     {
+        id: 'development-tools',
+        icon: 'tools',
+        label: 'Development Tools',
+        items: [
+            {
+                id: 'jupyter-lab',
+                icon: 'beaker',
+                label: 'Jupyter Lab',
+                href: '/jupyter-lab',
+                type: 'navigation'
+            }
+        ]
+    },
+    {
         id: 'ai-services',
         icon: 'chat-sparkle',
         label: 'AI Services',
