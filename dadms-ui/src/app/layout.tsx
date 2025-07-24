@@ -532,7 +532,7 @@ function StatusBar() {
 
 // New component to handle the main content with agent assistant spacing
 function MainContent({ children }: { children: React.ReactNode }) {
-    const { isDocked, dockedHeight } = useAgentAssistant();
+    const { isDocked, dockedHeight, dockedWidth, dockPosition } = useAgentAssistant();
     const statusBarHeight = 24; // VSCode status bar height from CSS
     const [isHydrated, setIsHydrated] = useState(false);
 
@@ -545,8 +545,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
         <div
             className="vscode-editor"
             style={{
-                paddingBottom: isHydrated && isDocked ? `${dockedHeight}px` : '0px',
-                transition: 'padding-bottom 0.3s ease'
+                paddingBottom: isHydrated && isDocked && dockPosition === 'bottom' ? `${dockedHeight}px` : '0px',
+                paddingRight: isHydrated && isDocked && dockPosition === 'right' ? `${dockedWidth}px` : '0px',
+                transition: 'padding-bottom 0.3s ease, padding-right 0.3s ease'
             }}
         >
             {children}
