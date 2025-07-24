@@ -989,3 +989,47 @@ html {
 .react-flow__node.selected {
     z-index: 10;
 }
+
+/* Agent Assistant Right Docking Resize Handle */
+.agent-resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    transition: background-color 0.2s ease;
+    z-index: 10;
+}
+
+.agent-resize-handle:hover {
+    background-color: var(--theme-accent-primary);
+    background-opacity: 0.3;
+}
+
+.agent-resize-handle:active {
+    background-color: var(--theme-accent-primary);
+    background-opacity: 0.5;
+}
+
+.agent-resize-handle .resize-indicator {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 32px;
+    background-color: var(--theme-text-muted);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: 1px;
+}
+
+.agent-resize-handle:hover .resize-indicator {
+    opacity: 1;
+}
+
+/* Ensure the resize handle is above other content */
+.agent-resize-handle:hover {
+    z-index: 20;
+}

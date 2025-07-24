@@ -17,76 +17,85 @@ const TABS = [
 
 export default function AASCar() {
     const { theme } = useTheme();
-    const { isDocked: contextIsDocked, dockedHeight: contextDockedHeight, setIsDocked: setContextIsDocked, setDockedHeight: setContextDockedHeight } = useAgentAssistant();
+    const {
+        isDocked: contextIsDocked,
+        dockedHeight: contextDockedHeight,
+        dockedWidth: contextDockedWidth,
+        dockPosition: contextDockPosition,
+        visible: contextVisible,
+        position: contextPosition,
+        activeTab: contextActiveTab,
+        isMinimized: contextIsMinimized,
+        isDetached: contextIsDetached,
+        setIsDocked: setContextIsDocked,
+        setDockedHeight: setContextDockedHeight,
+        setDockedWidth: setContextDockedWidth,
+        setDockPosition: setContextDockPosition,
+        setVisible: setContextVisible,
+        setPosition: setContextPosition,
+        setActiveTab: setContextActiveTab,
+        setIsMinimized: setContextIsMinimized,
+        setIsDetached: setContextIsDetached
+    } = useAgentAssistant();
 
     // Add hydration state to prevent SSR/client mismatch
     const [isHydrated, setIsHydrated] = useState(false);
 
     // Initialize local state from context (which loads from localStorage)
-    const [visible, setVisible] = useState(false); // Start hidden to avoid hydration issues
     const [height, setHeight] = useState(280);
-    const [position, setPosition] = useState({ x: 400, y: 100 });
-    const [activeTab, setActiveTab] = useState(TAB_AAS);
+    const [width, setWidth] = useState(320);
     const [aasInput, setAasInput] = useState("");
     const [conversationHistory, setConversationHistory] = useState("Assistant: I'm monitoring your DADMS workspace. I noticed you have 3 active projects. Would you like me to help prioritize your next steps or provide insights on any specific project?\n\nAsk me anything about your DADMS workspace...");
-    const [isMinimized, setIsMinimized] = useState(false);
     const conversationRef = useRef<HTMLTextAreaElement>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [isDetached, setIsDetached] = useState(false);
-    const [isDocked, setIsDocked] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
     const detachedWindowRef = useRef<Window | null>(null);
     const dragRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
     const startY = useRef<number | null>(null);
+    const startX = useRef<number | null>(null);
     const startHeight = useRef<number>(height);
+    const startWidth = useRef<number>(width);
     const startPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const startMouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const isResizing = useRef<boolean>(false);
 
     // Handle hydration - set initial state after client-side mount
     useEffect(() => {
         setIsHydrated(true);
-        setIsDocked(contextIsDocked);
         setHeight(contextDockedHeight || 280);
-        setVisible(!contextIsDocked);
-    }, [contextIsDocked, contextDockedHeight]);
-
-    // Initialize position after mount to avoid hydration issues
-    useEffect(() => {
-        if (!isInitialized && typeof window !== 'undefined') {
-            const statusBarHeight = 24;
-            setPosition({
-                x: Math.max(20, window.innerWidth - 420),
-                y: Math.max(20, window.innerHeight - 300 - statusBarHeight)
-            });
-            setIsInitialized(true);
-        }
-    }, [isInitialized]);
+        setWidth(contextDockedWidth || 320);
+    }, [contextDockedHeight, contextDockedWidth]);
 
     // Sync with context state changes (from other instances or localStorage)
     useEffect(() => {
-        setIsDocked(contextIsDocked);
         setHeight(contextDockedHeight || 280);
-        // If context says we're docked, make sure we're visible
-        if (contextIsDocked) {
-            setVisible(true);
-            setIsDetached(false);
-        }
-    }, [contextIsDocked, contextDockedHeight]);
+        setWidth(contextDockedWidth || 320);
+    }, [contextDockedHeight, contextDockedWidth]);
 
     // Update context when local state changes, but avoid loops
     useEffect(() => {
-        if (isDocked !== contextIsDocked) {
-            setContextIsDocked(isDocked);
+        if (contextIsDocked) {
+            if (contextDockPosition === 'bottom') {
+                // For bottom docking, always save the actual height (not minimized height)
+                if (height !== contextDockedHeight) {
+                    setContextDockedHeight(height);
+                }
+            } else if (contextDockPosition === 'right') {
+                // For right docking, always save the actual width (not minimized width)
+                if (width !== contextDockedWidth) {
+                    setContextDockedWidth(width);
+                }
+            }
+        } else {
+            // Only reset if not already reset
+            if (contextDockedHeight !== 0) {
+                setContextDockedHeight(0);
+            }
+            if (contextDockedWidth !== 0) {
+                setContextDockedWidth(0);
+            }
         }
-
-        const currentHeight = isMinimized ? 48 : height;
-        if (isDocked && currentHeight !== contextDockedHeight) {
-            setContextDockedHeight(currentHeight);
-        } else if (!isDocked && contextDockedHeight !== 0) {
-            setContextDockedHeight(0);
-        }
-    }, [isDocked, height, isMinimized, contextIsDocked, contextDockedHeight, setContextIsDocked, setContextDockedHeight]);
+    }, [height, width, contextIsDocked, contextDockPosition, contextDockedHeight, contextDockedWidth, setContextDockedHeight, setContextDockedWidth]);
 
     // Function to open agent assistant in separate window
     const openDetachedWindow = () => {
@@ -153,16 +162,16 @@ export default function AASCar() {
         }
 
         detachedWindowRef.current = newWindow;
-        setIsDetached(true);
-        setVisible(false);
-        setIsDocked(false);
+        setContextIsDetached(true);
+        setContextVisible(false);
+        setContextIsDocked(false);
 
         // Set up the detached window content
         setupDetachedWindow(newWindow);
 
         // Handle window close
         newWindow.addEventListener('beforeunload', () => {
-            setIsDetached(false);
+            setContextIsDetached(false);
             detachedWindowRef.current = null;
             // Clean up blob URL
             URL.revokeObjectURL(blobURL);
@@ -625,28 +634,46 @@ export default function AASCar() {
     };
 
     const handleDocking = () => {
-        const newDockedState = !isDocked;
-        setIsDocked(newDockedState);
-        setVisible(true);
-        setIsDetached(false);
-        if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
-            detachedWindowRef.current.close();
+        if (contextIsDocked) {
+            // If already docked, switch position
+            const newPosition = contextDockPosition === 'bottom' ? 'right' : 'bottom';
+            setContextDockPosition(newPosition);
+        } else {
+            // If not docked, dock to bottom by default
+            setContextIsDocked(true);
+            setContextDockPosition('bottom');
         }
+        setContextVisible(true);
+        setContextIsDetached(false);
     };
 
     const handleResizeDragStart = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        startY.current = e.clientY;
-        startHeight.current = height;
-        document.body.style.cursor = "ns-resize";
+
+        if (contextDockPosition === 'bottom') {
+            // Vertical resize for bottom docking
+            startY.current = e.clientY;
+            startHeight.current = height;
+            document.body.style.cursor = "ns-resize";
+        } else {
+            // Horizontal resize for right docking
+            startX.current = e.clientX;
+            startWidth.current = width;
+            document.body.style.cursor = "ew-resize";
+        }
+
         document.body.style.userSelect = "none";
 
         const handleDragMove = (e: MouseEvent) => {
-            if (startY.current !== null) {
+            if (contextDockPosition === 'bottom' && startY.current !== null) {
                 const deltaY = startY.current - e.clientY;
                 const newHeight = Math.max(120, Math.min(600, startHeight.current + deltaY));
                 setHeight(newHeight);
+            } else if (contextDockPosition === 'right' && startX.current !== null) {
+                const deltaX = startX.current - e.clientX;
+                const newWidth = Math.max(200, Math.min(500, startWidth.current + deltaX));
+                setWidth(newWidth);
             }
         };
 
@@ -654,6 +681,7 @@ export default function AASCar() {
             document.body.style.cursor = "";
             document.body.style.userSelect = "";
             startY.current = null;
+            startX.current = null;
             window.removeEventListener("mousemove", handleDragMove);
             window.removeEventListener("mouseup", handleDragEnd);
         };
@@ -663,12 +691,12 @@ export default function AASCar() {
     };
 
     const handlePositionDragStart = (e: React.MouseEvent) => {
-        if (isDocked) return; // Don't allow dragging when docked
+        if (contextIsDocked) return; // Don't allow dragging when docked
 
         e.preventDefault();
         setIsDragging(true);
         startMouse.current = { x: e.clientX, y: e.clientY };
-        startPosition.current = { x: position.x, y: position.y };
+        startPosition.current = { x: contextPosition.x, y: contextPosition.y };
         document.body.style.cursor = "grabbing";
         document.body.style.userSelect = "none";
 
@@ -679,7 +707,7 @@ export default function AASCar() {
             const newX = startPosition.current.x + deltaX;
             const newY = startPosition.current.y + deltaY;
 
-            setPosition({ x: newX, y: newY });
+            setContextPosition({ x: newX, y: newY });
         };
 
         const handleDragEnd = () => {
@@ -702,26 +730,26 @@ export default function AASCar() {
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, [height, isMinimized]);
+    }, [height, contextIsMinimized]);
 
     // Monitor detached window status and theme changes
     useEffect(() => {
-        if (!isDetached || !detachedWindowRef.current) return;
+        if (!contextIsDetached || !detachedWindowRef.current) return;
 
         const checkWindowStatus = () => {
             if (detachedWindowRef.current && detachedWindowRef.current.closed) {
-                setIsDetached(false);
+                setContextIsDetached(false);
                 detachedWindowRef.current = null;
             }
         };
 
         const interval = setInterval(checkWindowStatus, 1000);
         return () => clearInterval(interval);
-    }, [isDetached]);
+    }, [contextIsDetached]);
 
     // Update detached window theme when theme changes
     useEffect(() => {
-        if (!isDetached || !detachedWindowRef.current || detachedWindowRef.current.closed) return;
+        if (!contextIsDetached || !detachedWindowRef.current || detachedWindowRef.current.closed) return;
 
         try {
             // Send theme change message to detached window
@@ -729,7 +757,7 @@ export default function AASCar() {
         } catch (e) {
             console.warn('Could not send theme change to detached window:', e);
         }
-    }, [theme, isDetached]);
+    }, [theme, contextIsDetached]);
 
     const handleAasSend = () => {
         if (aasInput.trim()) {
@@ -761,7 +789,7 @@ export default function AASCar() {
     const resetPosition = () => {
         if (typeof window !== 'undefined') {
             const statusBarHeight = 24;
-            setPosition({
+            setContextPosition({
                 x: Math.max(20, window.innerWidth - 420),
                 y: Math.max(20, window.innerHeight - 300 - statusBarHeight)
             });
@@ -774,7 +802,7 @@ export default function AASCar() {
     }
 
     // Show control buttons when not visible
-    if (!visible && !isDetached && !isDocked) {
+    if (!contextVisible && !contextIsDetached && !contextIsDocked) {
         return (
             <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
                 <button
@@ -794,9 +822,9 @@ export default function AASCar() {
                     Dock Assistant
                 </button>
                 <button
-                    onClick={() => setVisible(true)}
+                    onClick={() => setContextVisible(true)}
                     onDoubleClick={() => {
-                        setVisible(true);
+                        setContextVisible(true);
                         resetPosition();
                     }}
                     className="bg-theme-accent-primary text-white hover:opacity-90 shadow-lg px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-opacity"
@@ -810,15 +838,15 @@ export default function AASCar() {
     }
 
     // Show detached indicator
-    if (isDetached) {
+    if (contextIsDetached) {
         return (
             <button
                 onClick={() => {
                     if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
                         detachedWindowRef.current.focus();
                     } else {
-                        setIsDetached(false);
-                        setVisible(true);
+                        setContextIsDetached(false);
+                        setContextVisible(true);
                     }
                 }}
                 className="fixed bottom-4 right-4 bg-theme-surface border border-theme-border-light text-theme-text-primary hover:bg-theme-surface-hover shadow-lg z-50 px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors"
@@ -830,188 +858,405 @@ export default function AASCar() {
         );
     }
 
-    // Docked mode - appears above the status bar
-    if (isDocked) {
-        const displayHeight = isMinimized ? 48 : height;
+    // Docked mode - appears above the status bar (bottom) or to the right of content (right)
+    if (contextIsDocked) {
+        const displayHeight = contextIsMinimized ? 48 : height;
+        const displayWidth = contextIsMinimized ? 48 : width;
         const statusBarHeight = 24; // VSCode status bar height from CSS
 
-        return (
-            <div
-                className="fixed left-0 right-0 z-40 flex flex-col overflow-hidden border-t border-theme-border bg-theme-surface"
-                style={{
-                    bottom: statusBarHeight + 'px',
-                    height: displayHeight + 'px',
-                    transition: isMinimized ? 'height 0.3s ease' : 'none'
-                }}
-            >
-                {/* Resize Handle with Controls */}
-                {!isMinimized && (
-                    <div className="h-6 bg-theme-bg-secondary border-b border-theme-border flex items-center justify-between px-2 select-none">
-                        {/* Left side - Resize handle */}
-                        <div
-                            onMouseDown={handleResizeDragStart}
-                            className="flex-1 h-full flex items-center justify-center cursor-ns-resize hover:bg-theme-surface-hover transition-colors group"
-                            title="Drag to resize"
-                        >
-                            <div className="w-8 h-0.5 bg-theme-text-muted rounded group-hover:bg-theme-accent-primary transition-colors"></div>
-                        </div>
-
-                        {/* Right side - Control buttons */}
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={openDetachedWindow}
-                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                                title="Open in separate window"
+        if (contextDockPosition === 'bottom') {
+            return (
+                <div
+                    className="fixed left-0 right-0 z-40 flex flex-col overflow-hidden border-t border-theme-border bg-theme-surface"
+                    style={{
+                        bottom: statusBarHeight + 'px',
+                        height: displayHeight + 'px',
+                        transition: contextIsMinimized ? 'height 0.3s ease' : 'none'
+                    }}
+                >
+                    {/* Resize Handle with Controls */}
+                    {!contextIsMinimized && (
+                        <div className="h-6 bg-theme-bg-secondary border-b border-theme-border flex items-center justify-between px-2 select-none">
+                            {/* Left side - Resize handle */}
+                            <div
+                                onMouseDown={handleResizeDragStart}
+                                className="flex-1 h-full flex items-center justify-center cursor-ns-resize hover:bg-theme-surface-hover transition-colors group"
+                                title="Drag to resize"
                             >
-                                <Icon name="ellipsis" size="xs" />
-                            </button>
-                            <button
-                                onClick={handleDocking}
-                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                                title="Undock"
-                            >
-                                <Icon name="arrow-up" size="xs" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setVisible(false);
-                                    setIsDocked(false);
-                                }}
-                                className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                                title="Close"
-                            >
-                                <Icon name="close" size="xs" />
-                            </button>
+                                <div className="w-8 h-0.5 bg-theme-text-muted rounded group-hover:bg-theme-accent-primary transition-colors"></div>
+                            </div>
+
+                            {/* Right side - Control buttons */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setContextIsMinimized(!contextIsMinimized)}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title={contextIsMinimized ? "Expand" : "Minimize"}
+                                >
+                                    <Icon name={contextIsMinimized ? "arrow-up" : "chevron-down"} size="xs" />
+                                </button>
+                                <button
+                                    onClick={openDetachedWindow}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Open in separate window"
+                                >
+                                    <Icon name="ellipsis" size="xs" />
+                                </button>
+                                <button
+                                    onClick={handleDocking}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Switch to right dock"
+                                >
+                                    <Icon name="arrow-right" size="xs" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setContextVisible(false);
+                                        setContextIsDocked(false);
+                                    }}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Close"
+                                >
+                                    <Icon name="close" size="xs" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {!isMinimized && (
-                    <>
-                        {/* Tab Navigation */}
-                        <div className="bg-theme-bg-primary border-b border-theme-border px-2">
-                            <nav className="flex">
-                                {TABS.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`
-                                            px-3 py-3 text-xs font-medium transition-all duration-200 border-b-2 flex items-center justify-center min-w-[40px]
-                                            ${activeTab === tab.id
-                                                ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
-                                                : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
-                                            }
-                                        `}
-                                        title={tab.description}
-                                    >
-                                        <Icon name={tab.icon as CodiconName} size="sm" />
-                                    </button>
-                                ))}
-                            </nav>
-                        </div>
+                    {!contextIsMinimized && (
+                        <>
+                            {/* Tab Navigation */}
+                            <div className="bg-theme-bg-primary border-b border-theme-border px-2">
+                                <nav className="flex">
+                                    {TABS.map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setContextActiveTab(tab.id)}
+                                            className={`
+                                                px-3 py-3 text-xs font-medium transition-all duration-200 border-b-2 flex items-center justify-center min-w-[40px]
+                                                ${contextActiveTab === tab.id
+                                                    ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
+                                                    : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
+                                                }
+                                            `}
+                                            title={tab.description}
+                                        >
+                                            <Icon name={tab.icon as CodiconName} size="sm" />
+                                        </button>
+                                    ))}
+                                </nav>
+                            </div>
 
-                        {/* Content */}
-                        <div className="flex-1 overflow-auto">
-                            {activeTab === TAB_ERRORS && (
-                                <div className="p-4">
-                                    <div className="text-center py-8">
-                                        <div className="w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                            <Icon name="check" size="lg" className="text-theme-accent-success" />
-                                        </div>
-                                        <p className="text-sm text-theme-text-secondary">No errors detected</p>
-                                        <p className="text-xs text-theme-text-muted mt-1">System running normally</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === TAB_INFO && (
-                                <div className="p-4 space-y-3">
-                                    <div className="text-xs space-y-2">
-                                        <div className="flex justify-between">
-                                            <span className="text-theme-text-secondary">System Status:</span>
-                                            <span className="px-2 py-1 bg-theme-accent-success bg-opacity-20 text-theme-accent-success rounded text-xs font-medium">Operational</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-theme-text-secondary">Active Projects:</span>
-                                            <span className="font-medium text-theme-text-primary">3</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-theme-text-secondary">Background Tasks:</span>
-                                            <span className="font-medium text-theme-text-primary">2</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-theme-text-secondary">Theme:</span>
-                                            <span className="font-medium text-theme-text-primary capitalize">{theme}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-theme-text-secondary">Last Updated:</span>
-                                            <span className="font-medium text-theme-text-primary">Just now</span>
+                            {/* Content */}
+                            <div className="flex-1 overflow-auto">
+                                {contextActiveTab === TAB_ERRORS && (
+                                    <div className="p-4">
+                                        <div className="text-center py-8">
+                                            <div className="w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                <Icon name="check" size="lg" className="text-theme-accent-success" />
+                                            </div>
+                                            <p className="text-sm text-theme-text-secondary">No errors detected</p>
+                                            <p className="text-xs text-theme-text-muted mt-1">System running normally</p>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {activeTab === TAB_AAS && (
-                                <div className="flex flex-col h-full p-2 gap-2">
-                                    {/* Conversation Area - fills available space */}
-                                    <textarea
-                                        ref={conversationRef}
-                                        readOnly
-                                        value={conversationHistory}
-                                        className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none min-h-0"
-                                        style={{
-                                            fontFamily: 'inherit'
-                                        }}
-                                    />
+                                {contextActiveTab === TAB_INFO && (
+                                    <div className="p-4 space-y-3">
+                                        <div className="text-xs space-y-2">
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">System Status:</span>
+                                                <span className="px-2 py-1 bg-theme-accent-success bg-opacity-20 text-theme-accent-success rounded text-xs font-medium">Operational</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Active Projects:</span>
+                                                <span className="font-medium text-theme-text-primary">3</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Background Tasks:</span>
+                                                <span className="font-medium text-theme-text-primary">2</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Theme:</span>
+                                                <span className="font-medium text-theme-text-primary capitalize">{theme}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Last Updated:</span>
+                                                <span className="font-medium text-theme-text-primary">Just now</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
-                                    {/* Input Area - fixed height at bottom */}
-                                    <div className="flex gap-2">
+                                {contextActiveTab === TAB_AAS && (
+                                    <div className="flex flex-col h-full p-2 gap-2">
+                                        {/* Conversation Area - fills available space */}
                                         <textarea
-                                            value={aasInput}
-                                            onChange={(e) => setAasInput(e.target.value)}
-                                            onKeyPress={handleKeyPress}
-                                            placeholder="Ask the assistant anything..."
-                                            className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary placeholder-theme-text-muted rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none"
-                                            rows={2}
+                                            ref={conversationRef}
+                                            readOnly
+                                            value={conversationHistory}
+                                            className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none min-h-0"
                                             style={{
-                                                minHeight: "44px",
-                                                maxHeight: "80px"
+                                                fontFamily: 'inherit'
                                             }}
                                         />
-                                        <button
-                                            onClick={handleAasSend}
-                                            disabled={!aasInput.trim()}
-                                            className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
-                                        >
-                                            Send
-                                        </button>
+
+                                        {/* Input Area - fixed height at bottom */}
+                                        <div className="flex gap-2">
+                                            <textarea
+                                                value={aasInput}
+                                                onChange={(e) => setAasInput(e.target.value)}
+                                                onKeyPress={handleKeyPress}
+                                                placeholder="Ask the assistant anything..."
+                                                className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary placeholder-theme-text-muted rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none"
+                                                rows={2}
+                                                style={{
+                                                    minHeight: "44px",
+                                                    maxHeight: "80px"
+                                                }}
+                                            />
+                                            <button
+                                                onClick={handleAasSend}
+                                                disabled={!aasInput.trim()}
+                                                className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
+                                            >
+                                                Send
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Minimized state */}
+                    {contextIsMinimized && (
+                        <div className="flex items-center justify-center h-full">
+                            <button
+                                onClick={() => setContextIsMinimized(false)}
+                                className="p-2 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                title="Expand Assistant"
+                            >
+                                <Icon name="robot" size="sm" />
+                            </button>
                         </div>
-                    </>
-                )}
-            </div>
-        );
+                    )}
+                </div>
+            );
+        } else {
+            // Right docking
+            const titleBarHeight = 35; // VSCode title bar height
+            const statusBarHeight = 24; // VSCode status bar height
+
+            return (
+                <div
+                    className="fixed z-40 flex flex-col overflow-hidden border-l border-theme-border bg-theme-surface"
+                    style={{
+                        right: 0,
+                        top: titleBarHeight + 'px',
+                        bottom: statusBarHeight + 'px',
+                        width: displayWidth + 'px',
+                        transition: contextIsMinimized ? 'width 0.3s ease' : 'none'
+                    }}
+                >
+                    {/* Left-side Resize Handle for Right Docking */}
+                    {!contextIsMinimized && (
+                        <div
+                            onMouseDown={handleResizeDragStart}
+                            className="agent-resize-handle"
+                            title="Drag to resize width"
+                        >
+                            {/* Visual indicator */}
+                            <div className="resize-indicator" />
+                        </div>
+                    )}
+
+                    {/* Resize Handle with Controls */}
+                    {!contextIsMinimized && (
+                        <div className="h-6 bg-theme-bg-secondary border-b border-theme-border flex items-center justify-between px-2 select-none">
+                            {/* Left side - Title/Info */}
+                            <div className="flex items-center gap-2 text-xs text-theme-text-secondary">
+                                <Icon name="robot" size="xs" />
+                                <span>Assistant</span>
+                            </div>
+
+                            {/* Right side - Control buttons */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setContextIsMinimized(!contextIsMinimized)}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title={contextIsMinimized ? "Expand" : "Minimize"}
+                                >
+                                    <Icon name={contextIsMinimized ? "arrow-right" : "chevron-right"} size="xs" />
+                                </button>
+                                <button
+                                    onClick={openDetachedWindow}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Open in separate window"
+                                >
+                                    <Icon name="ellipsis" size="xs" />
+                                </button>
+                                <button
+                                    onClick={handleDocking}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Switch to bottom dock"
+                                >
+                                    <Icon name="arrow-down" size="xs" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setContextVisible(false);
+                                        setContextIsDocked(false);
+                                    }}
+                                    className="p-0.5 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                    title="Close"
+                                >
+                                    <Icon name="close" size="xs" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!contextIsMinimized && (
+                        <>
+                            {/* Tab Navigation */}
+                            <div className="bg-theme-bg-primary border-b border-theme-border px-2">
+                                <nav className="flex">
+                                    {TABS.map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setContextActiveTab(tab.id)}
+                                            className={`
+                                                px-3 py-3 text-xs font-medium transition-all duration-200 border-b-2 flex items-center justify-center min-w-[40px]
+                                                ${contextActiveTab === tab.id
+                                                    ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
+                                                    : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
+                                                }
+                                            `}
+                                            title={tab.description}
+                                        >
+                                            <Icon name={tab.icon as CodiconName} size="sm" />
+                                        </button>
+                                    ))}
+                                </nav>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 overflow-auto">
+                                {contextActiveTab === TAB_ERRORS && (
+                                    <div className="p-4">
+                                        <div className="text-center py-8">
+                                            <div className="w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                                                <Icon name="check" size="lg" className="text-theme-accent-success" />
+                                            </div>
+                                            <p className="text-sm text-theme-text-secondary">No errors detected</p>
+                                            <p className="text-xs text-theme-text-muted mt-1">System running normally</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {contextActiveTab === TAB_INFO && (
+                                    <div className="p-4 space-y-3">
+                                        <div className="text-xs space-y-2">
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">System Status:</span>
+                                                <span className="px-2 py-1 bg-theme-accent-success bg-opacity-20 text-theme-accent-success rounded text-xs font-medium">Operational</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Active Projects:</span>
+                                                <span className="font-medium text-theme-text-primary">3</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Background Tasks:</span>
+                                                <span className="font-medium text-theme-text-primary">2</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Theme:</span>
+                                                <span className="font-medium text-theme-text-primary capitalize">{theme}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-theme-text-secondary">Last Updated:</span>
+                                                <span className="font-medium text-theme-text-primary">Just now</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {contextActiveTab === TAB_AAS && (
+                                    <div className="flex flex-col h-full p-2 gap-2">
+                                        {/* Conversation Area - fills available space */}
+                                        <textarea
+                                            ref={conversationRef}
+                                            readOnly
+                                            value={conversationHistory}
+                                            className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none min-h-0"
+                                            style={{
+                                                fontFamily: 'inherit'
+                                            }}
+                                        />
+
+                                        {/* Input Area - fixed height at bottom */}
+                                        <div className="flex gap-2">
+                                            <textarea
+                                                value={aasInput}
+                                                onChange={(e) => setAasInput(e.target.value)}
+                                                onKeyPress={handleKeyPress}
+                                                placeholder="Ask the assistant anything..."
+                                                className="flex-1 bg-theme-input-bg border border-theme-input-border text-theme-text-primary placeholder-theme-text-muted rounded px-3 py-2 text-xs resize-none focus:border-theme-accent-primary focus:outline-none"
+                                                rows={2}
+                                                style={{
+                                                    minHeight: "44px",
+                                                    maxHeight: "80px"
+                                                }}
+                                            />
+                                            <button
+                                                onClick={handleAasSend}
+                                                disabled={!aasInput.trim()}
+                                                className="bg-theme-accent-primary text-white px-3 py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex-shrink-0 self-end"
+                                            >
+                                                Send
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Minimized state */}
+                    {contextIsMinimized && (
+                        <div className="flex items-center justify-center h-full">
+                            <button
+                                onClick={() => setContextIsMinimized(false)}
+                                className="p-2 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+                                title="Expand Assistant"
+                            >
+                                <Icon name="robot" size="sm" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
     }
 
     // Floating mode (existing behavior)
-    const displayHeight = isMinimized ? 48 : height;
+    const displayHeight = contextIsMinimized ? 48 : height;
 
     return (
         <div
             className={`fixed border border-theme-border z-40 flex flex-col overflow-hidden bg-theme-surface ${isDragging ? 'shadow-2xl' : 'shadow-lg'}`}
             style={{
-                left: position.x + 'px',
-                top: position.y + 'px',
+                left: contextPosition.x + 'px',
+                top: contextPosition.y + 'px',
                 width: '400px',
                 height: displayHeight + 'px',
                 borderRadius: '6px',
-                transition: isMinimized ? 'height 0.3s ease' : isDragging ? 'none' : 'box-shadow 0.2s ease'
+                transition: contextIsMinimized ? 'height 0.3s ease' : isDragging ? 'none' : 'box-shadow 0.2s ease'
             }}
         >
             {/* Resize Handle */}
-            {!isMinimized && (
+            {!contextIsMinimized && (
                 <div
                     ref={dragRef}
                     onMouseDown={handleResizeDragStart}
@@ -1058,14 +1303,14 @@ export default function AASCar() {
                         <Icon name="arrow-down" size="sm" />
                     </button>
                     <button
-                        onClick={() => setIsMinimized(!isMinimized)}
+                        onClick={() => setContextIsMinimized(!contextIsMinimized)}
                         className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-                        title={isMinimized ? "Expand" : "Minimize"}
+                        title={contextIsMinimized ? "Expand" : "Minimize"}
                     >
-                        <Icon name={isMinimized ? "arrow-up" : "chevron-down"} size="sm" />
+                        <Icon name={contextIsMinimized ? "arrow-up" : "chevron-down"} size="sm" />
                     </button>
                     <button
-                        onClick={() => setVisible(false)}
+                        onClick={() => setContextVisible(false)}
                         className="p-1 hover:bg-theme-surface-hover rounded text-theme-text-secondary hover:text-theme-text-primary transition-colors"
                         title="Close"
                     >
@@ -1074,7 +1319,7 @@ export default function AASCar() {
                 </div>
             </div>
 
-            {!isMinimized && (
+            {!contextIsMinimized && (
                 <>
                     {/* Tab Navigation */}
                     <div className="bg-theme-bg-primary border-b border-theme-border px-2">
@@ -1082,10 +1327,10 @@ export default function AASCar() {
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
+                                    onClick={() => setContextActiveTab(tab.id)}
                                     className={`
                                         px-3 py-2 text-xs font-medium transition-all duration-200 border-b-2 flex items-center gap-1
-                                        ${activeTab === tab.id
+                                        ${contextActiveTab === tab.id
                                             ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
                                             : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
                                         }
@@ -1101,7 +1346,7 @@ export default function AASCar() {
 
                     {/* Content - same as docked mode */}
                     <div className="flex-1 overflow-auto">
-                        {activeTab === TAB_ERRORS && (
+                        {contextActiveTab === TAB_ERRORS && (
                             <div className="p-4">
                                 <div className="text-center py-8">
                                     <div className="w-12 h-12 bg-theme-accent-success bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-3">
@@ -1113,7 +1358,7 @@ export default function AASCar() {
                             </div>
                         )}
 
-                        {activeTab === TAB_INFO && (
+                        {contextActiveTab === TAB_INFO && (
                             <div className="p-4 space-y-3">
                                 <div className="text-xs space-y-2">
                                     <div className="flex justify-between">
@@ -1140,7 +1385,7 @@ export default function AASCar() {
                             </div>
                         )}
 
-                        {activeTab === TAB_AAS && (
+                        {contextActiveTab === TAB_AAS && (
                             <div className="flex flex-col h-full">
                                 <div className="flex-1 p-4 space-y-3 min-h-0 overflow-auto">
                                     <div className="text-xs text-theme-text-muted mb-2">Assistant ready to help with DADMS tasks</div>
