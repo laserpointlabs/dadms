@@ -2,18 +2,28 @@
 
 import React from 'react';
 import { OntologyWorkspace } from '../../components/OntologyWorkspace';
+import { Button } from '../../components/shared/Button';
 import { PageLayout } from '../../components/shared/PageLayout';
 
-const OntologyTestPage: React.FC = () => {
+const OntologyModelerPage: React.FC = () => {
     return (
         <PageLayout
-            title="Ontology Workspace"
+            title="Ontology Modeler"
             subtitle="Design and manage decision intelligence ontologies with AI-enhanced modeling"
             icon="type-hierarchy"
             status={{
-                text: 'Workspace Ready',
+                text: 'Modeler Ready',
                 type: 'active'
             }}
+            actions={
+                <Button
+                    variant="secondary"
+                    leftIcon="arrow-left"
+                    onClick={() => window.location.href = '/ontology'}
+                >
+                    Back to Workspace
+                </Button>
+            }
         >
             <div style={{
                 width: '100%',
@@ -23,13 +33,10 @@ const OntologyTestPage: React.FC = () => {
                 overflow: 'hidden',
                 background: 'var(--theme-bg-primary)'
             }}>
-                <OntologyWorkspace
-                    workspaceId="test-workspace"
-                    projectId="test-project"
-                />
+                <OntologyWorkspace />
             </div>
         </PageLayout>
     );
 };
 
-export default OntologyTestPage; 
+export default OntologyModelerPage; 

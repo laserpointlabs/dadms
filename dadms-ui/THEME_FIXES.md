@@ -56,6 +56,17 @@ This document captures the comprehensive fixes implemented to resolve icon and t
 - **SimpleOntologyNode.tsx**: Updated `getNodeIcon` function to use the same icons as the palette
 - **Result**: All ontology components now use consistent icons: `symbol-class` for entities and `symbol-field` for data properties
 
+### 6. Ontology Workspace Integration
+**Problem**: The ontology-test page was separate from the main ontology workspace, creating a fragmented user experience.
+
+**Root Cause**: The modeling workspace was isolated from the management interface.
+
+**Solution**: 
+- **Created `/ontology-modeler`**: New dedicated modeling page with full-screen OntologyWorkspace component
+- **Enhanced `/ontology` workspace tab**: Added modeler section with "Open Modeler" button
+- **Removed legacy page**: Deleted `/ontology-test` to clean up the codebase
+- **Result**: Integrated workflow where users can browse ontologies and seamlessly open the modeler for detailed work
+
 ## Key Principles Established
 
 ### 1. Icon Color Strategy

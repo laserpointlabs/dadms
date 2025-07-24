@@ -141,6 +141,30 @@ export default function OntologyWorkspacePage() {
             case 'workspace':
                 return (
                     <div className="space-y-6">
+                        {/* Modeler Section */}
+                        <Card variant="outlined" padding="md">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-theme-accent-primary bg-opacity-20 rounded-lg flex items-center justify-center">
+                                        <Icon name="type-hierarchy" size="lg" className="text-theme-accent-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-theme-text-primary">Ontology Modeler</h3>
+                                        <p className="text-sm text-theme-text-secondary">
+                                            Visual ontology design and modeling workspace
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="primary"
+                                    leftIcon="arrow-right"
+                                    onClick={() => window.open('/ontology-modeler', '_blank')}
+                                >
+                                    Open Modeler
+                                </Button>
+                            </div>
+                        </Card>
+
                         {/* Search and Filters */}
                         <Card variant="outlined" padding="md">
                             <div className="flex flex-col md:flex-row gap-4">
