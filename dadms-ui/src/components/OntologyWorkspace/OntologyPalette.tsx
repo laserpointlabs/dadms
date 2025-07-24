@@ -24,7 +24,7 @@ const paletteItems: PaletteItem[] = [
         type: 'data_property',
         label: 'Data Property',
         description: 'Attributes and literal values',
-        icon: 'symbol-property', // Proper icon for properties
+        icon: 'symbol-field', // Better icon for data fields/properties
         color: '#0969da', // Blue - using actual color instead of CSS variable
     },
 

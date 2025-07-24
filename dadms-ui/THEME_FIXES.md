@@ -15,59 +15,46 @@ This document captures the comprehensive fixes implemented to resolve icon and t
 - Let icons inherit colors from parent button classes (e.g., `text-theme-text-primary`)
 - For the main "Assistant" button with colored background, let the icon inherit from the button's `text-theme-text-inverse` class
 
-**Files Modified**: `dadms-ui/src/components/AASCar.tsx`
-
 ### 2. Lightbulb Icon in Lower Toolbar
-**Problem**: Lightbulb icon in the theme selector was not visible in light mode.
+**Problem**: Lightbulb icon was not visible in light mode due to theme variable inheritance issues.
 
-**Root Cause**: CSS inheritance issues and incorrect use of theme variables for icons on button backgrounds.
+**Root Cause**: CSS specificity and button background color conflicts with theme variables.
 
-**Solution**:
-- Applied theme-aware hardcoded hex colors: `color={theme === 'light' ? '#1f2328' : '#d4d4d4'}`
-- This ensures proper contrast against the button background in both themes
-
-**Files Modified**: `dadms-ui/src/components/shared/ThemeSelector.tsx`
+**Solution**: 
+- Applied hardcoded hex colors directly to the Icon component: `color={theme === 'light' ? '#1f2328' : '#d4d4d4'}`
+- This bypasses CSS inheritance issues and ensures proper contrast in both themes
 
 ### 3. Ontology Workspace Icons
-**Problem**: Icons throughout the ontology workspace were not visible in light mode.
+**Problem**: Icons in ontology workspace components (toolbar, palette, properties panel) were not visible in light mode.
 
-**Root Cause**: Multiple issues:
-1. Invalid codicon names (`'circle-filled'`, `'symbol-field'`)
-2. Missing wrapper div structure for icon containers
-3. CSS variables not resolving correctly in inline styles
+**Root Cause**: Multiple issues including CSS variable resolution in inline styles and invalid codicon names.
 
-**Solution**:
-
-#### 3.1 Ontology Toolbar Icons
-- Added explicit `color` props to all `Icon` components
-- Used `dadmsTheme.colors.text.primary`, `dadmsTheme.colors.text.muted`, `dadmsTheme.colors.accent.primary`, etc.
-
-**Files Modified**: `dadms-ui/src/components/OntologyWorkspace/OntologyToolbar.tsx`
-
-#### 3.2 Ontology Palette Icons
-- **Icon Names**: Changed from invalid `'circle-filled'` and `'symbol-field'` to valid codicon names:
-  - Entity: `'symbol-class'`
-  - Data Property: `'symbol-property'`
-- **Structure Fix**: Added wrapper div with `iconContainerStyle(item.color)` around each icon
-- **Background Colors**: Used hardcoded hex values (`#0969da`) instead of CSS variables for icon container backgrounds
-- **Icon Colors**: Used `color="#ffffff"` for white icons on colored backgrounds
-
-**Files Modified**: `dadms-ui/src/components/OntologyWorkspace/OntologyPalette.tsx`
-
-#### 3.3 Properties Panel Icons
-- Added explicit `color` props to various `Icon` components
-- Used appropriate theme colors for different contexts (primary, secondary, success, etc.)
-
-**Files Modified**: `dadms-ui/src/components/OntologyWorkspace/PropertiesPanel.tsx`
+**Solution**: 
+- **OntologyToolbar.tsx**: Added explicit `color` props using `dadmsTheme.colors.*` values
+- **OntologyPalette.tsx**: 
+  - Fixed icon container structure by adding wrapper div with `iconContainerStyle`
+  - Changed from invalid codicon names (`'circle-filled'`, `'symbol-field'`) to valid ones (`'symbol-class'`, `'symbol-field'`)
+  - Used hardcoded hex colors for backgrounds instead of CSS variables
+- **PropertiesPanel.tsx**: Added explicit `color` props for all icons
 
 ### 4. Main UI Layout Overlap Fix
-**Problem**: When the agent assistant was docked on the right, it overlapped the top and bottom toolbars.
+**Problem**: When agent assistant was docked on the right, it overlapped the top and bottom toolbars.
 
-**Solution**:
-- Updated `MainContent` component in `layout.tsx` to dynamically apply `paddingRight` when assistant is docked on the right
-- Added `paddingRight: isHydrated && isDocked && dockPosition === 'right' ? `${dockedWidth}px` : '0px'`
+**Root Cause**: Main content area wasn't accounting for right-docked assistant width.
 
-**Files Modified**: `dadms-ui/src/app/layout.tsx`
+**Solution**: 
+- Updated `MainContent` component in `layout.tsx` to apply `paddingRight` when assistant is docked on the right
+- Added dynamic padding calculation: `paddingRight: isHydrated && isDocked && dockPosition === 'right' ? `${dockedWidth}px` : '0px'`
+
+### 5. Icon Consistency Across Ontology Components
+**Problem**: Ontology explorer and React Flow nodes were using different icons than the palette, creating inconsistency.
+
+**Root Cause**: Different components were using different icon names for the same entity types.
+
+**Solution**: 
+- **OntologyExplorer.tsx**: Updated `getIconName` function to use `'symbol-class'` for entities and `'symbol-field'` for data properties
+- **SimpleOntologyNode.tsx**: Updated `getNodeIcon` function to use the same icons as the palette
+- **Result**: All ontology components now use consistent icons: `symbol-class` for entities and `symbol-field` for data properties
 
 ## Key Principles Established
 
