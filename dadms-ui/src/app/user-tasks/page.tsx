@@ -1,5 +1,4 @@
 "use client";
-import Head from 'next/head';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDialog, Button, Card, Icon } from '../../components/shared';
 import { FormField, Select } from '../../components/shared/FormField';
@@ -297,256 +296,250 @@ const UserTasksPage: React.FC = () => {
     );
 
     return (
-        <>
-            <Head>
-                <title>User Tasks - DADMS</title>
-                <meta name="description" content="Manage and complete manual tasks from BPMN processes" />
-            </Head>
-            <PageLayout
-                title="User Tasks"
-                subtitle="Manage and complete manual tasks from BPMN processes"
-                icon="files"
-                actions={pageActions}
-                status={{
-                    text: `${counts.pending} Pending, ${counts.overdue} Overdue`,
-                    type: counts.overdue > 0 ? 'error' : 'active'
-                }}
-            >
-                <div className="space-y-6">
-                    {/* Error Alert */}
-                    {error && (
-                        <Alert variant="error" title="Error" onClose={() => setError(null)}>
-                            {error}
-                        </Alert>
-                    )}
+        <PageLayout
+            title="User Tasks"
+            subtitle="Manage and complete manual tasks from BPMN processes"
+            icon="files"
+            actions={pageActions}
+            status={{
+                text: `${counts.pending} Pending, ${counts.overdue} Overdue`,
+                type: counts.overdue > 0 ? 'error' : 'active'
+            }}
+        >
+            <div className="space-y-6">
+                {/* Error Alert */}
+                {error && (
+                    <Alert variant="error" title="Error" onClose={() => setError(null)}>
+                        {error}
+                    </Alert>
+                )}
 
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <Card variant="default" padding="sm">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-warning bg-opacity-20 rounded-lg mx-auto mb-2">
-                                    <Icon name="warning" size="md" className="text-theme-accent-warning" />
-                                </div>
-                                <p className="text-xs text-theme-text-secondary mb-1">Pending</p>
-                                <p className="text-xl font-bold text-theme-accent-warning">{counts.pending}</p>
-                            </div>
-                        </Card>
-                        <Card variant="default" padding="sm">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-primary bg-opacity-20 rounded-lg mx-auto mb-2">
-                                    <Icon name="pulse" size="md" className="text-theme-accent-primary" />
-                                </div>
-                                <p className="text-xs text-theme-text-secondary mb-1">In Progress</p>
-                                <p className="text-xl font-bold text-theme-accent-primary">{counts.inProgress}</p>
-                            </div>
-                        </Card>
-                        <Card variant="default" padding="sm">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-success bg-opacity-20 rounded-lg mx-auto mb-2">
-                                    <Icon name="check" size="md" className="text-theme-accent-success" />
-                                </div>
-                                <p className="text-xs text-theme-text-secondary mb-1">Completed</p>
-                                <p className="text-xl font-bold text-theme-accent-success">{counts.completed}</p>
-                            </div>
-                        </Card>
-                        <Card variant="default" padding="sm">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-error bg-opacity-20 rounded-lg mx-auto mb-2">
-                                    <Icon name="error" size="md" className="text-theme-accent-error" />
-                                </div>
-                                <p className="text-xs text-theme-text-secondary mb-1">Overdue</p>
-                                <p className="text-xl font-bold text-theme-accent-error">{counts.overdue}</p>
-                            </div>
-                        </Card>
-                        <Card variant="default" padding="sm">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center w-10 h-10 bg-theme-bg-secondary rounded-lg mx-auto mb-2">
-                                    <Icon name="files" size="md" className="text-theme-text-primary" />
-                                </div>
-                                <p className="text-xs text-theme-text-secondary mb-1">Total</p>
-                                <p className="text-xl font-bold text-theme-text-primary">{counts.total}</p>
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Filters */}
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <Card variant="default" padding="sm">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <FormField label="Status">
-                                <Select
-                                    value={filter.status}
-                                    onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
-                                >
-                                    <option value="all">All Statuses</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="overdue">Overdue</option>
-                                </Select>
-                            </FormField>
-                            <FormField label="Priority">
-                                <Select
-                                    value={filter.priority}
-                                    onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
-                                >
-                                    <option value="all">All Priorities</option>
-                                    <option value="1">High</option>
-                                    <option value="2">Medium</option>
-                                    <option value="3">Low</option>
-                                </Select>
-                            </FormField>
-                            <FormField label="Assignee">
-                                <Select
-                                    value={filter.assignee}
-                                    onChange={(e) => setFilter(prev => ({ ...prev, assignee: e.target.value }))}
-                                >
-                                    <option value="all">All Assignees</option>
-                                    <option value="john.doe@company.com">John Doe</option>
-                                    <option value="jane.smith@company.com">Jane Smith</option>
-                                </Select>
-                            </FormField>
-                            <FormField label="Process">
-                                <Select
-                                    value={filter.processDefinition}
-                                    onChange={(e) => setFilter(prev => ({ ...prev, processDefinition: e.target.value }))}
-                                >
-                                    <option value="all">All Processes</option>
-                                    <option value="budget-approval">Budget Approval</option>
-                                    <option value="risk-assessment">Risk Assessment</option>
-                                    <option value="contract-approval">Contract Approval</option>
-                                    <option value="security-review">Security Review</option>
-                                    <option value="performance-testing">Performance Testing</option>
-                                </Select>
-                            </FormField>
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-warning bg-opacity-20 rounded-lg mx-auto mb-2">
+                                <Icon name="warning" size="md" className="text-theme-accent-warning" />
+                            </div>
+                            <p className="text-xs text-theme-text-secondary mb-1">Pending</p>
+                            <p className="text-xl font-bold text-theme-accent-warning">{counts.pending}</p>
                         </div>
                     </Card>
-
-                    {/* User Tasks Table */}
-                    <Card variant="default" padding="none">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-theme-border">
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Task</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Process</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Assignee</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Priority</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Status</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Due Date</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-theme-border">
-                                    {filteredTasks.map((task) => (
-                                        <tr key={task.id} className="hover:bg-theme-bg-secondary">
-                                            <td className="px-4 py-3">
-                                                <div>
-                                                    <p className="text-sm font-medium text-theme-text-primary">{task.name}</p>
-                                                    {task.description && (
-                                                        <p className="text-xs text-theme-text-secondary mt-1">{task.description}</p>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div>
-                                                    <p className="text-sm text-theme-text-primary">{task.processDefinitionName}</p>
-                                                    <p className="text-xs text-theme-text-secondary">{task.businessKey}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-sm text-theme-text-primary">{task.assignee || 'Unassigned'}</p>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                                    {getPriorityLabel(task.priority)}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)} ${getStatusBgColor(task.status)}`}>
-                                                    {task.status.replace('_', ' ')}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div>
-                                                    <p className="text-sm text-theme-text-primary">{formatDateTime(task.due)}</p>
-                                                    <p className="text-xs text-theme-text-secondary">{getTimeUntilDue(task.due)}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex space-x-2">
-                                                    <Button
-                                                        variant="primary"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setSelectedTask(task);
-                                                            setCompleteTaskOpen(true);
-                                                        }}
-                                                    >
-                                                        Complete
-                                                    </Button>
-                                                    <Button
-                                                        variant="secondary"
-                                                        size="sm"
-                                                        onClick={() => setSelectedTask(task)}
-                                                    >
-                                                        Details
-                                                    </Button>
-                                                    {task.assignee ? (
-                                                        <Button
-                                                            variant="tertiary"
-                                                            size="sm"
-                                                            onClick={() => handleUnclaimTask(task.id)}
-                                                        >
-                                                            Unclaim
-                                                        </Button>
-                                                    ) : (
-                                                        <Button
-                                                            variant="tertiary"
-                                                            size="sm"
-                                                            onClick={() => handleClaimTask(task.id)}
-                                                        >
-                                                            Claim
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        {filteredTasks.length === 0 && (
-                            <div className="text-center py-8">
-                                <Icon name="files" size="lg" className="text-theme-text-secondary mx-auto mb-4" />
-                                <p className="text-theme-text-secondary">No tasks found</p>
-                                <p className="text-sm text-theme-text-secondary mt-1">Try adjusting your filters</p>
+                    <Card variant="default" padding="sm">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-primary bg-opacity-20 rounded-lg mx-auto mb-2">
+                                <Icon name="pulse" size="md" className="text-theme-accent-primary" />
                             </div>
-                        )}
+                            <p className="text-xs text-theme-text-secondary mb-1">In Progress</p>
+                            <p className="text-xl font-bold text-theme-accent-primary">{counts.inProgress}</p>
+                        </div>
+                    </Card>
+                    <Card variant="default" padding="sm">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-success bg-opacity-20 rounded-lg mx-auto mb-2">
+                                <Icon name="check" size="md" className="text-theme-accent-success" />
+                            </div>
+                            <p className="text-xs text-theme-text-secondary mb-1">Completed</p>
+                            <p className="text-xl font-bold text-theme-accent-success">{counts.completed}</p>
+                        </div>
+                    </Card>
+                    <Card variant="default" padding="sm">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-10 h-10 bg-theme-accent-error bg-opacity-20 rounded-lg mx-auto mb-2">
+                                <Icon name="error" size="md" className="text-theme-accent-error" />
+                            </div>
+                            <p className="text-xs text-theme-text-secondary mb-1">Overdue</p>
+                            <p className="text-xl font-bold text-theme-accent-error">{counts.overdue}</p>
+                        </div>
+                    </Card>
+                    <Card variant="default" padding="sm">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-10 h-10 bg-theme-bg-secondary rounded-lg mx-auto mb-2">
+                                <Icon name="files" size="md" className="text-theme-text-primary" />
+                            </div>
+                            <p className="text-xs text-theme-text-secondary mb-1">Total</p>
+                            <p className="text-xl font-bold text-theme-text-primary">{counts.total}</p>
+                        </div>
                     </Card>
                 </div>
 
-                {/* Task Detail Modal */}
-                <AlertDialog
-                    open={!!selectedTask && !completeTaskOpen}
-                    onClose={() => setSelectedTask(null)}
-                    title="Task Details"
-                    description="View detailed information about this user task"
-                    onConfirm={() => setSelectedTask(null)}
-                    confirmText="Close"
-                />
+                {/* Filters */}
+                <Card variant="default" padding="sm">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <FormField label="Status">
+                            <Select
+                                value={filter.status}
+                                onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
+                            >
+                                <option value="all">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="overdue">Overdue</option>
+                            </Select>
+                        </FormField>
+                        <FormField label="Priority">
+                            <Select
+                                value={filter.priority}
+                                onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
+                            >
+                                <option value="all">All Priorities</option>
+                                <option value="1">High</option>
+                                <option value="2">Medium</option>
+                                <option value="3">Low</option>
+                            </Select>
+                        </FormField>
+                        <FormField label="Assignee">
+                            <Select
+                                value={filter.assignee}
+                                onChange={(e) => setFilter(prev => ({ ...prev, assignee: e.target.value }))}
+                            >
+                                <option value="all">All Assignees</option>
+                                <option value="john.doe@company.com">John Doe</option>
+                                <option value="jane.smith@company.com">Jane Smith</option>
+                            </Select>
+                        </FormField>
+                        <FormField label="Process">
+                            <Select
+                                value={filter.processDefinition}
+                                onChange={(e) => setFilter(prev => ({ ...prev, processDefinition: e.target.value }))}
+                            >
+                                <option value="all">All Processes</option>
+                                <option value="budget-approval">Budget Approval</option>
+                                <option value="risk-assessment">Risk Assessment</option>
+                                <option value="contract-approval">Contract Approval</option>
+                                <option value="security-review">Security Review</option>
+                                <option value="performance-testing">Performance Testing</option>
+                            </Select>
+                        </FormField>
+                    </div>
+                </Card>
 
-                {/* Complete Task Modal */}
-                <AlertDialog
-                    open={completeTaskOpen}
-                    onClose={() => setCompleteTaskOpen(false)}
-                    title="Complete Task"
-                    description="Are you sure you want to complete this task? This action cannot be undone."
-                    onConfirm={handleCompleteTask}
-                    confirmText="Complete Task"
-                    cancelText="Cancel"
-                />
-            </PageLayout>
-        </>
+                {/* User Tasks Table */}
+                <Card variant="default" padding="none">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-theme-border">
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Task</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Process</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Assignee</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Priority</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Due Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-theme-text-secondary uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-theme-border">
+                                {filteredTasks.map((task) => (
+                                    <tr key={task.id} className="hover:bg-theme-bg-secondary">
+                                        <td className="px-4 py-3">
+                                            <div>
+                                                <p className="text-sm font-medium text-theme-text-primary">{task.name}</p>
+                                                {task.description && (
+                                                    <p className="text-xs text-theme-text-secondary mt-1">{task.description}</p>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div>
+                                                <p className="text-sm text-theme-text-primary">{task.processDefinitionName}</p>
+                                                <p className="text-xs text-theme-text-secondary">{task.businessKey}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <p className="text-sm text-theme-text-primary">{task.assignee || 'Unassigned'}</p>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                {getPriorityLabel(task.priority)}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)} ${getStatusBgColor(task.status)}`}>
+                                                {task.status.replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div>
+                                                <p className="text-sm text-theme-text-primary">{formatDateTime(task.due)}</p>
+                                                <p className="text-xs text-theme-text-secondary">{getTimeUntilDue(task.due)}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex space-x-2">
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedTask(task);
+                                                        setCompleteTaskOpen(true);
+                                                    }}
+                                                >
+                                                    Complete
+                                                </Button>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => setSelectedTask(task)}
+                                                >
+                                                    Details
+                                                </Button>
+                                                {task.assignee ? (
+                                                    <Button
+                                                        variant="tertiary"
+                                                        size="sm"
+                                                        onClick={() => handleUnclaimTask(task.id)}
+                                                    >
+                                                        Unclaim
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        variant="tertiary"
+                                                        size="sm"
+                                                        onClick={() => handleClaimTask(task.id)}
+                                                    >
+                                                        Claim
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    {filteredTasks.length === 0 && (
+                        <div className="text-center py-8">
+                            <Icon name="files" size="lg" className="text-theme-text-secondary mx-auto mb-4" />
+                            <p className="text-theme-text-secondary">No tasks found</p>
+                            <p className="text-sm text-theme-text-secondary mt-1">Try adjusting your filters</p>
+                        </div>
+                    )}
+                </Card>
+            </div>
+
+            {/* Task Detail Modal */}
+            <AlertDialog
+                open={!!selectedTask && !completeTaskOpen}
+                onClose={() => setSelectedTask(null)}
+                title="Task Details"
+                description="View detailed information about this user task"
+                onConfirm={() => setSelectedTask(null)}
+                confirmText="Close"
+            />
+
+            {/* Complete Task Modal */}
+            <AlertDialog
+                open={completeTaskOpen}
+                onClose={() => setCompleteTaskOpen(false)}
+                title="Complete Task"
+                description="Are you sure you want to complete this task? This action cannot be undone."
+                onConfirm={handleCompleteTask}
+                confirmText="Complete Task"
+                cancelText="Cancel"
+            />
+        </PageLayout>
     );
 };
 
