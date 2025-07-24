@@ -39,7 +39,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                     name="lightbulb"
                     size="sm"
                     className="transition-transform duration-200"
-                    color="#000000"
+                    color={theme === 'light' ? '#1f2328' : '#d4d4d4'}
                 />
             </button>
         );
