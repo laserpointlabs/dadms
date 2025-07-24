@@ -1,5 +1,79 @@
 # Changelog
 
+## [2.0.0-alpha.5] - 2025-07-24
+
+### Added
+- **🔬 Jupyter Lab Integration**
+  - Complete Jupyter Lab service integration with Docker Compose
+  - NotebookEditor component with kernel management
+  - KernelManager for Python notebook execution
+  - Jupyter Lab API integration with OpenAPI specification
+  - Development environment with configurable Python notebooks
+
+- **📋 User Tasks Management System**
+  - Complete User Tasks service specification and API endpoints
+  - User Tasks page with comprehensive task management UI
+  - Task creation, assignment, and tracking capabilities
+  - Service API integration with task management workflows
+  - Enhanced navigation with user tasks menu item
+
+- **🎨 Enhanced UI Components & Navigation**
+  - Comprehensive page implementations for all DADMS services
+  - TabBar component with dynamic tab management and persistence
+  - CollapsiblePanel component for flexible layout management
+  - PanelStateContext for persistent panel state management
+  - Enhanced layout with improved navigation structure
+
+- **🧠 Ontology Workspace Enhancements**
+  - OntologyNoteNode for annotation and documentation
+  - NoteConnectionEdge for connecting notes to ontology elements
+  - Improved state management for ontology operations
+  - Enhanced dual-view editor with better synchronization
+  - Theme integration improvements across all components
+
+- **📊 Service Page Implementations**
+  - Analysis service page with data visualization capabilities
+  - Decision service page with decision modeling interface
+  - Data service page with data management and processing
+  - Event service page with event monitoring and management
+  - Memory service page with knowledge base management
+  - Model service page with model development and testing
+  - Parameter service page with parameter configuration
+  - Requirements service page with requirements management
+  - Simulation service page with simulation execution
+  - Error service page with error tracking and debugging
+  - Thread service page with conversation management
+  - Agent assistance page with AI-powered support
+
+### Enhanced
+- **🎯 Theme System Improvements**
+  - Comprehensive theme integration across all new components
+  - Enhanced dark/light mode support for all service pages
+  - Improved color consistency and visual hierarchy
+  - Better accessibility support with ARIA labels and keyboard navigation
+
+- **🔧 Development Infrastructure**
+  - Docker Compose enhancement with Jupyter Lab service
+  - Jupyter configuration management and security settings
+  - Improved error handling and boundary components
+  - Enhanced development documentation and integration guides
+
+### Fixed
+- **🐛 Component Stability**
+  - ErrorBoundary component improvements for better error handling
+  - VSCodeEditor component refinements and stability
+  - AASCar component state management improvements
+  - Knowledge component integration fixes
+
+### Documentation
+- **📚 Comprehensive Documentation Updates**
+  - Jupyter Lab integration specification and API documentation
+  - Tab management solution documentation
+  - Persistent panel states documentation
+  - Ontology workspace integration guide
+  - Theme fixes and implementation guide
+  - User tasks service complete specification
+
 ## [2.0.0-alpha.4] - 2025-01-23
 
 ### Added

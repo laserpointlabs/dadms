@@ -1,6 +1,6 @@
 {
     "name": "dadms-aads",
-    "version": "2.0.0-alpha.4",
+    "version": "2.0.0-alpha.5",
     "description": "Agent Assistant & Documentation Service for DADMS",
     "main": "dist/index.js",
     "scripts": {

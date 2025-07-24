@@ -1,6 +1,6 @@
 {
     "name": "@dadms/user-project-service",
-    "version": "2.0.0-alpha.4",
+    "version": "2.0.0-alpha.5",
     "description": "DADMS User and Project Management Service",
     "main": "dist/index.js",
     "scripts": {
