@@ -477,7 +477,6 @@ html {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
 }
 
 /* Tab Bar */
@@ -673,9 +672,8 @@ html {
 /* Editor */
 .vscode-editor {
     flex: 1;
-    overflow: auto;
     background-color: var(--theme-bg-primary);
-    position: relative;
+    overflow: auto;
 }
 
 /* Status Bar */
@@ -1169,165 +1167,37 @@ html {
     z-index: 20;
 }
 
-/* Panel System */
-.vscode-panel {
-    height: 100%;
-    width: 100%;
-    background-color: var(--theme-bg-primary);
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-header {
-    height: 35px;
-    background-color: var(--theme-bg-secondary);
-    border-top: 1px solid var(--theme-border);
-    border-left: 1px solid var(--theme-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 10px;
-    flex-shrink: 0;
-}
-
-.panel-title {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--theme-text-primary);
-}
-
-.panel-actions {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-.panel-action {
-    background: none;
-    border: none;
-    color: var(--theme-text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-}
-
-.panel-action:hover {
-    background-color: var(--theme-surface-hover);
-    color: var(--theme-text-primary);
-}
-
-.panel-action i {
-    font-size: 16px;
-}
-
-.panel-content {
-    flex: 1;
-    overflow: auto;
-    padding: 10px;
-}
-
-/* Resize Handle Styling */
-.panel-resize-handle-horizontal {
-    height: 4px;
-    background-color: var(--theme-border);
-    cursor: ns-resize;
-    position: relative;
-}
-
-.panel-resize-handle-horizontal:hover {
-    background-color: var(--theme-accent-primary);
-}
-
-.panel-resize-handle-vertical {
-    width: 4px;
-    background-color: var(--theme-border);
-    cursor: ew-resize;
-    position: relative;
-}
-
-.panel-resize-handle-vertical:hover {
-    background-color: var(--theme-accent-primary);
-}
-
-/* Status Bar Button */
-.status-button {
-    background: none;
-    border: none;
-    color: var(--theme-text-secondary);
-    cursor: pointer;
-    padding: 0 8px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.status-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--theme-text-primary);
-}
-
-.vscode-statusbar-item .status-button {
-    margin: 0;
-    height: 100%;
-}
-
-/* React Resizable Panels Override */
-[data-panel-group] {
-    height: 100%;
-}
-
-/* Ensure status bar button styling */
-.vscode-statusbar-item .status-button {
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    padding: 0;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: inherit;
-}
-
-.vscode-statusbar-item .status-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Floating Action Button */
+/* Floating AAS Button */
 .aas-floating-button {
     position: fixed;
-    bottom: 40px;
+    bottom: 20px;
     right: 20px;
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    background-color: var(--theme-accent-primary);
-    color: var(--theme-text-inverse);
+    background: var(--theme-accent-primary);
     border: none;
+    color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transition: all 0.2s ease;
+    z-index: 1000;
+    font-size: 20px;
 }
 
 .aas-floating-button:hover {
+    background: var(--theme-accent-secondary);
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.aas-floating-button:active {
+    transform: scale(0.95);
 }
 
 .aas-floating-button i {
-    font-size: 24px;
+    font-size: 20px;
 }

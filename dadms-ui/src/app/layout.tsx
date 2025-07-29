@@ -1,13 +1,13 @@
 'use client';
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { useEffect, useState } from "react";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
+import { Icon } from "../components/shared/Icon";
 import { TabBar as EnhancedTabBar } from "../components/shared/TabBar";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
-import { AgentAssistantProvider } from "../contexts/AgentAssistantContext";
+import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
 import { PanelStateProvider, usePanelState } from "../contexts/PanelStateContext";
 import { TabProvider, useTabs } from "../contexts/TabContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
@@ -511,7 +511,63 @@ function TabBar() {
     return <EnhancedTabBar />;
 }
 
-function StatusBar({ showBottomPanel, onTogglePanel }: { showBottomPanel: boolean; onTogglePanel: () => void }) {
+// Floating AAS Button
+function AASFloatingButton() {
+    const { visible, setVisible, setIsDocked, setDockPosition, setDockedWidth } = useAgentAssistant();
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+
+    // Don't render until hydrated to prevent SSR/client mismatch
+    if (!isHydrated) {
+        return null;
+    }
+
+    // Don't show button if AAS is already visible
+    if (visible) {
+        return null;
+    }
+
+    const handleOpenAAS = () => {
+        setVisible(true);
+        setIsDocked(true);
+        setDockPosition('right');
+        setDockedWidth(350); // Set a default width
+    };
+
+    return (
+        <button
+            className="aas-floating-button"
+            onClick={handleOpenAAS}
+            title="Open Agent Assistant"
+            style={{
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: 'var(--theme-accent-primary)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease',
+                zIndex: 1000,
+                fontSize: '20px'
+            }}
+        >
+            <Icon name="hubot" size="sm" />
+        </button>
+    );
+}
+
+function StatusBar() {
     return (
         <div className="vscode-statusbar">
             <div className="vscode-statusbar-left">
@@ -544,16 +600,6 @@ function StatusBar({ showBottomPanel, onTogglePanel }: { showBottomPanel: boolea
                 <div className="vscode-statusbar-item">
                     <i className="codicon codicon-bell-dot"></i>
                 </div>
-                <div className="vscode-statusbar-item">
-                    <button
-                        className="status-button"
-                        onClick={onTogglePanel}
-                        title="Toggle Agent Assistant Panel"
-                    >
-                        <i className="codicon codicon-hubot"></i>
-                        Agent Assistant
-                    </button>
-                </div>
             </div>
         </div>
     );
@@ -563,20 +609,31 @@ function StatusBar({ showBottomPanel, onTogglePanel }: { showBottomPanel: boolea
 function MainLayout({ children }: { children: React.ReactNode }) {
     const { tabs, activeTabId, navigateToTab } = useTabs();
     const [activeView, setActiveView] = useState<string>('explorer');
-    const [showBottomPanel, setShowBottomPanel] = useState(false);
-    const [dockPosition, setDockPosition] = useState<'bottom' | 'right'>('bottom');
-    const [isMinimized, setIsMinimized] = useState(false);
+    const { isDocked, dockPosition, dockedWidth, visible, isMinimized } = useAgentAssistant();
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
 
     const handleViewChange = (viewId: string) => {
         setActiveView(viewId);
     };
 
-    const toggleDockPosition = () => {
-        setDockPosition(prev => prev === 'bottom' ? 'right' : 'bottom');
-    };
-
-    const toggleMinimize = () => {
-        setIsMinimized(prev => !prev);
+    // Calculate editor area style based on docked AAS
+    const getEditorAreaStyle = () => {
+        if (visible && isDocked && dockPosition === 'right') {
+            // When minimized, use a smaller width
+            const effectiveWidth = isMinimized ? 48 : dockedWidth;
+            return {
+                marginRight: `${effectiveWidth}px`,
+                transition: 'margin-right 0.3s ease'
+            };
+        }
+        return {
+            marginRight: '0px',
+            transition: 'margin-right 0.3s ease'
+        };
     };
 
     return (
@@ -603,83 +660,61 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 {/* Sidebar */}
                 <SidebarView activeView={activeView} />
 
-                {/* Editor Area with Resizable Panels */}
-                <div className="vscode-editor-area">
+                {/* Editor Area - with dynamic margin for docked AAS */}
+                <div className="vscode-editor-area" style={getEditorAreaStyle()}>
                     {/* Tab Bar */}
                     <TabBar />
 
-                    {/* Resizable Panel Group */}
-                    <PanelGroup direction={dockPosition === 'bottom' ? 'vertical' : 'horizontal'} style={{ height: '100%' }}>
-                        {/* Main Content Panel */}
-                        <Panel defaultSize={showBottomPanel ? (isMinimized ? 95 : 70) : 100} minSize={30}>
-                            <div className="vscode-editor">
-                                {children}
-                            </div>
-                        </Panel>
-
-                        {/* Docked Panel (AAS) */}
-                        {showBottomPanel && (
-                            <>
-                                <PanelResizeHandle className={dockPosition === 'bottom' ? 'panel-resize-handle-horizontal' : 'panel-resize-handle-vertical'} />
-                                <Panel
-                                    defaultSize={isMinimized ? 5 : 30}
-                                    minSize={isMinimized ? 5 : 20}
-                                    maxSize={isMinimized ? 5 : 50}
-                                    collapsible={false}
-                                >
-                                    <div className="vscode-panel">
-                                        <div className="panel-header">
-                                            <div className="panel-title">Agent Assistant</div>
-                                            <div className="panel-actions">
-                                                <button
-                                                    className="panel-action"
-                                                    onClick={toggleMinimize}
-                                                    title={isMinimized ? "Maximize" : "Minimize"}
-                                                >
-                                                    <i className={`codicon ${isMinimized ? 'codicon-chevron-up' : 'codicon-chevron-down'}`}></i>
-                                                </button>
-                                                <button
-                                                    className="panel-action"
-                                                    onClick={toggleDockPosition}
-                                                    title={`Move to ${dockPosition === 'bottom' ? 'right' : 'bottom'}`}
-                                                >
-                                                    <i className={`codicon ${dockPosition === 'bottom' ? 'codicon-layout-sidebar-right' : 'codicon-layout-panel'}`}></i>
-                                                </button>
-                                                <button
-                                                    className="panel-action"
-                                                    onClick={() => setShowBottomPanel(false)}
-                                                    title="Close Panel"
-                                                >
-                                                    <i className="codicon codicon-close"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {!isMinimized && (
-                                            <div className="panel-content">
-                                                <AASCar />
-                                            </div>
-                                        )}
-                                    </div>
-                                </Panel>
-                            </>
-                        )}
-                    </PanelGroup>
+                    {/* Main Content */}
+                    <div className="vscode-editor">
+                        {children}
+                    </div>
                 </div>
+
+                {/* Docked AAS Panel - positioned as part of the layout */}
+                {isHydrated && visible && isDocked && dockPosition === 'right' && (
+                    <div
+                        className="vscode-docked-panel"
+                        style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: `${isMinimized ? 48 : dockedWidth}px`,
+                            zIndex: 10
+                        }}
+                    >
+                        <AASCar isLayoutControlled={true} />
+                    </div>
+                )}
             </div>
 
             {/* Status Bar */}
-            <StatusBar showBottomPanel={showBottomPanel} onTogglePanel={() => setShowBottomPanel(!showBottomPanel)} />
+            <StatusBar />
 
-            {/* Floating Action Button for AAS */}
-            {!showBottomPanel && (
-                <button
-                    className="aas-floating-button"
-                    onClick={() => setShowBottomPanel(true)}
-                    title="Open Agent Assistant"
-                >
-                    <i className="codicon codicon-hubot"></i>
-                </button>
-            )}
+            {/* Floating AAS - only show when not docked and hydrated */}
+            {isHydrated && visible && (!isDocked || dockPosition !== 'right') && <AASCar />}
+
+            {/* Floating AAS Button */}
+            <AASFloatingButton />
+
+            {/* Debug info */}
+            <div style={{
+                position: 'fixed',
+                top: '60px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                padding: '10px',
+                fontSize: '12px',
+                zIndex: 9999,
+                borderRadius: '4px',
+                fontFamily: 'monospace'
+            }}>
+                AAS Debug: visible={visible.toString()}, isDocked={isDocked.toString()},
+                dockPosition={dockPosition}, dockedWidth={dockedWidth}
+            </div>
         </div>
     );
 }
