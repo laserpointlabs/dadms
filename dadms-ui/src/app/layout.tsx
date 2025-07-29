@@ -609,7 +609,7 @@ function StatusBar() {
 function MainLayout({ children }: { children: React.ReactNode }) {
     const { tabs, activeTabId, navigateToTab } = useTabs();
     const [activeView, setActiveView] = useState<string>('explorer');
-    const { isDocked, dockPosition, dockedWidth, visible, isMinimized } = useAgentAssistant();
+    const { isDocked, dockPosition, dockedWidth, dockedHeight, visible, isMinimized } = useAgentAssistant();
     const [isHydrated, setIsHydrated] = useState(false);
 
     useEffect(() => {
@@ -622,18 +622,26 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
     // Calculate editor area style based on docked AAS
     const getEditorAreaStyle = () => {
-        if (visible && isDocked && dockPosition === 'right') {
-            // When minimized, use a smaller width
-            const effectiveWidth = isMinimized ? 48 : dockedWidth;
-            return {
-                marginRight: `${effectiveWidth}px`,
-                transition: 'margin-right 0.3s ease'
-            };
-        }
-        return {
-            marginRight: '0px',
-            transition: 'margin-right 0.3s ease'
+        const style: React.CSSProperties = {
+            transition: 'margin-right 0.3s ease, margin-bottom 0.3s ease'
         };
+
+        if (visible && isDocked) {
+            if (dockPosition === 'right') {
+                // When minimized, use a smaller width
+                const effectiveWidth = isMinimized ? 48 : dockedWidth;
+                style.marginRight = `${effectiveWidth}px`;
+            } else if (dockPosition === 'bottom') {
+                // When minimized, use a smaller height
+                const effectiveHeight = isMinimized ? 48 : dockedHeight;
+                style.marginBottom = `${effectiveHeight}px`;
+            }
+        } else {
+            style.marginRight = '0px';
+            style.marginBottom = '0px';
+        }
+
+        return style;
     };
 
     return (
@@ -671,7 +679,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
 
-                {/* Docked AAS Panel - positioned as part of the layout */}
+                {/* Right Docked AAS Panel */}
                 {isHydrated && visible && isDocked && dockPosition === 'right' && (
                     <div
                         className="vscode-docked-panel"
@@ -687,13 +695,32 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                         <AASCar isLayoutControlled={true} />
                     </div>
                 )}
+
+                {/* Bottom Docked AAS Panel - inside main container */}
+                {isHydrated && visible && isDocked && dockPosition === 'bottom' && (
+                    <div
+                        className="vscode-docked-panel"
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: `${isMinimized ? 48 : dockedHeight}px`,
+                            zIndex: 10,
+                            borderTop: '1px solid var(--vscode-panel-border)',
+                            backgroundColor: 'var(--vscode-panel-background)'
+                        }}
+                    >
+                        <AASCar isLayoutControlled={true} />
+                    </div>
+                )}
             </div>
 
             {/* Status Bar */}
             <StatusBar />
 
             {/* Floating AAS - only show when not docked and hydrated */}
-            {isHydrated && visible && (!isDocked || dockPosition !== 'right') && <AASCar />}
+            {isHydrated && visible && (!isDocked || (dockPosition !== 'right' && dockPosition !== 'bottom')) && <AASCar />}
 
             {/* Floating AAS Button */}
             <AASFloatingButton />
