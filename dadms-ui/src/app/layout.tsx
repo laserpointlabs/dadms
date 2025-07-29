@@ -10,7 +10,7 @@ import { ThemeSelector } from "../components/shared/ThemeSelector";
 import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
 import { PanelStateProvider, usePanelState } from "../contexts/PanelStateContext";
 import { TabProvider, useTabs } from "../contexts/TabContext";
-import { ThemeProvider } from "../contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 import "./globals.css";
 
 // Types for the grouped navigation structure
@@ -513,54 +513,30 @@ function TabBar() {
 
 // Floating AAS Button
 function AASFloatingButton() {
-    const { visible, setVisible, setIsDocked, setDockPosition, setDockedWidth } = useAgentAssistant();
+    const { visible, setIsDocked, setDockPosition, setDockedWidth, setVisible } = useAgentAssistant();
     const [isHydrated, setIsHydrated] = useState(false);
 
     useEffect(() => {
         setIsHydrated(true);
     }, []);
 
-    // Don't render until hydrated to prevent SSR/client mismatch
-    if (!isHydrated) {
-        return null;
-    }
-
-    // Don't show button if AAS is already visible
-    if (visible) {
-        return null;
-    }
-
     const handleOpenAAS = () => {
         setVisible(true);
         setIsDocked(true);
         setDockPosition('right');
-        setDockedWidth(350); // Set a default width
+        setDockedWidth(350);
     };
+
+    // Don't render until hydrated to prevent SSR mismatch
+    if (!isHydrated || visible) {
+        return null;
+    }
 
     return (
         <button
-            className="aas-floating-button"
             onClick={handleOpenAAS}
-            title="Open Agent Assistant"
-            style={{
-                position: 'fixed',
-                bottom: '20px',
-                right: '20px',
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                background: 'var(--theme-accent-primary)',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.2s ease',
-                zIndex: 1000,
-                fontSize: '20px'
-            }}
+            className="aas-floating-button"
+            title="Open Analysis & Assessment Service"
         >
             <Icon name="hubot" size="sm" />
         </button>
@@ -568,6 +544,8 @@ function AASFloatingButton() {
 }
 
 function StatusBar() {
+    const { theme, setTheme } = useTheme();
+
     return (
         <div className="vscode-statusbar">
             <div className="vscode-statusbar-left">
@@ -626,7 +604,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
             transition: 'margin-right 0.3s ease, margin-bottom 0.3s ease'
         };
 
-        if (visible && isDocked) {
+        // Only apply AAS margins after hydration to prevent SSR mismatch
+        if (isHydrated && visible && isDocked) {
             if (dockPosition === 'right') {
                 // When minimized, use a smaller width
                 const effectiveWidth = isMinimized ? 48 : dockedWidth;
@@ -687,7 +666,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                             position: 'absolute',
                             right: 0,
                             top: 0,
-                            bottom: 0,
+                            bottom: '24px', // Leave space for status bar
                             width: `${isMinimized ? 48 : dockedWidth}px`,
                             zIndex: 10
                         }}
@@ -704,7 +683,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                             position: 'absolute',
                             left: 0,
                             right: 0,
-                            bottom: 0,
+                            bottom: '24px', // Leave space for status bar
                             height: `${isMinimized ? 48 : dockedHeight}px`,
                             zIndex: 10,
                             borderTop: '1px solid var(--vscode-panel-border)',
@@ -724,24 +703,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
             {/* Floating AAS Button */}
             <AASFloatingButton />
-
-            {/* Debug info */}
-            <div style={{
-                position: 'fixed',
-                top: '60px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
-                padding: '10px',
-                fontSize: '12px',
-                zIndex: 9999,
-                borderRadius: '4px',
-                fontFamily: 'monospace'
-            }}>
-                AAS Debug: visible={visible.toString()}, isDocked={isDocked.toString()},
-                dockPosition={dockPosition}, dockedWidth={dockedWidth}
-            </div>
         </div>
     );
 }

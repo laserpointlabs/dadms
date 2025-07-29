@@ -687,6 +687,8 @@ html {
     font-size: 12px;
     color: white;
     flex-shrink: 0;
+    z-index: 1000;
+    position: relative;
 }
 
 .vscode-statusbar-left {

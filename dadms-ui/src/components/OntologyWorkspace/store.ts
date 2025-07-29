@@ -855,6 +855,11 @@ export const useOntologyWorkspaceStore = create<OntologyWorkspaceStore>()(
                     externalReferences: state.externalReferences,
                     dualView: state.dualView,
                     isInitialized: state.isInitialized,
+                    // Include UI state for persistence
+                    isPropertiesPanelOpen: state.isPropertiesPanelOpen,
+                    isExternalPanelOpen: state.isExternalPanelOpen,
+                    isMinimapVisible: state.isMinimapVisible,
+                    isFullscreen: state.isFullscreen,
                 }),
                 // Handle migration from old state
                 onRehydrateStorage: () => (state) => {
