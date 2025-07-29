@@ -156,6 +156,15 @@ export const AgentAssistantProvider: React.FC<AgentAssistantProviderProps> = ({ 
         if (typeof window !== 'undefined') {
             localStorage.setItem('dadms-agent-docked', JSON.stringify(docked));
         }
+        // Reset docked dimensions when undocking
+        if (!docked) {
+            setDockedHeightState(0);
+            setDockedWidthState(0);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('dadms-agent-height', '0');
+                localStorage.setItem('dadms-agent-docked-width', '0');
+            }
+        }
     };
 
     const setDockedHeight = (height: number) => {
@@ -179,10 +188,10 @@ export const AgentAssistantProvider: React.FC<AgentAssistantProviderProps> = ({ 
         }
     };
 
-    const setVisible = (newVisible: boolean) => {
-        setVisibleState(newVisible);
+    const setVisible = (visible: boolean) => {
+        setVisibleState(visible);
         if (typeof window !== 'undefined') {
-            localStorage.setItem('dadms-agent-visible', JSON.stringify(newVisible));
+            localStorage.setItem('dadms-agent-visible', JSON.stringify(visible));
         }
     };
 
@@ -215,15 +224,15 @@ export const AgentAssistantProvider: React.FC<AgentAssistantProviderProps> = ({ 
     };
 
     const value: AgentAssistantContextType = {
-        isDocked: mounted ? isDocked : false,
-        dockedHeight: mounted ? dockedHeight : 0,
-        dockedWidth: mounted ? dockedWidth : 0,
-        dockPosition: mounted ? dockPosition : 'bottom',
-        visible: mounted ? visible : false,
-        position: mounted ? position : { x: 400, y: 100 },
-        activeTab: mounted ? activeTab : 'assistant',
-        isMinimized: mounted ? isMinimized : false,
-        isDetached: mounted ? isDetached : false,
+        isDocked,
+        dockedHeight,
+        dockedWidth,
+        dockPosition,
+        visible,
+        position,
+        activeTab,
+        isMinimized,
+        isDetached,
         setIsDocked,
         setDockedHeight,
         setDockedWidth,

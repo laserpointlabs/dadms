@@ -1,12 +1,13 @@
 'use client';
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import AASCar from "../components/AASCar";
 import ProjectTreeView from "../components/ProjectTreeView";
 import { TabBar as EnhancedTabBar } from "../components/shared/TabBar";
 import { ThemeSelector } from "../components/shared/ThemeSelector";
-import { AgentAssistantProvider, useAgentAssistant } from "../contexts/AgentAssistantContext";
+import { AgentAssistantProvider } from "../contexts/AgentAssistantContext";
 import { PanelStateProvider, usePanelState } from "../contexts/PanelStateContext";
 import { TabProvider, useTabs } from "../contexts/TabContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
@@ -510,7 +511,7 @@ function TabBar() {
     return <EnhancedTabBar />;
 }
 
-function StatusBar() {
+function StatusBar({ showBottomPanel, onTogglePanel }: { showBottomPanel: boolean; onTogglePanel: () => void }) {
     return (
         <div className="vscode-statusbar">
             <div className="vscode-statusbar-left">
@@ -543,49 +544,43 @@ function StatusBar() {
                 <div className="vscode-statusbar-item">
                     <i className="codicon codicon-bell-dot"></i>
                 </div>
+                <div className="vscode-statusbar-item">
+                    <button
+                        className="status-button"
+                        onClick={onTogglePanel}
+                        title="Toggle Agent Assistant Panel"
+                    >
+                        <i className="codicon codicon-hubot"></i>
+                        Agent Assistant
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
-// New component to handle the main content with agent assistant spacing
-function MainContent({ children }: { children: React.ReactNode }) {
-    const { isDocked, dockedHeight, dockedWidth, dockPosition } = useAgentAssistant();
-    const statusBarHeight = 24; // VSCode status bar height from CSS
-    const [isHydrated, setIsHydrated] = useState(false);
-
-    // Handle hydration to prevent SSR/client mismatch
-    useEffect(() => {
-        setIsHydrated(true);
-    }, []);
-
-    return (
-        <div
-            className="vscode-editor"
-            style={{
-                paddingBottom: isHydrated && isDocked && dockPosition === 'bottom' ? `${dockedHeight}px` : '0px',
-                paddingRight: isHydrated && isDocked && dockPosition === 'right' ? `${dockedWidth}px` : '0px',
-                transition: 'padding-bottom 0.3s ease, padding-right 0.3s ease'
-            }}
-        >
-            {children}
-        </div>
-    );
-}
-
-// Main layout component that uses the tab context
+// Main layout component
 function MainLayout({ children }: { children: React.ReactNode }) {
-    const [activeView, setActiveView] = useState('explorer');
-    const { navigateToTab } = useTabs();
+    const { tabs, activeTabId, navigateToTab } = useTabs();
+    const [activeView, setActiveView] = useState<string>('explorer');
+    const [showBottomPanel, setShowBottomPanel] = useState(false);
+    const [dockPosition, setDockPosition] = useState<'bottom' | 'right'>('bottom');
+    const [isMinimized, setIsMinimized] = useState(false);
 
-    const handleViewChange = (view: string) => {
-        setActiveView(view);
+    const handleViewChange = (viewId: string) => {
+        setActiveView(viewId);
     };
 
+    const toggleDockPosition = () => {
+        setDockPosition(prev => prev === 'bottom' ? 'right' : 'bottom');
+    };
 
+    const toggleMinimize = () => {
+        setIsMinimized(prev => !prev);
+    };
 
     return (
-        <div className="vscode-workbench">
+        <div className="vscode-layout">
             {/* Title Bar */}
             <div className="vscode-titlebar">
                 <div className="title">DADMS 2.0 - Decision Analysis & Decision Management System</div>
@@ -608,20 +603,83 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 {/* Sidebar */}
                 <SidebarView activeView={activeView} />
 
-                {/* Editor Area */}
+                {/* Editor Area with Resizable Panels */}
                 <div className="vscode-editor-area">
                     {/* Tab Bar */}
                     <TabBar />
 
-                    {/* Main Content with Agent Assistant spacing */}
-                    <MainContent>
-                        {children}
-                    </MainContent>
+                    {/* Resizable Panel Group */}
+                    <PanelGroup direction={dockPosition === 'bottom' ? 'vertical' : 'horizontal'} style={{ height: '100%' }}>
+                        {/* Main Content Panel */}
+                        <Panel defaultSize={showBottomPanel ? (isMinimized ? 95 : 70) : 100} minSize={30}>
+                            <div className="vscode-editor">
+                                {children}
+                            </div>
+                        </Panel>
+
+                        {/* Docked Panel (AAS) */}
+                        {showBottomPanel && (
+                            <>
+                                <PanelResizeHandle className={dockPosition === 'bottom' ? 'panel-resize-handle-horizontal' : 'panel-resize-handle-vertical'} />
+                                <Panel
+                                    defaultSize={isMinimized ? 5 : 30}
+                                    minSize={isMinimized ? 5 : 20}
+                                    maxSize={isMinimized ? 5 : 50}
+                                    collapsible={false}
+                                >
+                                    <div className="vscode-panel">
+                                        <div className="panel-header">
+                                            <div className="panel-title">Agent Assistant</div>
+                                            <div className="panel-actions">
+                                                <button
+                                                    className="panel-action"
+                                                    onClick={toggleMinimize}
+                                                    title={isMinimized ? "Maximize" : "Minimize"}
+                                                >
+                                                    <i className={`codicon ${isMinimized ? 'codicon-chevron-up' : 'codicon-chevron-down'}`}></i>
+                                                </button>
+                                                <button
+                                                    className="panel-action"
+                                                    onClick={toggleDockPosition}
+                                                    title={`Move to ${dockPosition === 'bottom' ? 'right' : 'bottom'}`}
+                                                >
+                                                    <i className={`codicon ${dockPosition === 'bottom' ? 'codicon-layout-sidebar-right' : 'codicon-layout-panel'}`}></i>
+                                                </button>
+                                                <button
+                                                    className="panel-action"
+                                                    onClick={() => setShowBottomPanel(false)}
+                                                    title="Close Panel"
+                                                >
+                                                    <i className="codicon codicon-close"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {!isMinimized && (
+                                            <div className="panel-content">
+                                                <AASCar />
+                                            </div>
+                                        )}
+                                    </div>
+                                </Panel>
+                            </>
+                        )}
+                    </PanelGroup>
                 </div>
             </div>
 
             {/* Status Bar */}
-            <StatusBar />
+            <StatusBar showBottomPanel={showBottomPanel} onTogglePanel={() => setShowBottomPanel(!showBottomPanel)} />
+
+            {/* Floating Action Button for AAS */}
+            {!showBottomPanel && (
+                <button
+                    className="aas-floating-button"
+                    onClick={() => setShowBottomPanel(true)}
+                    title="Open Agent Assistant"
+                >
+                    <i className="codicon codicon-hubot"></i>
+                </button>
+            )}
         </div>
     );
 }
@@ -629,13 +687,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 // Root layout that only provides providers
 export default function RootLayout({
     children,
-}: Readonly<{
+}: {
     children: React.ReactNode;
-}>) {
+}) {
     return (
         <html lang="en">
             <head>
-                <title>DADMS 2.0 - Decision Analysis & Decision Management System</title>
+                <title>DADMS 2.0 - Decision Intelligence Platform</title>
                 <meta name="description" content="Professional decision intelligence platform for engineering teams" />
             </head>
             <body>
@@ -646,9 +704,6 @@ export default function RootLayout({
                                 <MainLayout>
                                     {children}
                                 </MainLayout>
-
-                                {/* Agent Assistance Component */}
-                                <AASCar />
                             </AgentAssistantProvider>
                         </TabProvider>
                     </PanelStateProvider>

@@ -91,6 +91,17 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
     const saveTimeoutRef = useRef<NodeJS.Timeout>();
     const lastPathname = useRef<string>('');
     const uniquePaths = useRef<Set<string>>(new Set()); // Track unique paths to prevent duplicates
+    const pendingNavigation = useRef<string | null>(null); // Track pending navigation after tab close
+
+    // Handle pending navigation after state updates
+    useEffect(() => {
+        if (pendingNavigation.current) {
+            const pathToNavigate = pendingNavigation.current;
+            pendingNavigation.current = null;
+            isNavigating.current = true;
+            router.push(pathToNavigate);
+        }
+    }, [tabs, router]);
 
     // Get page info from navigation configuration
     const getPageInfo = useCallback((path: string) => {
@@ -408,10 +419,9 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
                 setActiveTabId(nextTab.id);
 
-                // Navigate to the next tab's path
+                // Schedule navigation to the next tab's path (will be handled by useEffect)
                 if (nextTab.path !== pathname) {
-                    isNavigating.current = true;
-                    router.push(nextTab.path);
+                    pendingNavigation.current = nextTab.path;
                 }
 
                 return updatedTabs;
@@ -419,7 +429,7 @@ export const TabProvider: React.FC<TabProviderProps> = ({ children }) => {
 
             return remainingTabs;
         });
-    }, [pathname, router]);
+    }, [pathname]);
 
     // Pin a tab
     const pinTab = useCallback((tabId: string) => {
