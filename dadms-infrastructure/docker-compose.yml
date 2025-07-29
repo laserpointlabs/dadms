@@ -317,7 +317,7 @@ services:
 
   # Jupyter Lab - Interactive Development Environment
   jupyter-lab:
-    image: jupyter/scipy-notebook:latest
+    image: docker.io/jupyter/scipy-notebook:latest
     container_name: jupyter-lab
     environment:
       - JUPYTER_ENABLE_LAB=yes
