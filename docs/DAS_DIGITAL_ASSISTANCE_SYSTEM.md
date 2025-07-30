@@ -1010,3 +1010,65 @@ DAS represents the future of AI-native enterprise software where:
 - **The platform learns** from every interaction
 
 This transforms DADMS from a tool into an intelligent partner that grows more capable with every use, ultimately creating a self-sustaining ecosystem of intelligent automation.
+## Related Documentation
+
+- **Mathematical Foundations**: [Decision Options Space Mathematical Foundations](./DECISION_OPTIONS_SPACE_MATHEMATICAL_FOUNDATIONS.md) - The field-theoretic mathematical framework underlying DAS's ambient intelligence
+- **Backend Implementation**: [Backend Implementation Guide](./BACKEND_IMPLEMENTATION_GUIDE.md) - How DAS integrates with the backend architecture
+- **UI Integration**: [UI Decision Landscape Integration](./UI_DECISION_LANDSCAPE_INTEGRATION.md) - How the UI embodies ambient intelligence
+
+## Weight-Agnostic Intelligence
+
+### Core Principle: Geometry Over Preferences
+
+DAS embodies weight-agnostic intelligence by:
+
+1. **Learning Landscape Geometry**: Instead of learning user preferences as weights, DAS learns the natural geometry of decision spaces
+2. **Context-Adaptive Navigation**: Guides users based on geometric properties (gradients, curvature) not predetermined importance
+3. **Emergent Priorities**: Important factors emerge from the landscape topology rather than being assigned
+
+### Implementation in DAS
+
+```typescript
+class WeightAgnosticDAS {
+  // Instead of weighted preferences
+  // ❌ userPreferences: { cost: 0.3, quality: 0.7 }
+  
+  // DAS learns geometric relationships
+  // ✅ 
+  async learnLandscapeGeometry(interactions: UserInteraction[]): Promise<GeometricModel> {
+    // Learn natural coupling between dimensions
+    const coupling = await this.extractCouplingTensor(interactions);
+    
+    // Identify critical regions from curvature
+    const criticalRegions = await this.findHighCurvatureRegions(interactions);
+    
+    // Map stable paths through the space
+    const naturalPaths = await this.extractCommonTrajectories(interactions);
+    
+    return {
+      coupling,        // How dimensions relate
+      criticalRegions, // Where decisions matter most
+      naturalPaths,    // Common successful routes
+      topology: await this.computeTopology(interactions)
+    };
+  }
+  
+  // Guide without imposing weights
+  async provideGuidance(context: Context, position: Point): Promise<Guidance> {
+    const geometry = await this.getLocalGeometry(position);
+    
+    // Direction emerges from geometry, not weights
+    const naturalDirection = geometry.gradient;
+    const stability = geometry.eigenvalues;
+    const alternatives = geometry.manifoldPaths;
+    
+    return {
+      suggestion: this.explainGeometry(naturalDirection, context),
+      confidence: this.assessStability(stability),
+      alternatives: alternatives.map(path => this.describePath(path))
+    };
+  }
+}
+```
+
+This weight-agnostic approach ensures DAS remains unbiased and adaptive, providing truly intelligent assistance based on the natural structure of problems rather than imposed preferences.

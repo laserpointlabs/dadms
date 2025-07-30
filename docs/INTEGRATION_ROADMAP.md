@@ -23,9 +23,9 @@ This roadmap outlines the step-by-step integration strategy for DADMS 2.0, imple
 
 ---
 
-## Phase 1: Foundation Services (Weeks 1-2)
+## Phase 1: Foundation Services with Ambient Intelligence (Weeks 1-2)
 
-### Week 1: Process Manager & EventManager with DAS Bootstrap
+### Week 1: Process Manager & EventManager with Decision Landscapes
 
 #### Day 1-2: Process Manager Service Setup with DAS Integration
 ```bash
@@ -40,14 +40,17 @@ npm install -D typescript @types/express @types/cors @types/pg jest
 ```
 
 **Implementation Tasks:**
-- [ ] Base service template implementation
-- [ ] Camunda client integration
-- [ ] Process deployment and execution
-- [ ] Basic BPMN validation
-- [ ] Health check endpoints
+- [ ] Base service template with decision landscape patterns
+- [ ] Camunda client integration with multi-option workflows
+- [ ] Process deployment supporting alternative paths
+- [ ] BPMN validation for decision points
+- [ ] Option generation for each process type
+- [ ] Trade-off analysis for workflow alternatives
+- [ ] DAS context integration in process execution
+- [ ] Historical decision tracking
 - [ ] DAS bootstrap initialization
-- [ ] DAS process generation capability
-- [ ] DAS self-monitoring process
+- [ ] DAS process generation with options
+- [ ] DAS self-monitoring with decision landscapes
 
 #### Day 3-4: EventManager Service Setup
 ```bash
@@ -76,9 +79,9 @@ npm install -D typescript @types/express @types/ws jest
 - [ ] Error handling and recovery
 - [ ] Performance baseline establishment
 
-### Week 2: API Gateway & Project Service
+### Week 2: API Gateway & Project Service with Decision Landscapes
 
-#### Day 1-3: API Gateway Implementation
+#### Day 1-3: API Gateway Implementation - Ambient Intelligence Core
 ```bash
 # Create API Gateway service structure
 mkdir -p dadms-services/api-gateway/src/{services,middleware,config,tests}
@@ -91,11 +94,18 @@ npm install -D typescript @types/express jest
 ```
 
 **Implementation Tasks:**
-- [ ] Authentication middleware (JWT/OAuth2)
-- [ ] Rate limiting and quotas
-- [ ] Request routing and transformation
-- [ ] Workflow orchestration layer
-- [ ] Service discovery and health checks
+- [ ] Decision landscape response format standardization
+- [ ] DAS context injection middleware
+- [ ] Option generation framework for all endpoints
+- [ ] Trade-off analysis engine
+- [ ] Authentication middleware with preference tracking
+- [ ] Rate limiting with pattern analysis
+- [ ] Request routing with context enrichment
+- [ ] Response transformation to include options
+- [ ] Workflow orchestration with alternatives
+- [ ] Service discovery with capability mapping
+- [ ] Historical decision tracking middleware
+- [ ] Recommendation engine foundation
 
 #### Day 4-5: Project Service Enhancement
 **Tasks:**
