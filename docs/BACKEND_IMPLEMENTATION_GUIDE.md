@@ -1,13 +1,17 @@
 # DADMS 2.0 Backend Implementation & Integration Guide
 
+> ### 🌐 **Ambient Intelligence Architecture**
+> This guide describes how to build a system that doesn't just USE AI, but exists WITHIN ambient intelligence - where every service, workflow, and interaction is permeated by the DAS intelligence field.
+
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
 2. [API Gateway Architecture](#api-gateway-architecture)
 3. [Service Implementation Strategy](#service-implementation-strategy)
 4. [BPMN-First Orchestration](#bpmn-first-orchestration)
-5. [Integration Patterns](#integration-patterns)
-6. [Implementation Phases](#implementation-phases)
-7. [Potential Challenges & Mitigation](#potential-challenges--mitigation)
+5. [DAS Integration](#das-integration)
+6. [Integration Patterns](#integration-patterns)
+7. [Implementation Phases](#implementation-phases)
+8. [Potential Challenges & Mitigation](#potential-challenges--mitigation)
 
 ---
 
@@ -308,6 +312,68 @@ const TaskTypes = {
   }
 };
 ```
+
+---
+
+## DAS Integration
+
+### Digital Assistance System (DAS) as the AI-Native Core
+
+DAS transforms DADMS from a traditional tool into a self-evolving, intelligent platform. Unlike bolt-on AI assistants, DAS is not a component but the very essence of intelligence that permeates every aspect of the system, providing:
+
+#### Core DAS Capabilities
+- **Co-Creation**: Works alongside users to build workflows, ontologies, and pipelines
+- **Total Context Awareness**: Understands all system objects, relationships, and patterns
+- **Self-Building**: Generates its own process definitions and capabilities
+- **Continuous Learning**: Improves from every interaction and execution
+- **Bootstrap Capability**: Can initialize itself from minimal definitions
+
+#### DAS Integration Points
+
+```typescript
+// DAS Service Integration
+interface DASServiceIntegration {
+  // Process Manager Integration
+  processManager: {
+    generateProcess(description: string): Promise<BPMNProcess>;
+    optimizeProcess(processId: string): Promise<Optimization>;
+    troubleshootProcess(error: ProcessError): Promise<Solution>;
+  };
+  
+  // API Gateway Integration
+  apiGateway: {
+    interpretRequest(request: APIRequest): Promise<EnrichedRequest>;
+    suggestEndpoints(context: Context): Promise<EndpointSuggestion[]>;
+    generateResponse(data: any, context: Context): Promise<APIResponse>;
+  };
+  
+  // Workflow Orchestration
+  workflowOrchestration: {
+    generateWorkflow(intent: string): Promise<Workflow>;
+    suggestNextSteps(workflowState: WorkflowState): Promise<Step[]>;
+    optimizeExecution(workflow: Workflow): Promise<OptimizedWorkflow>;
+  };
+}
+```
+
+#### DAS Bootstrap Sequence
+
+```mermaid
+graph LR
+    A[Minimal Definition] --> B[Generate Core Processes]
+    B --> C[Deploy Self-Monitoring]
+    C --> D[Activate Learning]
+    D --> E[Enable Co-Creation]
+    E --> F[Continuous Evolution]
+    
+    subgraph "Self-Building"
+        B
+        C
+        D
+    end
+```
+
+For complete DAS documentation, see [DAS Digital Assistance System](./DAS_DIGITAL_ASSISTANCE_SYSTEM.md).
 
 ---
 

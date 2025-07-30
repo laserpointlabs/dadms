@@ -1490,11 +1490,11 @@ export default function AASCar({ isLayoutControlled = false }: AASCarProps) {
                                 onClick={() => setContextActiveTab(tab.id)}
                                 className={`
                                 px-3 py-3 text-xs font-medium transition-all duration-200 border-b-2 flex items-center justify-center min-w-[40px]
-                                ${contextActiveTab === tab.id
+                                        ${contextActiveTab === tab.id
                                         ? 'text-theme-accent-primary border-theme-accent-primary bg-theme-surface'
                                         : 'text-theme-text-secondary border-transparent hover:text-theme-accent-primary hover:border-theme-border-light'
                                     }
-                            `}
+                                    `}
                                 title={tab.description}
                             >
                                 <Icon name={tab.icon as CodiconName} size="sm" />

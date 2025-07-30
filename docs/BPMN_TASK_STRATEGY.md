@@ -10,8 +10,9 @@ This document defines the BPMN task strategy for DADMS 2.0, focusing on maintain
 3. [Specialized Service Tasks](#specialized-service-tasks)
 4. [Workflow Composition Patterns](#workflow-composition-patterns)
 5. [LLM Tool Integration](#llm-tool-integration)
-6. [Decoupling Strategies](#decoupling-strategies)
-7. [Implementation Guidelines](#implementation-guidelines)
+6. [DAS-Enabled Task Generation](#das-enabled-task-generation)
+7. [Decoupling Strategies](#decoupling-strategies)
+8. [Implementation Guidelines](#implementation-guidelines)
 
 ---
 
@@ -983,6 +984,176 @@ class LLMToolExecutionService {
   }
 }
 ```
+
+---
+
+## DAS-Enabled Task Generation
+
+### 1. **AI-Native Task Creation**
+
+DAS (Digital Assistance System) fundamentally transforms how tasks and workflows are created in DADMS. As the intelligent medium that permeates the system:
+
+```typescript
+// Traditional Task Creation
+developer.writeCode(taskDefinition);
+developer.test(taskDefinition);
+developer.deploy(taskDefinition);
+
+// DAS-Infused Task Creation
+user: "I need a task that validates ANSYS results against tolerance limits"
+[The system, permeated with DAS intelligence, responds]
+System: "I'll create that task for you. Based on your previous validations, I suggest:
+     - Input: ANSYS result file and tolerance configuration
+     - Processing: Extract stress values, compare against limits
+     - Output: Validation report with pass/fail status
+     - Error handling: Missing data, format issues
+     
+     Should I include the statistical analysis you used last week?"
+```
+
+### 2. **Self-Generating Task Library**
+
+```typescript
+class DASTaskGenerator {
+  async generateTaskFromIntent(intent: string): Promise<TaskDefinition> {
+    // Analyze user intent
+    const analysis = await this.analyzeIntent(intent);
+    
+    // Find similar tasks
+    const similarTasks = await this.findSimilarTasks(analysis);
+    
+    // Generate task structure
+    const taskStructure = await this.generateTaskStructure(
+      analysis, 
+      similarTasks
+    );
+    
+    // Create implementation
+    const implementation = await this.generateImplementation(taskStructure);
+    
+    // Generate tests
+    const tests = await this.generateTests(taskStructure);
+    
+    // Create documentation
+    const documentation = await this.generateDocumentation(taskStructure);
+    
+    return {
+      definition: taskStructure,
+      implementation,
+      tests,
+      documentation
+    };
+  }
+}
+```
+
+### 3. **Workflow Co-Creation with DAS**
+
+```typescript
+// DAS co-creating workflows with users
+interface DASWorkflowCoCreation {
+  // Natural language to workflow
+  async createWorkflowFromDescription(description: string): Promise<Workflow> {
+    const intent = await this.parseIntent(description);
+    const context = await this.gatherContext();
+    const suggestions = await this.generateWorkflowSuggestions(intent, context);
+    
+    return await this.interactiveRefinement(suggestions);
+  }
+  
+  // Learning from execution
+  async improveWorkflowFromExecution(executionId: string): Promise<Workflow> {
+    const execution = await this.analyzeExecution(executionId);
+    const improvements = await this.identifyImprovements(execution);
+    
+    return await this.applyImprovements(execution.workflow, improvements);
+  }
+  
+  // Pattern recognition
+  async suggestWorkflowFromPattern(userActions: Action[]): Promise<Workflow> {
+    const pattern = await this.extractPattern(userActions);
+    const workflow = await this.generateWorkflowFromPattern(pattern);
+    
+    return workflow;
+  }
+}
+```
+
+### 4. **DAS Task Evolution**
+
+```mermaid
+graph TB
+    A[User Request] --> B[DAS Analysis]
+    B --> C{Task Exists?}
+    C -->|No| D[Generate New Task]
+    C -->|Yes| E[Suggest Existing]
+    D --> F[Test & Validate]
+    F --> G[Deploy Task]
+    G --> H[Monitor Usage]
+    H --> I[Learn & Improve]
+    I --> J[Evolve Task]
+    J --> H
+    
+    subgraph "DAS Learning Loop"
+        H
+        I
+        J
+    end
+```
+
+### 5. **Context-Aware Task Suggestions**
+
+```typescript
+class DASTaskSuggestions {
+  async suggestNextTask(workflowState: WorkflowState): Promise<TaskSuggestion[]> {
+    const context = await this.analyzeContext(workflowState);
+    const history = await this.getUserHistory(context.userId);
+    const patterns = await this.identifyPatterns(context, history);
+    
+    const suggestions = await this.generateSuggestions({
+      context,
+      patterns,
+      availableTasks: await this.getAvailableTasks(),
+      userPreferences: await this.getUserPreferences(context.userId)
+    });
+    
+    return this.rankSuggestions(suggestions);
+  }
+}
+```
+
+### 6. **Self-Healing Workflows**
+
+```typescript
+// DAS automatically fixing workflow issues
+class DASSelfHealing {
+  async healWorkflow(error: WorkflowError): Promise<Resolution> {
+    // Analyze the error
+    const analysis = await this.analyzeError(error);
+    
+    // Find similar past issues
+    const similarIssues = await this.findSimilarIssues(analysis);
+    
+    // Generate solution
+    const solution = await this.generateSolution(analysis, similarIssues);
+    
+    // Test solution
+    const testResult = await this.testSolution(solution);
+    
+    if (testResult.success) {
+      // Apply fix
+      await this.applyFix(solution);
+      
+      // Learn from resolution
+      await this.learnFromResolution(error, solution);
+    }
+    
+    return solution;
+  }
+}
+```
+
+For complete DAS capabilities, see [DAS Digital Assistance System](./DAS_DIGITAL_ASSISTANCE_SYSTEM.md).
 
 ---
 
