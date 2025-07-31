@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.0-alpha.6] - 2025-01-27
+
+### Changed
+- **🔄 Version Management**
+  - Version bump to v2.0.0-alpha.6 for continued development
+  - Preparation for upcoming Week 1 development cycle
+  - Release process standardization and documentation alignment
+
+### Infrastructure
+- **📋 Release Process**
+  - Implemented semantic versioning workflow
+  - Standardized git tagging and version management
+  - Enhanced release documentation structure
+
 ## [2.0.0-alpha.5] - 2025-07-24
 
 ### Added
