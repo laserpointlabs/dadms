@@ -1,0 +1,1211 @@
+# OpenAPI Extension for Ontology Workspace Versioning
+# This extension adds comprehensive versioning capabilities to the existing Ontology Workspace Service API
+
+openapi: 3.0.3
+info:
+  title: DADMS Ontology Workspace Versioning API Extension
+  version: 1.0.0
+  description: |
+    Advanced versioning capabilities for DADMS Ontology Workspace Service including:
+    - Comprehensive version management with semantic versioning
+    - DAS-assisted impact analysis and migration planning
+    - Emergency response and rollback capabilities
+    - Cross-system dependency tracking and coordination
+    - Intelligent stakeholder communication management
+
+# Tags for versioning endpoints
+tags:
+  - name: Version Management
+    description: Core ontology version management operations
+  - name: Impact Analysis  
+    description: Ecosystem impact analysis and prediction
+  - name: Migration Management
+    description: Migration planning and execution
+  - name: Branch Management
+    description: Version branching and merging operations
+  - name: DAS Version Intelligence
+    description: AI-assisted versioning guidance and optimization
+  - name: Stakeholder Communication
+    description: Stakeholder notification and change management
+  - name: Emergency Response
+    description: Emergency detection and response capabilities
+  - name: Cross-System Integration
+    description: Integration with DataManager and other DADMS services
+
+# Paths for versioning endpoints
+paths:
+  # Version Management
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/versions:
+    get:
+      tags: [Version Management]
+      summary: Get ontology version history
+      description: Retrieve comprehensive version history with metadata and change tracking
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+        - $ref: '#/components/parameters/VersionLimit'
+        - $ref: '#/components/parameters/VersionOffset'
+        - $ref: '#/components/parameters/StabilityLevel'
+        - $ref: '#/components/parameters/CreatedBy'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/VersionHistoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    post:
+      tags: [Version Management]
+      summary: Create new ontology version
+      description: Create a new version with comprehensive change tracking and impact analysis
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+      requestBody:
+        $ref: '#/components/requestBodies/CreateVersionRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/VersionCreatedResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/versions/{versionId}:
+    get:
+      tags: [Version Management]
+      summary: Get specific version details
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+        - $ref: '#/components/parameters/VersionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/VersionDetailsResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/versions/compare:
+    post:
+      tags: [Version Management]
+      summary: Compare ontology versions
+      description: Perform detailed comparison between versions with change analysis
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+      requestBody:
+        $ref: '#/components/requestBodies/CompareVersionsRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/VersionComparisonResponse'
+
+  # Impact Analysis
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/impact-analysis:
+    post:
+      tags: [Impact Analysis]
+      summary: Analyze ecosystem impact of proposed changes
+      description: Comprehensive impact analysis across entire DADMS ecosystem
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+      requestBody:
+        $ref: '#/components/requestBodies/ImpactAnalysisRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/ImpactAnalysisResponse'
+
+  /workspaces/{workspaceId}/ontologies/{ontologyId}/dependencies:
+    get:
+      tags: [Impact Analysis]
+      summary: Get comprehensive dependency graph
+      description: Retrieve complete dependency graph including hidden dependencies
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/OntologyId'
+        - $ref: '#/components/parameters/IncludeHidden'
+        - $ref: '#/components/parameters/DependencyDepth'
+      responses:
+        '200':
+          $ref: '#/components/responses/DependencyGraphResponse'
+
+  # Migration Management  
+  /workspaces/{workspaceId}/migration/plan:
+    post:
+      tags: [Migration Management]
+      summary: Create ecosystem migration plan
+      description: Generate comprehensive migration plan with DAS optimization
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        $ref: '#/components/requestBodies/MigrationPlanRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/MigrationPlanResponse'
+
+  /workspaces/{workspaceId}/migration/execute:
+    post:
+      tags: [Migration Management]  
+      summary: Execute migration plan
+      description: Execute coordinated migration across DADMS ecosystem
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        $ref: '#/components/requestBodies/ExecuteMigrationRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/MigrationExecutionResponse'
+
+  /workspaces/{workspaceId}/migration/{migrationId}/status:
+    get:
+      tags: [Migration Management]
+      summary: Get migration status
+      description: Real-time migration progress and status monitoring
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MigrationId'
+      responses:
+        '200':
+          $ref: '#/components/responses/MigrationStatusResponse'
+
+  # DAS Integration
+  /workspaces/{workspaceId}/das/version-guidance:
+    post:
+      tags: [DAS Version Intelligence]
+      summary: Get DAS versioning guidance
+      description: AI-powered versioning strategy recommendations
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        $ref: '#/components/requestBodies/DASGuidanceRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/DASGuidanceResponse'
+
+  /workspaces/{workspaceId}/das/impact-prediction:
+    post:
+      tags: [DAS Version Intelligence]
+      summary: Get DAS impact prediction
+      description: AI-powered impact prediction with confidence intervals
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        $ref: '#/components/requestBodies/DASImpactPredictionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/DASImpactPredictionResponse'
+
+  # Emergency Response
+  /workspaces/{workspaceId}/emergency/response:
+    post:
+      tags: [Emergency Response]
+      summary: Initiate emergency response
+      description: Initiate automated emergency response for ontology incidents
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        $ref: '#/components/requestBodies/EmergencyResponseRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/EmergencyResponseInitiated'
+
+# Components
+components:
+  # Parameters
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique workspace identifier
+
+    OntologyId:
+      name: ontologyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique ontology identifier
+
+    VersionId:
+      name: versionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique version identifier
+
+    MigrationId:
+      name: migrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique migration identifier
+
+    VersionLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      description: Maximum number of versions to return
+
+    VersionOffset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of versions to skip
+
+    StabilityLevel:
+      name: stability_level
+      in: query
+      schema:
+        $ref: '#/components/schemas/StabilityLevel'
+      description: Filter by stability level
+
+    CreatedBy:
+      name: created_by
+      in: query
+      schema:
+        type: string
+      description: Filter by version creator
+
+    DateFrom:
+      name: date_from
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter versions created after this date
+
+    DateTo:
+      name: date_to
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter versions created before this date
+
+    IncludeHidden:
+      name: include_hidden
+      in: query
+      schema:
+        type: boolean
+        default: false
+      description: Include hidden dependencies in analysis
+
+    DependencyDepth:
+      name: depth
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 3
+      description: Maximum depth for dependency traversal
+
+  # Request Bodies
+  requestBodies:
+    CreateVersionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateVersionRequest'
+
+    CompareVersionsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CompareVersionsRequest'
+
+    ImpactAnalysisRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ImpactAnalysisRequest'
+
+    MigrationPlanRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MigrationPlanRequest'
+
+    ExecuteMigrationRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExecuteMigrationRequest'
+
+    DASGuidanceRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DASGuidanceRequest'
+
+    DASImpactPredictionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DASImpactPredictionRequest'
+
+    EmergencyResponseRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EmergencyResponseRequest'
+
+  # Responses
+  responses:
+    VersionHistoryResponse:
+      description: Version history retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VersionHistoryResponse'
+
+    VersionCreatedResponse:
+      description: Version created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VersionCreatedResponse'
+
+    VersionDetailsResponse:
+      description: Version details retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VersionDetailsResponse'
+
+    VersionComparisonResponse:
+      description: Version comparison completed successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VersionComparisonResponse'
+
+    ImpactAnalysisResponse:
+      description: Impact analysis completed successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ImpactAnalysisResponse'
+
+    DependencyGraphResponse:
+      description: Dependency graph retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DependencyGraphResponse'
+
+    MigrationPlanResponse:
+      description: Migration plan created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MigrationPlanResponse'
+
+    MigrationExecutionResponse:
+      description: Migration execution initiated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MigrationExecutionResponse'
+
+    MigrationStatusResponse:
+      description: Migration status retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MigrationStatusResponse'
+
+    DASGuidanceResponse:
+      description: DAS guidance generated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DASGuidanceResponse'
+
+    DASImpactPredictionResponse:
+      description: DAS impact prediction completed successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DASImpactPredictionResponse'
+
+    EmergencyResponseInitiated:
+      description: Emergency response initiated successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EmergencyResponseInitiated'
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # Schemas
+  schemas:
+    # Core Version Management Schemas
+    OntologyVersion:
+      type: object
+      required:
+        - version_id
+        - version_number
+        - stability_level
+        - created_at
+        - created_by
+      properties:
+        version_id:
+          type: string
+          format: uuid
+          description: Unique version identifier
+        version_number:
+          type: string
+          pattern: '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'
+          description: Semantic version number
+          example: "2.1.0"
+        stability_level:
+          $ref: '#/components/schemas/StabilityLevel'
+        created_at:
+          type: string
+          format: date-time
+          description: Version creation timestamp
+        created_by:
+          type: string
+          description: User who created the version
+        change_summary:
+          type: string
+          description: Summary of changes in this version
+        change_justification:
+          type: string
+          description: Business justification for changes
+        breaking_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BreakingChange'
+        compatibility_level:
+          $ref: '#/components/schemas/CompatibilityLevel'
+        migration_required:
+          type: boolean
+          description: Whether migration is required for this version
+        affected_dependencies:
+          type: integer
+          description: Number of dependencies affected by this version
+        quality_metrics:
+          $ref: '#/components/schemas/QualityMetrics'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionTag'
+
+    StabilityLevel:
+      type: string
+      enum:
+        - alpha
+        - beta
+        - release_candidate
+        - stable
+        - deprecated
+        - end_of_life
+      description: Version stability level
+
+    CompatibilityLevel:
+      type: string
+      enum:
+        - backward_compatible
+        - forward_compatible
+        - breaking_change
+        - major_revision
+      description: Compatibility level with previous versions
+
+    BreakingChange:
+      type: object
+      required:
+        - change_type
+        - element_affected
+        - impact_level
+        - description
+      properties:
+        change_type:
+          $ref: '#/components/schemas/ChangeType'
+        element_affected:
+          type: string
+          description: Ontology element affected by the change
+        impact_level:
+          $ref: '#/components/schemas/ImpactLevel'
+        description:
+          type: string
+          description: Description of the breaking change
+        migration_notes:
+          type: string
+          description: Notes for migrating from this change
+
+    ChangeType:
+      type: string
+      enum:
+        - class_deletion
+        - class_rename
+        - property_deletion
+        - property_type_change
+        - hierarchy_restructure
+        - namespace_change
+        - axiom_removal
+        - constraint_tightening
+        - semantic_shift
+        - cardinality_restriction
+        - domain_range_modification
+        - class_addition
+        - property_addition
+        - axiom_addition
+      description: Type of ontology change
+
+    ImpactLevel:
+      type: string
+      enum:
+        - critical
+        - major
+        - minor
+        - patch
+        - enhancement
+      description: Impact level of the change
+
+    QualityMetrics:
+      type: object
+      properties:
+        completeness:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Ontology completeness score
+        consistency:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Ontology consistency score
+        maintainability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Ontology maintainability score
+        complexity:
+          type: number
+          minimum: 0
+          description: Ontology complexity metric
+        coverage:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Domain coverage score
+
+    VersionTag:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: Tag key
+        value:
+          type: string
+          description: Tag value
+
+    # Request Schemas
+    CreateVersionRequest:
+      type: object
+      required:
+        - version_type
+        - change_summary
+      properties:
+        version_type:
+          type: string
+          enum: [major, minor, patch]
+          description: Type of version increment
+        change_summary:
+          type: string
+          description: Summary of changes in this version
+        change_justification:
+          type: string
+          description: Business justification for changes
+        stability_level:
+          $ref: '#/components/schemas/StabilityLevel'
+        breaking_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BreakingChange'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionTag'
+        notify_stakeholders:
+          type: boolean
+          default: true
+          description: Whether to notify affected stakeholders
+        run_impact_analysis:
+          type: boolean
+          default: true
+          description: Whether to run automatic impact analysis
+
+    CompareVersionsRequest:
+      type: object
+      required:
+        - from_version
+        - to_version
+      properties:
+        from_version:
+          type: string
+          description: Source version for comparison
+        to_version:
+          type: string
+          description: Target version for comparison
+        comparison_scope:
+          $ref: '#/components/schemas/ComparisonScope'
+        include_semantic_analysis:
+          type: boolean
+          default: true
+          description: Include semantic change analysis
+
+    ComparisonScope:
+      type: object
+      properties:
+        include_classes:
+          type: boolean
+          default: true
+        include_properties:
+          type: boolean
+          default: true
+        include_individuals:
+          type: boolean
+          default: true
+        include_axioms:
+          type: boolean
+          default: true
+        include_annotations:
+          type: boolean
+          default: false
+
+    # Impact Analysis Schemas
+    ImpactAnalysisRequest:
+      type: object
+      required:
+        - proposed_changes
+      properties:
+        proposed_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposedChange'
+        analysis_scope:
+          $ref: '#/components/schemas/AnalysisScope'
+        das_assistance:
+          $ref: '#/components/schemas/DASAssistanceOptions'
+
+    ProposedChange:
+      type: object
+      required:
+        - change_type
+        - element_affected
+      properties:
+        change_type:
+          $ref: '#/components/schemas/ChangeType'
+        element_affected:
+          type: string
+          description: Ontology element to be changed
+        change_details:
+          type: object
+          description: Detailed change specification
+          additionalProperties: true
+
+    AnalysisScope:
+      type: object
+      properties:
+        include_hidden_dependencies:
+          type: boolean
+          default: true
+        include_performance_impact:
+          type: boolean
+          default: true
+        include_security_analysis:
+          type: boolean
+          default: false
+        forecast_horizon_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 90
+
+    DASAssistanceOptions:
+      type: object
+      properties:
+        enable_ai_predictions:
+          type: boolean
+          default: true
+        include_recommendations:
+          type: boolean
+          default: true
+        confidence_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+
+    # Migration Schemas
+    MigrationPlanRequest:
+      type: object
+      required:
+        - from_version
+        - to_version
+      properties:
+        from_version:
+          type: string
+          description: Source version for migration
+        to_version:
+          type: string
+          description: Target version for migration
+        migration_requirements:
+          $ref: '#/components/schemas/MigrationRequirements'
+        target_systems:
+          type: array
+          items:
+            type: string
+          description: Systems to include in migration
+        das_assistance:
+          $ref: '#/components/schemas/MigrationDASAssistance'
+
+    MigrationRequirements:
+      type: object
+      properties:
+        max_downtime_minutes:
+          type: integer
+          minimum: 0
+          description: Maximum acceptable downtime in minutes
+        rollback_required:
+          type: boolean
+          default: true
+          description: Whether rollback capability is required
+        stakeholder_approval_required:
+          type: boolean
+          default: false
+          description: Whether stakeholder approval is needed
+        testing_environment:
+          type: string
+          description: Environment for testing migration
+        coordination_strategy:
+          $ref: '#/components/schemas/CoordinationStrategy'
+
+    CoordinationStrategy:
+      type: string
+      enum:
+        - sequential_ordered
+        - parallel_coordinated
+        - dependency_driven
+        - adaptive_dynamic
+        - risk_minimized
+        - performance_optimized
+      description: Strategy for coordinating migration across systems
+
+    MigrationDASAssistance:
+      type: object
+      properties:
+        optimize_timeline:
+          type: boolean
+          default: true
+        generate_rollback_plan:
+          type: boolean
+          default: true
+        create_communication_plan:
+          type: boolean
+          default: true
+
+    ExecuteMigrationRequest:
+      type: object
+      required:
+        - migration_plan_id
+      properties:
+        migration_plan_id:
+          type: string
+          format: uuid
+          description: Migration plan to execute
+        execution_mode:
+          type: string
+          enum: [simulation, dry_run, production]
+          default: production
+          description: Execution mode for migration
+        force_execution:
+          type: boolean
+          default: false
+          description: Force execution even if warnings exist
+
+    # DAS Schemas
+    DASGuidanceRequest:
+      type: object
+      required:
+        - scenario
+      properties:
+        scenario:
+          $ref: '#/components/schemas/VersioningScenario'
+        guidance_scope:
+          $ref: '#/components/schemas/GuidanceScope'
+
+    VersioningScenario:
+      type: object
+      required:
+        - scenario_type
+        - current_version
+        - proposed_changes
+      properties:
+        scenario_type:
+          type: string
+          enum:
+            - ontology_enhancement
+            - bug_fix
+            - performance_optimization
+            - security_update
+            - compliance_update
+          description: Type of versioning scenario
+        current_version:
+          type: string
+          description: Current ontology version
+        proposed_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposedChange'
+        constraints:
+          $ref: '#/components/schemas/VersioningConstraints'
+
+    VersioningConstraints:
+      type: object
+      properties:
+        max_downtime:
+          type: string
+          description: Maximum acceptable downtime
+        stakeholder_availability:
+          type: string
+          description: When stakeholders are available
+        testing_requirements:
+          type: string
+          description: Testing requirements
+        rollback_requirement:
+          type: string
+          description: Rollback time requirements
+
+    GuidanceScope:
+      type: object
+      properties:
+        include_timing_recommendations:
+          type: boolean
+          default: true
+        include_risk_analysis:
+          type: boolean
+          default: true
+        include_resource_planning:
+          type: boolean
+          default: true
+        include_alternative_approaches:
+          type: boolean
+          default: true
+
+    DASImpactPredictionRequest:
+      type: object
+      required:
+        - ontology_id
+        - proposed_changes
+      properties:
+        ontology_id:
+          type: string
+          format: uuid
+        proposed_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposedChange'
+        prediction_horizon:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+          description: Prediction horizon in days
+
+    # Emergency Response Schemas
+    EmergencyResponseRequest:
+      type: object
+      required:
+        - emergency_condition
+      properties:
+        emergency_condition:
+          $ref: '#/components/schemas/EmergencyCondition'
+        response_requirements:
+          $ref: '#/components/schemas/ResponseRequirements'
+
+    EmergencyCondition:
+      type: object
+      required:
+        - emergency_type
+        - severity_level
+        - description
+      properties:
+        emergency_type:
+          $ref: '#/components/schemas/EmergencyType'
+        severity_level:
+          $ref: '#/components/schemas/EmergencySeverityLevel'
+        description:
+          type: string
+          description: Description of the emergency condition
+        affected_systems:
+          type: array
+          items:
+            type: string
+          description: Systems affected by the emergency
+        detection_time:
+          type: string
+          format: date-time
+          description: When the emergency was detected
+        impact_scope:
+          $ref: '#/components/schemas/ImpactScope'
+
+    EmergencyType:
+      type: string
+      enum:
+        - ontology_corruption
+        - massive_validation_failure
+        - dependency_cascade_failure
+        - data_inconsistency_crisis
+        - performance_degradation
+        - security_compromise
+        - migration_failure
+        - rollback_failure
+      description: Type of emergency condition
+
+    EmergencySeverityLevel:
+      type: string
+      enum:
+        - critical
+        - high
+        - medium
+        - low
+      description: Severity level of emergency
+
+    ImpactScope:
+      type: object
+      properties:
+        users_affected:
+          type: integer
+          description: Number of users affected
+        data_records_affected:
+          type: integer
+          description: Number of data records affected
+        business_processes_disrupted:
+          type: array
+          items:
+            type: string
+          description: Business processes disrupted
+
+    ResponseRequirements:
+      type: object
+      properties:
+        max_resolution_time:
+          type: string
+          description: Maximum time to resolve emergency
+        stakeholder_notification_required:
+          type: boolean
+          default: true
+        regulatory_reporting_required:
+          type: boolean
+          default: false
+        preserve_audit_trail:
+          type: boolean
+          default: true
+
+    # Response Schemas
+    VersionHistoryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required:
+            - versions
+            - total_versions
+            - current_version
+          properties:
+            versions:
+              type: array
+              items:
+                $ref: '#/components/schemas/OntologyVersion'
+            total_versions:
+              type: integer
+            current_version:
+              type: string
+            pagination:
+              $ref: '#/components/schemas/PaginationInfo'
+
+    VersionCreatedResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required:
+            - version_id
+            - version_number
+            - created_at
+          properties:
+            version_id:
+              type: string
+              format: uuid
+            version_number:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            impact_analysis:
+              $ref: '#/components/schemas/ImpactAnalysisSummary'
+            stakeholder_notifications:
+              $ref: '#/components/schemas/NotificationSummary'
+
+    ImpactAnalysisSummary:
+      type: object
+      properties:
+        overall_impact_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        affected_systems:
+          type: integer
+        breaking_changes:
+          type: integer
+        migration_required:
+          type: boolean
+        estimated_migration_time:
+          type: string
+
+    NotificationSummary:
+      type: object
+      properties:
+        notifications_generated:
+          type: integer
+        notifications_sent:
+          type: integer
+        estimated_review_time:
+          type: string
+
+    PaginationInfo:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        has_more:
+          type: boolean
+
+    # Additional Response Schemas (truncated for space - would include full schemas for all response types)
+    
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error details
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+              description: Error timestamp
+
+# WebSocket Events Schema (for reference)
+# Note: OpenAPI 3.0 doesn't fully support WebSocket, but this shows the structure
+components:
+  schemas:
+    VersioningWebSocketEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - data
+      properties:
+        type:
+          type: string
+          enum:
+            - version_created
+            - impact_analysis_completed
+            - migration_progress
+            - emergency_detected
+            - stakeholder_response
+          description: Type of WebSocket event
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+        data:
+          type: object
+          description: Event-specific data
+          additionalProperties: true
+        metadata:
+          type: object
+          description: Additional event metadata
+          additionalProperties: true

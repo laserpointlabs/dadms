@@ -63,6 +63,70 @@ This document details the API endpoints for the DataManager Service in DADMS 2.0
 | POST   | `/units/detect`                        | Detect units from data patterns           | UnitDetectionRequest (JSON)     | UnitDetectionResult (JSON)      | Yes   |
 | GET    | `/units/suggest`                       | Get unit suggestions from context         | Query parameters                | UnitSuggestion[] (JSON)         | Yes   |
 | POST   | `/units/feedback`                      | Provide unit detection feedback           | UnitFeedback (JSON)             | FeedbackResponse (JSON)          | Yes   |
+| **Domain Integration & Mapping** |
+| GET    | `/domains`                             | List registered domains                   | Query parameters                | Domain[] (JSON)                 | Yes   |
+| POST   | `/domains`                             | Register new domain                       | DomainConfig (JSON)             | Domain (JSON)                    | Yes   |
+| GET    | `/domains/{domainId}`                  | Get domain details                        | Path parameter: domain ID       | Domain (JSON)                    | Yes   |
+| PUT    | `/domains/{domainId}`                  | Update domain configuration               | DomainConfig (JSON)             | Domain (JSON)                    | Yes   |
+| DELETE | `/domains/{domainId}`                  | Delete domain                             | Path parameter: domain ID       | Success message                  | Yes   |
+| POST   | `/domains/discover`                    | Discover external domains                 | DiscoveryConfig (JSON)          | DiscoveredDomain[] (JSON)        | Yes   |
+| GET    | `/mappings`                            | List domain mappings                      | Query parameters                | DomainMapping[] (JSON)           | Yes   |
+| POST   | `/mappings`                            | Create domain mapping                     | MappingConfig (JSON)            | DomainMapping (JSON)             | Yes   |
+| GET    | `/mappings/{mappingId}`                | Get mapping details                       | Path parameter: mapping ID      | DomainMapping (JSON)             | Yes   |
+| PUT    | `/mappings/{mappingId}`                | Update domain mapping                     | MappingConfig (JSON)            | DomainMapping (JSON)             | Yes   |
+| DELETE | `/mappings/{mappingId}`                | Delete domain mapping                     | Path parameter: mapping ID      | Success message                  | Yes   |
+| POST   | `/mappings/{mappingId}/execute`        | Execute domain mapping                    | MappingExecutionRequest (JSON)  | MappingResult (JSON)             | Yes   |
+| POST   | `/mappings/{mappingId}/validate`       | Validate domain mapping                   | Path parameter: mapping ID      | ValidationResult (JSON)          | Yes   |
+| GET    | `/mappings/suggest`                    | Suggest domain mappings                   | Query parameters                | MappingSuggestion[] (JSON)       | Yes   |
+| **Visual Data Management** |
+| GET    | `/visualizations/lineage/{projectId}` | Get data lineage visualization            | Path parameter: project ID      | ReactFlowDiagram (JSON)          | Yes   |
+| PUT    | `/visualizations/lineage/{projectId}` | Update lineage visualization              | ReactFlowDiagram (JSON)         | Success message                  | Yes   |
+| GET    | `/visualizations/mapping/{mappingId}` | Get mapping canvas visualization          | Path parameter: mapping ID      | ReactFlowDiagram (JSON)          | Yes   |
+| PUT    | `/visualizations/mapping/{mappingId}` | Update mapping canvas                     | ReactFlowDiagram (JSON)         | Success message                  | Yes   |
+| GET    | `/visualizations/topology/{projectId}`| Get data source topology                  | Path parameter: project ID      | ReactFlowDiagram (JSON)          | Yes   |
+| PUT    | `/visualizations/topology/{projectId}`| Update topology visualization             | ReactFlowDiagram (JSON)         | Success message                  | Yes   |
+| POST   | `/visualizations/export`               | Export visualization                      | ExportRequest (JSON)            | Yes   |
+| **Enhanced Ontology Integration** |
+| POST   | `/ontology/link`                       | Link domain to ontology                   | OntologyLinkRequest (JSON)      | OntologyLink (JSON)              | Yes   |
+| POST   | `/ontology/validate`                   | Validate domain against ontology          | OntologyValidationRequest       | OntologyValidationResult (JSON)  | Yes   |
+| POST   | `/ontology/generate`                   | Generate ontology from domain             | OntologyGenerationRequest       | GeneratedOntology (JSON)         | Yes   |
+| POST   | `/ontology/sync`                       | Sync with ontology workspace              | OntologySyncRequest (JSON)      | SyncResult (JSON)                | Yes   |
+| GET    | `/ontology/patterns`                   | Discover data patterns using ontology     | Query parameters                | DiscoveredPattern[] (JSON)       | Yes   |
+| **DAS Enhanced Operations** |
+| GET    | `/das/opportunities/external`          | Get DAS discovered external data          | Query parameters                | DiscoveredDataOpportunity[]      | Yes   |
+| GET    | `/das/opportunities/synthetic`         | Get synthetic truth opportunities         | Query parameters                | SyntheticTruthOpportunity[]      | Yes   |
+| POST   | `/das/synthetic/create`                | Create DAS synthetic dataset              | SyntheticDatasetRequest (JSON)  | SyntheticDataSet (JSON)          | Yes   |
+| GET    | `/das/patterns/emergent`               | Get DAS discovered emergent patterns      | Query parameters                | EmergentPattern[] (JSON)         | Yes   |
+| GET    | `/das/recommendations/data`            | Get DAS data recommendations              | Query parameters                | DataRecommendation[] (JSON)      | Yes   |
+| **Data Versioning** |
+| POST   | `/data/{recordId}/versions`            | Create new data record version            | VersionMetadata (JSON)          | DataRecordVersion (JSON)         | Yes   |
+| GET    | `/data/{recordId}/versions`            | Get data record version history           | Query parameters                | DataRecordVersion[] (JSON)       | Yes   |
+| GET    | `/data/{recordId}/versions/{versionId}`| Get specific data record version          | Path parameters                 | VersionedDataRecord (JSON)       | Yes   |
+| POST   | `/data/{recordId}/versions/compare`    | Compare data record versions              | VersionComparisonRequest (JSON) | VersionComparison (JSON)         | Yes   |
+| POST   | `/data/{recordId}/versions/rollback`   | Rollback to previous version              | RollbackRequest (JSON)          | RollbackResult (JSON)            | Yes   |
+| **Dataset Versioning** |
+| POST   | `/datasets/{datasetId}/versions`       | Create new dataset version                | DatasetVersionMetadata (JSON)   | DatasetVersion (JSON)            | Yes   |
+| GET    | `/datasets/{datasetId}/versions`       | Get dataset version history               | Query parameters                | DatasetVersion[] (JSON)          | Yes   |
+| POST   | `/datasets/{datasetId}/versions/compare` | Compare dataset versions               | DatasetComparisonRequest (JSON) | DatasetVersionComparison (JSON)  | Yes   |
+| POST   | `/datasets/{datasetId}/versions/promote` | Promote dataset version               | PromotionRequest (JSON)         | PromotionResult (JSON)           | Yes   |
+| **Synthetic Data Versioning** |
+| POST   | `/synthetic/{syntheticId}/regenerate`  | Regenerate synthetic dataset              | RegenerationRequest (JSON)      | SyntheticRegenerationResult      | Yes   |
+| GET    | `/synthetic/{syntheticId}/versions`    | Get synthetic dataset versions            | Query parameters                | SyntheticVersionInfo[] (JSON)    | Yes   |
+| GET    | `/synthetic/{syntheticId}/dependencies`| Get synthetic data dependencies           | Path parameter: synthetic ID    | DependencyGraph (JSON)           | Yes   |
+| **Mapping Versioning** |
+| POST   | `/mappings/{mappingId}/versions`       | Create new mapping version                | MappingVersionRequest (JSON)    | MappingVersionInfo (JSON)        | Yes   |
+| GET    | `/mappings/{mappingId}/versions`       | Get mapping version history               | Query parameters                | MappingVersionInfo[] (JSON)      | Yes   |
+| POST   | `/mappings/{mappingId}/migrate`        | Migrate mapping usage                     | MigrationRequest (JSON)         | MigrationResult (JSON)           | Yes   |
+| POST   | `/mappings/{mappingId}/impact`         | Analyze mapping change impact             | ImpactAnalysisRequest (JSON)    | MappingImpactAnalysis (JSON)     | Yes   |
+| **Version Management** |
+| POST   | `/versions/branches`                   | Create version branch                     | BranchRequest (JSON)            | VersionBranch (JSON)             | Yes   |
+| POST   | `/versions/branches/{branchId}/merge`  | Merge version branch                      | MergeRequest (JSON)             | MergeResult (JSON)               | Yes   |
+| POST   | `/versions/impact/analyze`             | Analyze cross-version impact              | ImpactAnalysisRequest (JSON)    | ImpactAnalysis (JSON)            | Yes   |
+| GET    | `/versions/dependencies/{artifactId}` | Get version dependencies                  | Path parameter: artifact ID     | VersionDependency[] (JSON)       | Yes   |
+| **DAS Version Intelligence** |
+| GET    | `/das/versioning/recommend`            | Get DAS versioning recommendations        | Query parameters                | VersioningRecommendation (JSON)  | Yes   |
+| POST   | `/das/versioning/detect-changes`       | Detect semantic changes with DAS         | ChangeDetectionRequest (JSON)   | SemanticChangeAnalysis (JSON)    | Yes   |
+| POST   | `/das/versioning/rollback-recommend`   | Get DAS rollback recommendations          | RollbackAnalysisRequest (JSON)  | RollbackRecommendation (JSON)    | Yes   |
 | GET    | `/health`                              | Service health check                      | None                            | HealthStatus (JSON)              | No    |
 | GET    | `/metrics`                             | Service performance metrics               | None                            | DataManagerMetrics (JSON)       | Yes   |
 
@@ -146,6 +210,292 @@ enum DataSourceType {
     MESSAGE_QUEUE = "message_queue", // Kafka, RabbitMQ, Redis
     STREAMING = "streaming",        // Real-time data streams
     THIRD_PARTY_API = "third_party_api" // External SaaS APIs
+}
+```
+
+### Domain Integration Data Models
+
+#### Domain Structure
+```typescript
+interface Domain {
+    id: string;                     // Unique domain identifier
+    name: string;                   // Domain name
+    description: string;            // Domain description
+    domain_type: DomainType;        // Domain classification
+    primary_ontology_id: string;    // Primary ontology reference
+    secondary_ontologies: string[]; // Additional ontologies
+    domain_schema: DomainSchema;    // Schema structure
+    vocabulary: DomainVocabulary;   // Domain vocabulary
+    semantic_context: SemanticContext; // Semantic information
+    data_patterns: DataPattern[];   // Recognized patterns
+    integration_constraints: IntegrationConstraint[]; // Integration rules
+    created_at: Date;
+    updated_at: Date;
+}
+
+enum DomainType {
+    ENGINEERING = "engineering",
+    FINANCE = "finance",
+    HEALTHCARE = "healthcare", 
+    MANUFACTURING = "manufacturing",
+    AEROSPACE = "aerospace",
+    DEFENSE = "defense",
+    RESEARCH = "research",
+    BUSINESS = "business",
+    SCIENTIFIC = "scientific",
+    REGULATORY = "regulatory",
+    CUSTOM = "custom"
+}
+```
+
+#### Domain Mapping Structure
+```typescript
+interface DomainMapping {
+    id: string;                     // Unique mapping identifier
+    name: string;                   // Mapping name
+    description: string;            // Mapping description
+    source_domain: Domain;          // Source domain
+    target_domain: Domain;          // Target domain
+    ontology_bridge: OntologyBridge; // Semantic bridge
+    mapping_rules: MappingRule[];   // Transformation rules
+    transformation_pipeline: TransformationPipeline; // Processing pipeline
+    validation_rules: ValidationRule[]; // Validation rules
+    confidence_score: number;       // Mapping confidence (0-1)
+    status: MappingStatus;          // Current status
+    created_by: string;             // Creator
+    approved_by?: string;           // Approver
+    created_at: Date;
+    updated_at: Date;
+}
+
+interface OntologyBridge {
+    primary_ontology_id: string;
+    source_concept_mappings: ConceptMapping[];
+    target_concept_mappings: ConceptMapping[];
+    semantic_alignment: SemanticAlignment;
+    bridge_relationships: BridgeRelationship[];
+    reasoning_path: ReasoningPath[];
+}
+
+interface MappingRule {
+    rule_id: string;
+    rule_type: MappingRuleType;
+    source_path: string;
+    target_path: string;
+    transformation: Transformation;
+    conditions: MappingCondition[];
+    ontology_justification: OntologyJustification;
+    confidence: number;
+    priority: number;
+}
+
+enum MappingRuleType {
+    DIRECT_MAPPING = "direct_mapping",
+    TRANSFORMATION_MAPPING = "transformation_mapping",
+    AGGREGATION_MAPPING = "aggregation_mapping",
+    CONDITIONAL_MAPPING = "conditional_mapping",
+    LOOKUP_MAPPING = "lookup_mapping",
+    DERIVED_MAPPING = "derived_mapping",
+    UNIT_CONVERSION_MAPPING = "unit_conversion_mapping"
+}
+```
+
+#### Visualization Data Models
+```typescript
+interface ReactFlowDiagram {
+    diagram_id: string;
+    diagram_type: DiagramType;
+    nodes: ReactFlowNode[];
+    edges: ReactFlowEdge[];
+    viewport: Viewport;
+    metadata: DiagramMetadata;
+    created_at: Date;
+    updated_at: Date;
+}
+
+enum DiagramType {
+    DATA_LINEAGE = "data_lineage",
+    DOMAIN_MAPPING = "domain_mapping",
+    SOURCE_TOPOLOGY = "source_topology",
+    TRANSFORMATION_PIPELINE = "transformation_pipeline",
+    SCHEMA_RELATIONSHIPS = "schema_relationships"
+}
+
+interface ReactFlowNode {
+    id: string;
+    type: string;
+    position: { x: number; y: number };
+    data: Record<string, any>;
+    style?: Record<string, any>;
+    className?: string;
+}
+
+interface ReactFlowEdge {
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    data?: Record<string, any>;
+    style?: Record<string, any>;
+    className?: string;
+}
+```
+
+#### DAS Enhanced Data Models
+```typescript
+interface DiscoveredDataOpportunity {
+    opportunity_id: string;
+    discovered_source: ExternalDataSource;
+    relevance_to_project: RelevanceAssessment;
+    potential_value: ValueAssessment;
+    integration_complexity: ComplexityAssessment;
+    das_confidence: number;
+    discovery_reasoning: DASReasoning;
+    suggested_actions: SuggestedAction[];
+    discovered_at: Date;
+}
+
+interface SyntheticTruthOpportunity {
+    opportunity_id: string;
+    candidate_datasets: DataSet[];
+    fusion_strategy: FusionStrategy;
+    expected_benefits: ExpectedBenefit[];
+    complexity_assessment: ComplexityAssessment;
+    das_confidence: number;
+    identified_at: Date;
+}
+
+interface SyntheticDataSet {
+    id: string;
+    name: string;
+    description: string;
+    source_datasets: SourceDataSetInfo[];
+    fusion_methodology: FusionMethodology;
+    das_orchestration_log: DASOrchestrationLog;
+    coherence_metrics: CoherenceMetrics;
+    truth_confidence: TruthConfidence;
+    synthetic_metadata: SyntheticMetadata;
+    update_strategy: UpdateStrategy;
+    quality_assurance: QualityAssurance;
+    created_at: Date;
+    updated_at: Date;
+}
+
+interface DASReasoning {
+    discovery_triggers: string[];           // What led DAS to find this
+    context_analysis: ContextAnalysis;      // How DAS analyzed the context
+    pattern_matching: PatternMatch[];       // Patterns DAS recognized
+    predictive_insights: PredictiveInsight[]; // What DAS predicts about value
+}
+```
+
+#### Data Versioning Models
+```typescript
+interface DataRecordVersion {
+    version_id: string;                 // Unique version identifier
+    version_number: string;             // Semantic version (e.g., "1.2.3")
+    version_type: VersionType;          // Major, minor, patch, snapshot
+    record_id: string;                  // Parent record ID
+    created_at: Date;
+    created_by: string;
+    change_summary: string;
+    change_reason: string;
+    parent_version_id?: string;
+    is_current: boolean;
+    is_published: boolean;
+    content_hash: string;
+    tags: VersionTag[];
+}
+
+enum VersionType {
+    MAJOR = "major",                    // Breaking changes
+    MINOR = "minor",                    // New features, backward compatible
+    PATCH = "patch",                    // Bug fixes, corrections
+    SNAPSHOT = "snapshot",              // Work in progress
+    BRANCH = "branch",                  // Experimental branch
+    MERGE = "merge"                     // Merged from branch
+}
+
+interface DatasetVersion {
+    version_id: string;
+    version_number: string;
+    dataset_id: string;
+    record_count: number;
+    record_versions: RecordVersionReference[];
+    schema_version: string;
+    created_at: Date;
+    created_by: string;
+    change_summary: string;
+    compatibility: CompatibilityInfo;
+    data_signature: DatasetSignature;
+}
+
+interface SyntheticVersionInfo {
+    synthetic_version_id: string;
+    version_number: string;
+    generation_timestamp: Date;
+    fusion_algorithm_version: string;
+    source_data_fingerprint: string;   // Hash of all source data versions
+    quality_metrics: SyntheticQualityMetrics;
+    validation_results: SyntheticValidationResults;
+    regeneration_triggers: RegenerationTrigger[];
+}
+
+interface MappingVersionInfo {
+    mapping_version_id: string;
+    version_number: string;
+    mapping_id: string;
+    source_domain_version: string;
+    target_domain_version: string;
+    ontology_version: string;
+    backward_compatible: boolean;
+    breaking_changes: BreakingChange[];
+    migration_required: boolean;
+    deprecation_info?: DeprecationInfo;
+}
+
+interface VersionComparison {
+    from_version: string;
+    to_version: string;
+    changes: ChangeDetail[];
+    change_summary: ChangeSummary;
+    impact_assessment: ImpactAssessment;
+    migration_recommendations: string[];
+}
+
+interface ChangeDetail {
+    change_type: ChangeType;
+    field_path: string;
+    old_value: any;
+    new_value: any;
+    impact_level: ImpactLevel;
+    description: string;
+}
+
+enum ChangeType {
+    ADDED = "added",
+    MODIFIED = "modified",
+    DELETED = "deleted",
+    MOVED = "moved",
+    RENAMED = "renamed",
+    TYPE_CHANGED = "type_changed"
+}
+
+enum ImpactLevel {
+    NONE = "none",
+    LOW = "low",
+    MEDIUM = "medium",
+    HIGH = "high",
+    BREAKING = "breaking"
+}
+
+interface VersioningRecommendation {
+    recommended_strategy: DatasetVersioningType;
+    reasoning: string[];
+    expected_benefits: string[];
+    estimated_storage_impact: StorageImpact;
+    implementation_complexity: ComplexityAssessment;
+    das_confidence: number;
 }
 ```
 
@@ -1596,4 +1946,474 @@ The DataManager both consumes and publishes events through the EventManager:
 
 ---
 
+### 14. Domain Integration Endpoints
+
+#### POST `/domains`
+**Description**: Register a new domain for semantic integration
+
+**Request Body**:
+```json
+{
+    "name": "Aerospace Engineering Domain",
+    "description": "Domain for aerospace engineering data and processes",
+    "domain_type": "aerospace",
+    "primary_ontology_id": "aerospace-ontology-v1",
+    "secondary_ontologies": ["units-ontology", "materials-ontology"],
+    "domain_schema": {
+        "entities": [
+            {
+                "name": "aircraft",
+                "properties": ["registration", "model", "manufacturer"]
+            }
+        ]
+    },
+    "vocabulary": {
+        "preferred_terms": {
+            "altitude": "flight_level",
+            "speed": "airspeed"
+        }
+    }
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "id": "domain-aerospace-uuid",
+        "name": "Aerospace Engineering Domain",
+        "domain_type": "aerospace",
+        "primary_ontology_id": "aerospace-ontology-v1",
+        "created_at": "2025-01-15T14:35:12Z",
+        "updated_at": "2025-01-15T14:35:12Z"
+    }
+}
+```
+
+#### POST `/mappings`
+**Description**: Create a semantic mapping between two domains
+
+**Request Body**:
+```json
+{
+    "name": "Aerospace to Manufacturing Mapping",
+    "description": "Semantic mapping for aerospace manufacturing data",
+    "source_domain_id": "domain-aerospace-uuid",
+    "target_domain_id": "domain-manufacturing-uuid",
+    "ontology_bridge": {
+        "primary_ontology_id": "industrial-bridge-ontology",
+        "source_concept_mappings": [
+            {
+                "domain_concept": "aircraft_part",
+                "ontology_concept_uri": "http://ontology.example.com/manufactured_component",
+                "mapping_type": "close_match",
+                "confidence": 0.92
+            }
+        ]
+    },
+    "mapping_rules": [
+        {
+            "rule_type": "direct_mapping",
+            "source_path": "part.material",
+            "target_path": "component.material_specification",
+            "confidence": 0.95
+        }
+    ]
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "id": "mapping-aero-mfg-uuid",
+        "name": "Aerospace to Manufacturing Mapping",
+        "source_domain": { /* domain details */ },
+        "target_domain": { /* domain details */ },
+        "confidence_score": 0.89,
+        "status": "draft",
+        "created_at": "2025-01-15T14:35:12Z"
+    }
+}
+```
+
+#### POST `/mappings/{mappingId}/execute`
+**Description**: Execute a domain mapping on actual data
+
+**Request Body**:
+```json
+{
+    "source_data": {
+        "aircraft_parts": [
+            {
+                "part_number": "AP-12345",
+                "material": "aluminum_alloy_6061",
+                "weight_lbs": 15.5,
+                "dimensions": {
+                    "length_in": 12.0,
+                    "width_in": 8.0
+                }
+            }
+        ]
+    },
+    "execution_options": {
+        "validate_mapping": true,
+        "preserve_original": true,
+        "apply_unit_conversions": true
+    }
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "mapping_execution_id": "exec-uuid",
+        "mapped_data": {
+            "manufactured_components": [
+                {
+                    "component_id": "AP-12345",
+                    "material_specification": "aluminum_alloy_6061",
+                    "mass_kg": 7.03,
+                    "dimensions_mm": {
+                        "length": 304.8,
+                        "width": 203.2
+                    }
+                }
+            ]
+        },
+        "mapping_statistics": {
+            "fields_mapped": 5,
+            "unit_conversions_applied": 3,
+            "validation_passed": true,
+            "confidence_score": 0.94
+        },
+        "execution_time_ms": 245
+    }
+}
+```
+
+### 15. Visual Data Management Endpoints
+
+#### GET `/visualizations/lineage/{projectId}`
+**Description**: Get data lineage visualization for a project
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "diagram_id": "lineage-proj-uuid",
+        "diagram_type": "data_lineage",
+        "nodes": [
+            {
+                "id": "source-customer-db",
+                "type": "dataSource",
+                "position": { "x": 100, "y": 100 },
+                "data": {
+                    "label": "Customer Database",
+                    "sourceType": "database",
+                    "recordCount": 150000,
+                    "healthStatus": "healthy"
+                }
+            },
+            {
+                "id": "transform-cleansing",
+                "type": "transformation",
+                "position": { "x": 300, "y": 100 },
+                "data": {
+                    "label": "Data Cleansing",
+                    "transformationType": "filter",
+                    "rulesApplied": 12
+                }
+            }
+        ],
+        "edges": [
+            {
+                "id": "edge-source-transform",
+                "source": "source-customer-db",
+                "target": "transform-cleansing",
+                "type": "dataFlow",
+                "data": {
+                    "recordsProcessed": 148500,
+                    "lastUpdate": "2025-01-15T14:30:00Z"
+                }
+            }
+        ],
+        "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1.0
+        }
+    }
+}
+```
+
+#### GET `/visualizations/mapping/{mappingId}`
+**Description**: Get domain mapping canvas visualization
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "diagram_id": "mapping-canvas-uuid",
+        "diagram_type": "domain_mapping",
+        "nodes": [
+            {
+                "id": "source-field-altitude",
+                "type": "domainField",
+                "position": { "x": 50, "y": 100 },
+                "data": {
+                    "fieldName": "altitude_ft",
+                    "fieldType": "number",
+                    "unit": "foot",
+                    "domain": "aerospace"
+                }
+            },
+            {
+                "id": "ontology-concept-height",
+                "type": "ontologyConcept",
+                "position": { "x": 250, "y": 100 },
+                "data": {
+                    "conceptUri": "http://ontology.example.com/physical/height",
+                    "conceptLabel": "Height Above Reference",
+                    "dimension": "length"
+                }
+            },
+            {
+                "id": "target-field-elevation",
+                "type": "domainField",
+                "position": { "x": 450, "y": 100 },
+                "data": {
+                    "fieldName": "elevation_m",
+                    "fieldType": "number",
+                    "unit": "meter",
+                    "domain": "manufacturing"
+                }
+            }
+        ],
+        "edges": [
+            {
+                "id": "mapping-altitude-height",
+                "source": "source-field-altitude",
+                "target": "ontology-concept-height",
+                "type": "ontologyAlignment",
+                "data": {
+                    "confidence": 0.95,
+                    "mappingType": "semantic_match"
+                }
+            },
+            {
+                "id": "mapping-height-elevation",
+                "source": "ontology-concept-height",
+                "target": "target-field-elevation",
+                "type": "ontologyAlignment",
+                "data": {
+                    "confidence": 0.88,
+                    "unitConversion": "foot_to_meter"
+                }
+            }
+        ]
+    }
+}
+```
+
+### 16. Enhanced Ontology Integration Endpoints
+
+#### POST `/ontology/link`
+**Description**: Link a domain to an ontology workspace
+
+**Request Body**:
+```json
+{
+    "domain_id": "domain-aerospace-uuid",
+    "ontology_workspace_id": "workspace-aero-ont-uuid",
+    "ontology_id": "aerospace-ontology-v2",
+    "link_type": "primary",
+    "auto_sync": true,
+    "sync_frequency": "daily"
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": {
+        "link_id": "ont-link-uuid",
+        "domain_id": "domain-aerospace-uuid",
+        "ontology_workspace_id": "workspace-aero-ont-uuid",
+        "ontology_id": "aerospace-ontology-v2",
+        "link_status": "active",
+        "last_sync": "2025-01-15T14:35:12Z",
+        "next_sync": "2025-01-16T14:35:12Z",
+        "created_at": "2025-01-15T14:35:12Z"
+    }
+}
+```
+
+### 17. DAS Enhanced Operations Endpoints
+
+#### GET `/das/opportunities/external`
+**Description**: Get external data opportunities discovered by DAS
+
+**Query Parameters**:
+- `project_id`: Filter by project
+- `domain`: Filter by domain
+- `confidence_min`: Minimum DAS confidence score
+- `limit`: Maximum results to return
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "opportunity_id": "das-opp-ext-001",
+            "discovered_source": {
+                "name": "FAA Aircraft Registry",
+                "type": "rest_api",
+                "url": "https://registry.faa.gov/api/v2",
+                "description": "Official FAA aircraft registration database"
+            },
+            "relevance_to_project": {
+                "score": 0.92,
+                "reasoning": "Project involves aircraft tracking and this provides official registration data",
+                "matching_entities": ["aircraft", "registration", "ownership"]
+            },
+            "potential_value": {
+                "score": 0.87,
+                "estimated_records": 380000,
+                "data_freshness": "real_time",
+                "coverage": "comprehensive"
+            },
+            "integration_complexity": {
+                "score": 0.34,
+                "estimated_effort_hours": 16,
+                "technical_challenges": ["rate_limiting", "api_key_required"]
+            },
+            "das_confidence": 0.91,
+            "discovery_reasoning": {
+                "discovery_triggers": ["project_context_analysis", "entity_matching"],
+                "pattern_matching": [
+                    {
+                        "pattern": "aircraft_data_needs",
+                        "confidence": 0.88
+                    }
+                ]
+            },
+            "suggested_actions": [
+                {
+                    "action": "request_api_access",
+                    "priority": "high",
+                    "description": "Apply for FAA API access credentials"
+                },
+                {
+                    "action": "create_integration_mapping",
+                    "priority": "medium",
+                    "description": "Map FAA schema to project data model"
+                }
+            ],
+            "discovered_at": "2025-01-15T14:35:12Z"
+        }
+    ]
+}
+```
+
+#### GET `/das/opportunities/synthetic`
+**Description**: Get synthetic truth creation opportunities identified by DAS
+
+**Response**:
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "opportunity_id": "das-synth-001",
+            "candidate_datasets": [
+                {
+                    "dataset_id": "aircraft-telemetry-2024",
+                    "name": "Aircraft Telemetry Data 2024",
+                    "record_count": 2400000,
+                    "overlap_score": 0.78
+                },
+                {
+                    "dataset_id": "maintenance-records-2024", 
+                    "name": "Aircraft Maintenance Records 2024",
+                    "record_count": 45000,
+                    "overlap_score": 0.85
+                }
+            ],
+            "fusion_strategy": {
+                "method": "temporal_correlation",
+                "key_fields": ["aircraft_id", "timestamp"],
+                "confidence": 0.89,
+                "expected_completeness": 0.92
+            },
+            "expected_benefits": [
+                {
+                    "benefit_type": "data_completeness",
+                    "improvement": 0.34,
+                    "description": "Fill gaps in telemetry with maintenance context"
+                },
+                {
+                    "benefit_type": "analytical_depth",
+                    "improvement": 0.67,
+                    "description": "Enable predictive maintenance analysis"
+                }
+            ],
+            "das_confidence": 0.86,
+            "identified_at": "2025-01-15T14:35:12Z"
+        }
+    ]
+}
+```
+
+---
+
 The DataManager Service provides a robust, scalable foundation for all data operations within DADMS, enabling intelligent data integration, processing, and real-time event-driven workflows while maintaining the highest standards of security, reliability, and performance.
+
+## **Key Enhancements Summary**:
+
+### **1. Enhanced Ontology Integration**
+- Deep integration with Ontology Workspace Service (Port 3016)
+- Real-time ontology synchronization and validation
+- Ontology-driven data modeling and semantic discovery
+
+### **2. ReactFlow Visual Data Management**
+- Interactive data lineage visualization
+- Visual domain mapping canvas
+- Data source topology diagrams
+- Transformation pipeline designer
+
+### **3. Domain Integration Data Mapper**
+- Semantic mapping between different domains using ontologies as bridges
+- Intelligent field mapping with confidence scoring
+- Visual mapping rule designer
+- Automated transformation suggestion
+
+### **4. DAS Pervasive Intelligence**
+- Ambient data discovery and external source identification
+- Intelligent synthetic truth creation opportunities
+- Continuous change monitoring and adaptation
+- Emergent pattern recognition and recommendations
+
+### **5. Comprehensive Data Versioning**
+- **Immutable Record History**: Complete audit trail of all data changes
+- **Semantic Version Management**: Intelligent versioning based on change impact
+- **Branching & Merging**: Git-like operations for data collaboration
+- **Dependency Tracking**: Understand impact across related datasets
+- **Automated Regeneration**: Smart synthetic data updates when sources change
+
+### **6. DAS Version Intelligence**
+- **Predictive Versioning Strategy**: DAS recommends optimal versioning approaches
+- **Semantic Change Detection**: Understands business meaning of changes
+- **Intelligent Rollback**: Smart recommendations for issue resolution
+- **Storage Optimization**: Automatic storage strategy optimization
+- **Impact Prediction**: Anticipate downstream effects of changes
+
+These enhancements transform the DataManager into a sophisticated semantic integration platform that understands the meaning of data across different domains, provides intelligent assistance throughout the entire data lifecycle, and maintains comprehensive versioning and change management capabilities that ensure data integrity and traceability at enterprise scale.

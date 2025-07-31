@@ -3679,3 +3679,13 @@ tags:
     description: Dimensional analysis and consistency validation
   - name: Unit Intelligence
     description: Automated unit detection and machine learning capabilities
+  - name: Domain Integration
+    description: Domain registration and semantic integration
+  - name: Domain Mapping
+    description: Cross-domain mapping and transformation
+  - name: Visual Data Management
+    description: ReactFlow-based data visualization and management
+  - name: Enhanced Ontology Integration
+    description: Deep integration with ontology workspace service
+  - name: DAS Intelligence
+    description: Digital Assistance System enhanced operations

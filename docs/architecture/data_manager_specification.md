@@ -837,6 +837,8 @@ interface ConsumedEvents {
   "project.created": ProjectCreatedEvent;        // Auto-link data to new projects
   "ontology.updated": OntologyUpdatedEvent;     // Update metadata mappings
   "user.permission.changed": PermissionEvent;   // Update access controls
+  "das.external.data.discovered": DASDataDiscoveryEvent; // DAS found external data
+  "das.synthetic.truth.opportunity": DASSyntheticTruthEvent; // DAS identified data fusion opportunity
 }
 
 // Events published by DataManager
@@ -848,6 +850,21 @@ interface PublishedEvents {
   "data.quality.alert": DataQualityAlertEvent;
   "data.anomaly.detected": DataAnomalyEvent;
   "data.lineage.updated": DataLineageUpdatedEvent;
+  
+  // Domain Integration Events
+  "domain.mapping.created": DomainMappingCreatedEvent;
+  "domain.integration.completed": DomainIntegrationCompletedEvent;
+  "semantic.alignment.detected": SemanticAlignmentEvent;
+  
+  // DAS Enhanced Events
+  "das.data.discovered.external": DASDataDiscoveryEvent;
+  "das.fusion.opportunity": DASFusionOpportunityEvent;
+  "das.change.predicted": DASChangePredictionEvent;
+  "das.pattern.emerged": DASPatternEmergenceEvent;
+  "das.quality.optimization": DASQualityOptimizationEvent;
+  "das.stewardship.action": DASDataStewardshipEvent;
+  "das.synthetic.truth.generated": DASSyntheticTruthEvent;
+  "das.context.evolved": DASContextEvolutionEvent;
 }
 
 // Example event publishing
@@ -1155,4 +1172,375 @@ interface MonitoringConfiguration {
 
 ---
 
-This specification provides a comprehensive foundation for implementing the DataManager service as a crucial component of DADMS's data ecosystem, enabling intelligent data integration, processing, and event-driven workflows.
+## 10. Enhanced Ontology Integration
+
+### 10.1 Deep Ontology Workspace Service Integration
+```typescript
+interface OntologyWorkspaceIntegration {
+  // Real-time ontology synchronization
+  syncWithOntologyWorkspace(workspaceId: string): Promise<SyncResult>;
+  subscribeToOntologyChanges(workspaceId: string): AsyncIterable<OntologyChangeEvent>;
+  
+  // Ontology-driven data modeling
+  generateDataModelFromOntology(ontologyId: string, requirements: DataRequirements): Promise<GeneratedDataModel>;
+  validateDataModelAgainstOntology(modelId: string, ontologyId: string): Promise<ValidationReport>;
+  
+  // Semantic data discovery
+  discoverDataPatterns(ontologyId: string): Promise<DiscoveredPattern[]>;
+  suggestDataSourcesFromOntology(ontologyId: string): Promise<DataSourceSuggestion[]>;
+}
+
+interface OntologyEnrichedMetadata extends DataMetadata {
+  ontological_grounding: {
+    primary_concepts: OntologicalConcept[];
+    inferred_relationships: InferredRelationship[];
+    semantic_consistency_score: number;
+    domain_alignment: DomainAlignment;
+    concept_coverage: ConceptCoverage;
+  };
+  
+  // Integration with Ontology Workspace Service
+  ontology_workspace_id?: string;
+  ontology_version: string;
+  last_ontology_sync: Date;
+}
+```
+
+## 11. ReactFlow Visual Data Management
+
+### 11.1 Data Visualization Architecture
+```typescript
+interface DataVisualizationComponents {
+  // Data Lineage Visualization
+  DataLineageCanvas: React.FC<{
+    dataRecords: DataRecord[];
+    transformations: Transformation[];
+    onNodeClick: (recordId: string) => void;
+  }>;
+  
+  // Data Source Topology
+  DataSourceTopology: React.FC<{
+    dataSources: DataSource[];
+    connections: DataConnection[];
+    onConnectionCreate: (source: string, target: string) => void;
+  }>;
+  
+  // Transformation Pipeline Designer
+  TransformationDesigner: React.FC<{
+    pipeline: TransformationPipeline;
+    onPipelineUpdate: (pipeline: TransformationPipeline) => void;
+  }>;
+  
+  // Schema Relationship Viewer
+  SchemaRelationshipViewer: React.FC<{
+    schemas: Schema[];
+    relationships: SchemaRelationship[];
+    onRelationshipEdit: (relationshipId: string) => void;
+  }>;
+}
+
+// Custom ReactFlow node types for data management
+const dataManagerNodeTypes = {
+  dataSource: DataSourceNode,
+  dataRecord: DataRecordNode,
+  transformation: TransformationNode,
+  schema: SchemaNode,
+  ontologyConcept: OntologyConceptNode,
+  unitDefinition: UnitDefinitionNode,
+  validationRule: ValidationRuleNode,
+  qualityMetric: QualityMetricNode
+};
+
+const dataManagerEdgeTypes = {
+  dataFlow: DataFlowEdge,
+  transformation: TransformationEdge,
+  schemaRelationship: SchemaRelationshipEdge,
+  ontologyMapping: OntologyMappingEdge,
+  unitConversion: UnitConversionEdge,
+  lineage: LineageEdge
+};
+```
+
+## 12. Domain Integration Data Mapper
+
+### 12.1 Ontology-Guided Semantic Integration
+```typescript
+interface DomainIntegrationMapper {
+  // Core mapping engine
+  mapperEngine: SemanticMappingEngine;
+  ontologyBridge: OntologyBridge;
+  domainAligner: DomainAligner;
+  mappingValidator: MappingValidator;
+  
+  // Visual mapping interface
+  mappingCanvas: ReactFlowMappingCanvas;
+  mappingLibrary: MappingTemplateLibrary;
+  
+  // Integration orchestration
+  integrationOrchestrator: DomainIntegrationOrchestrator;
+}
+
+interface SemanticMappingEngine {
+  // Ontology-guided mapping creation
+  createSemanticMapping(sourceDomain: Domain, targetDomain: Domain, ontologyId: string): Promise<DomainMapping>;
+  generateMappingRules(sourceSchema: Schema, targetSchema: Schema, ontologyContext: OntologyContext): Promise<MappingRule[]>;
+  
+  // Intelligent field mapping
+  mapFieldsUsingOntology(sourceFields: Field[], targetFields: Field[], ontology: Ontology): Promise<FieldMapping[]>;
+  suggestTransformations(sourceField: Field, targetField: Field, ontologyPath: OntologyPath): Promise<TransformationSuggestion[]>;
+  
+  // Semantic relationship detection
+  detectSemanticRelationships(sourceData: any, targetDomain: string, ontologyId: string): Promise<SemanticRelationship[]>;
+  validateSemanticConsistency(mapping: DomainMapping): Promise<ConsistencyReport>;
+}
+
+interface Domain {
+  id: string;
+  name: string;
+  description: string;
+  domain_type: DomainType;
+  primary_ontology_id: string;
+  secondary_ontologies: string[];
+  domain_schema: DomainSchema;
+  vocabulary: DomainVocabulary;
+  semantic_context: SemanticContext;
+  data_patterns: DataPattern[];
+  integration_constraints: IntegrationConstraint[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+enum DomainType {
+  ENGINEERING = "engineering",
+  FINANCE = "finance", 
+  HEALTHCARE = "healthcare",
+  MANUFACTURING = "manufacturing",
+  AEROSPACE = "aerospace",
+  DEFENSE = "defense",
+  RESEARCH = "research",
+  BUSINESS = "business",
+  SCIENTIFIC = "scientific",
+  REGULATORY = "regulatory",
+  CUSTOM = "custom"
+}
+
+interface DomainMapping {
+  id: string;
+  name: string;
+  description: string;
+  source_domain: Domain;
+  target_domain: Domain;
+  ontology_bridge: OntologyBridge;
+  mapping_rules: MappingRule[];
+  transformation_pipeline: TransformationPipeline;
+  validation_rules: ValidationRule[];
+  mapping_metadata: MappingMetadata;
+  confidence_score: number;
+  status: MappingStatus;
+  created_by: string;
+  approved_by?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+```
+
+### 12.2 Visual Domain Mapping Canvas
+```typescript
+// ReactFlow Integration for Domain Mapping
+interface DomainMappingCanvas {
+  // Visual mapping components
+  SourceDomainPanel: React.FC<{domain: Domain, onFieldSelect: (field: Field) => void}>;
+  TargetDomainPanel: React.FC<{domain: Domain, onFieldSelect: (field: Field) => void}>;
+  OntologyBridgeVisualizer: React.FC<{ontologyBridge: OntologyBridge}>;
+  MappingRuleDesigner: React.FC<{onRuleCreate: (rule: MappingRule) => void}>;
+}
+
+// Custom ReactFlow node types for domain mapping
+const domainMappingNodeTypes = {
+  domainField: DomainFieldNode,
+  ontologyConcept: OntologyConceptNode,
+  mappingRule: MappingRuleNode,
+  transformation: TransformationNode,
+  validationPoint: ValidationPointNode,
+  semanticBridge: SemanticBridgeNode,
+  domainEntity: DomainEntityNode,
+  businessRule: BusinessRuleNode
+};
+```
+
+## 13. Digital Assistance System (DAS) Pervasive Intelligence
+
+### 13.1 DAS Ambient Data Intelligence
+```typescript
+// DAS as Ethereal Data Intelligence - not separate APIs but enhanced behaviors
+interface DASDataIntelligence {
+  // Ambient data discovery
+  ambientDataDiscovery: AmbientDataDiscovery;
+  
+  // Intelligent dataset orchestration  
+  syntheticTruthGeneration: SyntheticTruthGeneration;
+  
+  // Continuous change monitoring
+  adaptiveChangeDetection: AdaptiveChangeDetection;
+  
+  // Contextual data stewardship
+  contextualDataStewardship: ContextualDataStewardship;
+  
+  // Emergent data patterns
+  emergentPatternRecognition: EmergentPatternRecognition;
+}
+
+// DAS-Enhanced Data Operations (not separate APIs, but enhanced behaviors)
+interface DASEnhancedDataManager extends DataManager {
+  // Every operation is DAS-enhanced - these show the DAS influence
+  
+  // Standard ingest becomes DAS-aware ingest
+  ingest(data: any, metadata: DataMetadata): Promise<DASEnhancedDataRecord>;
+  
+  // Standard query becomes DAS-contextual query
+  query(filters: QueryFilters): Promise<DASContextualizedResults>;
+  
+  // Standard validation becomes DAS-intelligent validation
+  validateData(data: any, schemaId: string): Promise<DASIntelligentValidationResult>;
+}
+```
+
+### 13.2 DAS Ambient Data Discovery
+```typescript
+interface AmbientDataDiscovery {
+  // DAS operates in the background, constantly discovering
+  continuousExternalDataScanning: {
+    // DAS monitors project context and proactively finds relevant data
+    monitorProjectContext(projectId: string): AsyncIterable<DiscoveredDataOpportunity>;
+    
+    // DAS learns user patterns and suggests complementary data sources
+    suggestComplementaryDataSources(currentDataSets: string[]): Promise<DataSourceSuggestion[]>;
+    
+    // DAS identifies data gaps and finds sources to fill them
+    identifyAndFillDataGaps(projectContext: ProjectContext): Promise<DataGapFillStrategy>;
+    
+    // DAS discovers emerging data sources relevant to ongoing work
+    emergingDataSourceDiscovery(domainContext: DomainContext): AsyncIterable<EmergingDataSource>;
+  };
+}
+
+interface DiscoveredDataOpportunity {
+  opportunity_id: string;
+  discovered_source: ExternalDataSource;
+  relevance_to_project: RelevanceAssessment;
+  potential_value: ValueAssessment;
+  integration_complexity: ComplexityAssessment;
+  das_confidence: number;
+  discovery_reasoning: DASReasoning;
+  suggested_actions: SuggestedAction[];
+}
+
+interface DASReasoning {
+  discovery_triggers: string[];           // What led DAS to find this
+  context_analysis: ContextAnalysis;      // How DAS analyzed the context
+  pattern_matching: PatternMatch[];       // Patterns DAS recognized
+  predictive_insights: PredictiveInsight[]; // What DAS predicts about value
+}
+```
+
+### 13.3 DAS Synthetic Truth Generation
+```typescript
+interface SyntheticTruthGeneration {
+  // DAS automatically identifies datasets that should be combined
+  automaticDatasetGrouping: {
+    // DAS recognizes natural groupings in data
+    identifyComplementaryDataSets(projectId: string): Promise<DataSetGroup[]>;
+    
+    // DAS suggests synthetic truth creation opportunities
+    suggestSyntheticTruthOpportunities(dataSets: DataSet[]): Promise<SyntheticTruthOpportunity[]>;
+    
+    // DAS orchestrates the creation of synthetic datasets
+    orchestrateSyntheticDatasetCreation(groupingPlan: DataSetGroupingPlan): Promise<SyntheticDataSet>;
+    
+    // DAS maintains coherence across combined datasets
+    maintainSyntheticDatasetCoherence(syntheticDataSetId: string): AsyncIterable<CoherenceUpdate>;
+  };
+}
+
+interface SyntheticDataSet {
+  id: string;
+  name: string;
+  description: string;
+  source_datasets: SourceDataSetInfo[];
+  fusion_methodology: FusionMethodology;
+  das_orchestration_log: DASOrchestrationLog;
+  coherence_metrics: CoherenceMetrics;
+  truth_confidence: TruthConfidence;
+  synthetic_metadata: SyntheticMetadata;
+  update_strategy: UpdateStrategy;
+  quality_assurance: QualityAssurance;
+}
+```
+
+### 13.4 DAS Enhanced API Interface
+```typescript
+// Enhanced DataManager API with all new capabilities
+interface EnhancedDataManagerAPI extends DataManager {
+  // Data Versioning
+  createDataVersion(recordId: string, changes: any, metadata: VersionMetadata): Promise<DataRecordVersion>;
+  getDataVersions(recordId: string, filters?: VersionFilters): Promise<DataRecordVersion[]>;
+  compareVersions(recordId: string, fromVersion: string, toVersion: string): Promise<VersionComparison>;
+  rollbackData(recordId: string, targetVersionId: string): Promise<RollbackResult>;
+  
+  // Dataset Versioning
+  createDatasetVersion(datasetId: string, metadata: DatasetVersionMetadata): Promise<DatasetVersion>;
+  getDatasetVersionHistory(datasetId: string): Promise<DatasetVersion[]>;
+  promoteDatasetVersion(datasetId: string, versionId: string): Promise<PromotionResult>;
+  
+  // Synthetic Data Versioning
+  regenerateSyntheticData(syntheticId: string, reason: RegenerationReason): Promise<SyntheticRegenerationResult>;
+  trackSyntheticDependencies(syntheticId: string): Promise<DependencyGraph>;
+  
+  // Mapping Versioning
+  versionDomainMapping(mappingId: string, changes: MappingChanges): Promise<MappingVersionInfo>;
+  migrateMappingUsage(mappingId: string, fromVersion: string, toVersion: string): Promise<MigrationResult>;
+  
+  // Cross-Version Operations
+  analyzeVersionImpact(changes: ProposedChange[]): Promise<ImpactAnalysis>;
+  createVersionBranch(artifactId: string, branchName: string): Promise<VersionBranch>;
+  mergeVersionBranch(artifactId: string, branchId: string): Promise<MergeResult>;
+  
+  // Enhanced Ontology Integration
+  linkDomainToOntology(domainId: string, ontologyId: string): Promise<OntologyLink>;
+  validateDomainAgainstOntology(domainId: string, ontologyId: string): Promise<OntologyValidationResult>;
+  generateOntologyFromDomain(domainId: string): Promise<GeneratedOntology>;
+  
+  // Domain Integration Mapper
+  registerDomain(domainConfig: DomainConfig): Promise<Domain>;
+  createDomainMapping(mappingConfig: MappingConfig): Promise<DomainMapping>;
+  executeDomainMapping(mappingId: string, sourceData: any): Promise<MappingResult>;
+  suggestDomainMappings(sourceDomainId: string, targetDomainId: string, ontologyId: string): Promise<MappingSuggestion[]>;
+  
+  // Visual Mapping Interface
+  getMappingCanvas(mappingId: string): Promise<ReactFlowDiagram>;
+  updateMappingCanvas(mappingId: string, canvasData: ReactFlowDiagram): Promise<void>;
+  exportMappingVisualization(mappingId: string, format: ExportFormat): Promise<ExportResult>;
+  
+  // Data Visualization
+  getDataFlowDiagram(projectId: string): Promise<ReactFlowDiagram>;
+  updateDataFlowDiagram(projectId: string, diagram: ReactFlowDiagram): Promise<void>;
+  
+  // DAS Integration (enhanced behaviors, not separate endpoints)
+  // All existing endpoints are DAS-enhanced automatically
+  
+  // DAS Version Intelligence
+  predictVersioningStrategy(datasetId: string): Promise<VersioningRecommendation>;
+  detectSemanticChanges(recordId: string, newContent: any): Promise<SemanticChangeAnalysis>;
+  recommendRollbackStrategy(artifactId: string, issue: string): Promise<RollbackRecommendation>;
+}
+```
+
+This comprehensive specification provides the foundation for implementing the DataManager service as a sophisticated semantic data integration platform that:
+
+1. **Uses Ontologies as Semantic Bridges** to translate between different domain vocabularies
+2. **Provides Visual Data Management** using ReactFlow for intuitive data flow and mapping interfaces
+3. **Offers Intelligent Domain Integration** with automated semantic mapping and transformation
+4. **Embeds DAS Pervasive Intelligence** throughout all data operations for ambient assistance
+5. **Maintains Semantic Integrity** throughout complex data integration workflows
+
+The DAS enhancement transforms every data operation into an intelligent, context-aware experience where assistance is woven into the fabric of every interaction, process, and decision - making DADMS a truly living, learning data integration platform.
