@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# DADMS Server Management Script (Podman)
-# Usage: ./dadms-servers.sh [status|start|stop|restart|logs]
+# DADMS System Management Script
+# Usage: ./dadms-start.sh [status|start|stop|restart|logs|memory|backup|restore]
 
 show_status() {
     echo "🎯 DADMS System Status"
@@ -117,7 +117,7 @@ show_memory_info() {
             "MATCH (n) RETURN labels(n)[0] as Type, count(n) as Count" 2>/dev/null || echo "   Could not retrieve stats"
     else
         echo "❌ Neo4j Memory Server: Not Running"
-        echo "   Start with: ./dadms-servers.sh start"
+        echo "   Start with: ./dadms-start.sh start"
     fi
     
     echo ""
