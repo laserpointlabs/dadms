@@ -1,0 +1,231 @@
+---
+description: Automatically maintain architecture documentation and diagrams when changes occur to DADMS system components, services, or infrastructure.
+globs: dadms-services/**/*.js, dadms-services/**/*.ts, dadms-infrastructure/**/*.yml, dadms-infrastructure/**/*.yaml, package.json, docker-compose.yml, *.md
+alwaysApply: false
+---
+
+# DADMS Architecture Documentation Maintenance
+
+## When to Use This Rule
+
+This rule triggers automatically when:
+- **Service changes**: Adding/modifying services in `dadms-services/`
+- **Infrastructure changes**: Updating Docker configurations
+- **API modifications**: Changing endpoints or service interfaces
+- **Documentation editing**: Working on architecture-related docs
+- **Package dependencies**: Updating service dependencies
+
+## Architecture Documentation Requirements
+
+### **Mandatory Diagram Updates**
+
+When making these changes, **automatically update** corresponding diagrams:
+
+#### **Service Changes** → Update Service Architecture
+- **File**: `docs/architecture/service-architecture.md`
+- **Triggers**: New services, modified APIs, changed dependencies
+- **Diagram Type**: Mermaid service relationship diagram
+- **Include**: Service boundaries, API connections, data flow
+
+#### **Infrastructure Changes** → Update Infrastructure Topology  
+- **File**: `docs/architecture/infrastructure.md`
+- **Triggers**: Container changes, port modifications, new databases
+- **Diagram Type**: Mermaid deployment diagram
+- **Include**: Containers, networks, volumes, ports
+
+#### **Data Flow Changes** → Update Data Flow Diagrams
+- **File**: `docs/architecture/data-flow.md`
+- **Triggers**: New data sources, modified processing, storage changes
+- **Diagram Type**: Mermaid flowchart
+- **Include**: Data sources, transformations, storage, outputs
+
+#### **System Overview Changes** → Update High-Level Architecture
+- **File**: `docs/architecture/system-overview.md`
+- **Triggers**: Major component additions, architectural pattern changes
+- **Diagram Type**: Mermaid graph showing system components
+- **Include**: Major subsystems, external integrations, user interactions
+
+### **Architecture Documentation Structure**
+
+Maintain this standardized structure:
+
+```
+docs/architecture/
+├── system-overview.md          # High-level DADMS architecture
+├── service-architecture.md     # Microservices design & relationships  
+├── data-flow.md               # Data processing and movement
+├── infrastructure.md          # Container and deployment topology
+├── security-architecture.md   # Security patterns and controls
+├── integration-patterns.md    # External system integration
+└── decision-records/          # Architecture Decision Records (ADRs)
+    ├── ADR-001-microservices.md
+    ├── ADR-002-database-choice.md
+    └── ADR-XXX-topic.md
+```
+
+### **Mermaid Diagram Standards**
+
+#### **Service Architecture Diagram Template**
+```mermaid
+graph TB
+    subgraph "Frontend"
+        UI[DADMS UI :3000]
+    end
+    
+    subgraph "API Gateway"
+        GATEWAY[API Gateway]
+    end
+    
+    subgraph "Core Services"
+        PS[Project Service :3001]
+        LLM[LLM Service :3002]
+        KS[Knowledge Service :3003]
+        EM[Event Manager :3004]
+        DAS[Digital Assistance :3005]
+    end
+    
+    subgraph "Data Layer"
+        PG[(PostgreSQL :5432)]
+        NEO[(Neo4j :7687)]
+        REDIS[(Redis :6379)]
+        QDRANT[(Qdrant :6333)]
+    end
+    
+    UI --> GATEWAY
+    GATEWAY --> PS
+    GATEWAY --> LLM
+    GATEWAY --> KS
+    PS --> PG
+    LLM --> NEO
+    KS --> QDRANT
+```
+
+#### **Infrastructure Topology Template**
+```mermaid
+graph TB
+    subgraph "Development Environment"
+        subgraph "Applications"
+            UI_APP[dadms-ui :3000]
+            BACKEND[dadms-backend :3001]
+        end
+        
+        subgraph "Infrastructure Services"
+            PG_CONTAINER[PostgreSQL Container :5432]
+            NEO_CONTAINER[Neo4j Container :7687]
+            NEO_MEM[Neo4j Memory :7688]
+            REDIS_CONTAINER[Redis Container :6379]
+            QDRANT_CONTAINER[Qdrant Container :6333]
+        end
+        
+        subgraph "Management"
+            PM2[PM2 Process Manager]
+            PODMAN[Podman Compose]
+        end
+    end
+    
+    PM2 --> UI_APP
+    PM2 --> BACKEND
+    PODMAN --> PG_CONTAINER
+    PODMAN --> NEO_CONTAINER
+    PODMAN --> NEO_MEM
+    PODMAN --> REDIS_CONTAINER
+    PODMAN --> QDRANT_CONTAINER
+```
+
+### **Automatic Documentation Tasks**
+
+#### **When Adding New Services**
+1. **Update service architecture diagram** with new service node
+2. **Add service to infrastructure diagram** with port allocation
+3. **Document API endpoints** in `docs/api/service-name.md`
+4. **Update system overview** if it's a major component
+5. **Create ADR** if architectural decision was made
+
+#### **When Modifying Infrastructure**
+1. **Update infrastructure topology** with changes
+2. **Verify port allocations** are documented correctly
+3. **Update deployment guides** in `docs/deployment/`
+4. **Check security implications** and update security docs
+
+#### **When Changing APIs**
+1. **Update service relationships** in service architecture
+2. **Document API changes** in OpenAPI specs
+3. **Update integration patterns** if external APIs affected
+4. **Review data flow diagrams** for data processing changes
+
+### **Architecture Decision Records (ADRs)**
+
+Create ADRs for significant decisions:
+
+#### **ADR Template** (`docs/architecture/decision-records/ADR-XXX-title.md`)
+```markdown
+# ADR-XXX: [Decision Title]
+
+## Status
+[Proposed | Accepted | Rejected | Deprecated | Superseded]
+
+## Context
+[Describe the forces at play, including technological, political, social, and project local]
+
+## Decision
+[Describe the change that we're proposing or have agreed to]
+
+## Consequences
+[Describe the resulting context, after applying the decision]
+
+## Alternatives Considered
+[List other options that were considered]
+
+## References
+[Links to supporting materials]
+```
+
+### **Documentation Quality Standards**
+
+#### **Diagram Requirements**
+- **Consistent styling** across all Mermaid diagrams
+- **Clear labeling** with service names and ports
+- **Logical grouping** using subgraphs
+- **Current information** reflecting actual system state
+- **Version control** tracking diagram changes
+
+#### **Content Standards**
+- **Clear descriptions** of architectural patterns used
+- **Rationale explanations** for design decisions
+- **Integration details** for external systems
+- **Performance considerations** documented
+- **Security implications** addressed
+
+### **Validation Checklist**
+
+Before considering architecture documentation complete:
+
+- [ ] **All services** represented in service architecture diagram
+- [ ] **All containers** shown in infrastructure topology
+- [ ] **All ports** correctly documented and allocated
+- [ ] **Data flows** accurately represent processing
+- [ ] **API documentation** matches actual implementations
+- [ ] **ADRs created** for significant architectural decisions
+- [ ] **Cross-references** between related documents maintained
+- [ ] **Diagrams render correctly** in documentation tools
+
+## Integration with Development Workflow
+
+### **Pre-Commit Validation**
+- Architecture diagrams are current
+- Service documentation matches code
+- No undocumented architectural changes
+
+### **Code Review Requirements**
+- Architecture impacts identified and documented
+- Diagrams updated for infrastructure changes
+- ADRs created for significant decisions
+
+### **Deployment Validation**
+- Infrastructure topology matches deployment
+- Service relationships correctly documented
+- Performance and security considerations documented
+
+---
+
+**This rule ensures DADMS architecture documentation stays synchronized with actual system implementation and design decisions.**

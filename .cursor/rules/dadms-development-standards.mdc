@@ -1,0 +1,244 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# DADMS Development Standards & Best Practices
+
+## 🎯 Core Development Standards
+
+I will **automatically** enforce these standards during all development activities:
+
+### 📁 **File Organization Standards**
+
+#### **Utility Scripts Location**
+- **ALL utility scripts** must be placed in the `scripts/` folder
+- **NO scripts** at the project root level (except `dadms-start.sh`)
+- Script categories:
+  - `scripts/setup/` - Setup and installation scripts
+  - `scripts/backup/` - Backup and restore utilities
+  - `scripts/deploy/` - Deployment automation
+  - `scripts/dev/` - Development helper scripts
+  - `scripts/testing/` - Testing utilities
+
+#### **Documentation Structure**
+- **ALL documentation** must be in the `docs/` folder with proper categorization:
+  - `docs/architecture/` - System design and diagrams
+  - `docs/api/` - API documentation and specifications
+  - `docs/user/` - User guides and tutorials
+  - `docs/development/` - Development guides and standards
+  - `docs/deployment/` - Infrastructure and deployment docs
+- **NO markdown files** at project root except `README.md`
+- Use clear, descriptive filenames with consistent naming
+
+#### **Project Structure Enforcement**
+```
+dadms/
+├── docs/                    # ALL documentation here
+│   ├── architecture/        # System design, diagrams
+│   ├── api/                # API specs, endpoints
+│   ├── user/               # User guides
+│   ├── development/        # Dev guides, standards
+│   └── deployment/         # Infrastructure docs
+├── scripts/                # ALL utility scripts here
+│   ├── setup/              # Setup automation
+│   ├── backup/             # Backup utilities
+│   ├── deploy/             # Deployment scripts
+│   ├── dev/                # Development helpers
+│   └── testing/            # Test utilities
+├── dadms-services/         # Microservices code
+├── dadms-ui/              # Frontend application
+├── dadms-infrastructure/   # Container configs
+├── .cursor/               # Cursor configuration
+├── backups/               # Generated backups
+└── dadms-start.sh         # Main management script
+```
+
+### 🏗️ **Architecture Documentation Standards**
+
+#### **Always Keep Architecture Diagrams Updated**
+- **Mermaid diagrams** must be updated when:
+  - Adding new services or components
+  - Changing service relationships
+  - Modifying data flows
+  - Updating infrastructure
+- **Diagram locations**:
+  - `docs/architecture/system-overview.md` - High-level system architecture
+  - `docs/architecture/service-architecture.md` - Service-level designs
+  - `docs/architecture/data-flow.md` - Data flow diagrams
+  - `docs/architecture/infrastructure.md` - Infrastructure topology
+
+#### **Documentation Synchronization**
+- **API changes** → Update `docs/api/` specifications
+- **Service changes** → Update `docs/architecture/` diagrams
+- **Configuration changes** → Update `docs/deployment/` guides
+- **New features** → Update `docs/user/` guides
+
+### 💻 **Code Organization Standards**
+
+#### **Service Structure (Node.js/TypeScript)**
+```
+dadms-services/service-name/
+├── src/
+│   ├── routes/             # API route handlers
+│   ├── controllers/        # Business logic
+│   ├── models/            # Data models
+│   ├── middleware/        # Express middleware
+│   ├── utils/             # Helper functions
+│   ├── config/            # Configuration files
+│   └── types/             # TypeScript type definitions
+├── tests/
+│   ├── unit/              # Unit tests
+│   ├── integration/       # Integration tests
+│   └── fixtures/          # Test data
+├── package.json
+├── tsconfig.json
+└── README.md              # Service-specific docs
+```
+
+#### **Frontend Structure (React/TypeScript)**
+```
+dadms-ui/
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── pages/            # Page-level components
+│   ├── hooks/            # Custom React hooks
+│   ├── utils/            # Helper functions
+│   ├── types/            # TypeScript definitions
+│   ├── styles/           # CSS/SCSS files
+│   ├── assets/           # Images, fonts, etc.
+│   └── config/           # Configuration files
+├── public/               # Static assets
+├── tests/               # Test files
+└── docs/                # UI-specific documentation
+```
+
+### 🔧 **Development Workflow Standards**
+
+#### **Branch and Commit Standards**
+- **Feature branches**: `feature/description`
+- **Bug fixes**: `fix/issue-description`
+- **Documentation**: `docs/update-description`
+- **Infrastructure**: `infra/change-description`
+- **Commit messages**: Clear, descriptive, imperative mood
+
+#### **Testing Requirements**
+- **Unit tests** for all business logic
+- **Integration tests** for API endpoints
+- **Component tests** for React components
+- **E2E tests** for critical user workflows
+- **Test coverage** minimum 80% for new code
+
+#### **Code Quality Standards**
+- **TypeScript strict mode** enabled
+- **ESLint** and **Prettier** configured and enforced
+- **No console.log** in production code
+- **Error handling** at all service boundaries
+- **Input validation** for all API endpoints
+
+### 📊 **Port Management Standards**
+
+#### **Service Port Allocation**
+- **UI**: 3000
+- **Project Service**: 3001
+- **LLM Service**: 3002
+- **Knowledge Service**: 3003
+- **Event Manager**: 3004
+- **DAS (Digital Assistance)**: 3005
+- **Testing/Development**: 9999+ (avoid 3000-3021)
+
+#### **Infrastructure Ports**
+- **PostgreSQL**: 5432
+- **Neo4j Main**: 7474/7687
+- **Neo4j Memory**: 7475/7688
+- **Redis**: 6379
+- **Qdrant**: 6333
+
+### 🛡️ **Security & Configuration Standards**
+
+#### **Environment Variables**
+- **NO hardcoded secrets** in code
+- **Environment-specific configs** in `.env` files
+- **Secrets management** through secure vaults
+- **Configuration validation** at startup
+
+#### **Docker & Infrastructure**
+- **Multi-stage builds** for production images
+- **Non-root users** in containers
+- **Health checks** for all services
+- **Resource limits** defined
+- **Secrets** mounted as volumes, not env vars
+
+### 📝 **Documentation Standards**
+
+#### **Code Documentation**
+- **JSDoc comments** for all public functions
+- **README.md** for each service/component
+- **API documentation** using OpenAPI/Swagger
+- **Architecture Decision Records (ADRs)** for major decisions
+
+#### **User Documentation**
+- **Installation guides** with prerequisites
+- **Configuration examples** with explanations
+- **Troubleshooting sections** with common issues
+- **FAQ sections** for frequently asked questions
+
+## 🔄 **Automatic Enforcement**
+
+### **File Creation Rules**
+- Creating new scripts → Automatically place in appropriate `scripts/` subfolder
+- Creating documentation → Automatically organize in appropriate `docs/` subfolder
+- Adding new services → Follow established service structure template
+
+### **File Movement Rules**
+- Scripts in wrong location → Move to `scripts/` with proper categorization
+- Documentation in wrong location → Move to `docs/` with proper structure
+- Root-level clutter → Organize into appropriate folders
+
+### **Architecture Maintenance**
+- Service additions → Update architecture diagrams
+- API changes → Update API documentation
+- Infrastructure changes → Update deployment docs
+- Configuration changes → Update setup guides
+
+## 🎯 **Quality Gates**
+
+### **Before Committing**
+- Code passes linting and formatting
+- Tests pass locally
+- Documentation updated for changes
+- Architecture diagrams current
+- No secrets in code
+
+### **Before Deploying**
+- All tests pass in CI
+- Security scans complete
+- Performance tests pass
+- Documentation reviewed
+- Rollback plan confirmed
+
+## 💡 **Development Principles**
+
+### **Clean Code**
+- **Single Responsibility Principle** - One purpose per function/class
+- **DRY (Don't Repeat Yourself)** - Extract common patterns
+- **KISS (Keep It Simple, Stupid)** - Favor simplicity over cleverness
+- **YAGNI (You Aren't Gonna Need It)** - Don't over-engineer
+
+### **API Design**
+- **RESTful conventions** for HTTP APIs
+- **Consistent naming** across endpoints
+- **Proper HTTP status codes** for responses
+- **Input validation** and error handling
+- **Versioning strategy** for breaking changes
+
+### **Performance**
+- **Database queries** optimized with indexes
+- **Caching strategies** for frequently accessed data
+- **Async/await** for I/O operations
+- **Resource cleanup** to prevent memory leaks
+
+---
+
+**These standards ensure consistent, maintainable, and professional development practices across the entire DADMS platform.**

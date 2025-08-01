@@ -1,0 +1,507 @@
+---
+description: Enforce code quality, security, and performance standards for all DADMS development work including TypeScript, React, Node.js, and infrastructure code.
+globs: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.json, **/*.yml, **/*.yaml, Dockerfile*, *.env*, package.json
+alwaysApply: false
+---
+
+# DADMS Code Quality & Security Standards
+
+## When to Use This Rule
+
+This rule applies when working with:
+- **TypeScript/JavaScript** files (`.ts`, `.tsx`, `.js`, `.jsx`)
+- **Configuration files** (`.json`, `.yml`, `.yaml`)
+- **Package management** (`package.json`, `package-lock.json`)
+- **Environment files** (`.env*`)
+- **Docker files** (`Dockerfile*`)
+
+## Code Quality Standards
+
+### **TypeScript/JavaScript Standards**
+
+#### **Type Safety (TypeScript)**
+```typescript
+// ✅ GOOD: Strict typing
+interface UserRequest {
+  id: string;
+  email: string;
+  name: string;
+}
+
+async function getUser(id: string): Promise<UserRequest | null> {
+  // Implementation with proper error handling
+}
+
+// ❌ BAD: Any types or loose typing
+function getUser(id: any): any {
+  // No type safety
+}
+```
+
+#### **Error Handling Patterns**
+```typescript
+// ✅ GOOD: Comprehensive error handling
+try {
+  const result = await externalService.call();
+  return { success: true, data: result };
+} catch (error) {
+  logger.error('Service call failed', { error: error.message, context });
+  throw new ServiceError('External service unavailable', error);
+}
+
+// ❌ BAD: Silent failures or generic catches
+try {
+  await externalService.call();
+} catch (e) {
+  console.log('Error'); // No context, poor logging
+}
+```
+
+#### **Async/Await Best Practices**
+```typescript
+// ✅ GOOD: Proper async patterns
+async function processItems(items: Item[]): Promise<ProcessResult[]> {
+  const results = await Promise.allSettled(
+    items.map(item => processItem(item))
+  );
+  
+  return results.map((result, index) => {
+    if (result.status === 'fulfilled') {
+      return { success: true, data: result.value, item: items[index] };
+    } else {
+      logger.warn('Item processing failed', { 
+        item: items[index], 
+        error: result.reason 
+      });
+      return { success: false, error: result.reason, item: items[index] };
+    }
+  });
+}
+
+// ❌ BAD: Blocking operations or unhandled promises
+function processItems(items: Item[]) {
+  items.forEach(async (item) => { // Don't use async in forEach
+    await processItem(item); // Unhandled errors
+  });
+}
+```
+
+### **React Component Standards**
+
+#### **Component Structure**
+```tsx
+// ✅ GOOD: Well-structured component
+interface ProjectCardProps {
+  project: Project;
+  onEdit?: (project: Project) => void;
+  className?: string;
+}
+
+export const ProjectCard: React.FC<ProjectCardProps> = ({
+  project,
+  onEdit,
+  className
+}) => {
+  const { theme } = useTheme();
+  
+  const handleEdit = useCallback(() => {
+    onEdit?.(project);
+  }, [project, onEdit]);
+  
+  return (
+    <div className={`project-card ${className || ''}`} style={theme.card}>
+      <h3>{project.name}</h3>
+      <p>{project.description}</p>
+      {onEdit && (
+        <button onClick={handleEdit} type="button">
+          Edit Project
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ❌ BAD: Poor component structure
+function ProjectCard(props: any) {
+  return (
+    <div onClick={() => props.onEdit && props.onEdit(props.project)}>
+      {props.project.name}
+    </div>
+  );
+}
+```
+
+#### **State Management**
+```tsx
+// ✅ GOOD: Proper state management
+const [formData, setFormData] = useState<FormData>({
+  name: '',
+  description: '',
+  status: 'draft'
+});
+
+const updateFormField = useCallback((field: keyof FormData, value: string) => {
+  setFormData(prev => ({
+    ...prev,
+    [field]: value
+  }));
+}, []);
+
+// ❌ BAD: Direct state mutation
+const [formData, setFormData] = useState({});
+
+const updateField = (field: string, value: any) => {
+  formData[field] = value; // Direct mutation
+  setFormData(formData);
+};
+```
+
+### **API Design Standards**
+
+#### **Express Route Handlers**
+```typescript
+// ✅ GOOD: Comprehensive route handler
+export const createProject = async (
+  req: Request<{}, ProjectResponse, CreateProjectRequest>,
+  res: Response<ProjectResponse>
+): Promise<void> => {
+  try {
+    // Input validation
+    const validationResult = CreateProjectSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        error: 'Invalid input',
+        details: validationResult.error.issues
+      });
+      return;
+    }
+    
+    // Business logic
+    const project = await projectService.create(validationResult.data);
+    
+    // Success response
+    res.status(201).json({
+      success: true,
+      data: project
+    });
+  } catch (error) {
+    logger.error('Failed to create project', { error, body: req.body });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to create project'
+    });
+  }
+};
+
+// ❌ BAD: Poor error handling and validation
+app.post('/projects', (req, res) => {
+  const project = new Project(req.body);
+  project.save();
+  res.json(project);
+});
+```
+
+## Security Standards
+
+### **Environment Variable Security**
+```typescript
+// ✅ GOOD: Secure configuration loading
+import { z } from 'zod';
+
+const ConfigSchema = z.object({
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  API_KEY: z.string().min(20),
+  NODE_ENV: z.enum(['development', 'production', 'test'])
+});
+
+export const config = ConfigSchema.parse(process.env);
+
+// ❌ BAD: Direct environment access without validation
+const dbUrl = process.env.DATABASE_URL; // No validation
+const secret = process.env.JWT_SECRET || 'default'; // Weak default
+```
+
+### **Input Validation & Sanitization**
+```typescript
+// ✅ GOOD: Comprehensive validation
+import { z } from 'zod';
+import DOMPurify from 'isomorphic-dompurify';
+
+const UserInputSchema = z.object({
+  email: z.string().email().max(254),
+  name: z.string().min(1).max(100).trim(),
+  bio: z.string().max(500).optional()
+});
+
+export const validateUserInput = (input: unknown) => {
+  const validated = UserInputSchema.parse(input);
+  
+  // Sanitize HTML content
+  if (validated.bio) {
+    validated.bio = DOMPurify.sanitize(validated.bio);
+  }
+  
+  return validated;
+};
+
+// ❌ BAD: No validation or sanitization
+function updateUser(req: any) {
+  return User.update(req.body); // Direct database update
+}
+```
+
+### **Authentication & Authorization**
+```typescript
+// ✅ GOOD: Proper auth middleware
+import jwt from 'jsonwebtoken';
+
+interface AuthRequest extends Request {
+  user?: { id: string; email: string; role: string };
+}
+
+export const authenticateToken = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    
+    if (!token) {
+      res.status(401).json({ error: 'Access token required' });
+      return;
+    }
+    
+    const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
+    req.user = decoded.user;
+    next();
+  } catch (error) {
+    logger.warn('Invalid token attempt', { error: error.message });
+    res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
+
+// ❌ BAD: Weak or missing authentication
+app.get('/protected', (req, res) => {
+  if (req.headers.authorization) {
+    // Proceed without verification
+  }
+});
+```
+
+### **SQL Injection Prevention**
+```typescript
+// ✅ GOOD: Parameterized queries
+const getUserProjects = async (userId: string): Promise<Project[]> => {
+  const query = `
+    SELECT p.* FROM projects p 
+    WHERE p.user_id = $1 AND p.deleted_at IS NULL
+    ORDER BY p.created_at DESC
+  `;
+  const result = await db.query(query, [userId]);
+  return result.rows;
+};
+
+// ❌ BAD: String concatenation (SQL injection risk)
+const getUserProjects = async (userId: string) => {
+  const query = `SELECT * FROM projects WHERE user_id = '${userId}'`;
+  return await db.query(query);
+};
+```
+
+## Performance Standards
+
+### **Database Query Optimization**
+```typescript
+// ✅ GOOD: Optimized queries with proper indexing
+const getProjectsWithStats = async (userId: string) => {
+  // Single optimized query with joins
+  const query = `
+    SELECT 
+      p.*,
+      COUNT(t.id) as task_count,
+      COUNT(CASE WHEN t.status = 'completed' THEN 1 END) as completed_tasks
+    FROM projects p
+    LEFT JOIN tasks t ON p.id = t.project_id
+    WHERE p.user_id = $1 AND p.deleted_at IS NULL
+    GROUP BY p.id
+    ORDER BY p.updated_at DESC
+    LIMIT 50
+  `;
+  return await db.query(query, [userId]);
+};
+
+// ❌ BAD: N+1 query problem
+const getProjectsWithStats = async (userId: string) => {
+  const projects = await db.query('SELECT * FROM projects WHERE user_id = $1', [userId]);
+  
+  for (const project of projects.rows) {
+    project.tasks = await db.query('SELECT * FROM tasks WHERE project_id = $1', [project.id]);
+  }
+  
+  return projects.rows;
+};
+```
+
+### **Memory Management**
+```typescript
+// ✅ GOOD: Proper resource cleanup
+export class FileProcessor {
+  private streams: NodeJS.ReadableStream[] = [];
+  
+  async processFile(filePath: string): Promise<ProcessResult> {
+    const stream = fs.createReadStream(filePath);
+    this.streams.push(stream);
+    
+    try {
+      const result = await this.processStream(stream);
+      return result;
+    } finally {
+      await this.cleanup();
+    }
+  }
+  
+  private async cleanup(): Promise<void> {
+    for (const stream of this.streams) {
+      if (!stream.destroyed) {
+        stream.destroy();
+      }
+    }
+    this.streams = [];
+  }
+}
+
+// ❌ BAD: Memory leaks
+function processFile(filePath: string) {
+  const stream = fs.createReadStream(filePath);
+  // No cleanup - potential memory leak
+  return processStream(stream);
+}
+```
+
+### **Caching Strategies**
+```typescript
+// ✅ GOOD: Intelligent caching
+import Redis from 'ioredis';
+
+export class CacheService {
+  private redis = new Redis(config.REDIS_URL);
+  
+  async get<T>(key: string, fallback: () => Promise<T>, ttl = 300): Promise<T> {
+    try {
+      const cached = await this.redis.get(key);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      logger.warn('Cache read failed', { key, error });
+    }
+    
+    const data = await fallback();
+    
+    try {
+      await this.redis.setex(key, ttl, JSON.stringify(data));
+    } catch (error) {
+      logger.warn('Cache write failed', { key, error });
+    }
+    
+    return data;
+  }
+}
+
+// ❌ BAD: No caching or inefficient caching
+async function getUser(id: string) {
+  return await database.findUser(id); // Always hits database
+}
+```
+
+## Infrastructure & Configuration Standards
+
+### **Docker Security**
+```dockerfile
+# ✅ GOOD: Secure Dockerfile
+FROM node:18-alpine AS base
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY --chown=nextjs:nodejs . .
+
+# Switch to non-root user
+USER nextjs
+
+# Security headers
+ENV NODE_ENV=production
+EXPOSE 3000
+
+CMD ["npm", "start"]
+
+# ❌ BAD: Insecure practices
+FROM node:latest
+WORKDIR /app
+COPY . .
+RUN npm install
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### **Environment Configuration**
+```bash
+# ✅ GOOD: Secure environment variables
+DATABASE_URL=postgresql://user:pass@localhost:5432/dadms
+JWT_SECRET=super-secure-secret-min-32-chars-long
+API_RATE_LIMIT=100
+LOG_LEVEL=info
+NODE_ENV=production
+
+# ❌ BAD: Insecure or exposed secrets
+DATABASE_URL=postgresql://admin:password123@localhost/db
+SECRET=secret
+DEBUG=true
+```
+
+## Automated Code Quality Checks
+
+### **ESLint Configuration**
+```json
+{
+  "extends": [
+    "@typescript-eslint/recommended",
+    "@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/explicit-function-return-type": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
+    "prefer-const": "error",
+    "no-console": "warn"
+  }
+}
+```
+
+### **Pre-commit Validation**
+- **TypeScript compilation** passes without errors
+- **ESLint** passes with no errors, warnings addressed
+- **Prettier** formatting applied consistently
+- **Unit tests** pass with minimum 80% coverage
+- **Security scanning** (npm audit) shows no high-severity issues
+
+### **Code Review Requirements**
+- **Type safety** maintained throughout changes
+- **Error handling** comprehensive and appropriate
+- **Security implications** reviewed and addressed
+- **Performance impact** considered and optimized
+- **Documentation** updated for public APIs
+
+---
+
+**These standards ensure DADMS maintains high code quality, security, and performance across all development work.**
