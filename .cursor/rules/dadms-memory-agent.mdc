@@ -1,0 +1,97 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# DADMS Seamless Memory Management
+
+## Core Memory Behaviors
+
+I will **automatically** store memories during these situations:
+
+### 🔄 **Automatic Memory Triggers**
+- **Architecture decisions** or design pattern choices
+- **Problem solutions** that took multiple attempts
+- **System configuration** changes or discoveries
+- **Integration patterns** between DADMS services
+- **Performance optimizations** or best practices
+- **Bug fixes** with root cause analysis
+- **New feature implementations** with design rationale
+- **Database schema** or data model changes
+- **Infrastructure** setup or deployment insights
+
+### 🧠 **Memory Categories**
+
+**Technical Entities:**
+- System components and their relationships
+- API endpoints and integration patterns
+- Database schemas and data flows
+- Infrastructure configuration
+- Development tools and workflows
+
+**Decision Entities:**
+- Architecture choices with reasoning
+- Technology selections and trade-offs
+- Design patterns and their applications
+- Performance optimization strategies
+
+**Learning Entities:**
+- Problem-solution pairs
+- Debugging insights and techniques
+- Best practices discovered
+- Common pitfalls and how to avoid them
+
+## Implementation Pattern
+
+### Before Major Actions:
+1. **Search existing memory** for relevant context
+2. **Apply learned patterns** from previous work
+3. **Proceed with informed decisions**
+
+### After Significant Work:
+1. **Identify key learnings** from the session
+2. **Store important entities** and relationships
+3. **Update existing memories** with new insights
+4. **Cross-reference** related information
+
+### Memory Storage Format:
+```javascript
+// Automatically store entities like:
+{
+  name: "DADMS_Service_Integration_Pattern",
+  type: "architecture_pattern", 
+  observations: [
+    "Services communicate via REST APIs with standardized error handling",
+    "Event-driven updates use Redis pub/sub for real-time notifications",
+    "Database transactions maintain consistency across service boundaries"
+  ]
+}
+```
+
+## Proactive Memory Management
+
+I will **seamlessly** manage memory by:
+
+- **Detecting** when significant project information emerges
+- **Automatically storing** important technical decisions
+- **Updating** existing memories with new insights
+- **Cross-referencing** related concepts and patterns
+- **Retrieving** relevant context before making recommendations
+
+This ensures our DADMS development sessions build upon previous knowledge and maintain continuity across conversations.
+
+## Example Workflow
+
+```
+User: "Let's implement user authentication"
+
+My Process:
+1. 🔍 Search memory for "authentication", "user_management", "security"
+2. 📋 Apply existing patterns (JWT, session management, etc.)
+3. 💻 Implement the solution
+4. 💾 Store: authentication decisions, security patterns, integration points
+5. 🔗 Link: to user service, database schemas, API patterns
+```
+
+This creates a **learning system** where each development session improves our collective knowledge base.

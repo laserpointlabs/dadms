@@ -37,6 +37,9 @@ This directory contains comprehensive documentation for integrating Model Contex
 ### Architecture Documentation
 - **[Backend Implementation Guide](BACKEND_IMPLEMENTATION_GUIDE.md)** - Existing DADMS architecture context
 - **[MCP Memory Architecture Guide](MCP_Memory_Architecture_Guide.md)** - Dedicated memory architecture, setup, and backup system
+- **[MCP Memory System Guide](MCP_Memory_System_Guide.md)** - Comprehensive guide to DADMS MCP memory implementation
+- **[MCP Memory Quick Setup](MCP_Memory_Quick_Setup.md)** - Fast setup instructions for immediate use
+- **[Cursor Rules Reference](Cursor_Rules_Reference.md)** - Complete reference for seamless memory rules
 
 ## 🎯 Documentation by Audience
 
@@ -67,6 +70,9 @@ This directory contains comprehensive documentation for integrating Model Contex
 
 ### For System Administrators
 - [MCP Memory Architecture Guide](MCP_Memory_Architecture_Guide.md) - Infrastructure setup, backup strategies, and troubleshooting
+- [MCP Memory System Guide](MCP_Memory_System_Guide.md) - Complete technical guide for system administration
+- [MCP Memory Quick Setup](MCP_Memory_Quick_Setup.md) - Fast deployment and configuration guide
+- [Cursor Rules Reference](Cursor_Rules_Reference.md) - Technical reference for rule configuration and troubleshooting
 - **[MCP Quick Reference Card](MCP_QUICK_REFERENCE.md)** - Daily operations and troubleshooting commands
 
 ## 🔍 Key Topics
