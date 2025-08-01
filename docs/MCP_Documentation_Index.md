@@ -14,6 +14,7 @@ This directory contains comprehensive documentation for integrating Model Contex
 1. **[Executive Summary](MCP_Integration_Summary.md)** - High-level overview and key findings
 2. **[Integration Specification](specifications/MCP_Integration_Specification.md)** - Technical architecture and design
 3. **[Implementation Guide](specifications/MCP_Implementation_Guide.md)** - Code examples and patterns
+4. **[Quick Start Implementation Guide](MCP_Quick_Start_Implementation_Guide.md)** - Immediate setup for development acceleration
 
 ## 📚 Complete Documentation
 
@@ -55,6 +56,7 @@ This directory contains comprehensive documentation for integrating Model Contex
 - [AWS Deployment MCP Servers](research/AWS_Deployment_MCP_Servers_for_DADMS.md) - Infrastructure automation and customer service deployment tools
 
 ### For Developers
+- [MCP Quick Start Implementation Guide](MCP_Quick_Start_Implementation_Guide.md) - Immediate setup for development acceleration
 - [MCP Implementation Guide](specifications/MCP_Implementation_Guide.md) - Code examples and implementation patterns
 - [Research Paper - Implementation Framework](research/MCP_DADMS_Integration_Paper.md#7-implementation-framework) - Technical implementation details
 

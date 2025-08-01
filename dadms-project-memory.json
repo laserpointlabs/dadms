@@ -1,0 +1,82 @@
+{
+    "memories": [
+        {
+            "id": "dadms-architecture-overview",
+            "content": "DADMS 2.0 is a clean microservices-based decision intelligence platform with the following key services: Project Service (3001), LLM Service (3002), Knowledge Service (3003), EventManager (3004), DAS/AAS (3005), and advanced services including Process Manager (3007), Model Manager (3010), Simulation Manager (3011), Analysis Manager (3012). UI runs on port 3000. Infrastructure includes PostgreSQL, Qdrant (vector), Redis (cache), Neo4j (graph), running on Podman.",
+            "metadata": {
+                "type": "architecture",
+                "created_at": "2025-01-29T20:00:00Z",
+                "tags": [
+                    "dadms",
+                    "architecture",
+                    "microservices",
+                    "ports"
+                ]
+            }
+        },
+        {
+            "id": "dadms-tech-stack",
+            "content": "DADMS 2.0 Technology Stack: Backend - Node.js 18+ with TypeScript and Express.js; Frontend - React 18 with TypeScript; Databases - PostgreSQL (primary), Qdrant (vector search), Redis (cache), Neo4j (graph); Infrastructure - Podman containers; Monorepo - Turborepo; Communication - Event-driven with BPMN-first orchestration.",
+            "metadata": {
+                "type": "technology",
+                "created_at": "2025-01-29T20:00:00Z",
+                "tags": [
+                    "dadms",
+                    "tech-stack",
+                    "nodejs",
+                    "react",
+                    "postgresql",
+                    "qdrant"
+                ]
+            }
+        },
+        {
+            "id": "dadms-week1-goals",
+            "content": "DADMS Week 1 Goals: 1) Project Service - Clean user/project management, 2) Knowledge Service - Document upload and RAG search, 3) LLM Service - Multi-provider with tool calling, 4) UI Foundation - Project dashboard and navigation, 5) Integration - End-to-end workflow testing. Success metrics: Project creation < 30 seconds, Document search < 5 seconds.",
+            "metadata": {
+                "type": "roadmap",
+                "created_at": "2025-01-29T20:00:00Z",
+                "tags": [
+                    "dadms",
+                    "week1",
+                    "goals",
+                    "milestones"
+                ]
+            }
+        },
+        {
+            "id": "mcp-integration-strategy",
+            "content": "DADMS MCP Integration Strategy: DADMS owns and controls all production MCP servers following 'Research → Prototype → Fork → Customize → Own → Deploy' workflow. Key MCP servers identified: Neo4j (graph knowledge), GitHub (code management), Memory (project context), Jupyter (analytics), AWS tools (deployment). MCP Gateway planned for port 3025.",
+            "metadata": {
+                "type": "integration",
+                "created_at": "2025-01-29T20:00:00Z",
+                "tags": [
+                    "mcp",
+                    "integration",
+                    "ownership",
+                    "security"
+                ]
+            }
+        },
+        {
+            "id": "dadms-infrastructure-status",
+            "content": "DADMS Infrastructure Status: Running on Podman with PostgreSQL (5432), Qdrant (6333), Redis (6379), Ollama (11434), MinIO (9001), Jupyter (8888), Camunda (8080). All services operational. Management script available: ./dadms-servers.sh",
+            "metadata": {
+                "type": "infrastructure",
+                "created_at": "2025-01-29T20:00:00Z",
+                "tags": [
+                    "infrastructure",
+                    "podman",
+                    "status",
+                    "ports"
+                ]
+            }
+        }
+    ],
+    "metadata": {
+        "project": "DADMS 2.0",
+        "created_at": "2025-01-29T20:00:00Z",
+        "version": "1.0",
+        "description": "DADMS Project Memory - Decision Analysis and Decision Management System 2.0"
+    }
+}
