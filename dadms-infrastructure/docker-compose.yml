@@ -315,6 +315,27 @@ services:
       timeout: 20s
       retries: 3
 
+  # Neo4j Memory - Dedicated Graph Database for MCP AI Memory
+  neo4j-memory:
+    image: docker.io/neo4j:5.13
+    container_name: neo4j-memory
+    environment:
+      NEO4J_AUTH: neo4j/memorypassword
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_apoc_export_file_enabled: true
+      NEO4J_apoc_import_file_enabled: true
+    ports:
+      - "7475:7474"   # HTTP (different port to avoid conflict)
+      - "7688:7687"   # Bolt (different port to avoid conflict)
+    volumes:
+      - neo4j-memory-data:/data
+      - neo4j-memory-backups:/backups
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "memorypassword", "RETURN 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
   # Jupyter Lab - Interactive Development Environment
   jupyter-lab:
     image: docker.io/jupyter/scipy-notebook:latest
@@ -376,6 +397,8 @@ volumes:
   ollama_data:
   minio-data:
   neo4j-data:
+  neo4j-memory-data:
+  neo4j-memory-backups:
   jupyter-data:
 
 

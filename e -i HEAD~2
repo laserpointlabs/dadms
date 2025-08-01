@@ -1,5 +1,0 @@
-[33m1e78bfaa[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m 🔒 SECURITY: Remove exposed GitHub token and add MCP config to gitignore
-[33m6baa25e2[m docs: Add Quick Start Implementation Guide to MCP Documentation
-[33m303d230b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m docs: Update release documentation for v2.0.0-alpha.7
-[33ma43dc86f[m docs: Add release documentation for v2.0.0-alpha.6
-[33md86fcc64[m[33m ([m[1;33mtag: [m[1;33mv2.0.0-alpha.6[m[33m)[m 2.0.0-alpha.6

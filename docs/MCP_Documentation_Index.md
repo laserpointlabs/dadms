@@ -36,6 +36,7 @@ This directory contains comprehensive documentation for integrating Model Contex
 
 ### Architecture Documentation
 - **[Backend Implementation Guide](BACKEND_IMPLEMENTATION_GUIDE.md)** - Existing DADMS architecture context
+- **[MCP Memory Architecture Guide](MCP_Memory_Architecture_Guide.md)** - Dedicated memory architecture, setup, and backup system
 
 ## 🎯 Documentation by Audience
 
@@ -63,6 +64,10 @@ This directory contains comprehensive documentation for integrating Model Contex
 ### For Project Managers
 - [Executive Summary - Implementation Plan](MCP_Integration_Summary.md#implementation-plan) - Four-phase development roadmap
 - [MCP Integration Specification - Roadmap](specifications/MCP_Integration_Specification.md#implementation-roadmap) - Detailed milestone tracking
+
+### For System Administrators
+- [MCP Memory Architecture Guide](MCP_Memory_Architecture_Guide.md) - Infrastructure setup, backup strategies, and troubleshooting
+- **[MCP Quick Reference Card](MCP_QUICK_REFERENCE.md)** - Daily operations and troubleshooting commands
 
 ## 🔍 Key Topics
 
