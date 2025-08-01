@@ -116,12 +116,65 @@ dadms-ui/
 
 ### 🔧 **Development Workflow Standards**
 
+#### **🚨 MANDATORY: Branch Protection Rule**
+**NEVER work directly on main branch for significant changes!**
+
+**ALWAYS create a new branch before starting any significant work:**
+
+```bash
+# Check current branch first
+git branch --show-current
+
+# Create and switch to new branch based on work type:
+
+# For new features or enhancements
+git checkout -b feature/description-of-work
+
+# For bug fixes
+git checkout -b fix/issue-description
+
+# For documentation updates
+git checkout -b docs/update-description
+
+# For infrastructure changes
+git checkout -b infra/change-description
+
+# For experiments or research
+git checkout -b experiment/research-topic
+```
+
+**Branch Creation is REQUIRED for:**
+- ✅ **Any code changes** to services, UI, or infrastructure
+- ✅ **New feature development** or significant enhancements
+- ✅ **Bug fixes** that modify more than trivial content
+- ✅ **Configuration changes** to Docker, environment, or deployment
+- ✅ **Database schema** or migration changes
+- ✅ **Architecture modifications** or new service additions
+- ✅ **Performance optimizations** or refactoring work
+- ✅ **Security updates** or dependency changes
+- ✅ **System stabilization** work (like Neo4j startup fixes)
+
+**Safe for main branch (exceptions):**
+- 📝 Minor documentation fixes (typos, formatting only)
+- 🔧 Small configuration tweaks (single environment variables)
+- 📊 Adding log statements or debugging info only
+- 🧹 Code formatting (linting fixes only, no logic changes)
+
 #### **Branch and Commit Standards**
 - **Feature branches**: `feature/description`
-- **Bug fixes**: `fix/issue-description`
+- **Bug fixes**: `fix/issue-description`  
 - **Documentation**: `docs/update-description`
 - **Infrastructure**: `infra/change-description`
+- **Experiments**: `experiment/research-topic`
 - **Commit messages**: Clear, descriptive, imperative mood
+
+#### **Branch Management Workflow**
+1. **Before Starting Work**: Always check current branch with `git branch --show-current`
+2. **Create Branch**: Use appropriate naming convention with descriptive names
+3. **Regular Commits**: Commit frequently with clear, descriptive messages
+4. **Testing**: Ensure all tests pass before merging
+5. **Clean Merges**: Use squash commits when merging to main
+6. **Branch Cleanup**: Delete merged branches to keep repository clean
 
 #### **Testing Requirements**
 - **Unit tests** for all business logic

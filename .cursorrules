@@ -1,5 +1,20 @@
 # DADMS 2.0 Clean Development Context
 
+## 🚨 MANDATORY: Branch Protection
+**NEVER work directly on main branch for significant changes!**
+Always create a feature branch first:
+```bash
+# Use our helper script:
+./scripts/dev/create-branch.sh feature description-of-work
+./scripts/dev/create-branch.sh fix issue-description
+./scripts/dev/create-branch.sh infra infrastructure-change
+
+# Or manually:
+git checkout -b feature/description-of-work
+```
+
+# DADMS 2.0 Clean Development Context
+
 ## Project Overview
 Building DADMS (Decision Analysis and Decision Management System) 2.0 from clean architecture.
 This is a complete rewrite leveraging existing knowledge but starting with fresh, production-ready code.

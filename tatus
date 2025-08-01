@@ -1,0 +1,5 @@
+[33m25c543fa[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix: branch validation to allow forward slashes in branch names
+[33m55aca038[m chore: Enhance DADMS service orchestration and diagnostics
+[33m82ad8945[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m chore: Remove obsolete MCP memory backup file
+[33mfeaeb28c[m chore: Remove obsolete 'how' file to streamline the codebase
+[33m0d1331d2[m chore: Remove obsolete MCP memory backup file
