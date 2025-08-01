@@ -30,13 +30,87 @@ show_status() {
     echo "- Frontend UI: http://localhost:3000"
 }
 
+wait_for_service() {
+    local service_name="$1"
+    local max_attempts="$2"
+    local check_cmd="$3"
+    
+    echo "⏳ Waiting for $service_name to be ready..."
+    for i in $(seq 1 $max_attempts); do
+        if eval "$check_cmd" >/dev/null 2>&1; then
+            echo "✅ $service_name is ready"
+            return 0
+        fi
+        echo "   Attempt $i/$max_attempts: $service_name not ready yet..."
+        sleep 3
+    done
+    
+    echo "❌ $service_name failed to start after $max_attempts attempts"
+    return 1
+}
+
+start_infrastructure_tier() {
+    local tier="$1"
+    shift
+    local services=("$@")
+    
+    echo "🚀 Starting $tier services: ${services[*]}"
+    podman-compose -f dadms-infrastructure/docker-compose.yml up -d "${services[@]}"
+    
+    # Wait for services to be healthy
+    for service in "${services[@]}"; do
+        case "$service" in
+            "postgres")
+                wait_for_service "PostgreSQL" 20 "podman exec dadms-postgres pg_isready -U dadms_user -d dadms"
+                ;;
+            "redis")
+                wait_for_service "Redis" 10 "podman exec dadms-redis redis-cli ping"
+                ;;
+            "qdrant")
+                wait_for_service "Qdrant" 15 "curl -sf http://localhost:6333/health"
+                ;;
+            "neo4j")
+                wait_for_service "Neo4j Main" 30 "curl -sf http://localhost:7474"
+                ;;
+            "neo4j-memory")
+                wait_for_service "Neo4j Memory" 30 "curl -sf http://localhost:7475"
+                ;;
+            "minio")
+                wait_for_service "MinIO" 15 "curl -sf http://localhost:9000/minio/health/live"
+                ;;
+            "ollama")
+                wait_for_service "Ollama" 15 "curl -sf http://localhost:11434"
+                ;;
+            "camunda")
+                wait_for_service "Camunda" 30 "curl -sf http://localhost:8080/engine-rest/engine"
+                ;;
+            "jupyter-lab")
+                wait_for_service "Jupyter Lab" 25 "curl -sf http://localhost:8888/api/status"
+                ;;
+        esac
+    done
+}
+
 start_services() {
-    echo "🚀 Starting DADMS Infrastructure..."
-    podman-compose -f dadms-infrastructure/docker-compose.yml up -d
+    echo "🎯 Starting DADMS Infrastructure in Tiers..."
     
-    echo "⏳ Waiting for infrastructure to stabilize..."
-    sleep 5
+    # Tier 1: Core databases
+    start_infrastructure_tier "Core Database" "postgres" "redis"
     
+    # Tier 2: Specialized databases (depends on core being stable)
+    start_infrastructure_tier "Graph & Vector Databases" "neo4j" "qdrant"
+    
+    # Tier 3: Neo4j Memory (depends on main Neo4j)
+    start_infrastructure_tier "Memory Database" "neo4j-memory"
+    
+    # Tier 4: Application services
+    start_infrastructure_tier "Application Services" "minio" "ollama"
+    
+    # Tier 5: Optional services (non-critical)
+    echo "🚀 Starting optional services..."
+    podman-compose -f dadms-infrastructure/docker-compose.yml up -d camunda jupyter-lab >/dev/null 2>&1 || echo "⚠️  Some optional services may have failed (continuing...)"
+    
+    echo ""
     echo "🔧 Starting DADMS Backend Services..."
     # Clean up old PM2 processes first
     pm2 delete dadms-backend >/dev/null 2>&1 || true
@@ -56,7 +130,8 @@ start_services() {
         cd ..
     fi
     
-    echo "📋 Service Status:"
+    echo ""
+    echo "📋 Final Service Status:"
     pm2 list 2>/dev/null || echo "   PM2 not available"
 }
 
@@ -72,8 +147,60 @@ stop_services() {
 restart_services() {
     echo "🔄 Restarting DADMS Infrastructure..."
     stop_services
-    sleep 2
+    echo "⏳ Waiting for complete shutdown..."
+    sleep 5
+    echo "🔄 Starting fresh..."
     start_services
+}
+
+restart_neo4j() {
+    echo "🔄 Restarting Neo4j Services..."
+    echo "🛑 Stopping Neo4j services..."
+    podman-compose -f dadms-infrastructure/docker-compose.yml stop neo4j neo4j-memory >/dev/null 2>&1 || true
+    
+    # Remove containers manually since podman-compose rm isn't supported
+    podman rm -f neo4j neo4j-memory >/dev/null 2>&1 || true
+    
+    echo "⏳ Waiting for complete shutdown..."
+    sleep 3
+    
+    echo "🚀 Starting Neo4j services..."
+    start_infrastructure_tier "Neo4j Services" "neo4j" "neo4j-memory"
+}
+
+diagnose_services() {
+    echo "🔍 DADMS Service Diagnostics"
+    echo "============================"
+    echo ""
+    
+    services=("dadms-postgres" "dadms-redis" "dadms-qdrant" "neo4j" "neo4j-memory" "minio" "ollama" "camunda" "jupyter-lab")
+    
+    for service in "${services[@]}"; do
+        echo "🔍 $service:"
+        if podman ps --format "{{.Names}}" | grep -q "^${service}$"; then
+            status=$(podman ps --format "{{.Names}}\t{{.Status}}" | grep "^${service}" | cut -f2)
+            echo "   Status: ✅ $status"
+            
+            # Quick health check
+            case "$service" in
+                "dadms-postgres")
+                    podman exec "$service" pg_isready -U dadms_user -d dadms >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    ;;
+                "dadms-redis")
+                    podman exec "$service" redis-cli ping >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    ;;
+                "neo4j")
+                    curl -sf http://localhost:7474 >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    ;;
+                "neo4j-memory")
+                    curl -sf http://localhost:7475 >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    ;;
+            esac
+        else
+            echo "   Status: ❌ Not running"
+        fi
+        echo ""
+    done
 }
 
 show_logs() {
@@ -143,6 +270,12 @@ case "$1" in
     "restart")
         restart_services
         ;;
+    "restart-neo4j")
+        restart_neo4j
+        ;;
+    "diagnose")
+        diagnose_services
+        ;;
     "logs")
         show_logs
         ;;
@@ -156,20 +289,28 @@ case "$1" in
         restore_memory "$2"
         ;;
     *)
-        echo "Usage: $0 [status|start|stop|restart|logs|memory|backup|restore]"
+        echo "🎯 DADMS System Management"
+        echo "Usage: $0 [command]"
         echo ""
-        echo "Infrastructure Commands:"
-        echo "  status   - Show service status (default)"
-        echo "  start    - Start all services"
-        echo "  stop     - Stop all services"
-        echo "  restart  - Restart all services"
-        echo "  logs     - Show recent logs"
+        echo "📋 Infrastructure Commands:"
+        echo "  status        - Show service status (default)"
+        echo "  start         - Start all services with robust sequencing"
+        echo "  stop          - Stop all services"
+        echo "  restart       - Restart all services"
+        echo "  restart-neo4j - Restart only Neo4j services"
+        echo "  diagnose      - Run comprehensive service diagnostics"
+        echo "  logs          - Show recent logs"
         echo ""
-        echo "Memory Management Commands:"
-        echo "  memory   - Show MCP memory information"
-        echo "  backup   - Backup MCP memory data"
-        echo "  restore  - Restore MCP memory from backup"
-        echo "           Usage: $0 restore <backup-file>"
-        echo "           Usage: $0 restore latest"
+        echo "🧠 Memory Management Commands:"
+        echo "  memory        - Show MCP memory information"
+        echo "  backup        - Backup MCP memory data"
+        echo "  restore       - Restore MCP memory from backup"
+        echo "                Usage: $0 restore <backup-file>"
+        echo "                Usage: $0 restore latest"
+        echo ""
+        echo "🔧 Troubleshooting:"
+        echo "  ./dadms-start.sh diagnose    - Check service health"
+        echo "  ./dadms-start.sh restart-neo4j - Fix Neo4j issues"
+        echo "  ./dadms-start.sh logs        - View error logs"
         ;;
 esac
