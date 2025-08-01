@@ -27,7 +27,7 @@
 
 ### 1. **Restart Cursor**
 ```bash
-# Close and reopen Cursor to load MCP servers
+# Close and reopen Cursor to load MCP servers...
 ```
 
 ### 2. **Test the Setup**
