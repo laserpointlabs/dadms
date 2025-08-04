@@ -42,6 +42,10 @@ git push origin feature/user-project-service
 git checkout develop
 git checkout -b release/2.1.0
 
+# MANDATORY: Backup MCP Memory before release
+./dadms-start.sh backup
+echo "Memory backup completed: $(ls -la backups/mcp-memory/mcp-memory-backup-*.cypher.gz | tail -1)"
+
 # Version bump, changelog, final testing
 npm version minor
 git commit -am "Release 2.1.0"
@@ -133,6 +137,56 @@ npm run test:coverage
 npm run test:e2e
 ```
 
+## Memory Management
+
+### MCP Neo4j Memory Backup
+The DADMS system uses Neo4j Memory for storing AI development context, architectural decisions, and problem-solution patterns. **Memory backup is MANDATORY before any release.**
+
+#### Pre-Release Memory Backup
+```bash
+# Backup MCP Memory before release
+./dadms-start.sh backup
+
+# Verify backup was created
+ls -la backups/mcp-memory/mcp-memory-backup-*.cypher.gz
+
+# Check backup integrity
+./scripts/backup-memory.sh verify
+```
+
+#### Memory Backup Best Practices
+- **Frequency**: Before every release, major changes, or system updates
+- **Location**: `backups/mcp-memory/` directory
+- **Format**: Compressed Cypher export (`.cypher.gz`)
+- **Naming**: `mcp-memory-backup-YYYYMMDD_HHMMSS.cypher.gz`
+- **Verification**: Always verify backup integrity before proceeding
+
+#### Memory Restoration (if needed)
+```bash
+# Restore from specific backup
+./dadms-start.sh restore mcp-memory-backup-20250731_222550.cypher.gz
+
+# Restore latest backup
+./dadms-start.sh restore latest
+```
+
+#### Memory Health Check
+```bash
+# Check memory server status
+./dadms-start.sh memory
+
+# Run memory diagnostics
+./scripts/dev/container-diagnostic.sh
+```
+
+### Memory Backup Checklist
+- [ ] **Memory server running**: `./dadms-start.sh memory`
+- [ ] **Backup created**: `./dadms-start.sh backup`
+- [ ] **Backup verified**: Check file size and timestamp
+- [ ] **Backup location**: `backups/mcp-memory/` directory
+- [ ] **Backup naming**: Follows timestamp format
+- [ ] **Memory integrity**: No corruption errors in backup
+
 ## Environment Management
 
 ### Environment Stages
@@ -183,6 +237,7 @@ const config = loadConfig(process.env.NODE_ENV);
 - [ ] Performance benchmarks met
 - [ ] Documentation updated
 - [ ] Database migrations tested
+- [ ] **Memory backup completed** (MCP Neo4j Memory)
 - [ ] Backup and rollback plan ready
 
 ### Release
@@ -200,6 +255,7 @@ const config = loadConfig(process.env.NODE_ENV);
 - [ ] Error rates within normal range
 - [ ] Performance metrics acceptable
 - [ ] User feedback collected
+- [ ] **Memory backup verified** (confirm backup integrity)
 - [ ] Hotfix plan ready if needed
 
 ## Monitoring & Observability
@@ -269,6 +325,15 @@ docker service update --image dadms:previous-version service-name
 # Traffic rollback
 # Blue-green deployment switch
 # Canary rollback
+```
+
+### Memory Rollback (if needed)
+```bash
+# Restore memory from pre-release backup
+./dadms-start.sh restore mcp-memory-backup-YYYYMMDD_HHMMSS.cypher.gz
+
+# Verify memory restoration
+./dadms-start.sh memory
 ```
 
 ## Security & Compliance
