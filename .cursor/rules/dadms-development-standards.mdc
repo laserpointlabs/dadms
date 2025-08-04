@@ -237,6 +237,39 @@ git checkout -b experiment/research-topic
 - **Troubleshooting sections** with common issues
 - **FAQ sections** for frequently asked questions
 
+### 🧠 **Memory System Organization**
+
+#### **Structured Memory Hierarchy**
+The DADMS memory system uses a hierarchical structure to organize development knowledge:
+
+**Root Node**: `DADMS_Development`
+- **Infrastructure Development**: Container orchestration, Docker configs, service management
+- **Backend Development**: Microservices, APIs, databases, business logic
+- **UI Development**: Frontend components, user interface, React/TypeScript
+- **Memory System**: Neo4j memory management, backup procedures, AI context
+- **Release Management**: Version control, release process, deployment automation
+
+#### **Memory Organization Rules**
+- **Always categorize memories** by development category
+- **Connect related memories** using appropriate relationship types
+- **Use consistent naming**: `DADMS_Category_Specific_Topic`
+- **Link to root node** when creating new development memories
+- **Maintain relationships** between related problems and solutions
+
+#### **Memory Categories and Relationships**
+```javascript
+// Example memory structure
+{
+  name: "DADMS_Infrastructure_Neo4j_Startup_Fix",
+  type: "problem_solution",
+  category: "DADMS_Infrastructure_Development",
+  relationships: [
+    { target: "Docker_Compose_Configuration", type: "implements" },
+    { target: "DADMS_Infrastructure_Development", type: "belongs_to" }
+  ]
+}
+```
+
 ### 🚀 **Release Process Standards**
 
 #### **Mandatory Release Steps**

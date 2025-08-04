@@ -142,6 +142,41 @@ npm run test:e2e
 ### MCP Neo4j Memory Backup
 The DADMS system uses Neo4j Memory for storing AI development context, architectural decisions, and problem-solution patterns. **Memory backup is MANDATORY before any release.**
 
+### Structured Memory Organization
+The DADMS memory system uses a hierarchical structure to ensure all development knowledge is properly organized and connected:
+
+#### **Memory Hierarchy**
+```
+DADMS_Development (Root)
+├── DADMS_Infrastructure_Development
+│   ├── Neo4j_Memory_Startup_Fix
+│   ├── Docker_Compose_Neo4j_Configuration
+│   └── DADMS_Startup_Script_Improvements
+├── DADMS_Backend_Development
+│   ├── API_Design_Patterns
+│   ├── Database_Integration_Patterns
+│   └── Service_Communication_Patterns
+├── DADMS_UI_Development
+│   ├── Component_Architecture
+│   ├── State_Management_Patterns
+│   └── UI_Design_Standards
+├── DADMS_Memory_System
+│   ├── DADMS_Cursor_Configuration_Backup
+│   ├── Memory_Backup_Procedures
+│   └── AI_Context_Preservation
+└── DADMS_Release_Management
+    ├── DADMS_Release_Process_Memory_Backup
+    ├── Release_Automation_Standards
+    └── Version_Control_Procedures
+```
+
+#### **Memory Organization Rules**
+- **Categorization**: All memories must be categorized by development area
+- **Relationships**: Use appropriate relationship types (belongs_to, implements, enables, etc.)
+- **Naming Convention**: `DADMS_Category_Specific_Topic`
+- **Connection**: All memories should connect to the root DADMS_Development node
+- **Context Preservation**: Maintain relationships between problems and solutions
+
 #### Pre-Release Memory Backup
 ```bash
 # Backup MCP Memory before release
