@@ -1,7 +1,7 @@
-# DADMS Release 2.0.1 - Neo4j Memory Startup Fix
+# DADMS Release 2.0.1-alpha.1 - Neo4j Memory Startup Fix
 
 **Release Date**: August 4, 2025  
-**Release Type**: Patch Release (Bug Fix)  
+**Release Type**: Alpha Prerelease (Infrastructure Fix)  
 **Memory Backup**: mcp-memory-backup-20250804_113701.cypher.gz
 
 ## 🐛 **Issue Resolved**
@@ -147,7 +147,7 @@ healthcheck:
 
 ## 🎯 **Impact**
 
-This release resolves a critical infrastructure issue that was affecting development workflow reliability. The DADMS system is now **stable, fast, and reliable** for development and production use.
+This alpha release resolves a critical infrastructure issue that was affecting development workflow reliability. The DADMS system is now **stable, fast, and reliable** for development use. This is a prerelease until backend integration is complete.
 
 **Memory backup completed**: mcp-memory-backup-20250804_113701.cypher.gz  
 **Release branch**: `release/2.0.1-neo4j-memory-fix`  
