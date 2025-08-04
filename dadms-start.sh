@@ -474,6 +474,10 @@ case "$1" in
     "backup")
         backup_memory
         ;;
+    "backup-cursor")
+        echo "🧠 Backing up Cursor configuration..."
+        ./scripts/backup/cursor-config-backup.sh
+        ;;
     "restore")
         restore_memory "$2"
         ;;
@@ -494,6 +498,7 @@ case "$1" in
         echo "🧠 Memory Management Commands:"
         echo "  memory        - Show MCP memory information"
         echo "  backup        - Backup MCP memory data"
+        echo "  backup-cursor - Backup Cursor configuration and development settings"
         echo "  restore       - Restore MCP memory from backup"
         echo "                Usage: $0 restore <backup-file>"
         echo "                Usage: $0 restore latest"
