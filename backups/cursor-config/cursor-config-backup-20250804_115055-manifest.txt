@@ -1,0 +1,41 @@
+DADMS Cursor Configuration Backup Manifest
+=========================================
+
+Backup Date: Mon Aug  4 11:50:55 EDT 2025
+Backup Name: cursor-config-backup-20250804_115055
+Backup Location: ./backups/cursor-config
+
+Files Backed Up:
+- .cursor/ directory (Cursor rules and configuration)
+- .cursorrules file (Global Cursor rules)
+- .vscode/ directory (VS Code/Cursor settings)
+- scripts/ directory (Development scripts)
+- docs/ directory (Documentation)
+- RELEASE_NOTES_*.md files (Release documentation)
+- .gitignore (Git ignore rules)
+- package.json (Package configuration)
+- dadms-infrastructure/ (Docker configuration)
+
+Backup Files:
+-rw-r--r-- 1 jdehart jdehart  19231 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-cursor-rules.tar.gz
+-rw-r--r-- 1 jdehart jdehart   1879 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-cursorrules.txt
+-rw-r--r-- 1 jdehart jdehart  10583 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-docker-config.tar.gz
+-rw-r--r-- 1 jdehart jdehart 855889 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-docs.tar.gz
+-rw-r--r-- 1 jdehart jdehart   2329 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-gitignore.txt
+-rw-r--r-- 1 jdehart jdehart      0 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-manifest.txt
+-rw-r--r-- 1 jdehart jdehart   1659 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-package.json
+-rw-r--r-- 1 jdehart jdehart   4178 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-release-notes.tar.gz
+-rw-r--r-- 1 jdehart jdehart  29951 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-scripts.tar.gz
+-rw-r--r-- 1 jdehart jdehart   1794 Aug  4 11:50 ./backups/cursor-config/cursor-config-backup-20250804_115055-vscode-settings.tar.gz
+
+Restore Instructions:
+1. Extract backup files to project root
+2. Restore Cursor configuration: tar -xzf cursor-config-backup-20250804_115055-cursor-rules.tar.gz
+3. Restore scripts: tar -xzf cursor-config-backup-20250804_115055-scripts.tar.gz
+4. Restore docs: tar -xzf cursor-config-backup-20250804_115055-docs.tar.gz
+5. Restore Docker config: tar -xzf cursor-config-backup-20250804_115055-docker-config.tar.gz
+6. Restore release notes: tar -xzf cursor-config-backup-20250804_115055-release-notes.tar.gz
+
+Memory Backup Status:
+-rw-r--r-- 1 jdehart jdehart 7194 Aug  4 11:37 backups/mcp-memory/mcp-memory-backup-20250804_113701.cypher.gz
+
