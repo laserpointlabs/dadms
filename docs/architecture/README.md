@@ -225,14 +225,24 @@ flowchart TD
 
 ## Service Specifications
 
+### Core Execution Architecture
+- **[Microkernel for Dummies](./microkernel/MICROKERNEL_FOR_DUMMIES.md)** - 🎓 **BEGINNER GUIDE** - Simple explanation of microkernel architecture using easy analogies and examples
+- **[Microkernel Execution Architecture](./microkernel/MICROKERNEL_EXECUTION_ARCHITECTURE.md)** - 🏗️ **ARCHITECTURE** - Revolutionary microkernel-based execution model replacing rigid service orchestration with CPU-like process-thread execution
+- **[Microkernel Implementation Guide](./microkernel/MICROKERNEL_IMPLEMENTATION_GUIDE.md)** - 🔧 **IMPLEMENTATION** - Technical specifications and step-by-step guide for implementing the microkernel architecture
+
 ### Core Services (Implemented)
 - **[Project Service](./project_service_specification.md)** - ✅ **OPERATIONAL** - Project lifecycle management for decision intelligence workflows with React UI integration
 - **[Agent Assistance Service (AAS)](./agent_assistance_service_specification.md)** - 📋 **SPECIFICATION** - Proactive, context-aware intelligent assistant (Port 3005)
 - **[LLM Playground Service](./llm_playground_service_specification.md)** - 📋 **SPECIFICATION** - Interactive LLM testing and experimentation platform (Port 3006)
 - **[Context Manager Service](./context_manager_service_specification.md)** - 📋 **SPECIFICATION** - Comprehensive AI context management with personas, teams, tools, and prompt templates (Port 3020)
 - **[BPMN Workspace Service](./bpmn_workspace_service_specification.md)** - 📋 **SPECIFICATION** - AI-enhanced BPMN workflow design environment with collaboration and validation (Port 3021)
-- **[Process Manager Service](./process_manager_service_specification.md)** - 📋 **SPECIFICATION** - Comprehensive BPMN process execution engine with task management and analytics (Port 3007)
-- **[Thread Manager Service](./thread_manager_service_specification.md)** - 📋 **SPECIFICATION** - Process thread tracking with feedback collection, similarity analysis, and impact assessment (Port 3008)
+
+### Execution Services (Microkernel-Based)
+- **[Process Manager Service](./process_manager_service_specification.md)** - 🔄 **ENHANCED** - Process monitoring and control within microkernel architecture (Port 3007)
+- **[Thread Manager Service](./thread_manager_service_specification.md)** - 🔄 **ENHANCED** - Thread lifecycle and context management for microkernel execution (Port 3008)
+- **[Task Orchestrator Service](./task_orchestrator_specification.md)** - ⚠️ **DEPRECATED** - Being replaced by Execution Microkernel architecture
+
+### Supporting Services
 - **[Agent Assistant & Documentation Service (AADS)](./aads_service_specification.md)** - 📋 **SPECIFICATION** - Decision finalization with AI assistance, collaboration, documentation, and approval workflows (Port 3005)
 - **[User Interface Specification](./ui_specification.md)** - 📋 **SPECIFICATION** - React/Next.js frontend with VS Code-inspired design and comprehensive component architecture (Port 3000)
 - **[EventManager Service](./event_manager_specification.md)** - Central event processing and distribution hub
@@ -244,7 +254,6 @@ flowchart TD
 - **[Requirements Extractor & Conceptualizer Service](./requirements_extractor_specification.md)** - Intelligent automation for requirements extraction and conceptual modeling
 - **[Memory Manager Service](./memory_manager_specification.md)** - Sophisticated memory management with categorization, lifecycle intelligence, and semantic retrieval
 - **[Ontology Workspace Service](./ontology_workspace_specification.md)** - Visual, collaborative environment for authoring, editing, and validating ontologies
-- **[Task Orchestrator Service](./task_orchestrator_specification.md)** - Central execution engine for workflow orchestration and task management across the EDS ecosystem
 - **[Decision Analytics Service](./decision_analytics_specification.md)** - Comprehensive decision intelligence engine for decision space analysis, impact assessment, and performance scoring
 - **[Error Manager Service](./error_manager_specification.md)** - Intelligent error detection, analysis, and autonomous correction engine with deep AAS integration
 
@@ -257,6 +266,7 @@ flowchart TD
 ### System Diagrams
 - [x] **[Architecture Overview](./DADMS_ARCHITECTURE_OVERVIEW.md)** - High-level system architecture
 - [x] **[EventManager Diagrams](./event_manager_diagrams.md)** - Event-driven system patterns
+- [x] **[Microkernel Architecture](./microkernel/)** - Process-thread execution model with comprehensive diagrams
 - [ ] **Service Dependency Map**: How services interact
 - [ ] **Data Flow Diagrams**: Information flow through system
 - [ ] **Deployment Architecture**: Infrastructure and containers
