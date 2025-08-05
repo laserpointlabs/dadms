@@ -226,9 +226,12 @@ flowchart TD
 ## Service Specifications
 
 ### Core Execution Architecture
-- **[Microkernel for Dummies](./microkernel/MICROKERNEL_FOR_DUMMIES.md)** - 🎓 **BEGINNER GUIDE** - Simple explanation of microkernel architecture using easy analogies and examples
-- **[Microkernel Execution Architecture](./microkernel/MICROKERNEL_EXECUTION_ARCHITECTURE.md)** - 🏗️ **ARCHITECTURE** - Revolutionary microkernel-based execution model replacing rigid service orchestration with CPU-like process-thread execution
-- **[Microkernel Implementation Guide](./microkernel/MICROKERNEL_IMPLEMENTATION_GUIDE.md)** - 🔧 **IMPLEMENTATION** - Technical specifications and step-by-step guide for implementing the microkernel architecture
+
+#### **Process-Driven Operating System (ProcOS)**
+- **[ProcOS for Dummies](./ProcOS/ProcOS_For_Dummies.md)** - 🎓 **BEGINNER GUIDE** - Fun, accessible introduction to process-driven computing with simple analogies and step-by-step tutorials
+- **[ProcOS Implementation Guide](./ProcOS/ProcOS_Implementation_Guide.md)** - 🔧 **TECHNICAL BLUEPRINT PART 1** - Foundation: microkernel, setup, BPMN processes, and deployment scripts
+- **[ProcOS Implementation Guide - Part 2](./ProcOS/ProcOS_Implementation_Guide_Part2.md)** - 🔧 **TECHNICAL BLUEPRINT PART 2** - Advanced: workers, integrations, runtime scenarios, Docker/K8s deployment
+- **[ProcOS Architecture Specification](./ProcOS/ProcOS_Architecture_Specification.md)** - 🏛️ **FORMAL SPECIFICATION** - Complete ARC42-based architecture for process-driven virtual operating system using BPMN as kernel language
 
 ### Core Services (Implemented)
 - **[Project Service](./project_service_specification.md)** - ✅ **OPERATIONAL** - Project lifecycle management for decision intelligence workflows with React UI integration
