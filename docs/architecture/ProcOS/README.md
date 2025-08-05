@@ -15,6 +15,79 @@ In ProcOS, **every system operation is a process**:
 
 This creates an unprecedented level of **flexibility** and **runtime reconfigurability** while maintaining complete **auditability** of all system operations.
 
+## 🏗️ ProcOS Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "ProcOS - Process-Driven Virtual Operating System"
+        subgraph "🔬 Microkernel Layer"
+            MK[ProcOS Microkernel<br/>Minimal Bootstrap]
+            MK --> CAM[Camunda Engine<br/>BPMN Execution]
+        end
+        
+        subgraph "📋 Process Layer (BPMN as Kernel Language)"
+            SYSPROC[System Orchestrator Process]
+            USERPROC[User Application Processes]
+            MGMTPROC[Management Processes]
+            
+            CAM --> SYSPROC
+            CAM --> USERPROC
+            CAM --> MGMTPROC
+        end
+        
+        subgraph "👷 Worker Layer (External Task Handlers)"
+            GENWORKER[Generic Workers<br/>HTTP, Email, Files]
+            AIWORKER[AI Workers<br/>OpenAI, Ollama]
+            CUSWORKER[Custom Workers<br/>Domain-Specific]
+            
+            SYSPROC -.->|external tasks| GENWORKER
+            USERPROC -.->|external tasks| AIWORKER
+            MGMTPROC -.->|external tasks| CUSWORKER
+        end
+        
+        subgraph "🌐 Service Ecosystem"
+            APIS[External APIs]
+            AI[AI Services]
+            DB[Databases]
+            MSG[Message Brokers]
+            
+            GENWORKER --> APIS
+            AIWORKER --> AI
+            CUSWORKER --> DB
+            GENWORKER --> MSG
+        end
+        
+        subgraph "💻 Runtime Environment"
+            DOCKER[Docker Containers]
+            K8S[Kubernetes Orchestration]
+            MONITOR[Monitoring & Logging]
+            
+            MK --> DOCKER
+            DOCKER --> K8S
+            K8S --> MONITOR
+        end
+    end
+    
+    classDef microkernel fill:#ffebee,stroke:#d32f2f,stroke-width:3px
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef worker fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef service fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef runtime fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class MK,CAM microkernel
+    class SYSPROC,USERPROC,MGMTPROC process
+    class GENWORKER,AIWORKER,CUSWORKER worker
+    class APIS,AI,DB,MSG service
+    class DOCKER,K8S,MONITOR runtime
+```
+
+**Key Innovations**:
+- 🧠 **BPMN as Kernel**: Process definitions control all system behavior
+- 🔬 **Minimal Microkernel**: Only bootstraps Camunda, then steps aside
+- 👷 **External Task Pattern**: Decoupled workers handle actual service integration
+- 🔄 **Runtime Flexibility**: Update system behavior by deploying new BPMN processes
+- 📊 **Complete Observability**: Every operation traced through process instances
+
 ## 📚 Documentation
 
 ### **[ProcOS for Dummies](./ProcOS_For_Dummies.md)**
@@ -27,7 +100,7 @@ This creates an unprecedented level of **flexibility** and **runtime reconfigura
 - "For Dummies" style with icons, warnings, and friendly tone
 - Perfect starting point for newcomers to process-driven computing
 
-### **[ProcOS Implementation Guide](./ProcOS_Implementation_Guide.md)**
+### **[ProcOS Implementation Guide - Part 1](./ProcOS_Implementation_Guide_Part1.md)**
 🔧 **TECHNICAL IMPLEMENTATION - PART 1**
 
 **Foundation, setup, microkernel & BPMN processes**:

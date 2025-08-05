@@ -3,7 +3,7 @@
 
 **Version**: 1.0  
 **Date**: January 2025  
-**Continuation**: [Part 1 - Foundation, Setup, Microkernel & BPMN](./ProcOS_Implementation_Guide.md)
+**Continuation**: [Part 1 - Foundation, Setup, Microkernel & BPMN](./ProcOS_Implementation_Guide_Part1.md)
 
 ---
 
@@ -20,7 +20,92 @@
 
 ## 5. Generic Worker and Adapters
 
-### 5.1 Specialized AI Worker Implementation
+### 5.1 Worker Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "ProcOS Worker Architecture"
+        subgraph "Camunda Engine"
+            ET[External Task Queue]
+            ET --> AI_TASK[ai_query]
+            ET --> HTTP_TASK[http_request]
+            ET --> EMAIL_TASK[email_send]
+            ET --> VALID_TASK[input_validation]
+        end
+        
+        subgraph "Worker Pool"
+            subgraph "AI Worker"
+                AW[AI Worker Instance]
+                AW --> OAI[OpenAI Handler]
+                AW --> OLL[Ollama Handler]
+                AW --> PS[Provider Selector]
+            end
+            
+            subgraph "Generic Worker"
+                GW[Generic Worker Instance]
+                GW --> HTTP[HTTP Client]
+                GW --> SMTP[Email SMTP]
+                GW --> VALID[Validator]
+                GW --> TRANS[Data Transformer]
+            end
+            
+            subgraph "Custom Workers"
+                CW[Custom Worker Instance]
+                CW --> DB[Database Client]
+                CW --> FILE[File System]
+                CW --> API[Custom API Client]
+            end
+        end
+        
+        subgraph "External Services"
+            OPENAI_API[OpenAI API]
+            OLLAMA_LOCAL[Ollama Local]
+            EMAIL_SERV[Email Server]
+            EXT_API[External APIs]
+            DATABASE[Databases]
+        end
+        
+        subgraph "Service Adapters"
+            EMAIL_ADAPTER[Email Adapter]
+            SLACK_ADAPTER[Slack Adapter]
+            GITHUB_ADAPTER[GitHub Adapter]
+        end
+    end
+    
+    AI_TASK -.->|poll| AW
+    HTTP_TASK -.->|poll| GW
+    EMAIL_TASK -.->|poll| GW
+    VALID_TASK -.->|poll| GW
+    
+    OAI --> OPENAI_API
+    OLL --> OLLAMA_LOCAL
+    SMTP --> EMAIL_SERV
+    HTTP --> EXT_API
+    DB --> DATABASE
+    
+    GW --> EMAIL_ADAPTER
+    GW --> SLACK_ADAPTER
+    CW --> GITHUB_ADAPTER
+    
+    classDef camunda fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef worker fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef adapter fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class ET,AI_TASK,HTTP_TASK,EMAIL_TASK,VALID_TASK camunda
+    class AW,GW,CW,OAI,OLL,PS,HTTP,SMTP,VALID,TRANS,DB,FILE,API worker
+    class OPENAI_API,OLLAMA_LOCAL,EMAIL_SERV,EXT_API,DATABASE external
+    class EMAIL_ADAPTER,SLACK_ADAPTER,GITHUB_ADAPTER adapter
+```
+
+**Worker Architecture Principles**:
+- **External Task Pattern**: Workers poll Camunda for tasks, maintaining loose coupling
+- **Specialized Workers**: Domain-specific workers (AI, Email, Database) for optimized handling
+- **Service Adapters**: Abstraction layer for external service integration
+- **Scalable Pools**: Multiple worker instances can handle the same task types
+- **Provider Abstraction**: AI worker supports multiple providers with automatic selection
+
+### 5.2 Specialized AI Worker Implementation
 
 ```python
 # File: workers/ai_worker.py
@@ -350,7 +435,98 @@ class SlackServiceAdapter(ServiceAdapter):
 
 ## 6. Integration with Microservices
 
-### 6.1 Message Broker Integration
+### 6.1 Microservice Integration Architecture
+
+```mermaid
+graph TB
+    subgraph "ProcOS Microservice Integration"
+        subgraph "Process Layer"
+            BPMN[BPMN Processes]
+            BPMN --> PROC1[User Management Process]
+            BPMN --> PROC2[Data Processing Process]
+            BPMN --> PROC3[Notification Process]
+        end
+        
+        subgraph "Worker Layer"
+            WORKER1[User Service Worker]
+            WORKER2[Data Service Worker]
+            WORKER3[Notification Worker]
+        end
+        
+        subgraph "Message Broker (RabbitMQ)"
+            EXCHANGE[procos.events Exchange]
+            EXCHANGE --> Q1[user.events Queue]
+            EXCHANGE --> Q2[data.events Queue]
+            EXCHANGE --> Q3[notification.events Queue]
+            EXCHANGE --> Q4[process.status Queue]
+        end
+        
+        subgraph "Service Registry"
+            REGISTRY[Service Discovery]
+            REGISTRY --> REG1[User Service: localhost:3001]
+            REGISTRY --> REG2[Data Service: localhost:3002]
+            REGISTRY --> REG3[Email Service: localhost:3003]
+        end
+        
+        subgraph "Microservices"
+            USER_SVC[User Service]
+            DATA_SVC[Data Processing Service]
+            EMAIL_SVC[Email Service]
+            ANALYTICS_SVC[Analytics Service]
+        end
+        
+        subgraph "External Systems"
+            DATABASE[(PostgreSQL)]
+            REDIS[(Redis Cache)]
+            ELASTIC[(Elasticsearch)]
+        end
+    end
+    
+    PROC1 -.->|external task| WORKER1
+    PROC2 -.->|external task| WORKER2
+    PROC3 -.->|external task| WORKER3
+    
+    WORKER1 --> Q1
+    WORKER2 --> Q2
+    WORKER3 --> Q3
+    
+    Q1 --> USER_SVC
+    Q2 --> DATA_SVC
+    Q3 --> EMAIL_SVC
+    
+    USER_SVC --> DATABASE
+    DATA_SVC --> REDIS
+    EMAIL_SVC --> ELASTIC
+    
+    USER_SVC --> Q4
+    DATA_SVC --> Q4
+    EMAIL_SVC --> Q4
+    
+    WORKER1 --> REGISTRY
+    WORKER2 --> REGISTRY
+    WORKER3 --> REGISTRY
+    
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef worker fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef broker fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef service fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    
+    class BPMN,PROC1,PROC2,PROC3 process
+    class WORKER1,WORKER2,WORKER3 worker
+    class EXCHANGE,Q1,Q2,Q3,Q4,REGISTRY,REG1,REG2,REG3 broker
+    class USER_SVC,DATA_SVC,EMAIL_SVC,ANALYTICS_SVC service
+    class DATABASE,REDIS,ELASTIC external
+```
+
+**Integration Patterns**:
+- **Event-Driven Communication**: Microservices communicate via RabbitMQ message broker
+- **Service Discovery**: Dynamic service registration and health monitoring
+- **Process Orchestration**: BPMN processes coordinate microservice interactions
+- **Loose Coupling**: Workers provide abstraction between processes and services
+- **Scalability**: Independent scaling of processes, workers, and services
+
+### 6.2 Message Broker Integration
 
 ```python
 # File: integrations/message_broker.py
@@ -905,7 +1081,112 @@ def ai_query_process_scenario():
 
 ## 8. Deployment and Scaling
 
-### 8.1 Docker Containerization
+### 8.1 Deployment Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Production Deployment Architecture"
+        subgraph "Kubernetes Cluster"
+            subgraph "Control Plane"
+                MASTER[K8s Master Nodes]
+                ETCD[(etcd)]
+                API[API Server]
+            end
+            
+            subgraph "Worker Nodes"
+                subgraph "Node 1: Core Services"
+                    POD1[Microkernel Pod]
+                    POD2[PostgreSQL Pod]
+                    POD3[RabbitMQ Pod]
+                end
+                
+                subgraph "Node 2: Worker Pool"
+                    POD4[Generic Worker Pod x3]
+                    POD5[AI Worker Pod x2]
+                    POD6[Custom Worker Pod x2]
+                end
+                
+                subgraph "Node 3: External Services"
+                    POD7[Ollama Pod]
+                    POD8[Redis Pod]
+                    POD9[Monitoring Pod]
+                end
+            end
+            
+            subgraph "Services & Networking"
+                LB[Load Balancer]
+                INGRESS[Ingress Controller]
+                DNS[Internal DNS]
+                CNI[Container Network Interface]
+            end
+            
+            subgraph "Storage"
+                PV1[PersistentVolume: Database]
+                PV2[PersistentVolume: Processes]
+                PV3[PersistentVolume: Logs]
+            end
+        end
+        
+        subgraph "External Infrastructure"
+            ELB[External Load Balancer]
+            CDN[Content Delivery Network]
+            BACKUP[Backup Storage]
+            MONITOR[External Monitoring]
+        end
+        
+        subgraph "CI/CD Pipeline"
+            GIT[Git Repository]
+            BUILD[Build System]
+            REGISTRY[Container Registry]
+            DEPLOY[Deployment Automation]
+        end
+    end
+    
+    ELB --> LB
+    LB --> INGRESS
+    INGRESS --> POD1
+    
+    POD1 --> POD2
+    POD1 --> POD3
+    
+    POD4 --> POD3
+    POD5 --> POD3
+    POD6 --> POD3
+    
+    POD2 --> PV1
+    POD1 --> PV2
+    POD9 --> PV3
+    
+    GIT --> BUILD
+    BUILD --> REGISTRY
+    REGISTRY --> DEPLOY
+    DEPLOY --> POD1
+    
+    POD9 --> MONITOR
+    PV1 --> BACKUP
+    
+    classDef k8s fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef pod fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef storage fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef cicd fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class MASTER,ETCD,API,LB,INGRESS,DNS,CNI k8s
+    class POD1,POD2,POD3,POD4,POD5,POD6,POD7,POD8,POD9 pod
+    class PV1,PV2,PV3 storage
+    class ELB,CDN,BACKUP,MONITOR external
+    class GIT,BUILD,REGISTRY,DEPLOY cicd
+```
+
+**Deployment Architecture Features**:
+- **Container Orchestration**: Kubernetes for automated deployment, scaling, and management
+- **High Availability**: Multi-node cluster with redundant core services
+- **Auto-Scaling**: Horizontal Pod Autoscaler (HPA) for dynamic worker scaling
+- **Persistent Storage**: Dedicated volumes for database, processes, and logs
+- **Service Mesh**: Internal networking with service discovery and load balancing
+- **CI/CD Integration**: Automated build, test, and deployment pipeline
+
+### 8.2 Docker Containerization
 
 ```dockerfile
 # File: docker/Dockerfile.microkernel

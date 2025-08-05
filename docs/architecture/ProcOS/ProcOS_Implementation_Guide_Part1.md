@@ -53,16 +53,53 @@ Before implementing ProcOS, ensure you have:
 
 ### 1.3 Implementation Overview
 
+```mermaid
+graph TB
+    A[Setup Development Environment] --> B[Implement Python Microkernel]
+    B --> C[Design Core BPMN Processes]
+    C --> D[Build Generic Workers & Service Adapters]
+    D --> E[Integrate Message Brokers]
+    E --> F[Deploy and Test System]
+    F --> G[Scale and Monitor]
+    
+    subgraph "Phase 1: Foundation"
+        A
+        B
+    end
+    
+    subgraph "Phase 2: Process Layer"
+        C
+        D
+    end
+    
+    subgraph "Phase 3: Integration"
+        E
+        F
+    end
+    
+    subgraph "Phase 4: Production"
+        G
+    end
+    
+    classDef phase1 fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef phase2 fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef phase3 fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef phase4 fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    class A,B phase1
+    class C,D phase2
+    class E,F phase3
+    class G phase4
 ```
-ProcOS Implementation Flow:
-1. Setup Development Environment
-2. Implement Python Microkernel
-3. Design Core BPMN Processes
-4. Build Generic Workers and Service Adapters
-5. Integrate Message Brokers
-6. Deploy and Test System
-7. Scale and Monitor
-```
+
+**ProcOS Implementation Flow**:
+1. **Setup Development Environment** - Install Java, Python, Docker, Camunda
+2. **Implement Python Microkernel** - Bootstrap system and process engine
+3. **Design Core BPMN Processes** - Create system orchestration workflows
+4. **Build Generic Workers & Service Adapters** - Handle external tasks
+5. **Integrate Message Brokers** - Enable microservice communication
+6. **Deploy and Test System** - Containerized deployment with testing
+7. **Scale and Monitor** - Production scaling and observability
 
 ---
 
@@ -204,6 +241,149 @@ pip install -r requirements.txt
 
 The ProcOS microkernel is intentionally minimal, providing only essential bootstrapping functionality:
 
+### 3.2 Bootstrap Sequence Flow
+
+The microkernel follows a strict 6-phase bootstrap sequence:
+
+```mermaid
+sequenceDiagram
+    participant HW as Hardware/Container
+    participant MK as ProcOS Microkernel
+    participant CAM as Camunda Engine
+    participant PROC as BPMN Processes
+    participant WORK as Workers
+    
+    HW->>MK: Start Microkernel
+    
+    Note over MK: Phase 1: Environment Validation
+    MK->>MK: Check Java Runtime
+    MK->>MK: Verify Process Directory
+    MK->>MK: Validate Dependencies
+    
+    Note over MK: Phase 2: Start Camunda
+    MK->>CAM: Launch Camunda Engine
+    CAM-->>MK: Engine Starting...
+    
+    Note over MK: Phase 3: Wait for Ready
+    loop Health Check
+        MK->>CAM: GET /engine-rest/engine
+        CAM-->>MK: Status Response
+    end
+    CAM-->>MK: Engine Ready!
+    
+    Note over MK: Phase 4: Deploy Processes
+    MK->>CAM: Deploy Root BPMN Files
+    CAM->>PROC: Load Process Definitions
+    PROC-->>CAM: Deployment Complete
+    CAM-->>MK: All Processes Deployed
+    
+    Note over MK: Phase 5: Start Orchestrator
+    MK->>CAM: Start System Orchestrator Process
+    CAM->>PROC: Create Process Instance
+    PROC->>WORK: External Task: Initialize Workers
+    WORK-->>PROC: Workers Started
+    PROC-->>CAM: System Ready
+    CAM-->>MK: Orchestrator Running
+    
+    Note over MK: Phase 6: Monitor System
+    MK->>MK: Setup Signal Handlers
+    loop System Monitoring
+        MK->>CAM: Health Check
+        MK->>WORK: Worker Status
+        MK->>MK: Log System Metrics
+    end
+```
+
+### 3.3 Microkernel Implementation
+
+```mermaid
+graph TB
+    subgraph "ProcOS System Architecture"
+        subgraph "Hardware Layer"
+            HW[Hardware/Container Runtime]
+        end
+        
+        subgraph "Microkernel Layer"
+            MK[ProcOS Microkernel]
+            MK --> ENV[Environment Validation]
+            MK --> CAM[Camunda Startup]
+            MK --> DEP[Process Deployment]
+            MK --> MON[System Monitoring]
+        end
+        
+        subgraph "Process Engine Layer"
+            CAMUNDA[Camunda Engine]
+            CAMUNDA --> BPMN[BPMN Process Store]
+            CAMUNDA --> HIST[Process History]
+            CAMUNDA --> EXEC[Process Execution]
+        end
+        
+        subgraph "Process Layer"
+            SYSORQ[System Orchestrator Process]
+            AIPROC[AI Query Process]
+            EMAILPROC[Email Process]
+            CUSTOMPROC[Custom Business Processes]
+            
+            SYSORQ --> AIPROC
+            SYSORQ --> EMAILPROC
+            SYSORQ --> CUSTOMPROC
+        end
+        
+        subgraph "Worker Layer"
+            GENWORKER[Generic Worker]
+            AIWORKER[AI Worker]
+            CUSTOMWORKER[Custom Workers]
+            
+            GENWORKER --> HTTP[HTTP Client]
+            GENWORKER --> EMAIL[Email Service]
+            GENWORKER --> FILE[File System]
+            
+            AIWORKER --> OPENAI[OpenAI API]
+            AIWORKER --> OLLAMA[Ollama Local]
+        end
+        
+        subgraph "External Services"
+            APIS[External APIs]
+            DBS[Databases]
+            MSGQUEUE[Message Queues]
+            MONITORING[Monitoring Systems]
+        end
+    end
+    
+    HW --> MK
+    MK --> CAMUNDA
+    CAMUNDA --> SYSORQ
+    
+    AIPROC -.->|external tasks| AIWORKER
+    EMAILPROC -.->|external tasks| GENWORKER
+    CUSTOMPROC -.->|external tasks| CUSTOMWORKER
+    
+    GENWORKER --> APIS
+    AIWORKER --> APIS
+    CUSTOMWORKER --> DBS
+    
+    CAMUNDA --> MSGQUEUE
+    MK --> MONITORING
+    
+    classDef microkernel fill:#ffebee,stroke:#d32f2f,stroke-width:3px
+    classDef engine fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef worker fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef external fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class MK,ENV,CAM,DEP,MON microkernel
+    class CAMUNDA,BPMN,HIST,EXEC engine
+    class SYSORQ,AIPROC,EMAILPROC,CUSTOMPROC process
+    class GENWORKER,AIWORKER,CUSTOMWORKER,HTTP,EMAIL,FILE,OPENAI,OLLAMA worker
+    class APIS,DBS,MSGQUEUE,MONITORING external
+```
+
+**Key Architectural Principles**:
+- **Minimal Microkernel**: Only handles system bootstrap and monitoring
+- **Process-Driven**: All functionality implemented as BPMN processes
+- **External Task Pattern**: Workers decouple processes from service implementations
+- **Layered Architecture**: Clear separation between kernel, engine, processes, and workers
+
 ```python
 #!/usr/bin/env python3
 """
@@ -258,6 +438,14 @@ class ProcOSKernel:
         """
         Main bootstrap sequence - the ONLY imperative code in ProcOS
         Everything else is defined by BPMN processes
+        
+        This method implements the 6-phase bootstrap sequence:
+        1. Environment validation
+        2. Start Camunda engine  
+        3. Wait for Camunda to be ready
+        4. Deploy root orchestration processes
+        5. Start root orchestrator
+        6. Enter monitoring mode
         """
         try:
             self.logger.info("🚀 ProcOS Kernel Bootstrap Starting")
@@ -662,6 +850,66 @@ security:
 ### 4.1 Root System Orchestrator
 
 The heart of ProcOS is the root system orchestrator that manages all system operations:
+
+```mermaid
+graph TB
+    START([System Startup]) --> INIT[Initialize Core Services]
+    INIT --> WORKERS[Start Worker Pools]
+    WORKERS --> HEALTH[Start Health Monitoring]
+    HEALTH --> WAIT{Wait for User Requests}
+    
+    WAIT --> ROUTE[Route User Request]
+    ROUTE --> EXECUTE[Execute User Process]
+    EXECUTE --> WAIT
+    
+    EXECUTE --> ERROR[Handle Process Error]
+    ERROR --> WAIT
+    
+    subgraph "System Initialization"
+        INIT
+        WORKERS
+        HEALTH
+    end
+    
+    subgraph "Main Event Loop"
+        WAIT
+        ROUTE
+        EXECUTE
+        ERROR
+    end
+    
+    subgraph "External Tasks"
+        ET1[system_initialization]
+        ET2[worker_management]
+        ET3[health_monitoring]
+        ET4[request_routing]
+        ET5[error_handling]
+    end
+    
+    INIT -.->|calls| ET1
+    WORKERS -.->|calls| ET2
+    HEALTH -.->|calls| ET3
+    ROUTE -.->|calls| ET4
+    ERROR -.->|calls| ET5
+    
+    classDef startEnd fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
+    classDef task fill:#e1f5fe,stroke:#2196f3,stroke-width:2px
+    classDef gateway fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    
+    class START startEnd
+    class INIT,WORKERS,HEALTH,ROUTE,EXECUTE,ERROR task
+    class WAIT gateway
+    class ET1,ET2,ET3,ET4,ET5 external
+```
+
+**Process Flow**:
+1. **System Startup** → Triggered when ProcOS microkernel starts the orchestrator
+2. **Initialize Core Services** → External task to setup system components
+3. **Start Worker Pools** → External task to launch all worker processes
+4. **Start Health Monitoring** → External task to begin system health checks
+5. **Main Loop** → Waits for user requests and routes them to appropriate processes
+6. **Error Handling** → Processes any failures with recovery mechanisms
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
