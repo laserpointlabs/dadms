@@ -537,3 +537,187 @@ export interface ArtifactMetadata {
   testing_status?: 'UNTESTED' | 'PASSING' | 'FAILING';
   documentation_level?: 'NONE' | 'BASIC' | 'COMPREHENSIVE';
 }
+
+/**
+ * Stretch Goal: Probabilistic Extraction Types
+ */
+export interface QuestionTemplate {
+  category: 'structural' | 'semantic' | 'constraint';
+  domain: 'LINK_16' | 'VMF' | 'DEFENSE_GENERAL';
+  questions: DomainQuestion[];
+}
+
+export interface DomainQuestion {
+  id: string;
+  text: string;
+  category: string;
+  focus_area: string;
+  expected_concepts: string[];
+  priority: number;
+}
+
+export interface QuestionSet {
+  standard_type: 'LINK_16' | 'VMF';
+  questions: DomainQuestion[];
+  total_questions: number;
+  coverage_areas: string[];
+}
+
+export interface QuestionFocus {
+  iteration: number;
+  selected_questions: DomainQuestion[];
+  focus_strategy: 'broad' | 'targeted' | 'refinement';
+  weight_distribution: Record<string, number>;
+}
+
+export interface ExtractionStrategy {
+  approach: 'conservative' | 'aggressive' | 'balanced';
+  confidence_threshold: number;
+  relationship_depth: number;
+  context_window: number;
+  iteration_focus: string[];
+}
+
+export interface ExtractionResult {
+  iteration: number;
+  extraction_id: string;
+  concepts: ExtractedConcept[];
+  relationships: ExtractedRelationship[];
+  confidence_metrics: ConfidenceMetrics;
+  question_coverage: QuestionCoverage[];
+  execution_time: number;
+  strategy_used: ExtractionStrategy;
+}
+
+export interface ExtractedConcept {
+  name: string;
+  description: string;
+  category: string;
+  confidence: number;
+  supporting_evidence: string[];
+  extraction_context: string;
+  question_source: string[];
+}
+
+export interface ExtractedRelationship {
+  source_concept: string;
+  target_concept: string;
+  relationship_type: string;
+  confidence: number;
+  supporting_evidence: string[];
+  extraction_context: string;
+}
+
+export interface ConfidenceMetrics {
+  average_concept_confidence: number;
+  average_relationship_confidence: number;
+  extraction_completeness: number;
+  evidence_strength: number;
+  consistency_score: number;
+}
+
+export interface QuestionCoverage {
+  question_id: string;
+  question_text: string;
+  coverage_score: number;
+  extracted_concepts: string[];
+  confidence: number;
+}
+
+export interface ConvergenceCriteria {
+  max_iterations: number;
+  min_iterations: number;
+  concept_stability_threshold: number;
+  relationship_stability_threshold: number;
+  confidence_improvement_threshold: number;
+  coverage_completeness_threshold: number;
+}
+
+export interface StabilityMetrics {
+  concept_variance: number;
+  relationship_stability: number;
+  confidence_trend: number;
+  coverage_completeness: number;
+  iteration_range: number[];
+}
+
+export interface ProbabilisticExtractionJob {
+  job_id: string;
+  document_id: string;
+  standard_type: 'LINK_16' | 'VMF';
+  question_set: QuestionSet;
+  convergence_criteria: ConvergenceCriteria;
+  status: 'INITIALIZING' | 'RUNNING' | 'CONVERGED' | 'MAX_ITERATIONS' | 'FAILED';
+  created_at: Date;
+  started_at?: Date;
+  completed_at?: Date;
+}
+
+export interface ExtractionProgress {
+  current_iteration: number;
+  total_iterations: number;
+  convergence_progress: number;
+  stability_metrics: StabilityMetrics;
+  confidence_trend: number[];
+  estimated_completion?: Date;
+}
+
+export interface ConvergenceAnalysis {
+  converged: boolean;
+  convergence_reason: string;
+  final_stability: StabilityMetrics;
+  quality_assessment: QualityAssessment;
+  uncertainty_areas: UncertaintyArea[];
+}
+
+export interface QualityAssessment {
+  conceptual_completeness: number;
+  semantic_coherence: number;
+  evidence_support: number;
+  ontological_validity: number;
+  overall_score: number;
+}
+
+export interface UncertaintyArea {
+  area_description: string;
+  concepts_affected: string[];
+  uncertainty_level: number;
+  recommended_action: string;
+}
+
+export interface ConvergedOntology {
+  ontology_id: string;
+  standard_type: 'LINK_16' | 'VMF';
+  converged_concepts: ConceptConsensus[];
+  converged_relationships: RelationshipConsensus[];
+  extraction_metadata: ExtractionMetadata;
+  quality_metrics: QualityAssessment;
+  uncertainty_analysis: UncertaintyArea[];
+}
+
+export interface ConceptConsensus {
+  concept_name: string;
+  final_description: string;
+  consensus_confidence: number;
+  extraction_count: number;
+  variance_score: number;
+  supporting_iterations: number[];
+}
+
+export interface RelationshipConsensus {
+  source_concept: string;
+  target_concept: string;
+  relationship_type: string;
+  consensus_probability: number;
+  extraction_frequency: number;
+  consistency_score: number;
+}
+
+export interface ExtractionMetadata {
+  total_iterations: number;
+  convergence_iteration: number;
+  total_execution_time: number;
+  average_iteration_time: number;
+  question_coverage_final: number;
+  extraction_efficiency: number;
+}

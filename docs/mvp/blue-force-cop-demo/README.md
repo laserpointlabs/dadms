@@ -79,6 +79,14 @@ This directory contains comprehensive documentation for the **Blue Force Common 
 - Semantic processing algorithms and performance targets
 - Implementation phases and testing strategies
 
+#### [🎲 Probabilistic Ontology Extraction](./probabilistic-ontology-extraction.md) *(Stretch Goal)*
+**Purpose**: Advanced question-guided probabilistic extraction with statistical convergence  
+**Key Content**:
+- Question-guided extraction framework with domain-specific templates
+- Probabilistic extraction algorithm with iterative convergence
+- Statistical aggregation and uncertainty quantification
+- Enhanced persona capabilities with statistical reasoning
+
 ## 🎪 Demonstration Overview
 
 ### Enhanced Value Proposition

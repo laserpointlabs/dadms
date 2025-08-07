@@ -287,6 +287,12 @@ Capabilities:
 4. **Compliance Analysis**: Identify rules and requirements
 5. **Knowledge Transfer**: Share findings and semantic models with other personas
 
+### Phase 2 (Stretch Goal): Advanced Probabilistic Extraction (2-15 minutes)
+1. **Question-Guided Setup**: Generate domain-specific question sets for extraction guidance
+2. **Probabilistic Extraction Iterations**: Multiple extraction runs with statistical convergence
+3. **Convergence Analysis**: Real-time monitoring of extraction stability and quality
+4. **Uncertainty Quantification**: Statistical confidence assessment of extracted ontologies
+
 ### Phase 3: Ontology Integration & Harmonization (12-17 minutes)
 1. **Semantic Alignment**: Data Modeler aligns extracted ontologies with base defense ontology
 2. **Conflict Resolution**: Resolve semantic mismatches and overlapping concepts

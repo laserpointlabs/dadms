@@ -13,6 +13,7 @@ The Ontology Manager Service (Port 3015) is the semantic intelligence core of th
 4. **Conflict Resolution**: Automatically resolve semantic inconsistencies
 5. **Knowledge Validation**: Ensure ontological consistency and completeness
 6. **Semantic Reasoning**: Infer new relationships and validate constraints
+7. **Stretch Goal: Probabilistic Extraction**: Question-guided iterative extraction with statistical convergence
 
 ### Technology Stack
 - **Runtime**: Node.js 18+ with TypeScript
@@ -274,6 +275,31 @@ Response: ReasoningResult
 // Check semantic consistency
 GET /api/reasoning/{ontology_id}/consistency
 Response: ConsistencyResult
+```
+
+#### Stretch Goal: Probabilistic Extraction
+```typescript
+// Start question-guided probabilistic extraction
+POST /api/extraction/probabilistic
+Body: {
+  document_id: string,
+  standard_type: 'LINK_16' | 'VMF',
+  question_set: QuestionSet,
+  convergence_criteria: ConvergenceCriteria
+}
+Response: ProbabilisticExtractionJob
+
+// Get probabilistic extraction progress
+GET /api/extraction/probabilistic/{job_id}/progress
+Response: ExtractionProgress
+
+// Get convergence analysis
+GET /api/extraction/probabilistic/{job_id}/convergence
+Response: ConvergenceAnalysis
+
+// Get final converged ontology
+GET /api/extraction/probabilistic/{job_id}/result
+Response: ConvergedOntology
 ```
 
 ### WebSocket Endpoints

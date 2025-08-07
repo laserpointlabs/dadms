@@ -40,6 +40,12 @@ This document defines the **Minimum Viable Product (MVP)** scope for the Blue Fo
 - **Compliance Analysis**: Identify integration requirements
 - **Knowledge Sharing**: Broadcast findings and semantic models to other personas
 
+### Phase 2 (Stretch Goal): Advanced Probabilistic Extraction (15 minutes)
+- **Question-Guided Setup**: Generate domain-specific question sets for extraction guidance
+- **Iterative Extraction**: Multiple probabilistic extraction runs with different question focuses
+- **Statistical Convergence**: Real-time monitoring of extraction stability and confidence trends
+- **Uncertainty Analysis**: Quantified confidence assessment and low-confidence area identification
+
 ### Phase 3: Semantic Integration & Harmonization (8 minutes)
 - **Ontology Alignment**: Data Modeler aligns extracted ontologies with base defense ontology
 - **Conflict Resolution**: Resolve semantic mismatches and overlapping concepts
