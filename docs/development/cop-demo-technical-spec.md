@@ -280,35 +280,42 @@ Capabilities:
 3. **Persona Activation**: System creates and initializes four AI personas
 4. **Task Distribution**: Orchestrator assigns initial tasks to each persona
 
-### Phase 2: Standards Analysis (2-7 minutes)
+### Phase 2: Standards Analysis & Ontology Extraction (2-12 minutes)
 1. **Document Ingestion**: Standards Analyst ingests Link-16/VMF documentation
 2. **Schema Extraction**: Parse and extract technical specifications
-3. **Compliance Analysis**: Identify rules and requirements
-4. **Knowledge Transfer**: Share findings with other personas
+3. **Ontology Mining**: Extract domain concepts, relationships, and semantics
+4. **Compliance Analysis**: Identify rules and requirements
+5. **Knowledge Transfer**: Share findings and semantic models with other personas
 
-### Phase 3: Pipeline Development (7-17 minutes)
-1. **Parser Generation**: Data Pipeline Engineer generates parsing code
-2. **Validation Logic**: Create data validation and transformation rules
-3. **Schema Harmonization**: Data Modeler aligns disparate schemas
-4. **Testing Framework**: Automated test generation and validation
+### Phase 3: Ontology Integration & Harmonization (12-17 minutes)
+1. **Semantic Alignment**: Data Modeler aligns extracted ontologies with base defense ontology
+2. **Conflict Resolution**: Resolve semantic mismatches and overlapping concepts
+3. **Unified Knowledge Model**: Create integrated semantic representation
+4. **Ontological Validation**: Ensure consistency and completeness of unified model
 
-### Phase 4: Visualization Development (17-27 minutes)
-1. **COP Interface Design**: UI/UX Prototyper creates tactical displays
-2. **Data Integration**: Connect pipelines to visualization components
-3. **Compliance Dashboard**: Build monitoring and reporting interfaces
-4. **Interactive Prototyping**: Enable PM interaction and feedback
+### Phase 4: Knowledge-Driven Pipeline Development (17-27 minutes)
+1. **Ontology-Driven Parser Generation**: Data Pipeline Engineer generates semantic-aware parsing code
+2. **Semantic Validation Logic**: Create validation rules based on ontological constraints
+3. **Knowledge-Aware Transformations**: Build data flows guided by semantic mappings
+4. **Interoperability Testing**: Validate semantic consistency across standards
 
-### Phase 5: Integration & Testing (27-32 minutes)
-1. **End-to-End Assembly**: Orchestrator combines all components
-2. **Automated Testing**: Validate data flow and compliance
-3. **Performance Verification**: Ensure real-time processing capabilities
-4. **PM Review**: Present integrated solution for evaluation
+### Phase 5: Ontology-Aware Visualization Development (27-32 minutes)
+1. **Semantic COP Interface Design**: UI/UX Prototyper creates ontology-aware tactical displays
+2. **Knowledge Integration**: Connect semantic pipelines to visualization components
+3. **Ontology Dashboard**: Build semantic relationship and compliance monitoring interfaces
+4. **Interactive Prototyping**: Enable PM interaction and ontology exploration
 
-### Phase 6: Iteration & Documentation (32-35 minutes)
-1. **PM Feedback**: Collect requirements and change requests
-2. **Rapid Iteration**: Personas adjust solution based on feedback
-3. **Documentation Generation**: Auto-create technical artifacts
-4. **Deployment Preparation**: Package for production transition
+### Phase 6: Integration & Semantic Testing (32-37 minutes)
+1. **End-to-End Assembly**: Orchestrator combines all semantic components
+2. **Ontological Validation**: Validate semantic consistency and reasoning
+3. **Interoperability Verification**: Ensure semantic compatibility across standards
+4. **PM Review**: Present integrated semantic solution for evaluation
+
+### Phase 7: Iteration & Knowledge Documentation (37-40 minutes)
+1. **PM Feedback**: Collect requirements and semantic enhancement requests
+2. **Ontology Refinement**: Personas adjust semantic model based on feedback
+3. **Knowledge Documentation**: Auto-generate ontological artifacts and integration guides
+4. **Future Integration Demo**: Show how additional standards would integrate seamlessly
 
 ## 🛠️ Implementation Plan
 

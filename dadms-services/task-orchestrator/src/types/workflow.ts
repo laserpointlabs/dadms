@@ -375,6 +375,99 @@ export interface WorkflowModification {
 }
 
 /**
+ * Ontology and Semantic Types
+ */
+export interface OntologyReference {
+  id: string;
+  name: string;
+  version: string;
+  domain: string;
+  concepts: number;
+  relationships: number;
+  url?: string;
+}
+
+export interface SemanticConcept {
+  id: string;
+  name: string;
+  description: string;
+  ontology_id: string;
+  super_concepts: string[];
+  properties: SemanticProperty[];
+  constraints: SemanticConstraint[];
+}
+
+export interface SemanticProperty {
+  name: string;
+  type: 'DATA_PROPERTY' | 'OBJECT_PROPERTY';
+  domain: string;
+  range: string;
+  required: boolean;
+  description: string;
+}
+
+export interface SemanticConstraint {
+  type: 'CARDINALITY' | 'VALUE_RESTRICTION' | 'DOMAIN_RANGE' | 'DISJOINT';
+  expression: string;
+  description: string;
+}
+
+export interface ConceptMapping {
+  source_concept_id: string;
+  target_concept_id: string;
+  mapping_type: 'EQUIVALENT' | 'BROADER' | 'NARROWER' | 'RELATED';
+  confidence: number;
+  justification: string;
+}
+
+export interface SemanticAlignment {
+  id: string;
+  source_ontology_id: string;
+  target_ontology_id: string;
+  mappings: ConceptMapping[];
+  conflicts: SemanticConflict[];
+  alignment_quality: number;
+  created_at: Date;
+}
+
+export interface SemanticConflict {
+  type: 'CONCEPT_OVERLAP' | 'PROPERTY_MISMATCH' | 'CONSTRAINT_VIOLATION' | 'INCONSISTENT_HIERARCHY';
+  source_element: string;
+  target_element: string;
+  description: string;
+  resolution_strategy: string;
+  resolved: boolean;
+}
+
+export interface UnifiedOntology {
+  id: string;
+  name: string;
+  base_ontology_id: string;
+  integrated_ontologies: string[];
+  concepts: SemanticConcept[];
+  unified_mappings: ConceptMapping[];
+  validation_results: OntologyValidationResult[];
+  created_at: Date;
+}
+
+export interface OntologyValidationResult {
+  validator: string;
+  validation_type: 'CONSISTENCY' | 'COMPLETENESS' | 'COHERENCE' | 'EXPRESSIVENESS';
+  passed: boolean;
+  score: number;
+  issues: ValidationIssue[];
+  recommendations: string[];
+}
+
+export interface ValidationIssue {
+  severity: 'ERROR' | 'WARNING' | 'INFO';
+  category: string;
+  element: string;
+  description: string;
+  suggested_fix?: string;
+}
+
+/**
  * Supporting interfaces
  */
 export interface AttachmentReference {

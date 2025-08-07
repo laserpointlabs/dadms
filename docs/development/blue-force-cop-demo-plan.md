@@ -39,9 +39,11 @@ Four specialized virtual personas working in concert:
 - **Capabilities**: Rapid prototyping, data visualization, compliance dashboards
 - **Service Mapping**: UI generation + Simulation Manager + visualization engine
 
-### 4-10. Demonstration Flow
+### 4-10. Enhanced Demonstration Flow with Ontology Integration
 - Automated standards ingestion and analysis
-- Pipeline and mapping generation
+- **Ontology extraction and semantic mapping**
+- **Knowledge-driven schema harmonization**
+- Pipeline and mapping generation (ontology-driven)
 - Rapid visualization prototyping
 - Orchestration and testing
 - PM oversight and iteration

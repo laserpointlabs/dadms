@@ -33,29 +33,36 @@ This document defines the **Minimum Viable Product (MVP)** scope for the Blue Fo
 - **Persona Activation**: Initialize four AI personas with clear roles
 - **Workflow Start**: Begin orchestrated demonstration
 
-### Phase 2: Standards Analysis (8 minutes)
+### Phase 2: Standards Analysis & Ontology Extraction (12 minutes)
 - **Document Processing**: Standards Analyst processes mock Link-16/VMF docs
 - **Schema Extraction**: Extract key data structures and formats
+- **Ontology Mining**: Extract semantic concepts and relationships
 - **Compliance Analysis**: Identify integration requirements
-- **Knowledge Sharing**: Broadcast findings to other personas
+- **Knowledge Sharing**: Broadcast findings and semantic models to other personas
 
-### Phase 3: Pipeline Development (12 minutes)
-- **Code Generation**: Data Pipeline Engineer generates parsing code
-- **Validation Logic**: Create data validation and transformation rules
-- **Schema Mapping**: Data Modeler harmonizes different formats
-- **Integration Testing**: Basic automated testing of generated code
+### Phase 3: Semantic Integration & Harmonization (8 minutes)
+- **Ontology Alignment**: Data Modeler aligns extracted ontologies with base defense ontology
+- **Conflict Resolution**: Resolve semantic mismatches and overlapping concepts
+- **Unified Knowledge Model**: Create integrated semantic representation
+- **Validation**: Ensure ontological consistency and completeness
 
-### Phase 4: Visualization Creation (8 minutes)
-- **Interface Design**: UI/UX Prototyper creates COP display mockups
-- **Data Integration**: Connect generated pipelines to visualization
-- **Compliance Dashboard**: Build monitoring and status displays
-- **Interactive Demo**: Show working prototype with sample data
+### Phase 4: Knowledge-Driven Pipeline Development (8 minutes)
+- **Semantic Code Generation**: Data Pipeline Engineer generates ontology-aware parsing code
+- **Knowledge Validation**: Create validation rules based on semantic constraints
+- **Ontology-Driven Mapping**: Build transformations guided by semantic relationships
+- **Interoperability Testing**: Validate semantic consistency across standards
 
-### Phase 5: PM Review & Iteration (4 minutes)
-- **Artifact Review**: PM examines generated code and visuals
-- **Feedback Integration**: Request minor modifications
-- **Rapid Iteration**: Personas adjust solution based on feedback
-- **Final Presentation**: Show polished, complete solution
+### Phase 5: Semantic Visualization Creation (5 minutes)
+- **Ontology-Aware Interface Design**: UI/UX Prototyper creates semantic COP displays
+- **Knowledge Integration**: Connect ontology-driven pipelines to visualization
+- **Semantic Dashboard**: Build ontology relationship and compliance monitoring
+- **Interactive Demo**: Show working prototype with semantic validation
+
+### Phase 6: PM Review & Future Extension Demo (4 minutes)
+- **Artifact Review**: PM examines generated semantic artifacts
+- **Ontology Exploration**: Interactive exploration of unified knowledge model
+- **Extension Simulation**: Demonstrate how JREAP would integrate seamlessly
+- **Knowledge Evolution**: Show ontology refinement and learning capabilities
 
 ## 🔧 MVP Technical Architecture
 
