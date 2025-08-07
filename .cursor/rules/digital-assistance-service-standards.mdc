@@ -1,0 +1,811 @@
+# Digital Assistance Service (DAS) Development Standards
+
+## When to Use This Rule
+
+This rule applies when working with:
+- **Intelligent assistance systems** and AI-powered helpers
+- **Context-aware services** that monitor user behavior
+- **Proactive suggestion engines** and recommendation systems
+- **Natural language processing** interfaces
+- **Event-driven intelligence** systems
+- **Learning and adaptation** algorithms
+- **User preference management** systems
+
+## Core Digital Assistance Principles
+
+### **Intelligent Assistance Architecture**
+
+#### **Context Management Standards**
+```typescript
+// ✅ GOOD: Comprehensive context management
+interface DigitalContext {
+    user_id: string;
+    current_page: string;
+    current_project?: string;
+    session_start: Date;
+    actions_taken: string[];
+    time_on_page: number;
+    
+    // System Context
+    system_state: SystemState;
+    recent_events: Event[];
+    active_processes: ProcessInfo[];
+    
+    // User Preferences
+    assistance_level: 'minimal' | 'moderate' | 'proactive';
+    notification_preferences: string[];
+    learning_enabled: boolean;
+    
+    // Temporal Context
+    timestamp: Date;
+    context_version: number;
+}
+
+interface SystemState {
+    active_processes: number;
+    pending_tasks: number;
+    system_health: 'healthy' | 'degraded' | 'unhealthy';
+    service_status: Record<string, 'online' | 'offline' | 'degraded'>;
+    performance_metrics: PerformanceMetrics;
+}
+
+// ❌ BAD: Minimal context tracking
+interface BasicContext {
+    user_id: string;
+    current_page: string;
+}
+```
+
+#### **Suggestion Engine Standards**
+```typescript
+// ✅ GOOD: Comprehensive suggestion system
+interface DigitalSuggestion {
+    id: string;
+    title: string;
+    description: string;
+    action_type: 'info' | 'suggestion' | 'warning' | 'critical' | 'action';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    confidence: number; // 0.0 - 1.0
+    
+    // Action Properties
+    can_execute: boolean;
+    action_id?: string;
+    requires_confirmation: boolean;
+    estimated_time: number; // seconds
+    
+    // Context
+    context_source: string[];
+    relevance_score: number;
+    expiry_time?: Date;
+    
+    // Metadata
+    created_at: Date;
+    category: string;
+    tags: string[];
+}
+
+interface DigitalAction {
+    id: string;
+    name: string;
+    description: string;
+    category: 'navigation' | 'process' | 'data' | 'knowledge' | 'system';
+    
+    // Execution Properties
+    parameters: Record<string, any>;
+    requires_confirmation: boolean;
+    estimated_time: number;
+    permissions_required: string[];
+    
+    // Safety & Validation
+    reversible: boolean;
+    risk_level: 'low' | 'medium' | 'high';
+    validation_rules: ValidationRule[];
+    
+    // Metadata
+    implementation: string; // service.method
+    documentation_url?: string;
+    last_used?: Date;
+    success_rate: number;
+}
+```
+
+### **Learning & Adaptation Patterns**
+
+#### **User Profile Management**
+```typescript
+// ✅ GOOD: Comprehensive user profiling
+interface UserProfile {
+    user_id: string;
+    assistance_preferences: AssistancePreferences;
+    usage_patterns: UsagePattern[];
+    skill_level: SkillLevel;
+    frequent_tasks: string[];
+    preferred_workflows: string[];
+    learning_insights: LearningInsight[];
+}
+
+interface AssistancePreferences {
+    proactivity_level: number; // 0.0 - 1.0
+    notification_frequency: 'minimal' | 'normal' | 'frequent';
+    explanation_detail: 'brief' | 'detailed';
+    auto_execute_permissions: string[];
+    quiet_hours: TimeRange[];
+}
+
+interface LearningData {
+    user_id: string;
+    interaction_type: 'suggestion_accepted' | 'suggestion_dismissed' | 'action_executed' | 'question_asked';
+    context_snapshot: DigitalContext;
+    outcome: 'successful' | 'failed' | 'neutral';
+    user_rating?: number; // 1-5
+    feedback_text?: string;
+    timestamp: Date;
+}
+
+// ❌ BAD: No learning or adaptation
+interface StaticUserProfile {
+    user_id: string;
+    preferences: Record<string, any>;
+}
+```
+
+## Service Architecture Standards
+
+### **Core Service Interface**
+```typescript
+// ✅ GOOD: Comprehensive service interface
+interface DigitalAssistanceService {
+    // Context Management
+    updateContext(context: ContextUpdate): Promise<ContextResponse>;
+    getContext(userId: string): Promise<DigitalContext>;
+    
+    // Natural Language Interface
+    askAssistant(question: string, context: DigitalContext): Promise<AssistantResponse>;
+    
+    // Proactive Assistance
+    getProactiveSuggestions(context: DigitalContext, filters?: SuggestionFilters): Promise<DigitalSuggestion[]>;
+    
+    // Action Execution
+    executeAction(actionId: string, parameters: Record<string, any>, context: DigitalContext): Promise<ActionResult>;
+    validateAction(actionId: string, parameters: Record<string, any>, context: DigitalContext): Promise<ValidationResult>;
+    
+    // Learning & Feedback
+    provideFeedback(feedback: UserFeedback): Promise<LearningResponse>;
+    getUserProfile(userId: string): Promise<UserProfile>;
+    
+    // System Intelligence
+    getSystemInsights(context: DigitalContext): Promise<SystemInsight[]>;
+    detectAnomalies(context: DigitalContext): Promise<AnomalyReport[]>;
+    
+    // Configuration
+    updatePreferences(userId: string, preferences: AssistancePreferences): Promise<void>;
+    getAvailableActions(context: DigitalContext): Promise<DigitalAction[]>;
+}
+```
+
+### **Event-Driven Intelligence**
+```typescript
+// ✅ GOOD: Event-driven architecture
+interface EventSubscriptions {
+    // System Events
+    system_health_degraded: (event: SystemHealthEvent) => void;
+    service_offline: (event: ServiceOfflineEvent) => void;
+    performance_threshold_exceeded: (event: PerformanceEvent) => void;
+    
+    // Process Events
+    process_stuck: (event: ProcessStuckEvent) => void;
+    process_completed: (event: ProcessCompletedEvent) => void;
+    task_failed: (event: TaskFailedEvent) => void;
+    
+    // User Events
+    user_idle: (event: UserIdleEvent) => void;
+    user_stuck: (event: UserStuckEvent) => void;
+    project_created: (event: ProjectCreatedEvent) => void;
+    
+    // Knowledge Events
+    document_uploaded: (event: DocumentUploadedEvent) => void;
+    knowledge_updated: (event: KnowledgeUpdatedEvent) => void;
+    
+    // Decision Events
+    decision_point_reached: (event: DecisionPointEvent) => void;
+    analysis_completed: (event: AnalysisCompletedEvent) => void;
+}
+
+interface EventResponseHandler {
+    analyzeEvent(event: Event): EventAnalysis;
+    generateSuggestions(analysis: EventAnalysis): DigitalSuggestion[];
+    determineUrgency(event: Event): 'low' | 'medium' | 'high' | 'critical';
+    createProactiveResponse(event: Event): ProactiveResponse;
+}
+```
+
+## Database Schema Standards
+
+### **PostgreSQL Schema**
+```sql
+-- Digital Context Management
+CREATE TABLE digital_contexts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    current_page VARCHAR(255),
+    current_project UUID,
+    session_start TIMESTAMP WITH TIME ZONE,
+    session_data JSONB,
+    system_state JSONB,
+    user_preferences JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Digital Suggestions
+CREATE TABLE digital_suggestions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    action_type VARCHAR(50),
+    priority VARCHAR(20),
+    confidence DECIMAL(3,2),
+    can_execute BOOLEAN DEFAULT FALSE,
+    action_id VARCHAR(255),
+    context_source JSONB,
+    relevance_score DECIMAL(3,2),
+    expiry_time TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_response VARCHAR(50), -- accepted, dismissed, executed
+    responded_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Digital Actions
+CREATE TABLE digital_actions (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    parameters JSONB,
+    requires_confirmation BOOLEAN DEFAULT TRUE,
+    estimated_time INTEGER, -- seconds
+    permissions_required JSONB,
+    reversible BOOLEAN DEFAULT FALSE,
+    risk_level VARCHAR(20),
+    validation_rules JSONB,
+    implementation VARCHAR(255),
+    success_rate DECIMAL(3,2) DEFAULT 0.00,
+    usage_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Learning Data
+CREATE TABLE digital_learning_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    interaction_type VARCHAR(50),
+    target_id VARCHAR(255), -- suggestion_id or action_id
+    context_snapshot JSONB,
+    outcome VARCHAR(50),
+    user_rating INTEGER CHECK (user_rating >= 1 AND user_rating <= 5),
+    feedback_text TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User Profiles
+CREATE TABLE digital_user_profiles (
+    user_id UUID PRIMARY KEY,
+    assistance_preferences JSONB,
+    usage_patterns JSONB,
+    skill_level VARCHAR(50),
+    frequent_tasks JSONB,
+    preferred_workflows JSONB,
+    learning_insights JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Performance Indexes
+CREATE INDEX idx_digital_contexts_user_id ON digital_contexts(user_id);
+CREATE INDEX idx_digital_contexts_current_project ON digital_contexts(current_project);
+CREATE INDEX idx_digital_contexts_updated_at ON digital_contexts(updated_at);
+
+CREATE INDEX idx_digital_suggestions_user_id ON digital_suggestions(user_id);
+CREATE INDEX idx_digital_suggestions_status ON digital_suggestions(status);
+CREATE INDEX idx_digital_suggestions_priority ON digital_suggestions(priority);
+CREATE INDEX idx_digital_suggestions_created_at ON digital_suggestions(created_at);
+
+CREATE INDEX idx_digital_learning_data_user_id ON digital_learning_data(user_id);
+CREATE INDEX idx_digital_learning_data_interaction_type ON digital_learning_data(interaction_type);
+CREATE INDEX idx_digital_learning_data_created_at ON digital_learning_data(created_at);
+```
+
+## API Design Standards
+
+### **RESTful Endpoint Structure**
+```typescript
+// ✅ GOOD: Comprehensive API structure
+interface DigitalAssistanceAPI {
+    // Context Management
+    'POST /context': {
+        request: ContextUpdate;
+        response: ContextResponse;
+    };
+    'GET /context/{userId}': {
+        request: { userId: string };
+        response: DigitalContext;
+    };
+    
+    // Natural Language Interface
+    'POST /ask': {
+        request: {
+            question: string;
+            user_id: string;
+            include_suggestions?: boolean;
+            include_actions?: boolean;
+        };
+        response: AssistantResponse;
+    };
+    
+    // Proactive Suggestions
+    'GET /suggestions': {
+        request: {
+            userId: string;
+            limit?: number;
+            priority?: string;
+            category?: string;
+        };
+        response: { suggestions: DigitalSuggestion[]; total: number };
+    };
+    'POST /suggestions/{suggestionId}/respond': {
+        request: {
+            response_type: string;
+            rating?: number;
+            comment?: string;
+        };
+        response: SuccessResponse;
+    };
+    
+    // Action Management
+    'GET /actions': {
+        request: {
+            userId: string;
+            category?: string;
+            riskLevel?: string;
+        };
+        response: { actions: DigitalAction[]; total: number };
+    };
+    'POST /actions/{actionId}/execute': {
+        request: {
+            user_id: string;
+            parameters: Record<string, any>;
+            confirmation: boolean;
+        };
+        response: ActionResult;
+    };
+    'POST /actions/{actionId}/validate': {
+        request: {
+            user_id: string;
+            parameters: Record<string, any>;
+        };
+        response: ValidationResult;
+    };
+    
+    // Learning & Feedback
+    'POST /feedback': {
+        request: UserFeedback;
+        response: LearningResponse;
+    };
+    
+    // User Profile
+    'GET /user/{userId}/profile': {
+        request: { userId: string };
+        response: UserProfile;
+    };
+    'PUT /user/{userId}/profile': {
+        request: AssistancePreferences;
+        response: SuccessResponse;
+    };
+    
+    // Intelligence
+    'GET /insights': {
+        request: { userId: string; scope?: string };
+        response: { insights: SystemInsight[] };
+    };
+    'GET /anomalies': {
+        request: { userId: string; severity?: string };
+        response: { anomalies: AnomalyReport[] };
+    };
+    
+    // Event Processing
+    'POST /events/webhook': {
+        request: Event;
+        response: EventProcessingResponse;
+    };
+}
+```
+
+### **Response Models**
+```typescript
+// ✅ GOOD: Comprehensive response models
+interface ContextResponse {
+    context_updated: boolean;
+    proactive_suggestions: DigitalSuggestion[];
+    system_insights: SystemInsight[];
+    recommendations: string[];
+    timestamp: Date;
+}
+
+interface AssistantResponse {
+    answer: string;
+    confidence: number;
+    suggestions: DigitalSuggestion[];
+    actions: DigitalAction[];
+    context_used: string[];
+    response_time: number;
+    follow_up_questions?: string[];
+}
+
+interface ActionResult {
+    action_executed: boolean;
+    action_id: string;
+    result: any;
+    message: string;
+    execution_time: number;
+    side_effects: SideEffect[];
+    next_suggestions: DigitalSuggestion[];
+}
+
+interface UserFeedback {
+    feedback_type: 'suggestion_helpful' | 'suggestion_not_helpful' | 'action_successful' | 'action_failed' | 'correction';
+    target_id: string; // suggestion_id or action_id
+    rating?: number; // 1-5
+    comment?: string;
+    context: DigitalContext;
+}
+```
+
+## Performance & Caching Standards
+
+### **Caching Strategy**
+```typescript
+// ✅ GOOD: Intelligent caching strategy
+interface CacheStrategy {
+    // User Context Caching
+    user_context: {
+        cache_duration: '5 minutes';
+        invalidation_triggers: ['context_update', 'session_end'];
+        compression: true;
+    };
+    
+    // Suggestion Caching
+    suggestions: {
+        cache_duration: '2 minutes';
+        invalidation_triggers: ['context_change', 'action_executed'];
+        max_cached_suggestions: 20;
+    };
+    
+    // Action Metadata Caching
+    actions: {
+        cache_duration: '1 hour';
+        invalidation_triggers: ['action_definition_updated'];
+        preload_common_actions: true;
+    };
+    
+    // Learning Insights Caching
+    learning_insights: {
+        cache_duration: '30 minutes';
+        invalidation_triggers: ['new_feedback_received'];
+        batch_updates: true;
+    };
+}
+
+// ❌ BAD: No caching strategy
+interface NoCacheStrategy {
+    // No caching defined
+}
+```
+
+### **Performance Targets**
+```typescript
+// ✅ GOOD: Clear performance targets
+interface PerformanceTargets {
+    response_times: {
+        context_updates: '< 200ms';
+        natural_language_queries: '< 2 seconds';
+        action_execution: '< 5 seconds';
+        suggestion_generation: '< 500ms';
+    };
+    
+    throughput: {
+        concurrent_users: '100+';
+        events_per_second: '1000+';
+        suggestions_per_minute: '50+';
+    };
+    
+    accuracy: {
+        suggestion_acceptance_rate: '> 75%';
+        action_success_rate: '> 95%';
+        learning_effectiveness_improvement: '20% over 30 days';
+    };
+}
+```
+
+## Security & Access Control
+
+### **Security Framework**
+```typescript
+// ✅ GOOD: Comprehensive security framework
+interface SecurityFramework {
+    authentication: {
+        method: 'JWT_Bearer';
+        token_validation: 'real_time';
+        session_management: 'stateless';
+    };
+    
+    authorization: {
+        context_access: 'user_scoped';
+        action_permissions: 'role_based';
+        suggestion_filtering: 'permission_aware';
+    };
+    
+    data_protection: {
+        context_encryption: 'at_rest';
+        pii_anonymization: 'learning_data';
+        retention_policy: '90_days_context';
+    };
+    
+    audit_logging: {
+        all_interactions: true;
+        action_execution: 'detailed';
+        privacy_events: 'strict';
+    };
+}
+```
+
+### **Action Security Model**
+```typescript
+// ✅ GOOD: Secure action execution
+interface ActionSecurity {
+    risk_assessment: {
+        automatic_execution_threshold: 'low_risk_only';
+        confirmation_required: 'medium_and_high_risk';
+        admin_approval_required: 'critical_actions';
+    };
+    
+    validation_layers: [
+        'parameter_validation',
+        'permission_check',
+        'context_appropriateness',
+        'impact_assessment',
+        'user_confirmation'
+    ];
+    
+    execution_safeguards: {
+        rollback_capability: 'reversible_actions';
+        execution_timeout: 30; // seconds
+        concurrent_action_limit: 3;
+        rate_limiting: '10_per_minute';
+    };
+}
+```
+
+## Learning & Intelligence Standards
+
+### **Machine Learning Integration**
+```typescript
+// ✅ GOOD: ML-powered intelligence
+interface LearningEngine {
+    pattern_recognition: {
+        user_behavior_patterns: boolean;
+        workflow_optimization: boolean;
+        anomaly_detection: boolean;
+        predictive_analysis: boolean;
+    };
+    
+    personalization: {
+        user_preference_learning: boolean;
+        context_adaptation: boolean;
+        suggestion_ranking: boolean;
+        action_recommendation: boolean;
+    };
+    
+    continuous_improvement: {
+        feedback_analysis: boolean;
+        success_rate_tracking: boolean;
+        model_retraining: boolean;
+        a_b_testing: boolean;
+    };
+}
+```
+
+### **Intelligence Pipeline**
+```typescript
+// ✅ GOOD: Intelligent processing pipeline
+interface IntelligencePipeline {
+    input_processing: {
+        context_analysis: 'real_time';
+        intent_recognition: 'nlp_based';
+        event_correlation: 'pattern_matching';
+    };
+    
+    intelligence_generation: {
+        suggestion_engine: 'ml_powered';
+        action_planning: 'risk_assessed';
+        anomaly_detection: 'statistical';
+        predictive_analysis: 'historical_based';
+    };
+    
+    output_delivery: {
+        response_generation: 'contextual';
+        suggestion_ranking: 'personalized';
+        action_validation: 'multi_layer';
+        user_personalization: 'adaptive';
+    };
+}
+```
+
+## Implementation Standards
+
+### **Service Architecture**
+```typescript
+// ✅ GOOD: Microservice architecture
+interface ServiceArchitecture {
+    api_layer: {
+        rest_api: 'Express.js';
+        websocket_api: 'Socket.io';
+        event_webhooks: 'Express.js';
+    };
+    
+    core_services: {
+        context_manager: 'Context tracking and analysis';
+        intelligence_engine: 'ML-powered suggestions';
+        action_executor: 'Safe action execution';
+        learning_engine: 'Continuous improvement';
+    };
+    
+    intelligence_components: {
+        nl_processor: 'Natural language understanding';
+        suggestion_engine: 'Proactive recommendations';
+        anomaly_detector: 'System monitoring';
+        pattern_matcher: 'Behavior analysis';
+    };
+    
+    storage_layer: {
+        postgresql: 'Context & learning data';
+        redis: 'Real-time cache';
+        vector_db: 'Semantic search';
+    };
+}
+```
+
+### **Development Workflow**
+```typescript
+// ✅ GOOD: Comprehensive development workflow
+interface DevelopmentWorkflow {
+    phase_1_core: [
+        'Basic service setup',
+        'Context management',
+        'Simple assistance',
+        'Basic logging'
+    ];
+    
+    phase_2_integration: [
+        'Event-driven intelligence',
+        'Service integration',
+        'Learning foundation',
+        'Real-time processing'
+    ];
+    
+    phase_3_intelligence: [
+        'Advanced analytics',
+        'Sophisticated learning',
+        'Advanced features',
+        'ML integration'
+    ];
+    
+    phase_4_optimization: [
+        'Performance optimization',
+        'Security hardening',
+        'UI integration',
+        'Production deployment'
+    ];
+}
+```
+
+## Testing Standards
+
+### **Comprehensive Testing Strategy**
+```typescript
+// ✅ GOOD: Multi-layer testing
+interface TestingStrategy {
+    unit_tests: {
+        context_management: '100% coverage';
+        suggestion_generation: '95% coverage';
+        action_validation: '100% coverage';
+        learning_algorithms: '90% coverage';
+    };
+    
+    integration_tests: {
+        api_endpoints: 'All endpoints';
+        event_processing: 'All event types';
+        service_communication: 'All services';
+        database_operations: 'All CRUD operations';
+    };
+    
+    performance_tests: {
+        load_testing: '1000+ concurrent users';
+        stress_testing: 'System limits';
+        endurance_testing: '24-hour stability';
+        scalability_testing: 'Horizontal scaling';
+    };
+    
+    security_tests: {
+        authentication: 'All auth flows';
+        authorization: 'All permission levels';
+        data_protection: 'Encryption validation';
+        audit_logging: 'Compliance verification';
+    };
+}
+```
+
+## Monitoring & Observability
+
+### **Comprehensive Monitoring**
+```typescript
+// ✅ GOOD: Full observability
+interface MonitoringStrategy {
+    metrics: {
+        response_times: 'All endpoints';
+        throughput: 'Requests per second';
+        error_rates: 'All error types';
+        user_satisfaction: 'Feedback scores';
+    };
+    
+    logging: {
+        structured_logging: 'JSON format';
+        log_levels: 'DEBUG, INFO, WARN, ERROR';
+        log_retention: '90 days';
+        log_analysis: 'Real-time processing';
+    };
+    
+    alerting: {
+        performance_alerts: 'Response time thresholds';
+        error_alerts: 'Error rate spikes';
+        security_alerts: 'Suspicious activity';
+        business_alerts: 'User satisfaction drops';
+    };
+    
+    tracing: {
+        distributed_tracing: 'Request flow tracking';
+        span_correlation: 'Cross-service tracing';
+        performance_analysis: 'Bottleneck identification';
+    };
+}
+```
+
+## Success Metrics
+
+### **Performance Targets**
+- **Response Time**: < 200ms for context updates, < 2s for complex questions
+- **Suggestion Accuracy**: > 75% user acceptance rate
+- **Action Success Rate**: > 95% successful action execution
+- **Learning Effectiveness**: 20% improvement in suggestion relevance over 30 days
+
+### **User Experience Goals**
+- **Proactive Assistance**: Provide helpful suggestions without being intrusive
+- **Natural Interaction**: Support conversational queries with high understanding
+- **Trust & Reliability**: Maintain user confidence through consistent, accurate assistance
+- **Productivity Enhancement**: Demonstrable time savings and efficiency improvements
+
+### **System Integration**
+- **Event Processing**: Handle 1000+ events/second with sub-100ms processing
+- **Service Coordination**: Seamless integration with all system services
+- **Scalability**: Support 100+ concurrent users with consistent performance
+- **Reliability**: 99.9% uptime with graceful degradation capabilities
+
+---
+
+**These standards ensure the development of intelligent, proactive digital assistance systems that enhance user productivity and decision-making effectiveness across any project or domain.**
+description:
+globs:
+alwaysApply: false
+---
