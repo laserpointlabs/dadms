@@ -1,0 +1,446 @@
+/**
+ * DADMS Task Orchestrator - Core Types
+ * Blue Force COP Demonstration Workflow Management
+ */
+
+export type WorkflowStatus = 'PENDING' | 'INITIALIZING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PAUSED';
+export type PersonaType = 'STANDARDS_ANALYST' | 'DATA_PIPELINE_ENGINEER' | 'DATA_MODELER' | 'UIUX_PROTOTYPER';
+export type PersonaStatus = 'IDLE' | 'WORKING' | 'WAITING' | 'COMPLETED' | 'ERROR';
+export type TaskType = 'DOCUMENT_ANALYSIS' | 'SCHEMA_EXTRACTION' | 'CODE_GENERATION' | 'VISUALIZATION_CREATION' | 'INTEGRATION_TESTING';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+/**
+ * Core workflow definition for COP demonstration
+ */
+export interface Workflow {
+  id: string;
+  name: string;
+  type: 'COP_DEMO';
+  description: string;
+  status: WorkflowStatus;
+  progress: WorkflowProgress;
+  personas: PersonaInstance[];
+  tasks: Task[];
+  artifacts: GeneratedArtifact[];
+  config: WorkflowConfig;
+  metadata: WorkflowMetadata;
+  created_at: Date;
+  updated_at: Date;
+  started_at?: Date;
+  completed_at?: Date;
+}
+
+/**
+ * Progress tracking for workflow execution
+ */
+export interface WorkflowProgress {
+  total_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  current_phase: WorkflowPhase;
+  estimated_completion?: Date;
+  performance_metrics: PerformanceMetrics;
+}
+
+/**
+ * Workflow execution phases for COP demo
+ */
+export type WorkflowPhase = 
+  | 'INITIALIZATION'
+  | 'STANDARDS_ANALYSIS' 
+  | 'PIPELINE_DEVELOPMENT'
+  | 'VISUALIZATION_DEVELOPMENT'
+  | 'INTEGRATION_TESTING'
+  | 'PM_REVIEW'
+  | 'ITERATION'
+  | 'COMPLETION';
+
+/**
+ * AI Persona instance within a workflow
+ */
+export interface PersonaInstance {
+  id: string;
+  workflow_id: string;
+  persona_type: PersonaType;
+  name: string;
+  description: string;
+  status: PersonaStatus;
+  current_task_id?: string;
+  completed_tasks: string[];
+  context: PersonaContext;
+  capabilities: PersonaCapability[];
+  communication_log: PersonaMessage[];
+  performance_metrics: PersonaMetrics;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Context and state for persona execution
+ */
+export interface PersonaContext {
+  domain_knowledge: string[];
+  current_focus: string;
+  available_tools: string[];
+  working_memory: Record<string, any>;
+  collaboration_state: CollaborationState;
+  execution_history: ExecutionHistoryEntry[];
+}
+
+/**
+ * Persona capability definition
+ */
+export interface PersonaCapability {
+  name: string;
+  description: string;
+  input_types: string[];
+  output_types: string[];
+  estimated_duration: number; // minutes
+  dependencies: string[];
+}
+
+/**
+ * Task definition and tracking
+ */
+export interface Task {
+  id: string;
+  workflow_id: string;
+  assigned_persona_id?: string;
+  type: TaskType;
+  name: string;
+  description: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  input_data: TaskInput;
+  output_data?: TaskOutput;
+  dependencies: string[];
+  estimated_duration: number;
+  actual_duration?: number;
+  error_message?: string;
+  created_at: Date;
+  started_at?: Date;
+  completed_at?: Date;
+}
+
+export type TaskStatus = 'PENDING' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'BLOCKED';
+
+/**
+ * Task input and output data structures
+ */
+export interface TaskInput {
+  documents?: DocumentReference[];
+  schemas?: SchemaDefinition[];
+  requirements?: Requirement[];
+  context?: Record<string, any>;
+}
+
+export interface TaskOutput {
+  artifacts: GeneratedArtifact[];
+  data: Record<string, any>;
+  recommendations: string[];
+  next_tasks: Partial<Task>[];
+}
+
+/**
+ * Generated artifacts from persona work
+ */
+export interface GeneratedArtifact {
+  id: string;
+  workflow_id: string;
+  persona_id: string;
+  task_id: string;
+  type: ArtifactType;
+  name: string;
+  description: string;
+  content: ArtifactContent;
+  metadata: ArtifactMetadata;
+  quality_score?: number;
+  validation_results?: ValidationResult[];
+  created_at: Date;
+}
+
+export type ArtifactType = 
+  | 'SCHEMA_DEFINITION'
+  | 'PARSER_CODE'
+  | 'VALIDATION_RULES'
+  | 'PIPELINE_CONFIG'
+  | 'VISUALIZATION_COMPONENT'
+  | 'TECHNICAL_DOCUMENTATION'
+  | 'TEST_SUITE'
+  | 'COMPLIANCE_REPORT';
+
+export interface ArtifactContent {
+  format: 'JSON' | 'TYPESCRIPT' | 'JAVASCRIPT' | 'XML' | 'YAML' | 'MARKDOWN' | 'HTML';
+  data: string | object;
+  dependencies?: string[];
+  entry_point?: string;
+}
+
+/**
+ * Inter-persona communication
+ */
+export interface PersonaMessage {
+  id: string;
+  from_persona_id: string;
+  to_persona_id?: string; // undefined for broadcast
+  message_type: MessageType;
+  content: MessageContent;
+  timestamp: Date;
+  acknowledged?: boolean;
+}
+
+export type MessageType = 
+  | 'TASK_ASSIGNMENT'
+  | 'PROGRESS_UPDATE'
+  | 'REQUEST_ASSISTANCE'
+  | 'SHARE_ARTIFACT'
+  | 'COORDINATION_REQUEST'
+  | 'STATUS_REPORT'
+  | 'ERROR_NOTIFICATION';
+
+export interface MessageContent {
+  subject: string;
+  body: string;
+  attachments?: AttachmentReference[];
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+}
+
+/**
+ * Collaboration and coordination state
+ */
+export interface CollaborationState {
+  active_collaborations: string[];
+  pending_requests: CollaborationRequest[];
+  shared_context: Record<string, any>;
+  coordination_rules: CoordinationRule[];
+}
+
+export interface CollaborationRequest {
+  id: string;
+  requestor_id: string;
+  target_persona_id: string;
+  request_type: 'ASSISTANCE' | 'ARTIFACT_SHARE' | 'CONTEXT_SYNC' | 'TASK_HANDOFF';
+  details: Record<string, any>;
+  created_at: Date;
+  response?: CollaborationResponse;
+}
+
+/**
+ * Performance metrics and monitoring
+ */
+export interface PerformanceMetrics {
+  total_execution_time: number; // minutes
+  average_task_completion_time: number;
+  error_rate: number;
+  quality_scores: number[];
+  resource_utilization: ResourceUtilization;
+}
+
+export interface PersonaMetrics {
+  tasks_completed: number;
+  average_completion_time: number;
+  quality_score: number;
+  collaboration_effectiveness: number;
+  error_count: number;
+  uptime_percentage: number;
+}
+
+export interface ResourceUtilization {
+  cpu_usage_avg: number;
+  memory_usage_avg: number;
+  api_calls_count: number;
+  storage_usage: number;
+}
+
+/**
+ * Configuration and setup
+ */
+export interface WorkflowConfig {
+  max_concurrent_personas: number;
+  max_execution_time: number; // minutes
+  quality_threshold: number;
+  auto_retry_failed_tasks: boolean;
+  enable_inter_persona_communication: boolean;
+  pm_oversight_level: 'MINIMAL' | 'STANDARD' | 'DETAILED';
+  notification_preferences: NotificationPreferences;
+}
+
+export interface WorkflowMetadata {
+  created_by: string;
+  project_id?: string;
+  scenario_type: 'DEMO' | 'PRODUCTION' | 'TESTING';
+  target_audience: string[];
+  success_criteria: SuccessCriterion[];
+  tags: string[];
+}
+
+/**
+ * Success criteria and validation
+ */
+export interface SuccessCriterion {
+  name: string;
+  description: string;
+  metric_name: string;
+  target_value: number;
+  operator: 'LESS_THAN' | 'GREATER_THAN' | 'EQUALS' | 'BETWEEN';
+  actual_value?: number;
+  achieved?: boolean;
+}
+
+export interface ValidationResult {
+  validator: string;
+  passed: boolean;
+  score?: number;
+  details: string;
+  recommendations?: string[];
+}
+
+/**
+ * Document and data references
+ */
+export interface DocumentReference {
+  id: string;
+  name: string;
+  type: 'LINK_16' | 'VMF' | 'TECHNICAL_SPEC' | 'REQUIREMENTS' | 'OTHER';
+  url?: string;
+  content?: string;
+  metadata: Record<string, any>;
+}
+
+export interface SchemaDefinition {
+  name: string;
+  version: string;
+  fields: FieldDefinition[];
+  constraints: SchemaConstraint[];
+  relationships: SchemaRelationship[];
+}
+
+export interface FieldDefinition {
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+  validation_rules: string[];
+  example_values?: any[];
+}
+
+/**
+ * Workflow events and notifications
+ */
+export interface WorkflowEvent {
+  id: string;
+  workflow_id: string;
+  event_type: WorkflowEventType;
+  timestamp: Date;
+  source: EventSource;
+  data: Record<string, any>;
+  severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
+}
+
+export type WorkflowEventType = 
+  | 'WORKFLOW_STARTED'
+  | 'WORKFLOW_COMPLETED'
+  | 'WORKFLOW_FAILED'
+  | 'TASK_ASSIGNED'
+  | 'TASK_COMPLETED'
+  | 'PERSONA_STATUS_CHANGED'
+  | 'ARTIFACT_GENERATED'
+  | 'ERROR_OCCURRED'
+  | 'PM_FEEDBACK_RECEIVED';
+
+export interface EventSource {
+  type: 'ORCHESTRATOR' | 'PERSONA' | 'EXTERNAL_SERVICE' | 'USER';
+  id: string;
+  name: string;
+}
+
+/**
+ * Program Manager interface types
+ */
+export interface PMFeedback {
+  workflow_id: string;
+  feedback_type: 'APPROVAL' | 'MODIFICATION_REQUEST' | 'PRIORITY_CHANGE' | 'ADDITIONAL_REQUIREMENTS';
+  content: string;
+  target_persona_id?: string;
+  target_task_id?: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
+  timestamp: Date;
+}
+
+export interface WorkflowModification {
+  type: 'ADD_TASK' | 'MODIFY_TASK' | 'CHANGE_PRIORITY' | 'ADD_REQUIREMENT' | 'ADJUST_TIMELINE';
+  target_id: string;
+  changes: Record<string, any>;
+  reason: string;
+}
+
+/**
+ * Supporting interfaces
+ */
+export interface AttachmentReference {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  size: number;
+}
+
+export interface Requirement {
+  id: string;
+  type: 'FUNCTIONAL' | 'NON_FUNCTIONAL' | 'COMPLIANCE' | 'PERFORMANCE';
+  description: string;
+  priority: TaskPriority;
+  acceptance_criteria: string[];
+}
+
+export interface SchemaConstraint {
+  type: 'UNIQUE' | 'FOREIGN_KEY' | 'CHECK' | 'NOT_NULL';
+  fields: string[];
+  expression?: string;
+}
+
+export interface SchemaRelationship {
+  type: 'ONE_TO_ONE' | 'ONE_TO_MANY' | 'MANY_TO_MANY';
+  source_field: string;
+  target_schema: string;
+  target_field: string;
+}
+
+export interface CoordinationRule {
+  name: string;
+  condition: string;
+  action: string;
+  priority: number;
+}
+
+export interface CollaborationResponse {
+  accepted: boolean;
+  message?: string;
+  proposed_alternative?: any;
+  timestamp: Date;
+}
+
+export interface NotificationPreferences {
+  email_enabled: boolean;
+  webhook_url?: string;
+  notification_levels: string[];
+  frequency: 'IMMEDIATE' | 'BATCHED' | 'DAILY_SUMMARY';
+}
+
+export interface ExecutionHistoryEntry {
+  timestamp: Date;
+  action: string;
+  input: any;
+  output: any;
+  duration: number;
+  success: boolean;
+}
+
+export interface ArtifactMetadata {
+  file_size?: number;
+  language?: string;
+  framework?: string;
+  dependencies?: string[];
+  testing_status?: 'UNTESTED' | 'PASSING' | 'FAILING';
+  documentation_level?: 'NONE' | 'BASIC' | 'COMPREHENSIVE';
+}
