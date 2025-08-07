@@ -123,73 +123,110 @@ and knowledge-driven interoperability checks.
 - **Knowledge-aware transformation pipelines**
 - Interoperability testing with semantic verification
 
-## 📊 Enhanced Data Flow
+## 📊 Enhanced Ontology Integration Data Flow
 
 ```mermaid
 %%{init: { 'flowchart': { 'curve': 'basis' }}}%%
 flowchart TB
-    subgraph Input["Input Standards"]
-        Link16["Link-16<br/>Specifications"]
-        VMF["VMF<br/>Documentation"]
-        Base["Base Defense<br/>Ontology"]
+    subgraph Input["Input Standards & Base Knowledge"]
+        Link16Doc["Link-16<br/>Technical Specifications"]
+        VMFDoc["VMF<br/>Documentation"]
+        BaseDefOnt["Base Defense<br/>Ontology"]
     end
 
-    subgraph Analysis["Standards Analysis"]
-        SA["Standards Analyst<br/>Parse & Extract"]
-        OntExtract["Ontology Extraction<br/>Semantic Mining"]
+    subgraph Analysis["Standards Analysis & Extraction"]
+        SA_Parse["Standards Analyst<br/>Document Parsing"]
+        SchemaExt["Schema Extraction"]
+        OntExtract["Ontology Mining<br/>Concept Extraction"]
+        ComplianceAnal["Compliance Analysis"]
     end
 
-    subgraph Ontology["Ontology Integration"]
-        OntMgr["Ontology Manager<br/>Port 3015"]
-        Alignment["Semantic Alignment"]
-        Unified["Unified Knowledge Model"]
+    subgraph Ontology["Ontology Integration Layer"]
+        OntMgr["Ontology Manager<br/>Semantic Processing"]
+        
+        subgraph Alignment["Semantic Alignment"]
+            ConceptMap["Concept Mapping"]
+            ConflictDetect["Conflict Detection"]
+            ConflictResolve["Conflict Resolution"]
+        end
+        
+        subgraph Integration["Knowledge Integration"]
+            UnifiedCreate["Unified Model Creation"]
+            Validation["Ontological Validation"]
+            Reasoning["Semantic Reasoning"]
+        end
     end
 
     subgraph Generation["Knowledge-Driven Generation"]
-        DM["Data Modeler<br/>Semantic Harmonization"]
-        DPE["Pipeline Engineer<br/>Ontology-Driven Code"]
-        Validation["Semantic Validation"]
+        DM_Align["Data Modeler<br/>Semantic Harmonization"]
+        DPE_CodeGen["Pipeline Engineer<br/>Ontology-Driven Code"]
+        UXP_Viz["UI Prototyper<br/>Semantic Visualization"]
+        
+        subgraph Outputs["Generated Artifacts"]
+            SemanticParsers["Semantic Parsers"]
+            KnowledgePipelines["Knowledge Pipelines"]
+            OntologyAwareUI["Ontology-Aware UI"]
+            IntegratedOnt["Integrated Ontology"]
+        end
     end
 
-    subgraph Output["Generated Artifacts"]
-        Parsers["Semantic Parsers"]
-        Pipelines["Knowledge Pipelines"]
-        Ontologies["Integrated Ontology"]
-        COP["Ontology-Aware COP"]
+    subgraph Validation_Layer["Validation & Testing"]
+        SemanticValidation["Semantic Validation"]
+        InteropTesting["Interoperability Testing"]
+        QualityAssurance["Quality Assurance"]
     end
 
-    %% Data Flow
-    Link16 --> SA
-    VMF --> SA
-    Base --> OntMgr
+    %% Data Flow Connections
+    Link16Doc --> SA_Parse
+    VMFDoc --> SA_Parse
+    BaseDefOnt --> OntMgr
     
-    SA --> OntExtract
+    SA_Parse --> SchemaExt
+    SA_Parse --> OntExtract
+    SA_Parse --> ComplianceAnal
+    
+    SchemaExt --> OntMgr
     OntExtract --> OntMgr
-    OntMgr --> Alignment
-    Alignment --> Unified
+    ComplianceAnal --> OntMgr
     
-    Unified --> DM
-    Unified --> DPE
-    DM --> Validation
-    DPE --> Validation
+    OntMgr --> ConceptMap
+    ConceptMap --> ConflictDetect
+    ConflictDetect --> ConflictResolve
+    ConflictResolve --> UnifiedCreate
+    UnifiedCreate --> Validation
+    Validation --> Reasoning
     
-    Validation --> Parsers
-    Validation --> Pipelines
-    Unified --> Ontologies
-    Pipelines --> COP
+    Reasoning --> DM_Align
+    Reasoning --> DPE_CodeGen
+    Reasoning --> UXP_Viz
+    
+    DM_Align --> SemanticParsers
+    DPE_CodeGen --> KnowledgePipelines
+    UXP_Viz --> OntologyAwareUI
+    Reasoning --> IntegratedOnt
+    
+    SemanticParsers --> SemanticValidation
+    KnowledgePipelines --> InteropTesting
+    OntologyAwareUI --> QualityAssurance
+    IntegratedOnt --> SemanticValidation
+
+    %% Feedback Loops
+    SemanticValidation -.->|"Validation Results"| DM_Align
+    InteropTesting -.->|"Test Results"| DPE_CodeGen
+    QualityAssurance -.->|"Quality Feedback"| UXP_Viz
 
     %% Styling
     classDef inputStyle fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
     classDef analysisStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     classDef ontologyStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef generationStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef outputStyle fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef validationStyle fill:#fce4ec,stroke:#880e4f,stroke-width:2px
 
-    class Link16,VMF,Base inputStyle
-    class SA,OntExtract analysisStyle
-    class OntMgr,Alignment,Unified ontologyStyle
-    class DM,DPE,Validation generationStyle
-    class Parsers,Pipelines,Ontologies,COP outputStyle
+    class Link16Doc,VMFDoc,BaseDefOnt inputStyle
+    class SA_Parse,SchemaExt,OntExtract,ComplianceAnal analysisStyle
+    class OntMgr,ConceptMap,ConflictDetect,ConflictResolve,UnifiedCreate,Validation,Reasoning ontologyStyle
+    class DM_Align,DPE_CodeGen,UXP_Viz,SemanticParsers,KnowledgePipelines,OntologyAwareUI,IntegratedOnt generationStyle
+    class SemanticValidation,InteropTesting,QualityAssurance validationStyle
 ```
 
 ## 🎭 Enhanced Persona Interactions
