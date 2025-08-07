@@ -1,5 +1,15 @@
 # Blue Force COP Demo - Implementation Roadmap
 
+## 🔄 Development Status (Live)
+- ✅ New UI route `/cop-demo` created and themed
+- ✅ Backend Status widget integrated (checks Project Service on :3001)
+- ✅ Full environment start validated via `./dadms-start.sh start`
+- ⚠️ MinIO healthcheck occasionally fails (non-blocking for COP demo)
+- ⏭️ Next: Scaffold Task Orchestrator service with `/health`
+- ⏭️ Next: Wire UI button to orchestrator (after health is green)
+
+---
+
 ## 🎯 Sprint Planning Overview
 
 This roadmap provides a detailed, actionable implementation plan for the Blue Force COP demonstration. The plan is structured as 3-week sprints with specific deliverables and success criteria.

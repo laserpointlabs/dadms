@@ -4,196 +4,97 @@
 
 This directory contains comprehensive documentation for the **Blue Force Common Operating Picture (COP) Demonstration MVP** - an advanced showcase of ontology-driven semantic interoperability through AI personas. The demonstration transforms DADMS from a decision platform into a revolutionary knowledge-driven integration platform.
 
+## 🚀 Development Startup
+
+- Start infrastructure and apps:
+  - `./dadms-start.sh start`
+  - Status: `./dadms-start.sh status`
+  - Stop: `./dadms-start.sh stop`
+- UI (Next.js): `http://localhost:3000`
+- Project Service API: `http://localhost:3001`
+
+### Environment Variables
+- UI API base (default): `NEXT_PUBLIC_API_BASE=http://localhost:3001/api`
+- Set in your shell before starting the UI, or in `.env.local`.
+
+## 🔒 Startup & Ports Policy (MANDATORY)
+- Always use `./dadms-start.sh` to start/stop/status all services (PM2-managed, detached)
+- Never launch ad‑hoc UI/backend servers in attached terminals
+- Respect dev ports: UI `3000`, Project Service `3001`, LLM `3002`, Knowledge `3003`, Orchestrator `3017`
+- Preflight check before any actions:
+  - `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/` → expect `200`
+  - `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3001/api` → expect `200`
+- If checks fail, use the start script: `./dadms-start.sh start` and re‑verify
+
+## 🧭 Access Points
+- COP Demo entry: `http://localhost:3000/cop-demo`
+- Project Service health: `http://localhost:3001/health`
+- Project Service API root: `http://localhost:3001/api`
+
+## ✅ Current Progress
+
+- New route scaffolded: `/cop-demo`
+- Theming aligned with `dadmsTheme` (light/dark via CSS variables)
+- Icons: using VS Code Codicons via shared `Icon` component (no emojis)
+- Backend Status widget on `/cop-demo`:
+  - Pings the Project Service
+  - Displays service, status, and port
+
 ## 📚 Documentation Structure
 
 ### Core Planning Documents
 
 #### [📋 Blue Force COP Demo Plan](./blue-force-cop-demo-plan.md)
-**Purpose**: Executive overview and high-level demonstration strategy  
-**Key Content**:
-- Demonstration storyboard and value proposition
-- Enhanced persona capabilities with ontology integration
-- Technical architecture mapping to existing DADMS services
-- Success metrics and business impact assessment
+Executive overview and high-level demonstration strategy.
 
 #### [🏗️ Architecture Overview](./architecture-overview.md)
-**Purpose**: Complete system architecture with embedded Mermaid diagrams  
-**Key Content**:
-- High-level system architecture with all components
-- Semantic integration data flow diagrams
-- Infrastructure architecture and deployment topology
-- AI persona interaction patterns
-- Security and performance architecture
+System, data flow, infrastructure, and persona interaction diagrams.
 
 #### [📖 Technical Specification](./cop-demo-technical-spec.md)
-**Purpose**: Detailed technical implementation requirements  
-**Key Content**:
-- Enhanced demonstration workflow (40-45 minutes)
-- New service specifications and API endpoints
-- Persona implementation details with semantic capabilities
-- Service enhancement requirements
-- Performance metrics and quality standards
+Detailed technical implementation requirements and semantic workflow.
 
 ### Implementation Guidance
 
 #### [🛣️ Implementation Roadmap](./cop-demo-implementation-roadmap.md)
-**Purpose**: 3-week sprint planning with detailed milestones  
-**Key Content**:
-- Sprint 1: Foundation Services (Week 1)
-- Sprint 2: Persona Intelligence & Ontology Integration (Week 2)
-- Sprint 3: Demo Polish & Production Ready (Week 3)
-- Daily task breakdowns and deliverable specifications
-- Success criteria and validation checkpoints
+3-week sprint planning with detailed milestones.
 
 #### [🎯 MVP Priorities](./cop-demo-mvp-priorities.md)
-**Purpose**: Minimum viable product scope and success criteria  
-**Key Content**:
-- MVP demonstration flow (40-45 minutes with ontology integration)
-- Core services and simplified persona implementation
-- Success metrics and exclusions (intentionally out of scope)
-- MVP iteration strategy and feedback integration
+MVP scope and success criteria.
 
 #### [🚀 Next Steps](./cop-demo-next-steps.md)
-**Purpose**: Immediate actions and development readiness  
-**Key Content**:
-- Sprint 1 implementation priorities
-- Development environment setup requirements
-- Risk mitigation and quality assurance strategies
-- Long-term vision and platform evolution
+Immediate actions and development readiness.
 
 ### Advanced Features
 
 #### [🧠 Ontology Enhancement](./cop-demo-ontology-enhancement.md)
-**Purpose**: Semantic interoperability through ontology integration  
-**Key Content**:
-- Ontology extraction and mapping workflow design
-- Enhanced persona capabilities with semantic reasoning
-- Knowledge-driven generation and validation processes
-- Future extension scenarios and advanced capabilities
+Semantic interoperability through ontology integration.
 
 #### [⚙️ Ontology Manager Service Specification](./ontology-manager-service-spec.md)
-**Purpose**: Technical specification for semantic processing service  
-**Key Content**:
-- Complete service architecture and API specification
-- Base defense ontology with Link-16/VMF extensions
-- Semantic processing algorithms and performance targets
-- Implementation phases and testing strategies
+Technical specification for semantic processing service.
 
 #### [🎲 Probabilistic Ontology Extraction](./probabilistic-ontology-extraction.md) *(Stretch Goal)*
-**Purpose**: Advanced question-guided probabilistic extraction with statistical convergence  
-**Key Content**:
-- Question-guided extraction framework with domain-specific templates
-- Probabilistic extraction algorithm with iterative convergence
-- Statistical aggregation and uncertainty quantification
-- Enhanced persona capabilities with statistical reasoning
+Advanced question-guided probabilistic extraction with statistical convergence.
 
-## 🎪 Demonstration Overview
+## 🧩 UI Implementation Notes
 
-### Enhanced Value Proposition
-This demonstration showcases **semantic interoperability** rather than just syntactic integration:
+- Always use `dadmsTheme` for colors/typography/shadows (no hardcoded colors)
+- Use shared `Icon` (VS Code Codicons) instead of emojis
+- Prefer small, composable components in `src/app/cop-demo/components`
 
-1. **Standards Analysis & Ontology Extraction** (12 minutes)
-   - AI extracts semantic concepts from Link-16/VMF documentation
-   - Identifies relationships, constraints, and domain knowledge
-   - Creates machine-readable ontological representations
+## ⚙️ Ports (Development)
+- UI: 3000
+- Project Service: 3001
+- LLM: 3002
+- Knowledge: 3003
+- Task Orchestrator (planned): 3017
 
-2. **Semantic Integration & Harmonization** (8 minutes)
-   - Automated alignment of extracted ontologies with base defense ontology
-   - Conflict detection and resolution using semantic reasoning
-   - Creation of unified knowledge model for integration
+## 📈 Success Metrics
 
-3. **Knowledge-Driven Pipeline Development** (8 minutes)
-   - Code generation guided by semantic understanding
-   - Validation rules based on ontological constraints
-   - Interoperability testing with semantic verification
-
-4. **Ontology-Aware Visualization** (5 minutes)
-   - COP displays that understand data semantics
-   - Interactive exploration of knowledge relationships
-   - Compliance monitoring based on semantic constraints
-
-5. **Future Extension Demonstration** (4 minutes)
-   - Show how JREAP integrates seamlessly using existing ontology
-   - Demonstrate knowledge evolution and learning capabilities
-
-### Revolutionary Capabilities
-
-#### **For Defense Contractors**
-- **True Semantic Interoperability**: Beyond syntax to meaning-aware integration
-- **Future-Proof Architecture**: New standards integrate seamlessly
-- **Knowledge Preservation**: Institutional knowledge in machine-readable form
-- **Unlimited Scalability**: Platform supports infinite standards through semantics
-
-#### **For Program Managers**
-- **Strategic Knowledge Management**: System understanding at semantic level
-- **Integration Roadmap**: Clear view of standard compatibility
-- **Technology Evolution**: Platform grows intelligently with requirements
-- **Risk Mitigation**: Semantic conflicts resolved before implementation
-
-## 🏗️ Technical Architecture
-
-### New Services for Ontology Integration
-- **Ontology Manager Service** (Port 3015): Semantic processing and alignment
-- **Enhanced Knowledge Service** (Port 3003): Ontology mining from documents
-- **Enhanced Task Orchestrator** (Port 3017): Workflow coordination with personas
-- **Code Generator Service** (Port 3018): Ontology-driven code generation
-- **COP Visualization Service** (Port 3019): Semantic visualization components
-
-### AI Personas Enhanced with Semantic Capabilities
-1. **Standards Analyst**: Ontology extraction and semantic annotation
-2. **Data Modeler**: Semantic alignment and conflict resolution
-3. **Pipeline Engineer**: Knowledge-driven code generation
-4. **UI/UX Prototyper**: Ontology-aware visualization design
-
-### Data Architecture
-- **RDF/OWL Triple Store**: Apache Jena Fuseki for ontology storage
-- **Vector Database**: Qdrant for semantic similarity search
-- **Graph Database**: Neo4j for relationship exploration
-- **Traditional Database**: PostgreSQL for workflow metadata
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+ with TypeScript
-- Docker and Docker Compose
-- Git and development environment setup
-- Access to LLM services (OpenAI/Claude)
-
-### Quick Start
-1. **Review Architecture**: Start with [Architecture Overview](./architecture-overview.md)
-2. **Understand MVP Scope**: Read [MVP Priorities](./cop-demo-mvp-priorities.md)
-3. **Plan Implementation**: Follow [Implementation Roadmap](./cop-demo-implementation-roadmap.md)
-4. **Begin Development**: Use [Next Steps](./cop-demo-next-steps.md) for immediate actions
-
-### Development Workflow
-1. **Branch**: Work on `feature/blue-force-cop-demo`
-2. **Services**: Implement Task Orchestrator → Ontology Manager → Enhancements
-3. **Integration**: Test end-to-end workflow continuously
-4. **Documentation**: Keep architecture diagrams current per [DADMS Architecture Maintenance](../../../.cursor/rules/dadms-architecture-maintenance.md)
-
-## 📊 Success Metrics
-
-### Technical Performance
-- **Total Demo Time**: 40-45 minutes consistently
-- **Ontology Extraction**: < 3 minutes per standard document
-- **Semantic Alignment**: < 2 minutes for 1,000 concepts
-- **Code Generation**: < 1 minute for complete pipeline
-- **Quality Validation**: > 90% accuracy in semantic extraction
-
-### Business Impact
-- **Development Acceleration**: 10x faster than traditional approaches
-- **Standards Compliance**: 100% automated semantic validation
-- **Future Integration**: Unlimited standards through ontological foundation
-- **Knowledge Preservation**: Institutional knowledge captured and reusable
-
-## 🔮 Future Vision
-
-This MVP demonstrates the foundation for:
-- **Multi-Standard Integration**: Unlimited defense standards support
-- **Cross-Domain Operations**: Land, sea, air, space, cyber integration
-- **Coalition Interoperability**: Semantic bridges across allies
-- **AI-Driven Evolution**: Self-improving knowledge systems
+- Total demo time: 40–45 minutes
+- Ontology extraction < 3 minutes per standard
+- Semantic alignment < 2 minutes for ~1k concepts
+- Code generation < 1 minute per pipeline
 
 ---
 
-**This documentation provides everything needed to implement and demonstrate revolutionary semantic interoperability capabilities that transform defense system integration! 🧠🚀**
+This documentation is kept current as we implement the COP demo and integrate with existing DADMS services.
