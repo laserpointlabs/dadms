@@ -16,6 +16,24 @@ DADMS_CONTAINERS=(
     "jupyter-lab"         # jupyter-lab
 )
 
+RUNTIME_DIR=".runtime"
+UI_PORT_FILE="$RUNTIME_DIR/ui-port"
+
+ensure_runtime_dir() {
+    mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
+}
+
+detect_ui_port() {
+    local default_port=3000
+    local fallback_port=9999
+    # If 3000 is free, use it; otherwise, fallback to 9999
+    if ss -ltn 2>/dev/null | grep -q ":${default_port} "; then
+        echo "$fallback_port"
+    else
+        echo "$default_port"
+    fi
+}
+
 show_status() {
     echo "🎯 DADMS System Status"
     echo "===================="
@@ -43,7 +61,9 @@ show_status() {
     echo "- MinIO S3 API: http://localhost:9002"
     echo "- Ollama: http://localhost:11434"
     echo "- Backend API: http://localhost:3001"
-    echo "- Frontend UI: http://localhost:3000"
+    local ui_port=3000
+    if [ -f "$UI_PORT_FILE" ]; then ui_port=$(cat "$UI_PORT_FILE" 2>/dev/null || echo 3000); fi
+    echo "- Frontend UI: http://localhost:${ui_port}"
     echo ""
     if command -v pm2 >/dev/null 2>&1; then
         echo "🟢 PM2 Apps:"
@@ -51,7 +71,7 @@ show_status() {
         echo ""
         echo "🌐 Quick HTTP checks:"
         curl -sf http://localhost:3001/health >/dev/null 2>&1 && echo "  Backend: OK" || echo "  Backend: NOT RESPONDING"
-        curl -sf http://localhost:3000 >/dev/null 2>&1 && echo "  Frontend: OK" || echo "  Frontend: NOT RESPONDING"
+        curl -sf http://localhost:${ui_port} >/dev/null 2>&1 && echo "  Frontend: OK" || echo "  Frontend: NOT RESPONDING"
     fi
 }
 
@@ -282,6 +302,8 @@ start_infrastructure_tier() {
 }
 
 start_services() {
+    ensure_runtime_dir
+
     echo "🎯 Starting DADMS Infrastructure in Tiers..."
     
     # Check if we're in the right directory
@@ -326,25 +348,34 @@ start_services() {
     # Start frontend UI
     if [ -d "dadms-ui" ]; then
         cd dadms-ui
-        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend start issued" || echo "❌ Frontend failed to start"
+        # Determine UI port and persist for status/diagnostics
+        local ui_port
+        ui_port=$(detect_ui_port)
+        echo -n "$ui_port" > "../$UI_PORT_FILE"
+        # Force Next.js dev to bind specified port and hostname
+        pm2 start npm --name dadms-ui-dev -- run dev -- --port "$ui_port" --hostname 0.0.0.0 >/dev/null 2>&1 && echo "✅ Frontend start issued on port $ui_port" || echo "❌ Frontend failed to start"
         cd ..
     fi
     
     echo ""
     echo "⏳ Waiting for applications to be ready..."
+    local ui_port
+    ui_port=$( [ -f "$UI_PORT_FILE" ] && cat "$UI_PORT_FILE" || echo 3000 )
     wait_for_pm2_app "dadms-backend" "http://localhost:3001/health" 30 || true
-    wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
+    wait_for_pm2_app "dadms-ui-dev" "http://localhost:${ui_port}" 30 || true
     echo ""
     echo "📋 Final Service Status:"
     pm2 list 2>/dev/null || echo "   PM2 not available"
     echo ""
     echo "⌛ Re-checking app readiness after warm-up..."
     sleep 12
-    check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
+    ui_port=$( [ -f "$UI_PORT_FILE" ] && cat "$UI_PORT_FILE" || echo 3000 )
+    check_http_ready "Frontend (UI)" "http://localhost:${ui_port}" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
     check_http_ready "Backend API" "http://localhost:3001/health" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
 start_services_quick() {
+    ensure_runtime_dir
     echo "🎯 Quick Starting DADMS Infrastructure..."
     
     # Check if we're in the right directory
@@ -375,14 +406,19 @@ start_services_quick() {
     # Start frontend UI
     if [ -d "dadms-ui" ]; then
         cd dadms-ui
-        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend start issued" || echo "❌ Frontend failed to start"
+        local ui_port
+        ui_port=$(detect_ui_port)
+        echo -n "$ui_port" > "../$UI_PORT_FILE"
+        pm2 start npm --name dadms-ui-dev -- run dev -- --port "$ui_port" --hostname 0.0.0.0 >/dev/null 2>&1 && echo "✅ Frontend start issued on port $ui_port" || echo "❌ Frontend failed to start"
         cd ..
     fi
     
     echo ""
     echo "⏳ Waiting for applications to be ready..."
+    local ui_port
+    ui_port=$( [ -f "$UI_PORT_FILE" ] && cat "$UI_PORT_FILE" || echo 3000 )
     wait_for_pm2_app "dadms-backend" "http://localhost:3001/health" 30 || true
-    wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
+    wait_for_pm2_app "dadms-ui-dev" "http://localhost:${ui_port}" 30 || true
     echo ""
     echo "📋 Quick Start Complete!"
     echo "   Use './dadms-start.sh status' to check service health"
@@ -391,7 +427,8 @@ start_services_quick() {
     echo ""
     echo "⌛ Re-checking app readiness after warm-up..."
     sleep 12
-    check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
+    ui_port=$( [ -f "$UI_PORT_FILE" ] && cat "$UI_PORT_FILE" || echo 3000 )
+    check_http_ready "Frontend (UI)" "http://localhost:${ui_port}" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
     check_http_ready "Backend API" "http://localhost:3001/health" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
