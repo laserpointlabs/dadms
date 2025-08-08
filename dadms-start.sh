@@ -44,6 +44,15 @@ show_status() {
     echo "- Ollama: http://localhost:11434"
     echo "- Backend API: http://localhost:3001"
     echo "- Frontend UI: http://localhost:3000"
+    echo ""
+    if command -v pm2 >/dev/null 2>&1; then
+        echo "🟢 PM2 Apps:"
+        pm2 list 2>/dev/null | grep -E "(dadms-backend|dadms-ui-dev)" || echo "  (no PM2 apps started)"
+        echo ""
+        echo "🌐 Quick HTTP checks:"
+        curl -sf http://localhost:3001 >/dev/null 2>&1 && echo "  Backend: OK" || echo "  Backend: NOT RESPONDING"
+        curl -sf http://localhost:3000 >/dev/null 2>&1 && echo "  Frontend: OK" || echo "  Frontend: NOT RESPONDING"
+    fi
 }
 
 # Improved container detection function
@@ -186,6 +195,25 @@ wait_for_pm2_app() {
     return 1
 }
 
+# Strict HTTP readiness check with retries
+check_http_ready() {
+    local name="$1"
+    local url="$2"
+    local attempts="${3:-10}"
+    local delay="${4:-2}"
+    echo "🌐 Checking $name at $url..."
+    for i in $(seq 1 "$attempts"); do
+        if curl -sf "$url" >/dev/null 2>&1; then
+            echo "✅ $name is responding at $url"
+            return 0
+        fi
+        echo "   Attempt $i/$attempts: $name not responding yet..."
+        sleep "$delay"
+    done
+    echo "❌ $name did not respond at $url"
+    return 1
+}
+
 start_infrastructure_tier() {
     local tier="$1"
     shift
@@ -309,6 +337,11 @@ start_services() {
     echo ""
     echo "📋 Final Service Status:"
     pm2 list 2>/dev/null || echo "   PM2 not available"
+    echo ""
+    echo "⌛ Re-checking app readiness after warm-up..."
+    sleep 12
+    check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
+    check_http_ready "Backend API" "http://localhost:3001" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
 start_services_quick() {
@@ -355,6 +388,11 @@ start_services_quick() {
     echo "   Use './dadms-start.sh status' to check service health"
     echo "   Use './dadms-start.sh diagnose' for detailed health check"
     echo "   Note: Some services may still be starting up in the background"
+    echo ""
+    echo "⌛ Re-checking app readiness after warm-up..."
+    sleep 12
+    check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
+    check_http_ready "Backend API" "http://localhost:3001" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
 start_optional_services() {
