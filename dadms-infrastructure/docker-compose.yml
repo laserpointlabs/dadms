@@ -292,11 +292,12 @@ services:
       - "9001:9001"   # MinIO Console
     volumes:
       - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+    # Disabled container-internal healthcheck; rely on host checks in start script
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    #   interval: 30s
+    #   timeout: 20s
+    #   retries: 3
 
   # Neo4j - Graph Database for Process/Task Relationships
   neo4j:
@@ -323,31 +324,31 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Neo4j Memory - Dedicated Graph Database for MCP AI Memory
-  neo4j-memory:
-    image: docker.io/neo4j:5.13
-    container_name: neo4j-memory
-    environment:
-      NEO4J_AUTH: neo4j/memorypassword
-      NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_apoc_export_file_enabled: true
-      NEO4J_apoc_import_file_enabled: true
-      NEO4J_dbms_security_procedures_unrestricted: apoc.*
-      #NEO4J_dbms_memory_heap_initial_size: 256m
-      #NEO4J_dbms_memory_heap_max_size: 512m
-    ports:
-      - "7475:7474"   # HTTP (different port to avoid conflict)
-      - "7688:7687"   # Bolt (different port to avoid conflict)
-    volumes:
-      - neo4j-memory-data:/data
-      - neo4j-memory-backups:/backups
-    healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+  # # Neo4j Memory - Dedicated Graph Database for MCP AI Memory
+  # neo4j-memory:
+  #   image: docker.io/neo4j:5.13
+  #   container_name: neo4j-memory
+  #   environment:
+  #     NEO4J_AUTH: neo4j/memorypassword
+  #     NEO4J_PLUGINS: '["apoc"]'
+  #     NEO4J_apoc_export_file_enabled: true
+  #     NEO4J_apoc_import_file_enabled: true
+  #     NEO4J_dbms_security_procedures_unrestricted: apoc.*
+  #     #NEO4J_dbms_memory_heap_initial_size: 256m
+  #     #NEO4J_dbms_memory_heap_max_size: 512m
+  #   ports:
+  #     - "7475:7474"   # HTTP (different port to avoid conflict)
+  #     - "7688:7687"   # Bolt (different port to avoid conflict)
+  #   volumes:
+  #     - neo4j-memory-data:/data
+  #     - neo4j-memory-backups:/backups
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:7474 || exit 1"]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   restart: unless-stopped
 
   # Jupyter Lab - Interactive Development Environment
   jupyter-lab:

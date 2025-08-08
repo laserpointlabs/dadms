@@ -7,7 +7,7 @@ project:
   framework: "unknown"
 
 server:
-  url: "http://localhost:9000"
+  url: "http://localhost:9999"
   api_version: "v1"
 
 tracking:
