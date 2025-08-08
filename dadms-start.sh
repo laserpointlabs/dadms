@@ -105,7 +105,8 @@ check_container_health() {
                     fi
                     ;;
                 "minio")
-                    if curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1; then
+                    # MinIO S3 API is mapped to host port 9002 (9000 in-container)
+                    if curl -sf http://localhost:9002/minio/health/live >/dev/null 2>&1; then
                         echo "✅ $container_name is healthy"
                         return 0
                     fi
@@ -156,6 +157,12 @@ wait_for_service() {
     return 1
 }
 
+# Check if a compose service is defined in docker-compose.yml
+is_service_defined() {
+    local service_name="$1"
+    grep -qE "^\s+${service_name}:" dadms-infrastructure/docker-compose.yml
+}
+
 start_infrastructure_tier() {
     local tier="$1"
     shift
@@ -163,14 +170,29 @@ start_infrastructure_tier() {
     
     echo "🚀 Starting $tier services: ${services[*]}"
     
+    # Filter to only services that are defined in compose
+    local defined_services=()
+    for svc in "${services[@]}"; do
+        if is_service_defined "$svc"; then
+            defined_services+=("$svc")
+        else
+            echo "ℹ️  Skipping undefined service in compose: $svc"
+        fi
+    done
+
+    if [ ${#defined_services[@]} -eq 0 ]; then
+        echo "ℹ️  No defined services to start for tier: $tier"
+        return 0
+    fi
+
     # Start services with better error handling
-    if ! podman-compose -f dadms-infrastructure/docker-compose.yml up -d "${services[@]}" 2>/dev/null; then
+    if ! podman-compose -f dadms-infrastructure/docker-compose.yml up -d "${defined_services[@]}" 2>/dev/null; then
         echo "⚠️  Some services in $tier may have failed to start"
     fi
     
     # Wait for services to be healthy with improved detection
     local failed_services=()
-    for service in "${services[@]}"; do
+    for service in "${defined_services[@]}"; do
         # Map service names to container names
         local container_name
         case "$service" in
@@ -368,7 +390,7 @@ diagnose_services() {
                     curl -sf http://localhost:11434 >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
                     ;;
                 "minio")
-                    curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    curl -sf http://localhost:9002/minio/health/live >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
                     ;;
                 "camunda")
                     curl -sf http://localhost:8080/engine-rest/engine >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
