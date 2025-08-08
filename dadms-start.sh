@@ -105,7 +105,7 @@ check_container_health() {
                     fi
                     ;;
                 "minio")
-                    if curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1; then
+                    if curl -sf http://localhost:9002/minio/health/live >/dev/null 2>&1; then
                         echo "✅ $container_name is healthy"
                         return 0
                     fi
@@ -368,7 +368,7 @@ diagnose_services() {
                     curl -sf http://localhost:11434 >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
                     ;;
                 "minio")
-                    curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
+                    curl -sf http://localhost:9002/minio/health/live >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"
                     ;;
                 "camunda")
                     curl -sf http://localhost:8080/engine-rest/engine >/dev/null 2>&1 && echo "   Health: ✅ Healthy" || echo "   Health: ❌ Not responding"

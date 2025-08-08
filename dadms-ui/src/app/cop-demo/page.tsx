@@ -73,6 +73,25 @@ export default function COPDemoPage() {
                     {/* Backend health status */}
                     <BackendStatus />
 
+                    {/* Start Demo (disabled placeholder) */}
+                    <div className="mb-6">
+                        <button
+                            type="button"
+                            disabled
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-md cursor-not-allowed"
+                            style={{
+                                backgroundColor: dadmsTheme.colors.background.secondary,
+                                color: dadmsTheme.colors.text.muted,
+                                border: `1px solid ${dadmsTheme.colors.border.light}`,
+                                borderRadius: dadmsTheme.borderRadius.md,
+                            }}
+                            title="Start Demo (coming soon)"
+                        >
+                            <Icon name="pulse" size="sm" />
+                            Start Demo
+                        </button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[
                             { icon: "pulse", title: "PM Dashboard", desc: "Real-time workflow monitoring and persona oversight" },
