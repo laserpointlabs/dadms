@@ -252,8 +252,12 @@ start_services() {
     start_infrastructure_tier "Application Services" "minio" "ollama"
     
     # Tier 5: Optional services (non-critical)
-    echo "🚀 Starting optional services..."
-    podman-compose -f dadms-infrastructure/docker-compose.yml up -d camunda jupyter-lab >/dev/null 2>&1 || echo "⚠️  Some optional services may have failed (continuing...)"
+    if [[ "$DADMS_START_OPTIONAL" == "1" ]]; then
+        echo "🚀 Starting optional services (env DADMS_START_OPTIONAL=1)..."
+        podman-compose -f dadms-infrastructure/docker-compose.yml up -d camunda jupyter-lab >/dev/null 2>&1 || echo "⚠️  Some optional services may have failed (continuing...)"
+    else
+        echo "ℹ️  Skipping optional services (camunda, jupyter-lab). Set DADMS_START_OPTIONAL=1 to include."
+    fi
     
     echo ""
     echo "🔧 Starting DADMS Backend Services..."
@@ -320,6 +324,11 @@ start_services_quick() {
     echo "   Use './dadms-start.sh status' to check service health"
     echo "   Use './dadms-start.sh diagnose' for detailed health check"
     echo "   Note: Some services may still be starting up in the background"
+}
+
+start_optional_services() {
+    echo "🚀 Starting optional services (camunda, jupyter-lab)..."
+    podman-compose -f dadms-infrastructure/docker-compose.yml up -d camunda jupyter-lab >/dev/null 2>&1 && echo "✅ Optional services started" || echo "⚠️  Optional services failed to start"
 }
 
 stop_services() {
@@ -484,6 +493,9 @@ case "$1" in
     "restart-neo4j")
         restart_neo4j
         ;;
+    "start-optional")
+        start_optional_services
+        ;;
     "diagnose")
         diagnose_services
         ;;
@@ -511,6 +523,7 @@ case "$1" in
         echo "  status        - Show service status (default)"
         echo "  start         - Start all services with robust sequencing"
         echo "  start-quick   - Quick start (faster, minimal health checks)"
+        echo "  start-optional- Start only optional services (camunda, jupyter-lab)"
         echo "  stop          - Stop all services"
         echo "  restart       - Restart all services"
         echo "  restart-neo4j - Restart only Neo4j services"
