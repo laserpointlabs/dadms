@@ -50,7 +50,7 @@ show_status() {
         pm2 list 2>/dev/null | grep -E "(dadms-backend|dadms-ui-dev)" || echo "  (no PM2 apps started)"
         echo ""
         echo "🌐 Quick HTTP checks:"
-        curl -sf http://localhost:3001 >/dev/null 2>&1 && echo "  Backend: OK" || echo "  Backend: NOT RESPONDING"
+        curl -sf http://localhost:3001/health >/dev/null 2>&1 && echo "  Backend: OK" || echo "  Backend: NOT RESPONDING"
         curl -sf http://localhost:3000 >/dev/null 2>&1 && echo "  Frontend: OK" || echo "  Frontend: NOT RESPONDING"
     fi
 }
@@ -332,7 +332,7 @@ start_services() {
     
     echo ""
     echo "⏳ Waiting for applications to be ready..."
-    wait_for_pm2_app "dadms-backend" "http://localhost:3001" 30 || true
+    wait_for_pm2_app "dadms-backend" "http://localhost:3001/health" 30 || true
     wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
     echo ""
     echo "📋 Final Service Status:"
@@ -341,7 +341,7 @@ start_services() {
     echo "⌛ Re-checking app readiness after warm-up..."
     sleep 12
     check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
-    check_http_ready "Backend API" "http://localhost:3001" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
+    check_http_ready "Backend API" "http://localhost:3001/health" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
 start_services_quick() {
@@ -381,7 +381,7 @@ start_services_quick() {
     
     echo ""
     echo "⏳ Waiting for applications to be ready..."
-    wait_for_pm2_app "dadms-backend" "http://localhost:3001" 30 || true
+    wait_for_pm2_app "dadms-backend" "http://localhost:3001/health" 30 || true
     wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
     echo ""
     echo "📋 Quick Start Complete!"
@@ -392,7 +392,7 @@ start_services_quick() {
     echo "⌛ Re-checking app readiness after warm-up..."
     sleep 12
     check_http_ready "Frontend (UI)" "http://localhost:3000" 8 2 || echo "⚠️  UI still not responding. Try: pm2 logs dadms-ui-dev --lines 200"
-    check_http_ready "Backend API" "http://localhost:3001" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
+    check_http_ready "Backend API" "http://localhost:3001/health" 8 2 || echo "⚠️  Backend still not responding. Try: pm2 logs dadms-backend --lines 200"
 }
 
 start_optional_services() {
