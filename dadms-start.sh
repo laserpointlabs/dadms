@@ -164,6 +164,28 @@ is_service_defined() {
     grep -qE "^\s+${service_name}:" dadms-infrastructure/docker-compose.yml
 }
 
+# Wait for a PM2 app by name to be online or its HTTP endpoint to respond
+wait_for_pm2_app() {
+    local app_name="$1"
+    local url="$2" # optional
+    local attempts="${3:-30}"
+    echo "⏳ Waiting for PM2 app $app_name to be ready..."
+    for i in $(seq 1 "$attempts"); do
+        if [ -n "$url" ] && curl -sf "$url" >/dev/null 2>&1; then
+            echo "✅ $app_name is responding at $url"
+            return 0
+        fi
+        if pm2 list 2>/dev/null | grep -E "\\b$app_name\\b" | grep -qi online; then
+            echo "✅ $app_name is ONLINE (PM2)"
+            return 0
+        fi
+        echo "   Attempt $i/$attempts: $app_name not ready yet..."
+        sleep 2
+    done
+    echo "❌ $app_name failed to become ready"
+    return 1
+}
+
 start_infrastructure_tier() {
     local tier="$1"
     shift
@@ -269,17 +291,21 @@ start_services() {
     # Start backend service
     if [ -d "dadms-services/user-project" ]; then
         cd dadms-services/user-project
-        pm2 start npm --name dadms-backend -- run dev >/dev/null 2>&1 && echo "✅ Backend started" || echo "❌ Backend failed"
+        pm2 start npm --name dadms-backend -- run dev >/dev/null 2>&1 && echo "✅ Backend start issued" || echo "❌ Backend failed to start"
         cd ../..
     fi
     
     # Start frontend UI
     if [ -d "dadms-ui" ]; then
         cd dadms-ui
-        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend started" || echo "❌ Frontend failed"
+        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend start issued" || echo "❌ Frontend failed to start"
         cd ..
     fi
     
+    echo ""
+    echo "⏳ Waiting for applications to be ready..."
+    wait_for_pm2_app "dadms-backend" "http://localhost:3001" 30 || true
+    wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
     echo ""
     echo "📋 Final Service Status:"
     pm2 list 2>/dev/null || echo "   PM2 not available"
@@ -309,17 +335,21 @@ start_services_quick() {
     # Start backend service
     if [ -d "dadms-services/user-project" ]; then
         cd dadms-services/user-project
-        pm2 start npm --name dadms-backend -- run dev >/dev/null 2>&1 && echo "✅ Backend started" || echo "❌ Backend failed"
+        pm2 start npm --name dadms-backend -- run dev >/dev/null 2>&1 && echo "✅ Backend start issued" || echo "❌ Backend failed to start"
         cd ../..
     fi
     
     # Start frontend UI
     if [ -d "dadms-ui" ]; then
         cd dadms-ui
-        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend started" || echo "❌ Frontend failed"
+        pm2 start npm --name dadms-ui-dev -- run dev >/dev/null 2>&1 && echo "✅ Frontend start issued" || echo "❌ Frontend failed to start"
         cd ..
     fi
     
+    echo ""
+    echo "⏳ Waiting for applications to be ready..."
+    wait_for_pm2_app "dadms-backend" "http://localhost:3001" 30 || true
+    wait_for_pm2_app "dadms-ui-dev" "http://localhost:3000" 30 || true
     echo ""
     echo "📋 Quick Start Complete!"
     echo "   Use './dadms-start.sh status' to check service health"
